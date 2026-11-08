@@ -16,7 +16,8 @@ from pathlib import Path
 import re
 from typing import Mapping
 
-from .credit import ARMS, PAIRED_ARMS, CreditContractError, advantages, prior, q_commit, same_world_credit
+from .credit import (ARMS, PAIRED_ARMS, CreditContractError, advantages, finite,
+                     prior, q_commit, same_world_credit, trajectory_loss_weight)
 
 
 def digest(value):
@@ -29,6 +30,56 @@ def file_digest(path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def independent_credit_units(arm, plan, steps, applied_advantages):
+    """Raw S1 c_u values; no variance/ddof, batch AUC, or world decomposition.
+
+    Each actual episode appears, even when all its steps are post-tau. Paired
+    units aggregate both weighted trajectories and divide by two exactly once.
+    """
+    if arm not in ARMS or not plan:
+        raise CreditContractError('Explicit arm and complete episode plan required for S1')
+    planned = {row['episode_id']: row for row in plan}
+    if (len(planned) != len(plan) or len({step.key for step in steps}) != len(steps)
+            or set(applied_advantages) != {step.key for step in steps}):
+        raise CreditContractError('Repeated plan identity or incomplete actual advantages')
+    grouped = {episode: [] for episode in planned}
+    for step in steps:
+        step.validate()
+        if step.episode_id not in planned:
+            raise CreditContractError('Unplanned S1 episode')
+        row = planned[step.episode_id]
+        if any(getattr(step, key) != row[key] for key in ('pair_id', 'pair_instance_id', 'world_id', 'rho')):
+            raise CreditContractError('S1 step disagrees with its episode plan')
+        finite(applied_advantages[step.key], 'applied S1 advantage')
+        grouped[step.episode_id].append(step)
+    units = {}
+    for episode, row in planned.items():
+        if not grouped[episode]:
+            raise CreditContractError('Missing trajectory is unknown, not a zero-credit episode')
+        unit_id = row['pair_instance_id'] if arm in PAIRED_ARMS else episode
+        unit = units.setdefault(unit_id, {'unit_id': unit_id, 'unit_kind': 'pair_instance' if arm in PAIRED_ARMS else 'episode',
+                                         'pair_id': row['pair_id'], 'rho': row['rho'], 'world_components': []})
+        if (unit['pair_id'], unit['rho']) != (row['pair_id'], row['rho']):
+            raise CreditContractError('Independent-unit identity has conflicting pair/prior')
+        weight = trajectory_loss_weight(arm, row['world_id'], row['rho'])
+        selected = sorted((step for step in grouped[episode] if step.pre_evidence), key=lambda step: step.decision_index)
+        terms = [{'decision_index': step.decision_index, 'tau': step.tau, 'x_seen_step': step.x_seen_step,
+                  'applied_advantage': applied_advantages[step.key], 'trajectory_loss_weight': weight,
+                  'weighted_credit': weight * applied_advantages[step.key]} for step in selected]
+        unit['world_components'].append({'episode_id': episode, 'world_id': row['world_id'],
+            'pre_evidence_decision_count': len(selected), 'all_decision_count': len(grouped[episode]),
+            'trajectory_loss_weight': weight, 'terms': terms,
+            'unweighted_credit_sum': math.fsum(applied_advantages[step.key] for step in selected),
+            'weighted_credit_sum': math.fsum(term['weighted_credit'] for term in terms)})
+    for unit in units.values():
+        worlds = [part['world_id'] for part in unit['world_components']]
+        if (arm in PAIRED_ARMS and sorted(worlds) != ['w0', 'w1']) or (arm not in PAIRED_ARMS and len(worlds) != 1):
+            raise CreditContractError('S1 paired unit needs both worlds; single unit needs exactly one episode')
+        unit['episode_equivalent_divisor'] = 2 if arm in PAIRED_ARMS else 1
+        unit['c_u'] = math.fsum(part['weighted_credit_sum'] for part in unit['world_components']) / unit['episode_equivalent_divisor']
+    return list(units.values())
 
 
 @dataclass(frozen=True)
@@ -76,7 +127,7 @@ class TrainingHoldout:
 class RawTrainingRecorder:
     """One writer/learner; reject overwrites and concurrent or ambiguous updates."""
     def __init__(self, directory, *, run_id, arm, seed, rho, common_config_sha256,
-                 holdout: TrainingHoldout, max_decisions=8, chunk_bytes=32 * 1024 * 1024, allow_synthetic=False):
+                 holdout: TrainingHoldout, max_decisions=5, chunk_bytes=32 * 1024 * 1024, allow_synthetic=False):
         if (arm not in ARMS or not run_id or type(seed) is not int
                 or not re.fullmatch(r"[0-9a-f]{64}", common_config_sha256)
                 or type(max_decisions) is not int or max_decisions <= 0
@@ -95,11 +146,11 @@ class RawTrainingRecorder:
         self.active, self.s2_due, self.closed = None, None, False
         self.stream, self.stream_size, self.chunks = None, 0, []
         self._append({"kind": "session", **self.identity, "holdout": asdict(holdout),
-            "s1_scope": "every pre-evidence decision in every attempted batch; optimizer completion recorded separately",
+            "s1_scope": "every pre-evidence decision plus every independent unit, including zero-pre-step units",
             "s1_statistics": None, "s2_interval_completed_updates": 20, "s2_auc": None,
             "notes": ["Raw per-world components are retained; no ddof or between-world decomposition is chosen.",
                       "S2 starts at completed optimizer update 20; no synthetic initial/terminal endpoint is added.",
-                      "Q scores retain full action probability mass and complete scoring provenance.",
+                      "Q scores retain raw full-action mass and explicit select-only conditional probabilities.",
                       "All journal files are bounded, append-only and indexed by SHA at close."]})
 
     def _append(self, row):
@@ -124,11 +175,16 @@ class RawTrainingRecorder:
         self.event_id += 1
 
     def begin_update(self, plan, steps, *, applied_advantages: Mapping,
-                     advantage_transform, policy_id, episode_summaries):
+                     advantage_transform, policy_id, episode_summaries, rollout_accounting=None):
         if self.active is not None or self.s2_due is not None:
             raise CreditContractError("Finish/abort the active update and record any due S2 evaluation before another update")
         if not policy_id or not advantage_transform:
             raise CreditContractError("Policy identity and explicit applied-advantage transformation are required")
+        if rollout_accounting is None and not self.identity['synthetic_fixture_session']:
+            raise CreditContractError('Real updates require physical sampling/token/scoring accounting')
+        if rollout_accounting is not None and any(type(rollout_accounting.get(key)) is not int or rollout_accounting[key] < 0
+                for key in ('physical_policy_sampling_calls', 'actual_generated_token_count', 'teacher_forced_scoring_calls')):
+            raise CreditContractError('Missing actual physical sampling/token/scoring counts')
         if len(plan) != 64 or len({row["episode_id"] for row in plan}) != 64:
             raise CreditContractError("Every arm requires exactly 64 distinct episode instances per update")
         by_episode = {row["episode_id"]: row for row in plan}
@@ -137,6 +193,8 @@ class RawTrainingRecorder:
             if row["rho"] != self.identity["rho"]:
                 raise CreditContractError("Batch rho differs from the session")
             pairs.setdefault(row["pair_instance_id"], []).append(row["world_id"])
+            if row.get('trajectory_loss_weight') != trajectory_loss_weight(self.identity['arm'], row['world_id'], row['rho']):
+                raise CreditContractError('Plan must record the exact per-token world loss weight')
         if self.identity["arm"] in PAIRED_ARMS:
             if len(pairs) != 32 or any(sorted(worlds) != ["w0", "w1"] for worlds in pairs.values()):
                 raise CreditContractError("Paired arms require 32 complete world pairs")
@@ -157,9 +215,34 @@ class RawTrainingRecorder:
                     or step.world_id != row["world_id"] or step.rho != row["rho"]):
                 raise CreditContractError("Credit row does not match its planned pair/world/prior")
             groups[step.episode_id].append(step.decision_index)
-        for indices in groups.values():
+        for episode, indices in groups.items():
             if not 1 <= len(indices) <= self.identity["max_decisions"] or sorted(indices) != list(range(len(indices))):
                 raise CreditContractError("Missing, duplicate or unbounded per-episode decision records")
+            summary = episode_summaries[episode]
+            if (type(summary.get('terminated')) is not bool or type(summary.get('truncated')) is not bool
+                    or summary['terminated'] == summary['truncated']
+                    or type(summary.get('environment_steps')) is not int or summary['environment_steps'] != len(indices)
+                    or type(summary.get('logical_model_calls')) is not int or summary['logical_model_calls'] != len(indices)):
+                raise CreditContractError('Episode completion/call/step counts must match its complete realized trajectory')
+            tokens = summary.get('logical_trajectory_token_count')
+            if ((tokens is None and not self.identity['synthetic_fixture_session'])
+                    or (tokens is not None and (type(tokens) is not int or tokens < 0))):
+                raise CreditContractError('Real episode summaries require actual logical trajectory token counts')
+        if rollout_accounting is not None:
+            calls = sum(len(indices) for indices in groups.values())
+            physical = rollout_accounting['physical_policy_sampling_calls']
+            lower = (calls + 1) // 2 if self.identity['arm'] in PAIRED_ARMS else calls
+            if not lower <= physical <= calls:
+                raise CreditContractError('Physical sampling calls contradict single/paired prompt sharing limits')
+            counts = [row.get('logical_trajectory_token_count') for row in episode_summaries.values()]
+            if all(value is not None for value in counts):
+                actual = rollout_accounting['actual_generated_token_count']
+                arm_is_paired = self.identity['arm'] in PAIRED_ARMS
+                if (rollout_accounting.get('logical_trajectory_token_count') != sum(counts)
+                        or actual > sum(counts)
+                        or (arm_is_paired and 2 * actual < sum(counts))
+                        or (not arm_is_paired and actual != sum(counts))):
+                    raise CreditContractError('Physical/generated versus logical copied token accounting disagrees')
         raw_advantages = advantages(self.identity["arm"], steps)
         if set(applied_advantages) != set(raw_advantages):
             raise CreditContractError("Applied advantages must cover every actual decision")
@@ -183,6 +266,7 @@ class RawTrainingRecorder:
         self._append({"kind": "update_begin", "update_attempt": self.active,
             "completed_optimizer_updates_before": self.completed_updates, "policy_id": policy_id,
             "planned_episodes": plan, "episode_summaries": episode_summaries,
+            "rollout_accounting": rollout_accounting,
             "all_decision_keys": all_keys, "expected_pre_evidence_keys": pre_keys,
             "advantage_transform": advantage_transform})
         for step in steps:
@@ -190,16 +274,25 @@ class RawTrainingRecorder:
                 continue
             q = q_commit(step.scores, step.target_name) if step.scores is not None else None
             # Even T3 retains both unaveraged worlds, enabling offline decomposition.
-            component = (same_world_credit(step) if step.scores is not None and step.action_kind in ("observe", "select") else None)
+            component = (same_world_credit(step) if step.scores is not None or step.action_kind == 'invalid' else None)
             self._append({"kind": "s1_pre_evidence_decision", **self.identity,
                 "update_attempt": self.active, "completed_optimizer_updates_before": self.completed_updates,
                 "decision": asdict(step), "scores": step.scores.record() if step.scores is not None else None,
                 "p_world": prior(step.rho)[step.world_id], "q_commit": q,
+                "trajectory_loss_weight": trajectory_loss_weight(self.identity['arm'], step.world_id, step.rho),
                 "same_world_unaveraged_credit": component, "raw_advantage": raw_advantages[step.key],
                 "applied_advantage": applied_advantages[step.key], "advantage_transform": advantage_transform})
+        units = independent_credit_units(self.identity['arm'], plan, steps, applied_advantages)
+        for unit in units:
+            self._append({'kind': 's1_independent_decision_unit', **self.identity,
+                          'update_attempt': self.active,
+                          'completed_optimizer_updates_before': self.completed_updates, **unit})
         self._append({"kind": "s1_batch_complete", "update_attempt": self.active,
                       "pre_evidence_keys_sha256": digest(pre_keys), "pre_evidence_row_count": len(pre_keys),
-                      "all_decision_row_count": len(all_keys), "episode_count": 64})
+                      "all_decision_row_count": len(all_keys), "episode_count": 64,
+                      "independent_unit_count": len(units),
+                      "independent_unit_definition": 'pair_instance' if self.identity['arm'] in PAIRED_ARMS else 'episode',
+                      "unit_records_sha256": digest(units), 'variance_estimator': None})
         self.stream.flush()
         os.fsync(self.stream.fileno())
         return self.active

@@ -1,10 +1,10 @@
 """Backend-independent T05 coupling state machine; no simulator/model imports.
 
-Ports carry privileged state. The policy receives ONLY PolicyInput (public RGB,
-text, marks, prior responses/actions and the shared prompt contract). Equality is
-byte/structure equality, never a similarity threshold or hash-only comparison.
-Any divergence permanently forks the pair, even if later observations converge.
-Forking on rendering noise does not change the backend's evidence annotation.
+Ports carry privileged state. A caller-supplied tokenizer/serializer converts the
+complete public PolicyInput to the exact ModelPrompt consumed by the policy.
+Equality is rechecked on all image bytes and text token IDs every round. Historical
+forking does not prevent later sharing if the complete actual prompt is equal.
+The P backend, not this collector, authorizes shared cached pixels and tau.
 """
 from dataclasses import asdict, dataclass
 import hashlib
@@ -79,12 +79,63 @@ class PolicyInput:
 
 
 @dataclass(frozen=True)
+class ModelPrompt:
+    """Exact model input, supplied by the frozen tokenizer/prompt adapter.
+
+    Image tuples are (bytes,width,height,dtype,channels) in actual input order.
+    No history/provenance-only field is exposed to the policy callback.
+    """
+    images: tuple
+    text_token_ids: tuple[int, ...]
+    serialization_contract: str
+
+    def __post_init__(self):
+        if (not isinstance(self.images, tuple) or not isinstance(self.text_token_ids, tuple)
+                or not self.serialization_contract
+                or any(type(token) is not int or token < 0 for token in self.text_token_ids)):
+            raise CreditContractError("Actual ordered image bytes, text token IDs and serializer provenance required")
+        for image in self.images:
+            if (not isinstance(image, tuple) or len(image) != 5 or type(image[0]) is not bytes
+                    or type(image[1]) is not int or type(image[2]) is not int
+                    or image[1] <= 0 or image[2] <= 0 or image[3:] != ("uint8", 3)
+                    or len(image[0]) != image[1] * image[2] * 3):
+                raise CreditContractError("Malformed exact model image")
+
+    def record(self):
+        return {"images": [{"sha256": hashlib.sha256(image[0]).hexdigest(),
+                            "width": image[1], "height": image[2], "dtype": image[3], "channels": image[4]}
+                           for image in self.images],
+                "text_token_ids": list(self.text_token_ids), "serialization_contract": self.serialization_contract}
+
+    @property
+    def sha256(self):
+        return hashlib.sha256(json.dumps(self.record(), sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+
+@dataclass(frozen=True)
+class PreparedPrompt:
+    prompt: ModelPrompt
+    public_history_sha256: str
+
+
+def synthetic_prompt(context):
+    """Explicit CPU fixture serializer, never a claimed production tokenizer."""
+    text = json.dumps({"text": [obs.text for obs in context.observations],
+                       "marks": [[asdict(mark) for mark in obs.marks] for obs in context.observations],
+                       "responses": context.response_history, "actions": context.action_history,
+                       "contract": context.prompt_contract}, sort_keys=True).encode()
+    return PreparedPrompt(ModelPrompt(tuple((obs.rgb, obs.width, obs.height, obs.dtype, obs.channels) for obs in context.observations),
+                       tuple(text), "synthetic_utf8_bytes_not_model_tokenizer"), context.sha256)
+
+
+@dataclass(frozen=True)
 class PolicySample:
     action_text: str
     response_text: str
     policy_id: str
     sample_id: str
     response_token_count: int  # Actual tokenizer count, not characters/whitespace.
+    response_token_log_probabilities: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -141,26 +192,40 @@ def validate_private(state, world, pair_id=None, episode_id=None, *, allow_synth
         raise CreditContractError("Real capture provenance is required; synthetic fixtures need explicit opt-in")
     if bool(info["evidence_entered"]) != (info["evidence_status"] == "entered"):
         raise CreditContractError("Evidence boolean and explicit status disagree")
+    if ("tau" not in info or "x_seen_step" not in info or not info.get("table_temporal_proof")
+            or any(value is not None and (type(value) is not int or not 0 <= value <= info["decision_index"])
+                   for value in (info["tau"], info["x_seen_step"]))
+            or info["evidence_entered"] != (info["tau"] is not None)
+            or (info["x_seen_step"] is not None and (info["tau"] is None or info["x_seen_step"] < info["tau"]))):
+        raise CreditContractError("Require authenticated table tau and own x_seen_step, not a generic evidence flag")
     if (pair_id is not None and info["pair_id"] != pair_id) or (episode_id is not None and info["episode_id"] != episode_id):
         raise CreditContractError("Backend changed the episode or pair identity")
     if info["kind"].startswith("direct_") and info["evidence_entered"] is not True:
         raise CreditContractError("Direct pairs have no pre-evidence segment")
 
 
-def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[PolicyInput], PolicySample],
+def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[ModelPrompt], PolicySample],
                  *, max_decisions: int, max_response_tokens: int, prompt_contract: str,
-                 pair_instance_id: str, allow_synthetic=False):
+                 pair_instance_id: str, allow_synthetic=False, prompt_builder=None):
     """Collect two realized episodes; shared prefix uses one physical policy call.
 
-    Observations are never copied from one world to the other. The backend must
-    independently realize each capture and expose its provenance in privileged.
+    Verified P shared states legitimately use the same cached RGB in both worlds.
+    Only actual public model input controls sampling deduplication; privileged
+    raw-image/source IDs never prevent sharing or enter the policy.
     Interactions remain two episodes even when one shared policy call supplies
     both actions. Exceptions are not converted into successful trajectories.
     """
     if (set(ports) != {"w0", "w1"} or type(max_decisions) is not int or max_decisions <= 0
             or type(max_response_tokens) is not int or max_response_tokens <= 0 or not pair_instance_id):
         raise CreditContractError("Require two ports and an explicit positive decision cap")
+    uses_fixture_serializer = prompt_builder is None
+    if uses_fixture_serializer:
+        if not allow_synthetic:
+            raise CreditContractError("Production requires the exact frozen model prompt/tokenizer adapter")
+        prompt_builder = synthetic_prompt
     states = {world: ports[world].reset() for world in ("w0", "w1")}
+    if uses_fixture_serializer and any(state.privileged.get('synthetic_backend') is not True for state in states.values()):
+        raise CreditContractError('The byte-token fixture serializer cannot drive a real backend')
     for world, state in states.items():
         validate_private(state, world, allow_synthetic=allow_synthetic)
         if state.privileged["decision_index"] != 0:
@@ -171,10 +236,10 @@ def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[PolicyInput
             or states["w0"].privileged["episode_id"] == states["w1"].privileged["episode_id"]):
         raise CreditContractError("Ports do not represent distinct episodes of the same pair")
     observations = {world: [states[world].public] for world in ports}
-    raw_hashes = {world: [states[world].privileged.get("raw_rgb_sha256")] for world in ports}
     responses, actions, rows = ({world: [] for world in ports} for _ in range(3))
     done = {world: False for world in ports}
-    forked, first_fork, sample_calls = False, None, 0
+    forked, first_fork, sample_calls, generated_tokens = False, None, 0, 0
+    sharing_by_round = []
     seen_samples = set()
     for decision in range(max_decisions):
         active = [world for world in ("w0", "w1") if not done[world]]
@@ -182,30 +247,35 @@ def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[PolicyInput
             break
         contexts = {world: PolicyInput(tuple(observations[world]), tuple(responses[world]), tuple(actions[world]), prompt_contract)
                     for world in active}
-        exact = (len(active) == 2 and contexts["w0"] == contexts["w1"]
-                 and raw_hashes["w0"] == raw_hashes["w1"] and all(raw_hashes["w0"]))
+        prepared = {world: prompt_builder(context) for world, context in contexts.items()}
+        if any(not isinstance(item, PreparedPrompt) or not isinstance(item.prompt, ModelPrompt)
+               or item.public_history_sha256 != contexts[world].sha256 for world, item in prepared.items()):
+            raise CreditContractError("Prompt builder must bind the actual complete public history")
+        prompts = {world: item.prompt for world, item in prepared.items()}
+        exact = len(active) == 2 and prompts["w0"] == prompts["w1"]
         if not forked and not exact:
             forked = True
             first_fork = {"decision_index": decision, "reason": "public_input_difference" if len(active) == 2 else "branch_termination",
-                          "input_sha256_by_world": {world: context.sha256 for world, context in contexts.items()},
+                          "input_sha256_by_world": {world: prompt.sha256 for world, prompt in prompts.items()},
                           "evidence_entered_by_world": {world: states[world].privileged["evidence_entered"] for world in active},
                           "noise_is_not_evidence": True}
-        shared = exact and not forked
-        if shared:
-            captures = [states[world].privileged.get("capture", {}) for world in ("w0", "w1")]
-            if any(not capture.get(key) for capture in captures for key in ("capture_id", "source_id")) or any(
-                    captures[0][key] == captures[1][key] for key in ("capture_id", "source_id")):
-                raise CreditContractError("Shared sampling needs two independently sourced captures; no copied prefix")
+        shared = exact
+        sharing_by_round.append({"decision_index": decision, "shared": shared,
+                                 "input_sha256_by_world": {world: prompt.sha256 for world, prompt in prompts.items()}})
         samples = {}
         for world in ([active[0]] if shared else active):
-            sample = policy(contexts[world])  # privileged state is deliberately not an argument
+            sample = policy(prompts[world])  # exactly the input used by the equality check
             sample_calls += 1
             if (not isinstance(sample, PolicySample) or not isinstance(sample.action_text, str)
                     or not isinstance(sample.response_text, str) or not sample.policy_id or not sample.sample_id
                     or sample.sample_id in seen_samples or type(sample.response_token_count) is not int
-                    or sample.response_token_count < 0):
+                    or sample.response_token_count < 0
+                    or type(sample.response_token_log_probabilities) is not tuple
+                    or len(sample.response_token_log_probabilities) != sample.response_token_count
+                    or any(finite(logp, "sample token log probability") > 0 for logp in sample.response_token_log_probabilities)):
                 raise CreditContractError("Policy must return an identifiable fresh sample")
             seen_samples.add(sample.sample_id)
+            generated_tokens += sample.response_token_count
             samples[world] = sample
         if shared:
             samples["w1"] = samples["w0"]
@@ -223,12 +293,16 @@ def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[PolicyInput
                 raise CreditContractError("Backend decision index is not aligned with the realized action")
             if current.privileged["evidence_entered"] and not transition.next_state.privileged["evidence_entered"]:
                 raise CreditContractError("Evidence already in history cannot disappear")
+            for timing in ("tau", "x_seen_step"):
+                if current.privileged[timing] is not None and transition.next_state.privileged[timing] != current.privileged[timing]:
+                    raise CreditContractError("First-visit table timing cannot change or disappear")
             rows[world].append({"pair_id": pair_id, "pair_instance_id": pair_instance_id,
                 "episode_id": current.privileged["episode_id"],
                 "world_id": world, "decision_index": decision,
-                "public_input": context.record(), "input_sha256": context.sha256,
+                "public_input": context.record(), "model_prompt": prompts[world].record(), "input_sha256": prompts[world].sha256,
                 "response_text": sample.response_text, "action_text": executed_action,
                 "proposed_action_text": sample.action_text, "response_token_count": sample.response_token_count,
+                "response_token_log_probabilities": sample.response_token_log_probabilities,
                 "response_token_budget_exceeded": exceeded,
                 "policy_id": sample.policy_id, "sample_id": sample.sample_id,
                 "shared_sample_id": sample.sample_id if shared else None,
@@ -236,21 +310,24 @@ def collect_pair(ports: Mapping[str, EpisodePort], policy: Callable[[PolicyInput
                 "shared_public_input_exact": shared, "synthetic_shared_input_exact": bool(shared and current.privileged.get("synthetic_backend")),
                 "forked_before_action": forked,
                 "pre_evidence": (None if current.privileged["evidence_status"] == "unknown" else not current.privileged["evidence_entered"]),
+                "tau": current.privileged["tau"], "x_seen_step": current.privileged["x_seen_step"],
                 "privileged_before": dict(current.privileged),
                 "privileged_after": dict(transition.next_state.privileged),
                 "reward": transition.reward, "done": transition.done})
             actions[world].append(executed_action)
             responses[world].append(sample.response_text)
             observations[world].append(transition.next_state.public)
-            raw_hashes[world].append(transition.next_state.privileged.get("raw_rgb_sha256"))
             states[world], done[world] = transition.next_state, transition.done
     return {"pair_id": pair_id, "pair_instance_id": pair_instance_id,
             "decisions_by_world": rows, "forked": forked, "first_fork": first_fork,
             "physical_policy_sampling_calls": sample_calls,
+            "actual_generated_token_count": generated_tokens, "sharing_by_round": sharing_by_round,
+            "logical_trajectory_token_count": sum(row["response_token_count"] for values in rows.values() for row in values),
             "logical_model_calls_by_world": {world: len(actions[world]) for world in ports},
             "environment_steps_by_world": {world: len(rows[world]) for world in ports},
             "done_by_world": done, "truncated_worlds": [world for world in ports if not done[world]],
             "complete": all(done.values()), "max_decisions": max_decisions, "max_response_tokens": max_response_tokens,
             "notes": ["Sampling calls exclude teacher-forced Q scoring calls; record those separately.",
-                      "Input equality was checked on actual bytes/text/marks/full public history.",
-                      "Forking is permanent; an RGB/text/mark difference does not itself certify task evidence."]}
+                      "Equality uses every actual model image byte and text token, including serialized history.",
+                      "Equality is rechecked every round; previous divergence does not forbid later exact sharing.",
+                      "tau/x_seen_step come only from verified P table history, never from a prompt difference."]}

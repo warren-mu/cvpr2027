@@ -203,3 +203,6 @@ T02 P后端CPU代码子步骤：新增D4视角表/五轮查表环境、同进程
 20:45:45 UTC的results/t01v2_search_progress_04.json仍为24scene not_yet_observed/errors=[]；上一03命令误用文件入口导致src导入失败，原失败log/meta完整保留，没有结果文件也不补写。已修正为模块入口。最新PBS现有观察两采集仍Q，原因为ngpus不足，无节点限制，作业未修改。进度工具将来源run_logged无时区结束时间明确标成source_time，不再误称UTC；原记录不改。
 
 T02 P代码CPU验证完成：results/t02_P_table_cpu_01.json的44项查表/导出检查/缓存/平衡测试全部通过；results/t02_P_paired_env_regression_01.json的24项旧环境接口回归通过；监控时间标签回归6项通过。测试使用合成表，仅验证程序，不等同真实GPU导出、cache_matches_live或T02正式验收。当前D=4、max_steps/max_model_calls=5，真实训练开关保持关闭，T01v2两采集不取消。T02本子步骤GPU用量0。
+
+
+T05新规格CPU代码子步骤：Q_commit在完整当前公开select标号集合上归一化；证据前无标号或无法解析输出按GAE回退，T3/T4以世界先验加权后双方使用相同优势。配对提示每轮比较完整图像字节与text token，允许精确重合后重新共享，真实生成token/模型调用单独记账。T4仅在自己t>=τ_seen的select生效，Stay要求两边满足；S1按独立episode/pair_instance保留逐步原始信用及加权c_u（paired只除2一次），包括实际0证据前步单元；S2按实际完成更新每20步记录。配置maximum_episode_rounds_from_T04=5、renormalize_over_select_candidates=true；必做T0/T2/T3/T4、T1应做。生产prompt/scorer、T04冻结配置、GPU冒烟仍未完成，training_execution_enabled=false。先提交后正式CPU测试。

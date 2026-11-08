@@ -1,8 +1,9 @@
 """T05 decision-level credit and auxiliary-loss contracts.
 
 Production T0/T1 and post-evidence steps keep the upstream masked-GAE output.
-This module never changes critic targets, normalizes advantages, renormalizes
-select scores, or decides the still-unfrozen token-to-decision adapter policy.
+This module never changes critic targets, normalizes advantages, or decides the
+still-unfrozen token-to-decision adapter policy. Revised T05 explicitly conditions
+Q_commit on the complete public set of selectable candidate action texts.
 All floats supplied here are detached targets; differentiable auxiliary helpers
 are separate and import torch only when explicitly called.
 """
@@ -13,6 +14,8 @@ from typing import Mapping, Optional, Sequence
 
 ARMS = ("T0", "T1", "T2", "T3", "T4")
 PAIRED_ARMS = ("T1", "T3", "T4")
+REQUIRED_ARMS = ("T0", "T2", "T3", "T4")
+SHOULD_DO_ARMS = ("T1",)
 # Validation of floating-point arithmetic only; never clips/rescales a score.
 PROBABILITY_CHECK_TOLERANCE = 1e-6
 
@@ -57,11 +60,14 @@ class ActionScores:
     probability_space: str = "unconditional_model_action"
     length_normalized: bool = False
     scoring_model_calls: int = 1
+    public_select_action_texts: tuple[str, ...] = ()
+    candidate_domain_source: str = ""
 
     def validate(self):
         if (not self.input_sha256 or not self.policy_id or not self.scoring_id or not self.scoring_contract
                 or not self.complete_action_events or self.probability_space != "unconditional_model_action"
-                or self.length_normalized):
+                or self.length_normalized or not self.candidate_domain_source
+                or not isinstance(self.public_select_action_texts, tuple)):
             raise CreditContractError("Require complete, unconditioned action-event probabilities with explicit scoring provenance")
         if type(self.scoring_model_calls) is not int or self.scoring_model_calls < 0:
             raise CreditContractError("Record actual scoring calls, including zero for an identified cached score")
@@ -82,6 +88,9 @@ class ActionScores:
             total += math.exp(logp)
         if total > 1 + PROBABILITY_CHECK_TOLERANCE:
             raise CreditContractError("Disjoint select events have probability mass above one")
+        if (len(set(self.public_select_action_texts)) != len(self.public_select_action_texts)
+                or set(self.public_select_action_texts) != texts):
+            raise CreditContractError("Score every publicly selectable candidate exactly once; no hidden subset normalization")
         return self
 
     def record(self):
@@ -89,15 +98,28 @@ class ActionScores:
         result = asdict(self)
         result["candidate_probability_mass"] = sum(math.exp(item.log_probability) for item in self.candidates)
         result["probabilities_by_stable_name"] = {item.object_name: math.exp(item.log_probability) for item in self.candidates}
+        result["select_conditional_probabilities_by_stable_name"] = select_distribution(self)
+        result["q_commit_normalization"] = "complete_public_select_candidate_set"
         return result
 
 
-def q_commit(scores: ActionScores, target_name: str):
-    """Exact T05 sum pi(select c|h) * 1[c==target], without conditioning on select."""
+def select_distribution(scores: ActionScores):
+    """Stable select-only normalization; an observed empty action domain is None."""
     scores.validate()
+    if not scores.candidates:
+        return None
+    largest = max(item.log_probability for item in scores.candidates)
+    masses = {item.object_name: math.exp(item.log_probability - largest) for item in scores.candidates}
+    total = math.fsum(masses.values())
+    return {name: mass / total for name, mass in masses.items()}
+
+
+def q_commit(scores: ActionScores, target_name: str):
+    """Revised T05 conditional select expectation; no public candidates => undefined."""
     if not target_name:
         raise CreditContractError("A unique privileged target name is required")
-    return sum(math.exp(item.log_probability) for item in scores.candidates if item.object_name == target_name)
+    distribution = select_distribution(scores)
+    return None if distribution is None else distribution.get(target_name, 0.0)
 
 
 def reference_gae(rewards, values, terminated, *, gamma, gae_lambda, bootstrap_value):
@@ -146,6 +168,9 @@ class CreditStep:
     evidence_proof: Mapping
     evidence_status: str
     evidence_provenance_verified: bool
+    tau: Optional[int]
+    x_seen_step: Optional[int]
+    temporal_proof: Mapping
     synthetic_fixture: bool = False
 
     @property
@@ -160,6 +185,11 @@ class CreditStep:
                 or not self.gae_source or not self.return_definition):
             raise CreditContractError("Incomplete decision-credit provenance")
         prior(self.rho)
+        if (any(value is not None and (type(value) is not int or value < 0)
+                for value in (self.tau, self.x_seen_step)) or not self.temporal_proof
+                or self.pre_evidence != (self.tau is None or self.decision_index < self.tau)
+                or (self.x_seen_step is not None and (self.tau is None or self.x_seen_step < self.tau))):
+            raise UnsupportedCredit("Require recorded T02 tau/x_seen_step; pre-evidence is t<tau, seen is t>=x_seen_step")
         if (self.evidence_status != ("not_entered_verified" if self.pre_evidence else "entered")
                 or not self.evidence_proof
                 or (self.evidence_provenance_verified is not True and not self.synthetic_fixture)):
@@ -175,13 +205,23 @@ class CreditStep:
 
 def same_world_credit(step):
     step.validate()
+    if step.action_kind == "invalid":
+        return step.gae_advantage
     if step.scores is None:
         raise CreditContractError("Counterfactual credit requires actual policy action scores")
-    if step.action_kind not in ("observe", "select"):
-        raise UnsupportedCredit("Pre-evidence invalid-action replacement is not specified by T05")
     q = q_commit(step.scores, step.target_name)
+    if q is None:
+        return step.gae_advantage
     outcome = step.realized_return if step.action_kind == "observe" else step.immediate_reward
     return outcome - q
+
+
+def trajectory_loss_weight(arm, world_id, rho):
+    """Separate token-loss weight; never multiply it into the shared advantage."""
+    if arm not in ARMS or world_id not in ("w0", "w1"):
+        raise CreditContractError("Unknown arm/world for trajectory loss weighting")
+    weights = prior(rho)
+    return 2 * weights[world_id] if arm in PAIRED_ARMS else 1.0
 
 
 def advantages(arm: str, steps: Sequence[CreditStep]):
@@ -209,11 +249,18 @@ def advantages(arm: str, steps: Sequence[CreditStep]):
         if len(members) != 2 or set(by_world) != {"w0", "w1"}:
             raise UnsupportedCredit(f"Cannot align both pre-evidence worlds at {pair}")
         first, second = by_world["w0"], by_world["w1"]
-        if (first.pair_id != second.pair_id or first.rho != second.rho or not first.shared_input_verified_exact or not second.shared_input_verified_exact
+        if (first.pair_id != second.pair_id or first.rho != second.rho or first.tau != second.tau
+                or not first.shared_input_verified_exact or not second.shared_input_verified_exact
                 or first.input_sha256 != second.input_sha256 or not first.shared_sample_id
                 or first.shared_sample_id != second.shared_sample_id or first.action_text != second.action_text
                 or first.action_kind != second.action_kind):
             raise UnsupportedCredit("Pre-evidence information set/action is not verified equal; noise divergence is not evidence")
+        if first.action_kind == "invalid":
+            weights = prior(first.rho)
+            shared = sum(weights[world] * by_world[world].gae_advantage for world in ("w0", "w1"))
+            for step in members:
+                output[step.key] = shared
+            continue
         if first.scores is None or second.scores is None:
             raise CreditContractError("Both-world Q scores are required")
         public_scores = lambda s: {item.action_text: item.log_probability for item in s.candidates}
@@ -242,6 +289,7 @@ def episode_plan(arm, pair_ids, *, rho, rng: random.Random):
         for world in worlds:
             rows.append({"episode_id": f"draw_{index:03d}_{world}", "pair_id": pair, "pair_instance_id": f"draw_{index:03d}:{pair}",
                          "pool_pair_id": pair, "world_id": world, "rho": rho,
+                         "trajectory_loss_weight": trajectory_loss_weight(arm, world, rho),
                          "sampling_design": "both_worlds" if arm in PAIRED_ARMS else "bernoulli_prior"})
     return rows
 
@@ -279,7 +327,7 @@ def symmetric_kl(first, second, *, distribution_source, convention):
         values = [finite(value, "selection probability") for value in distribution.values()]
         if any(value < 0 for value in values) or not math.isclose(sum(values), 1.0,
                 rel_tol=PROBABILITY_CHECK_TOLERANCE, abs_tol=PROBABILITY_CHECK_TOLERANCE):
-            raise UnsupportedCredit("Stay helper requires a supplied normalized distribution; raw Q_commit mass is never renormalized here")
+            raise UnsupportedCredit("Low-level Stay helper requires an already normalized candidate distribution")
     def kl(left, right):
         total = 0.0
         for name, p in left.items():
@@ -296,45 +344,73 @@ def symmetric_kl(first, second, *, distribution_source, convention):
             "convention": convention, "distribution_source": distribution_source}
 
 
-def t4_eligibility(arm, steps, *, forked):
-    """Require actual post-evidence terminal select decisions in both branches."""
+def t4_eligible_worlds(arm, steps):
+    """Each Flip branch uses its OWN inclusive t >= tau_seen boundary."""
     if arm != "T4":
-        return False
+        return {"w0": False, "w1": False}
     if len(steps) != 2 or {step.world_id for step in steps} != {"w0", "w1"}:
         raise UnsupportedCredit("T4 auxiliary loss requires both branch select observations")
     for step in steps:
         step.validate()
-    if not forked or any(step.pre_evidence or step.action_kind != "select" for step in steps):
-        return False
-    if (len({(step.pair_id, step.pair_instance_id) for step in steps}) != 1
-            or steps[0].input_sha256 == steps[1].input_sha256):
-        raise CreditContractError("T4 cannot impose differing target behavior at the same input")
-    return True
+    if len({(step.pair_id, step.pair_instance_id, step.rho) for step in steps}) != 1:
+        raise CreditContractError("T4 branch records must describe the same sampled world pair/prior")
+    return {step.world_id: (step.action_kind == "select" and step.x_seen_step is not None
+                           and step.decision_index >= step.x_seen_step) for step in steps}
 
 
-def consistency_components(arm, steps, *, forked, pair_change,
+def t4_eligibility(arm, steps, *, forked=None):
+    # Kept as a compatibility query; a historical fork boolean is not tau_seen.
+    return any(t4_eligible_worlds(arm, steps).values())
+
+
+def consistency_components(arm, steps, *, forked=None, pair_change,
                            stay_distributions=None, distribution_source=None, kl_convention=None):
     """Eligibility-enforced scalar audit of T4 terms, with no hidden reduction."""
-    if not t4_eligibility(arm, steps, forked=forked):
-        return {"eligible": False, "weighted_terms": None, "reason": "not_T4_or_not_both_post_evidence_selects"}
+    eligibility = t4_eligible_worlds(arm, steps)
+    if not any(eligibility.values()):
+        return {"eligible": False, "eligible_by_world": eligibility, "weighted_terms": None,
+                "reason": "no_T4_select_at_or_after_own_x_seen_step"}
     by_world = {step.world_id: step for step in steps}
     targets = {world: step.target_name for world, step in by_world.items()}
     if pair_change == "flip":
-        if any(step.scores is None for step in steps):
-            raise UnsupportedCredit("Flip consistency requires actual action scores in both worlds")
-        logs = {world: {score.object_name: score.log_probability for score in step.scores.candidates}
-                for world, step in by_world.items()}
-        terms = flip_hinges(logs, targets)
+        if targets["w0"] == targets["w1"]:
+            raise CreditContractError("Flip needs distinct stable targets")
+        if all(eligibility.values()) and steps[0].input_sha256 == steps[1].input_sha256:
+            raise UnsupportedCredit("Cannot impose distinct Flip targets on the same actual policy input")
+        terms = {}
+        for world, eligible in eligibility.items():
+            if not eligible:
+                continue
+            scores = by_world[world].scores
+            if scores is None:
+                raise UnsupportedCredit("Eligible Flip branch requires actual candidate action scores")
+            logs = {score.object_name: score.log_probability for score in scores.candidates}
+            other = "w1" if world == "w0" else "w0"
+            if targets[world] not in logs or targets[other] not in logs:
+                raise UnsupportedCredit("Flip cannot invent an invisible public select action")
+            terms[world] = max(0.0, 1.0 - logs[targets[world]] + logs[targets[other]])
         return {"eligible": True, "kind": "flip", "margin": 1.0, "beta": 0.1,
+                "eligible_by_world": eligibility,
                 "unweighted_terms": terms, "weighted_terms": {world: 0.1 * value for world, value in terms.items()},
                 "reduction": "unreduced per-world terms; training reduction awaits frozen common configuration"}
     if pair_change != "stay" or targets["w0"] != targets["w1"]:
         raise CreditContractError("Stay requires the same stable target; unknown pair-change label")
-    if stay_distributions is None or set(stay_distributions) != {"w0", "w1"}:
-        raise UnsupportedCredit("Stay distribution construction has not been supplied/approved")
+    if not all(eligibility.values()):
+        return {"eligible": False, "kind": "stay", "eligible_by_world": eligibility,
+                "weighted_terms": None, "reason": "Stay_requires_both_selects_at_or_after_own_x_seen_step"}
+    if any(step.scores is None for step in steps):
+        raise UnsupportedCredit('Stay requires actual complete public candidate scores in both worlds')
+    measured = {world: select_distribution(step.scores) for world, step in by_world.items()}
+    if any(distribution is None for distribution in measured.values()):
+        raise UnsupportedCredit('No selectable candidates means no Stay distribution')
+    if stay_distributions is not None and stay_distributions != measured:
+        raise CreditContractError('Supplied Stay distribution differs from actual normalized select scores')
+    stay_distributions = measured
+    distribution_source = distribution_source or ('complete_public_select_action_scores:' +
+                           ','.join(by_world[world].scores.scoring_id for world in ('w0', 'w1')))
     terms = symmetric_kl(stay_distributions["w0"], stay_distributions["w1"],
                          distribution_source=distribution_source, convention=kl_convention)
-    return {"eligible": True, "kind": "stay", "beta": 0.1, "unweighted_terms": terms,
+    return {"eligible": True, "kind": "stay", "beta": 0.1, "eligible_by_world": eligibility, "unweighted_terms": terms,
             "weighted_terms": 0.1 * terms["symmetric"], "reduction": "one supplied pair term"}
 
 

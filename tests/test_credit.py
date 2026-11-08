@@ -15,20 +15,23 @@ import unittest
 
 from src.rl.credit import (ActionScores, CandidateScore, CreditContractError, CreditStep,
     UnsupportedCredit, advantages, consistency_components, episode_plan, flip_hinges,
-    q_commit, reference_gae, symmetric_kl, torch_flip_hinges, torch_symmetric_kl)
-from src.rl.credit_records import RawTrainingRecorder, TrainingHoldout
+    q_commit, reference_gae, select_distribution, symmetric_kl, torch_flip_hinges,
+    torch_symmetric_kl, trajectory_loss_weight)
+from src.rl.credit_records import RawTrainingRecorder, TrainingHoldout, independent_credit_units
 from src.rl.paired_rollout import (EpisodeState, PolicySample, PublicMark, PublicObservation,
-                                 Transition, collect_pair)
+                                 ModelPrompt, PreparedPrompt, Transition, collect_pair, synthetic_prompt)
 
 INPUT = "a" * 64
 
 
 def score_fixture(probabilities=None, *, input_sha256=INPUT):
-    probabilities = probabilities or {"Cup_A": ("select 1", 0.5), "Cup_B": ("select 2", 0.5)}
+    probabilities = {"Cup_A": ("select 1", 0.5), "Cup_B": ("select 2", 0.5)} if probabilities is None else probabilities
     return ActionScores(tuple(CandidateScore(name, text, math.log(p), (math.log(p),))
                               for name, (text, p) in probabilities.items()),
                         input_sha256, "fixture_policy", "fixture_scores", "synthetic_complete_action_including_stop",
-                        complete_action_events=True)
+                        complete_action_events=True,
+                        public_select_action_texts=tuple(text for text, p in probabilities.values()),
+                        candidate_domain_source="synthetic_actual_public_select_labels")
 
 
 def step_fixture(world="w0", *, observe=True, rho=0.5, target=None, scores=None):
@@ -45,7 +48,8 @@ def step_fixture(world="w0", *, observe=True, rho=0.5, target=None, scores=None)
         gae_source="synthetic_scalar_GAE_gamma1_lambda1_value0",
         return_definition="undiscounted_sum_of_realized_fixture_rewards_cost_already_included",
         evidence_proof={"synthetic": True, "fixture": "paired_before_observation"},
-        evidence_status="not_entered_verified", evidence_provenance_verified=False, synthetic_fixture=True)
+        evidence_status="not_entered_verified", evidence_provenance_verified=False,
+        tau=1, x_seen_step=None, temporal_proof={"synthetic_table_history": True}, synthetic_fixture=True)
 
 
 def observation(value=7, text="Select the cup by its visible mark.", label=1):
@@ -54,9 +58,10 @@ def observation(value=7, text="Select the cup by its visible mark.", label=1):
 
 
 class FixturePort:
-    def __init__(self, world, frames, evidence=None):
+    def __init__(self, world, frames, evidence=None, seen=None):
         self.world, self.frames = world, frames
         self.evidence = evidence or [False] * len(frames)
+        self.seen = self.evidence if seen is None else seen
         self.index, self.calls, self.actions = 0, [], []
 
     def state(self):
@@ -65,6 +70,9 @@ class FixturePort:
         return EpisodeState(image, {"world_id": self.world, "pair_id": "pool_pair",
             "episode_id": "episode_" + self.world, "decision_index": self.index, "kind": "look_flip",
             "evidence_entered": entered, "evidence_status": "entered" if entered else "not_entered_verified",
+            "tau": next((i for i, flag in enumerate(self.evidence[:self.index + 1]) if flag), None),
+            "x_seen_step": next((i for i, flag in enumerate(self.seen[:self.index + 1]) if flag), None),
+            "table_temporal_proof": {"synthetic_table": True, "step": self.index},
             "evidence_proof": [{"synthetic": True}], "synthetic_backend": True,
             "capture_provenance_verified": False, "evidence_provenance_verified": False,
             "capture": {"capture_id": f"{self.world}_{self.index}", "source_id": f"raw_{self.world}_{self.index}"},
@@ -127,13 +135,13 @@ class CreditMathTests(unittest.TestCase):
         self.assertEqual(result[rows[0].key], result[rows[1].key])
 
     def test_post_evidence_steps_keep_upstream_gae_for_every_arm(self):
-        row = replace(step_fixture(), pre_evidence=False, evidence_status="entered", gae_advantage=-0.123, scores=None)
+        row = replace(step_fixture(), pre_evidence=False, evidence_status="entered", tau=0, gae_advantage=-0.123, scores=None)
         for arm in ("T0", "T1", "T2", "T3", "T4"):
             self.assertEqual(advantages(arm, [row])[row.key], -0.123)
 
-    def test_unconditional_Q_mass_and_complete_action_scoring(self):
+    def test_select_conditional_Q_keeps_raw_mass_and_complete_action_scoring(self):
         scores = score_fixture({"Cup_A": ("select 9", 0.2), "Cup_B": ("select 2", 0.3)})
-        self.assertAlmostEqual(q_commit(scores, "Cup_A"), 0.2)
+        self.assertAlmostEqual(q_commit(scores, "Cup_A"), 0.4)
         self.assertAlmostEqual(scores.record()["candidate_probability_mass"], 0.5)
         self.assertEqual(q_commit(scores, "currently_unmarked_target"), 0.0)
         with self.assertRaises(CreditContractError):
@@ -170,7 +178,7 @@ class CreditMathTests(unittest.TestCase):
     def test_T4_auxiliary_only_after_evidence_on_select(self):
         rows = [step_fixture(world, observe=False) for world in ("w0", "w1")]
         self.assertFalse(consistency_components("T4", rows, forked=True, pair_change="flip")["eligible"])
-        post = [replace(row, pre_evidence=False, evidence_status="entered", input_sha256=str(i) * 64,
+        post = [replace(row, pre_evidence=False, evidence_status="entered", tau=0, x_seen_step=0, input_sha256=str(i) * 64,
                         scores=replace(row.scores, input_sha256=str(i) * 64)) for i, row in enumerate(rows)]
         terms = consistency_components("T4", post, forked=True, pair_change="flip")
         self.assertEqual(terms["weighted_terms"], {"w0": 0.1, "w1": 0.1})
@@ -183,6 +191,70 @@ class CreditMathTests(unittest.TestCase):
             self.assertEqual(len(plan), 64)
             self.assertEqual(len({row["episode_id"] for row in plan}), 64)
             self.assertEqual(len({row["pair_instance_id"] for row in plan}), draws)
+
+    def test_no_marks_and_invalid_outputs_use_the_specified_gae_fallback(self):
+        rows = [replace(step_fixture(world), scores=score_fixture({}),
+                        gae_advantage=2.0 if world == 'w0' else -1.0) for world in ('w0', 'w1')]
+        self.assertIsNone(q_commit(rows[0].scores, 'Cup_A'))
+        for arm in ('T3', 'T4'):
+            measured = advantages(arm, rows)
+            self.assertEqual(measured, {row.key: .5 for row in rows})
+        self.assertEqual(advantages('T2', rows), {row.key: row.gae_advantage for row in rows})
+        invalid = [replace(row, action_kind='invalid', action_text='unparseable', scores=None) for row in rows]
+        self.assertEqual(advantages('T3', invalid), {row.key: .5 for row in invalid})
+        self.assertEqual(advantages('T2', invalid), {row.key: row.gae_advantage for row in invalid})
+        with self.assertRaises(CreditContractError):
+            advantages('T2', [replace(rows[0], scores=None)])  # missing is not an observed empty domain
+
+    def test_T1_T3_gamma_lambda_one_differ_only_by_value_versus_Q_baseline(self):
+        rows = [step_fixture(world) for world in ('w0', 'w1')]
+        value = .2
+        rows = [replace(row, gae_advantage=reference_gae([-.05, 1.0], [value, value], [False, True],
+                        gamma=1.0, gae_lambda=1.0, bootstrap_value=0)[0]) for row in rows]
+        self.assertAlmostEqual(sum(advantages('T1', rows).values()), sum(row.realized_return - value for row in rows))
+        self.assertAlmostEqual(sum(advantages('T3', rows).values()),
+                               sum(row.realized_return - q_commit(row.scores, row.target_name) for row in rows))
+
+    def test_world_token_weights_are_separate_from_shared_advantages(self):
+        for arm in ('T1', 'T3', 'T4'):
+            self.assertEqual(trajectory_loss_weight(arm, 'w0', .25), 1.5)
+            self.assertEqual(trajectory_loss_weight(arm, 'w1', .25), .5)
+        self.assertEqual(trajectory_loss_weight('T2', 'w1', .25), 1.0)
+
+    def test_Q_scores_cover_the_whole_public_domain_and_stay_stable_at_tiny_mass(self):
+        scores = score_fixture({'Cup_A': ('select 1', .2), 'Cup_B': ('select 2', .3)})
+        with self.assertRaises(CreditContractError):
+            q_commit(replace(scores, public_select_action_texts=('select 1',)), 'Cup_A')
+        tiny = replace(scores, candidates=tuple(replace(item, log_probability=-1000.0,
+                            token_log_probabilities=(-1000.0,)) for item in scores.candidates))
+        self.assertEqual(select_distribution(tiny), {'Cup_A': .5, 'Cup_B': .5})
+
+    def test_T4_uses_own_inclusive_seen_boundary_not_tau_or_the_other_world(self):
+        rows = [replace(step_fixture(world, observe=False), decision_index=2,
+            pre_evidence=False, evidence_status='entered', tau=1, x_seen_step=2 if world == 'w0' else None,
+            input_sha256=world, scores=replace(score_fixture(), input_sha256=world)) for world in ('w0', 'w1')]
+        flip = consistency_components('T4', rows, pair_change='flip')
+        self.assertEqual(flip['weighted_terms'], {'w0': .1})
+        self.assertEqual(flip['eligible_by_world'], {'w0': True, 'w1': False})
+        stay_rows = [replace(row, target_name='Cup_A') for row in rows]
+        self.assertFalse(consistency_components('T4', stay_rows, pair_change='stay')['eligible'])
+        future = [replace(row, x_seen_step=3) for row in rows]
+        self.assertFalse(consistency_components('T4', future, pair_change='flip')['eligible'])
+        with self.assertRaises(UnsupportedCredit):
+            advantages('T2', [replace(step_fixture(), tau=0)])  # pre flag contradicts tau
+
+    def test_eligible_Stay_uses_actual_candidate_normalization_and_stable_name_support(self):
+        scores = [score_fixture({'Cup_A': ('select 1', .3), 'Cup_B': ('select 2', .1)}),
+                  score_fixture({'Cup_B': ('select 2', .3), 'Cup_A': ('select 1', .1)})]
+        rows = [replace(step_fixture(world, observe=False, target='Cup_A'), pre_evidence=False,
+                        evidence_status='entered', tau=0, x_seen_step=0, input_sha256=world,
+                        scores=replace(scores[index], input_sha256=world))
+                for index, world in enumerate(('w0', 'w1'))]
+        terms = consistency_components('T4', rows, pair_change='stay', kl_convention='half_sum')
+        self.assertAlmostEqual(terms['weighted_terms'], .1 * .5 * math.log(3))
+        with self.assertRaises(CreditContractError):
+            consistency_components('T4', rows, pair_change='stay', kl_convention='half_sum',
+                stay_distributions={world: {'Cup_A': .5, 'Cup_B': .5} for world in ('w0', 'w1')})
 
 
 class TorchGradientTests(unittest.TestCase):
@@ -286,10 +358,10 @@ class PairedRolloutTests(unittest.TestCase):
             self.assertFalse(hasattr(context, "privileged"))
             self.assertNotIn("PRIVATE_TARGET", repr(context))
             calls.append(context)
-            return PolicySample("turn_left", "public response: turn_left", "fixture_policy", f"sample_{len(calls)}", 4)
+            return PolicySample("turn_left", "public response: turn_left", "fixture_policy", f"sample_{len(calls)}", 4, (-.1,) * 4)
         return sample, calls
 
-    def test_one_shared_sample_then_permanent_fork_without_promoting_noise(self):
+    def test_different_full_history_stays_different_despite_equal_current_frame(self):
         ports = {"w0": FixturePort("w0", [observation(7), observation(8), observation(9), observation(9)]),
                  "w1": FixturePort("w1", [observation(7), observation(10), observation(9), observation(9)])}
         policy, calls = self.policy()
@@ -315,6 +387,50 @@ class PairedRolloutTests(unittest.TestCase):
         ports = {world: FixturePort(world, [observation(), observation()]) for world in ("w0", "w1")}
         with self.assertRaises(CreditContractError):
             collect_pair(ports, self.policy()[0], max_decisions=1, max_response_tokens=256, prompt_contract="fixture", pair_instance_id="draw_0")
+
+    def test_P_cached_source_identity_is_private_and_shared_tokens_count_once(self):
+        class SharedCachePort(FixturePort):
+            def state(self):
+                state = super().state()
+                private = dict(state.privileged, capture={'capture_id': 'same_cache', 'source_id': 'w0_cache'},
+                               raw_rgb_sha256='different_raw_' + self.world)
+                return EpisodeState(state.public, private)
+        ports = {world: SharedCachePort(world, [observation(), observation()]) for world in ('w0', 'w1')}
+        policy, calls = self.policy()
+        result = collect_pair(ports, policy, max_decisions=1, max_response_tokens=256,
+                              prompt_contract='fixture', pair_instance_id='draw_0', allow_synthetic=True)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(result['actual_generated_token_count'], 4)
+        self.assertEqual(result['logical_trajectory_token_count'], 8)
+        self.assertEqual(result['decisions_by_world']['w0'][0]['response_token_log_probabilities'],
+                         result['decisions_by_world']['w1'][0]['response_token_log_probabilities'])
+
+    def test_exact_actual_prompt_can_reshare_without_a_permanent_fork_latch(self):
+        # Scripted actual model-token inputs isolate the dedup state machine.
+        # This is not a claim about a real tokenizer or T04 history serialization.
+        ports = {'w0': FixturePort('w0', [observation()] * 4),
+                 'w1': FixturePort('w1', [observation(), observation(text='alternate'), observation(), observation()])}
+        def builder(context):
+            base = synthetic_prompt(context)
+            tokens = (9,) if len(context.observations) == 2 and context.observations[-1].text == 'alternate' else (1,)
+            return PreparedPrompt(ModelPrompt(base.prompt.images, tokens, 'explicit_scripted_fixture_prompt'), context.sha256)
+        policy, calls = self.policy()
+        result = collect_pair(ports, policy, max_decisions=3, max_response_tokens=256,
+                              prompt_contract='fixture', pair_instance_id='draw_0', allow_synthetic=True, prompt_builder=builder)
+        self.assertEqual(len(calls), 4)
+        self.assertEqual([item['shared'] for item in result['sharing_by_round']], [True, False, True])
+        self.assertEqual(ports['w0'].calls[2], ports['w1'].calls[2])
+
+    def test_prompt_tokens_and_all_images_not_just_a_digest_control_sharing(self):
+        ports = {'w0': FixturePort('w0', [observation(), observation()]),
+                 'w1': FixturePort('w1', [observation(9), observation(9)])}
+        def builder(context):
+            image = context.observations[0]
+            return PreparedPrompt(ModelPrompt(((image.rgb, 2, 2, 'uint8', 3),), (1,), 'fixture'), context.sha256)
+        policy, calls = self.policy()
+        collect_pair(ports, policy, max_decisions=1, max_response_tokens=256, prompt_contract='fixture',
+                     pair_instance_id='draw_0', allow_synthetic=True, prompt_builder=builder)
+        self.assertEqual(len(calls), 2)
 
 
 class RawRecordingTests(unittest.TestCase):
@@ -361,6 +477,10 @@ class RawRecordingTests(unittest.TestCase):
             self.assertEqual({row["decision"]["world_id"] for row in raw}, {"w0", "w1"})
             self.assertEqual(raw[0]["completed_optimizer_updates_before"], 0)
             self.assertIn("same_world_unaveraged_credit", raw[0])
+            units = [row for row in events if row['kind'] == 's1_independent_decision_unit']
+            self.assertEqual(len(units), 20 * 32)
+            self.assertAlmostEqual(units[0]['c_u'], .45)
+            self.assertEqual(units[0]['episode_equivalent_divisor'], 2)
             evaluation = next(row for row in events if row["kind"] == "s2_evaluation")
             self.assertEqual(evaluation["actual_completed_optimizer_updates"], 20)
             self.assertIsNone(evaluation["auc"])
@@ -385,6 +505,26 @@ class RawRecordingTests(unittest.TestCase):
             index = recorder.close()
             self.assertEqual(index["actual_completed_optimizer_updates"], 0)
 
+    def test_recorded_episode_and_physical_token_counts_are_consistent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = RawTrainingRecorder(Path(directory) / 'journal', run_id='fixture', arm='T3', seed=0,
+                rho=.5, common_config_sha256='b' * 64, holdout=self.holdout(directory), allow_synthetic=True)
+            plan, rows, applied, summaries = self.batch()
+            summaries = {key: dict(value, logical_trajectory_token_count=8) for key, value in summaries.items()}
+            accounting = {'physical_policy_sampling_calls': 96, 'actual_generated_token_count': 384,
+                          'logical_trajectory_token_count': 512, 'teacher_forced_scoring_calls': 32}
+            options = dict(applied_advantages=applied, advantage_transform='identity', policy_id='fixture_policy')
+            broken = copy.deepcopy(summaries)
+            broken[plan[0]['episode_id']]['environment_steps'] = 1
+            with self.assertRaises(CreditContractError):
+                recorder.begin_update(plan, rows, episode_summaries=broken, rollout_accounting=accounting, **options)
+            with self.assertRaises(CreditContractError):
+                recorder.begin_update(plan, rows, episode_summaries=summaries,
+                    rollout_accounting=dict(accounting, actual_generated_token_count=100), **options)
+            recorder.begin_update(plan, rows, episode_summaries=summaries, rollout_accounting=accounting, **options)
+            recorder.finish_update(actual_completed_optimizer_updates=1, policy_checkpoint_id='fixture_1')
+            self.assertTrue(recorder.close()['complete_recording'])
+
     def test_S2_cannot_use_frozen_test_or_training_pairs(self):
         with tempfile.TemporaryDirectory() as directory:
             holdout = self.holdout(directory)
@@ -394,6 +534,23 @@ class RawRecordingTests(unittest.TestCase):
             with self.assertRaises(CreditContractError):
                 TrainingHoldout.load(holdout.manifest_path, train_scenes={"FloorPlan1"}, frozen_test_scenes={"FloorPlan25"},
                                      optimization_pair_ids={"heldout_pair"}, frozen_test_pair_ids=set())
+
+    def test_S1_independent_units_keep_world_weights_and_observed_zero_pre_steps(self):
+        rows = [replace(step_fixture(world, rho=.25), gae_advantage=2 if world == 'w0' else -2)
+                for world in ('w0', 'w1')]
+        plan = [{'episode_id': row.episode_id, 'pair_id': row.pair_id, 'pair_instance_id': row.pair_instance_id,
+                 'world_id': row.world_id, 'rho': row.rho} for row in rows]
+        unit = independent_credit_units('T1', plan, rows, advantages('T1', rows))[0]
+        self.assertEqual(unit['c_u'], 1.0)  # (1.5*2 + .5*(-2))/2
+        self.assertEqual([part['weighted_credit_sum'] for part in unit['world_components']], [3, -1])
+        post = [replace(row, pre_evidence=False, tau=0, evidence_status='entered') for row in rows]
+        zero = independent_credit_units('T1', plan, post, advantages('T1', post))[0]
+        self.assertEqual(zero['c_u'], 0.0)
+        self.assertEqual(len(zero['world_components']), 2)
+        single = independent_credit_units('T0', plan[:1], rows[:1], advantages('T0', rows[:1]))[0]
+        self.assertEqual(single['c_u'], 2)
+        with self.assertRaises(CreditContractError):
+            independent_credit_units('T1', plan, rows[:1], advantages('T1', rows[:1]))
 
 
 if __name__ == "__main__":
