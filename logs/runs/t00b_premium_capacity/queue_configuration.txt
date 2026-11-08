@@ -1,0 +1,324 @@
+Queue: auto
+    queue_type = Route
+    total_jobs = 17
+    state_count = Transit:0 Queued:7 Held:8 Waiting:2 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = False
+    resources_default.queue_charge_rate = 1
+    acl_group_enable = True
+    acl_groups = hpc_hopperusers
+    route_destinations = small,medium,large,special
+    route_held_jobs = False
+    route_waiting_jobs = False
+    enabled = True
+    started = True
+
+Queue: interactive
+    queue_type = Execution
+    Priority = 500
+    total_jobs = 80
+    state_count = Transit:0 Queued:14 Held:57 Waiting:0 Running:9 Exiting:0 Beg
+	un:0 
+    acl_host_enable = False
+    from_route_only = False
+    resources_max.ngpus = 2
+    resources_max.nodes = 1
+    resources_max.walltime = 02:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 01:00:00
+    acl_group_enable = True
+    acl_groups = hpc_hopperusers
+    default_chunk.node_pool = nus_hpc
+    resources_assigned.mem = 2250gb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 120
+    resources_assigned.nodect = 9
+    max_run = [u:PBS_GENERIC=1]
+    enabled = True
+    started = True
+
+Queue: medium
+    queue_type = Execution
+    Priority = 100
+    total_jobs = 48
+    state_count = Transit:0 Queued:41 Held:6 Waiting:0 Running:0 Exiting:0 Begu
+	n:1 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 7
+    resources_max.nodes = 1
+    resources_max.walltime = 48:00:00
+    resources_min.ngpus = 3
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc_medium
+    resources_assigned.mem = 0gb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 0
+    resources_assigned.nodect = 0
+    max_run = [u:PBS_GENERIC=1]
+    enabled = True
+    started = True
+
+Queue: long
+    queue_type = Execution
+    Priority = 100
+    total_jobs = 0
+    state_count = Transit:0 Queued:0 Held:0 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.walltime = 240:00:00
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc
+    enabled = False
+    started = False
+
+Queue: large
+    queue_type = Execution
+    Priority = 100
+    total_jobs = 39
+    state_count = Transit:0 Queued:28 Held:10 Waiting:0 Running:1 Exiting:0 Beg
+	un:0 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 16
+    resources_max.nodes = 2
+    resources_max.walltime = 48:00:00
+    resources_min.ngpus = 8
+    resources_min.walltime = 02:00:01
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc_large
+    resources_assigned.mem = 1800gb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 96
+    resources_assigned.nodect = 1
+    max_run = [u:PBS_GENERIC=1]
+    enabled = True
+    started = True
+
+Queue: small
+    queue_type = Execution
+    Priority = 100
+    total_jobs = 548
+    state_count = Transit:0 Queued:240 Held:226 Waiting:0 Running:79 Exiting:0 
+	Begun:3 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 2
+    resources_max.nodes = 1
+    resources_max.walltime = 72:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc
+    resources_assigned.mem = 19575gb
+    resources_assigned.mpiprocs = 43
+    resources_assigned.ncpus = 1044
+    resources_assigned.nodect = 79
+    max_run = [u:PBS_GENERIC=2]
+    enabled = True
+    started = True
+
+Queue: special
+    queue_type = Execution
+    Priority = 100
+    total_jobs = 0
+    state_count = Transit:0 Queued:0 Held:0 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    acl_user_enable = True
+    acl_users = ccev713@*
+    from_route_only = False
+    resources_max.ngpus = 64
+    resources_max.nodes = 8
+    resources_max.walltime = 48:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 02:00:01
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 02:00:01
+    acl_group_enable = False
+    acl_groups = svuadmin
+    resources_assigned.mem = 0gb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 0
+    resources_assigned.nodect = 0
+    max_run = [u:PBS_GENERIC=12]
+    enabled = False
+    started = True
+
+Queue: AISG_debug
+    queue_type = Execution
+    total_jobs = 22
+    state_count = Transit:0 Queued:0 Held:4 Waiting:0 Running:17 Exiting:0 Begu
+	n:1 
+    acl_host_enable = False
+    from_route_only = False
+    resources_max.ngpus = 128
+    resources_max.nodes = 16
+    resources_max.walltime = 1440:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 0
+    resources_default.walltime = 01:00:00
+    acl_group_enable = True
+    acl_groups = HPC_AISGUsers,svuadmin
+    default_chunk.node_pool = aisg
+    resources_assigned.mem = 5058330624kb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 356
+    resources_assigned.nodect = 17
+    hasnodes = True
+    enabled = True
+    started = True
+
+Queue: AISG_large
+    queue_type = Execution
+    total_jobs = 0
+    state_count = Transit:0 Queued:0 Held:0 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = False
+    resources_max.ngpus = 128
+    resources_max.walltime = 4380:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 0
+    resources_default.walltime = 24:00:00
+    acl_group_enable = True
+    acl_groups = HPC_AISGUsers,svuadmin
+    default_chunk.node_pool = aisg
+    max_run = [u:PBS_GENERIC=36]
+    enabled = True
+    started = True
+
+Queue: AISG_guest
+    queue_type = Execution
+    total_jobs = 0
+    state_count = Transit:0 Queued:0 Held:0 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = False
+    resources_max.walltime = 48:00:00
+    resources_min.walltime = 00:00:00
+    resources_default.walltime = 24:00:00
+    acl_group_enable = True
+    acl_groups = HPC_AISGUsers,svuadmin
+    default_chunk.node_pool = aisg
+    enabled = True
+    started = True
+
+Queue: isc2026
+    queue_type = Execution
+    Priority = 400
+    total_jobs = 0
+    state_count = Transit:0 Queued:0 Held:0 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    acl_users = e1408756,zidni
+    from_route_only = False
+    resources_max.ngpus = 4
+    resources_max.nodes = 2
+    resources_max.walltime = 144:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc
+    max_run = [u:PBS_GENERIC=2]
+    enabled = True
+    started = True
+
+Queue: autox
+    queue_type = Route
+    total_jobs = 2
+    state_count = Transit:0 Queued:0 Held:2 Waiting:0 Running:0 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = False
+    resources_min.walltime = 00:00:00
+    acl_group_enable = False
+    acl_groups = HPC_Users_3201,HPC_Users_3340,svuadmin
+    route_destinations = smallx,mediumx,largex
+    route_held_jobs = False
+    route_waiting_jobs = False
+    enabled = True
+    started = True
+
+Queue: smallx
+    queue_type = Execution
+    Priority = 200
+    total_jobs = 107
+    state_count = Transit:0 Queued:53 Held:20 Waiting:0 Running:34 Exiting:0 Be
+	gun:0 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 2
+    resources_max.nodes = 1
+    resources_max.walltime = 144:00:00
+    resources_min.ngpus = 1
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc
+    resources_assigned.mem = 8775gb
+    resources_assigned.mpiprocs = 2
+    resources_assigned.ncpus = 468
+    resources_assigned.nodect = 34
+    max_run = [u:PBS_GENERIC=3]
+    enabled = True
+    started = True
+
+Queue: mediumx
+    queue_type = Execution
+    Priority = 200
+    total_jobs = 16
+    state_count = Transit:0 Queued:8 Held:0 Waiting:0 Running:8 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 7
+    resources_max.nodes = 1
+    resources_max.walltime = 96:00:00
+    resources_min.ngpus = 3
+    resources_min.walltime = 00:00:00
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc_medium
+    resources_assigned.mem = 7200gb
+    resources_assigned.mpiprocs = 0
+    resources_assigned.ncpus = 384
+    resources_assigned.nodect = 8
+    max_run = [u:PBS_GENERIC=2]
+    enabled = True
+    started = True
+
+Queue: largex
+    queue_type = Execution
+    Priority = 200
+    total_jobs = 17
+    state_count = Transit:0 Queued:8 Held:5 Waiting:0 Running:4 Exiting:0 Begun
+	:0 
+    acl_host_enable = False
+    from_route_only = True
+    resources_max.ngpus = 16
+    resources_max.nodes = 2
+    resources_max.walltime = 48:00:00
+    resources_min.ngpus = 8
+    resources_min.walltime = 02:00:01
+    resources_default.queue_charge_rate = 1
+    resources_default.walltime = 24:00:00
+    default_chunk.node_pool = nus_hpc_large
+    resources_assigned.mem = 7200gb
+    resources_assigned.ncpus = 384
+    resources_assigned.nodect = 4
+    max_run = [u:PBS_GENERIC=1]
+    enabled = True
+    started = True
+

@@ -1,10 +1,23 @@
 # STATUS（共享黑板 —— 所有窗口都读写这里）
 
-当前阶段：T00（Hopper 可行性测试）｜ 下一关卡：D1 选观察后端 → 周一（11/9）晚去留检查点 ｜ 更新：2026-11-07
+当前阶段：T00b + T01（并行执行；T00 不重做）｜ 下一关卡：D1 选观察后端 → 周一（11/9）晚去留检查点 ｜ 更新：2026-11-08
 
 ## 执行方式（2026-11-07 起）
 - Codex 在 Hopper 上执行，规则见 `AGENTS.md`；任务说明和进度见 `tasks/README.md`；Claude 的审查意见在 `reviews/`。
 - 下面 v3.1 时期的旧任务板只作历史参考，以 `tasks/README.md` 为准。
+
+## 当前执行与 premium 核对（2026-11-08）
+
+- 人类明确确认：premium 指 Express/autox。提交统一 `#PBS -q autox`、项目 `CFP04-SF-125`、`cvpr27_` 作业名；不存在另一个名为 premium 的队列。
+- 已用 `hpc autox`、`qstat -Qf`、`qstat -u e1583364`、`pbsnodes -a -F json`、`pbsnodes -aSj` 留存查询。可审计证据：`results/t00b_premium_capacity.json` 及 `logs/runs/t00b_premium_capacity/`。
+- `autox` 路由至 `smallx`（1–2 卡，每用户运行上限 3）、`mediumx`（3–7 卡，上限 2）、`largex`（8–16 卡，上限 1）。三档相加为 6，与人类说明一致；这是运行上限，不是保证立即有空闲卡。`largex` 最短申请 walltime 为 `02:00:01`。
+- 三个执行队列的 `resources_default.queue_charge_rate` 都为 `1`。预算按 PBS 实际分配卡数 × 已结束作业的 `resources_used.walltime` × 作业 `queue_charge_rate` 计算；排队/运行但未有最终会计记录的作业保留整个申请上限 × 费率。T00b+T01 合计不得超过 60 个计费 GPU·小时。队列配置和 PBS 字段不是独立项目余额账单；不宣称已与项目账单对账。
+- 当前三个 CVPR 排队作业 `706354`（2 卡训练）、`706408`（D/E/F/G）、`706410`（旧六场景 T01）已在 `smallx`，因此不需要 qmove、重提或 qdel，新旧作业映射保持相同。未取消任何运行或排队作业。
+- 节点查询中的 NUS HPC 三种资源池共 28 个节点，每节点 8 张 GPU。JSON 对无分配节点省略 `resources_assigned.ngpus`，故聚合器保留未知；同次 `pbsnodes -aSj` 明确显示在线 `hopper-04` 为 `8/8` 空闲，其余 NUS HPC 在线节点为 `0/8`；离线 `hopper-03` 不算可用。资源池/预约/队列约束仍可能阻止调度，不能把这个快照当作可立即获得 8 卡的承诺。
+- 现有 `706408`、`706410` 保持先前已验证 GPU 所在 hopper-29 的约束；新增 4/8 卡测速及 T01 A/B 默认不限定主机。出图正常仅在特定 GPU UUID 上观察到，不推断整台节点永远正常。
+- 后续名额：2 卡训练、D/E/F/G、2 卡厨房 A；4 卡原始拓扑训练、4 卡客厅 B（之后打包冒烟）；单节点 8 卡训练。每卡都有实际工作，T01 每卡 12 CPU、最多 8 个 THOR 实例；新作业每卡启动前出图检查，纯黑退出 86，保留 UUID/节点和失败记录再预算检查重提。
+- 多卡典型排队时长尚未测得；当前 2 卡测速仍排队。每个已结束作业的实际 qtime→stime 已由 `src/tools/pbs_usage.py` 记录；不能用单卡等待推算多卡等待。
+- T00b 诊断/测速与 T01 采集尚未完成。T01 的最大编辑位移和最小相关 mask 像素阈值仍待人类批准，当前只收集证据，不自行放宽逐像素相同标准或宣布试点验收。
 
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
