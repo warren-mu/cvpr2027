@@ -69,11 +69,12 @@ export WANDB_DIR=$t00_work/wandb
 export PYTHONUNBUFFERED=1
 export HYDRA_FULL_ERROR=1
 mkdir -p "$WANDB_DIR"
-export T00_VAGEN_SOURCE=$t00_vagen T00_WORK_DIR=$t00_work T00_MANIFEST=$t00_manifest
+export T00_VAGEN_SOURCE=$t00_vagen T00_WORK_DIR=$t00_work T00_MANIFEST=$t00_manifest T00_RUN_NAME=$t00_name
 export T00_TOTAL_STEPS=${T00_TOTAL_STEPS:-21}
 t00_stage=prepare_official_launcher
 python3 - <<'PY'
 import hashlib, importlib.metadata, importlib.util, json, os, pathlib, shutil, socket, subprocess
+from src.envs.thor_common import prepare_runtime
 source = pathlib.Path(os.environ['T00_VAGEN_SOURCE']).resolve()
 work = pathlib.Path(os.environ['T00_WORK_DIR']).resolve()
 commit = '4e2976d87c0f92c97f9a820803e71908cde5fb71'
@@ -96,14 +97,74 @@ if sha != expected:
 steps = int(os.environ['T00_TOTAL_STEPS'])
 if not 21 <= steps <= 300:
     raise RuntimeError('T00_TOTAL_STEPS must be 21..300; default 21 yields 20 updates in this legacy loop')
-gpu_lines = subprocess.check_output(['nvidia-smi', '--query-gpu=index,uuid,name', '--format=csv,noheader'], text=True).strip().splitlines()
+gpu_lines = subprocess.check_output(['nvidia-smi', '--query-gpu=index,uuid,name', '--format=csv,noheader'], text=True, timeout=30).strip().splitlines()
 if len(gpu_lines) != 1:
     raise RuntimeError('Expected exactly one nvidia-smi GPU inside the PBS allocation')
 gpu_index, gpu_uuid, gpu_name = [part.strip() for part in gpu_lines[0].split(',', 2)]
 visible = os.environ['CUDA_VISIBLE_DEVICES']
 if visible.startswith('GPU-') and not gpu_uuid.startswith(visible):
     raise RuntimeError('Allocated GPU UUID differs from nvidia-smi')
-device = 0 if visible.isdigit() else int(gpu_index)
+runtime = prepare_runtime(os.environ['T00_RUN_NAME'])
+if runtime['gpu_uuid'] != gpu_uuid or runtime['gpu_index'] != int(gpu_index):
+    raise RuntimeError('GPU enumeration changed during allocation preflight')
+device = runtime['controller_gpu_device']
+# AI2-THOR 5 accepts a CUDA index and translates it to Vulkan. Its shared
+# mapping file is otherwise reused without checking the current node's UUIDs.
+# Keep the unmodified official Controller, and never overwrite a stale cache.
+from ai2thor.util.lock import LockEx
+cache_dir = pathlib.Path.home() / '.ai2thor'
+expected_cache_dir = pathlib.Path(runtime['scratch']) / 'ai2thor'
+if not cache_dir.is_dir() or cache_dir.resolve() != expected_cache_dir.resolve():
+    raise RuntimeError('Expected ~/.ai2thor to point to the setup-created scratch ai2thor directory')
+release_dir = cache_dir / 'releases'
+release_dirs = sorted(path.name for path in release_dir.iterdir() if path.is_dir()) if release_dir.exists() else []
+if len(release_dirs) > 2:
+    raise RuntimeError(
+        f'AI2-THOR has {len(release_dirs)} cached release directories; training was not started. '
+        'Upstream retains only three releases, so this guard reserves one slot for a new build. '
+        'Existing releases are preserved; broader cache support requires review.'
+    )
+release_guard = {
+    'path': str(release_dir.resolve()), 'existing_directories': release_dirs,
+    'maximum_existing_directories': 2, 'reserved_new_build_slots': 1,
+    'upstream_retained_release_count': 3,
+}
+cache_path = cache_dir / 'cuda-vulkan-mapping.json'
+cache_key = str(runtime['gpu_index'])
+expected_vulkan = runtime['vulkan_device_index']
+cache_created = False
+try:
+    # Match upstream's .lock filename and lockf convention; do not wait on
+    # another process or silently replace its mapping.
+    with LockEx(str(cache_path), blocking=False):
+        try:
+            with cache_path.open('x') as handle:
+                json.dump({cache_key: expected_vulkan}, handle)
+                handle.write('\n')
+                handle.flush()
+                os.fsync(handle.fileno())
+            cache_created = True
+        except FileExistsError:
+            pass
+        cache_bytes = cache_path.read_bytes()
+        try:
+            mapping = json.loads(cache_bytes)
+        except (ValueError, UnicodeError) as error:
+            raise RuntimeError('Existing AI2-THOR GPU mapping is unreadable; preserved without changes') from error
+        if not isinstance(mapping, dict) or type(mapping.get(cache_key)) is not int or mapping[cache_key] != expected_vulkan:
+            raise RuntimeError(
+                f'Existing AI2-THOR GPU mapping does not match allocated CUDA index {cache_key} '
+                f'and verified Vulkan index {expected_vulkan}; preserved without changes. '
+                'A per-job cache adapter requires review before training.'
+            )
+except BlockingIOError as error:
+    raise RuntimeError('AI2-THOR mapping cache is locked by another process; training was not started') from error
+mapping_cache = {
+    'path': str(cache_path.resolve()), 'created_exclusively': cache_created,
+    'sha256': hashlib.sha256(cache_bytes).hexdigest(),
+    'verified_cuda_index': int(cache_key), 'verified_vulkan_index': expected_vulkan,
+    'shared_cache': True,
+}
 text = original.decode()
 changes = {
     'trainer.n_gpus_per_node=4': 'trainer.n_gpus_per_node=1',
@@ -143,9 +204,13 @@ config = {
     'generated_launcher': str(target), 'pbs_jobid': os.environ['PBS_JOBID'],
     'cuda_visible_devices': visible, 'gpu_uuid': gpu_uuid, 'gpu_name': gpu_name,
     'gpu_device_for_ai2thor': device,
+    'gpu_preflight': runtime, 'ai2thor_mapping_cache': mapping_cache,
+    'ai2thor_release_prune_guard': release_guard,
     'notes': ['Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.',
               'Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.',
               'Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer settings are unchanged.',
+              'Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.',
+              'At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.',
               'Official shell is executed with -e and pipefail so tee cannot hide a training failure.'],
 }
 pathlib.Path(os.environ['T00_MANIFEST']).write_text(json.dumps(config, indent=2) + '\n')
