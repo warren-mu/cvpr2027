@@ -186,3 +186,8 @@ results/t01v2_search_integration_cpu_01.json：222项v2 CPU测试全部通过，
 
 
 已合并4793625与50108ac的上游决定（补充5及D1=P/合同v3.3）。tasks/README.md与T02.md明确：T02的GPU视角表导出依赖T01v2试点通过审查，因此本轮8GPUh范围仍是构造阶段+补充4的一步可见性；完整P后端的D预算BFS、graph_mismatch、non_anchor_divergent和≥200缓存重渲染检查均留到T02，当前不能声称完整METRICS_SPEC已全部通过。补充5本轮如实报告场景/类别的candidate-a目标比例和Stay两侧数量；新版本生成会使用场景+尝试编号固定种子随机Flip方向、交替Stay两侧，不以合成平衡替代实际通过集统计。不会打断/取消现有排队作业。不同规范hash的历史来源将显式区分版本与适用阶段，原日志与结果不改写。上游合并后的审计497文件0FAIL（results/t01v2_backend_decisions_merge_audit.json）。
+
+
+补充4+5核心代码1594e41完成：新solvable入口分别从两world恢复状态，调用既有observation_actions得到各自原生合法域，测量确定性并集中的全部本world合法动作；两个world的可见集合可不同，缺测unknown，不把不可达动作填成0像素。公共首步仍按原X-mask并集通道差>10且≥250验收，新进程见证/物理/D1门槛不变；所有新Look导出包含全动作原生证据与两world可见X审查视角，独立合并器从真实掩码/元数据/动作复算。补充5使用candidate_roles_sha256_view_round_robin_v1：固定seed0+scene+实际attempt编号SHA256决定Flip方向，Stay在展开视角后的实际候选尝试间交替两侧；不伪造缺失侧，也不把proposal顺序平衡当作合格数据已平衡。
+results/t01v2_solvable_integration_cpu_01.json：275项v2 CPU集成测试全部通过（包括新旧生成/证据/角色/导出/历史规范/调度回归）。历史规范只允许明确已知的构造兼容版本并核验来源commit内真实文档hash；旧结果不改写。最终试点的验收范围显式为T01构造+补充4(a)，T02的P后端完整检查仍not_run，full_METRICS_compliance=null。旧Look的正向事后证书将由单独程序从真实已存首步见证帧验证，未测全动作不声称complete_catalog；一侧未看到保持unknown。
+results/t01v2_search_watch_02.json已恢复正式调度观察：2026-11-08 20:26:30 UTC，707255/707257/706354/706682均Q、无分配节点，errors=[]，无自动重提。旧有界monitor20在SSH连接中断后只有已完成观察记录可用，未补造其最终结果。新代码先审计推送，再切换后续外层入口；现有作业不取消。
