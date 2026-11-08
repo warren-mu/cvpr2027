@@ -144,3 +144,7 @@
 4卡测速最终PBS记账：707054.hopper-m-02 F/exit124，分配walltime02:22:08，排队与eligible等待均943秒；实际分配用量9.475555556 GPU·小时，queue_charge_rate=1。results/t00b_monitor16_p4_accounting.json和原始PBS字段保留；Stageout_status=1表示stage-out成功，不能误称失败原因。新预算results/t01v2_after_scale4_budget.json：已结束实际11.683333333，未结束完整预留26.000000000，合计37.683333333/60；T01v2仍预留2.666666667/8。18:34 UTC正式观察厨房707189、客厅707191、2卡706354、8卡706682均Q，原样保留，监控进入下一有界轮次。
 
 T01v2厨房首轮707189完成：12个分片四类均0；FloorPlan1/5/8/9原场景落定预检失败排除，2/3/4/6/11/12缺天然双候选。7/10各160次尝试，分别34/90次w0物理拒绝后出现126/70次证据存储guard失败，最终worker_failed。首轮逐卡gate通过、cleanup无错误、无黑帧；原始scratch及所有失败journal保留。正式汇总results/t01v2_kitchen_r1_summary.json记录全部分片；707189实际0.166666667 GPU·小时、等待1547秒（results/t00b_monitor17_p1_accounting.json）。已触发人类的<5复制规则，下一轮固定用原预检通过的FloorPlan2/3/4/6/7/10/11/12，每卡两scene；客厅707191继续原队列。第二轮每simulator原始scratch证据上限升至2GiB（273e364、14项针对CPU测试通过），portable证明仍128MiB；此为存储保护，不改变2cm/1cm、证据像素或D1验收。首轮真物理拒绝原因正在读原始证据诊断，未改写成通过。
+
+
+2026-11-08 19:00 UTC 前的新预检调整：已拉取人类补充3d91bc1，旧规格原始摆放基准不重标。厨房707189首轮原始诊断已正式归档为results/diag_t01v2_kitchen_r1_physics.json；所查FloorPlan7/10首个w0物理拒绝的编辑偏差分别0.0453748958/0.0230046913m，均真实超过2cm，合法点和parent检查均通过，不能用新基准掩盖这类拒绝。旧客厅707191与刚提交但仍Q的旧预检复制作业707216已按最新人类要求取消，三段证据results/t01v2_stable_cancel_{preflight,qdel,postflight}.json确认两者从未启动；results/t01v2_stable_cancel_accounting.json正式计0 GPUh，等待时间未取得而保留null。原始提交回执与所有失败证据保留。后续厨房全部12scene采用落定快照+50步稳定窗口并合并clone，客厅201..212同样新入口；正在运行的作业未修改。新旧替代映射待新回执后补充。
+诊断与旧复制提交使用的原producer c79e6ea因并发上游task更新曾被rebase；已用保留树的合并将原commit纳入main祖先，保证结果_meta.git_commit可从GitHub追溯，没有修改结果或日志。
