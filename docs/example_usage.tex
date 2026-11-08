@@ -1,0 +1,15 @@
+% 示例：如何在表格和正文中使用 \res{}（可删除本文件）
+% 正文：Our method improves mIoU on ADE20K by \res{gain_miou_ade20k} points over the strongest baseline.
+\begin{table}[t]
+\centering
+\resizebox{0.95\linewidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Method & ADE20K mIoU & Cityscapes mIoU \\
+\midrule
+Baseline & \res{baseline_miou_ade20k} & \res{baseline_miou_cityscapes} \\
+Ours & \textbf{\res{ours_miou_ade20k}}$_{\pm\res{ours_miou_ade20k_std}}$ & \textbf{\res{ours_miou_cityscapes}} \\
+\bottomrule
+\end{tabular}}
+\caption{Main results (mean of 3 seeds).}
+\end{table}
