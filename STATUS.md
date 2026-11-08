@@ -16,7 +16,7 @@
 | 706682 | 8 | 训练测速 | largex | Q / 未分配 |
 
 - 已完成计费2.207777777777778 GPUh；未完成保留41.33333333333333，合计43.541111111111114 /60（results/t00b_premium_budget_12.json）。运行中的申请仍保留全额。
-- 707054仍运行：四卡gate通过，已有首个完整PPO更新中期快照 results/t00b_scale4_update1_snapshot.json，耗时345.462秒、gen243.159秒；不是20步验收或完整测速。清理EBUSY异常保留在训练进度报告。
+- 707054仍运行：四卡gate通过，已有首个完整PPO更新中期快照 results/t00b_scale4_update1_snapshot.json，耗时345.462秒、gen243.159秒；不是20步验收或完整测速。后续已完成更新原始行见中期快照 results/t00b_scale4_midrun_snapshot_02.json；基线仍运行。清理EBUSY异常保留在训练进度报告。
 - 707057自然结束，外层exit1；独立pack退出0、passed=true，报告tasks/T00b.packing.report.md。PBS实际185秒、等待1804秒、计费0.20555555555555555 GPUh；联合账单只计一次，不拆分两个子步骤。
 - 碰撞探针三个场景因原位Teleport拒绝后旋转metadata微变而严格停止，另一个原始落定失败；未放宽标准、未接纳或重标旧世界对。原始证据归档与诊断汇总正在CPU上完成，中档一个名额已释放，后续采集安排需先根据诊断形成可执行修正。
 - R01本轮报告已推送并停等审查；T02/T05 CPU子步骤报告已推送，均不等于完整任务验收。T00b最终报告等待2/4/8卡完整测速；T01等待A/C与诊断结论。T04批量池继续等T01审查，T02后端等D1。
@@ -70,6 +70,8 @@
 - 独立碰撞诊断与打包入口代码2c8b202后，四组CPU测试分别13/8/13/9项通过（results/t01_diag_pack_*_cpu.json）。固定203/204/205/206逐卡比对原查询和暂停物理后的原位数组TeleportObject，保留完整元数据/位图哈希；仅诊断、不输出物理合格标签或接纳世界对。严格状态变化不被忽略，普通诊断失败在已证实清理后允许独立pack继续且整体仍失败；黑帧86或清理不确定立即停。新增重提守卫验证实际probe/pack子链、UUID与原始黑帧PNG，原T01 shard真实Python -u -m argv也有fixture；未放宽黑帧标准。拟在另一中档名额以4卡00:20:00运行诊断后pack，每卡12CPU，无节点限制。
 
 - 六名额已经补齐并正式确认：results/t00b_active_watch_03.json（2026-11-08T15:54:52.370585+00:00）显示706354/706448/706582为smallx，707054/707057为mediumx，706682为largex，全部Q、无host限制。707057.hopper-m-02为新独立碰撞诊断后打包冒烟，run t01_collision_pack_01、4卡00:20:00；回执results/t01_collision_pack_01_submit.json。没有取消作业。新预算results/t00b_premium_budget_11.json：已完成计费2.002222222222222 GPUh，未完成按申请上限预留42.666666666666664，合计44.66888888888889 /60。联合诊断/pack的整作业会计只计一次，不编造两子步骤的独立PBS扣费。
+
+- 碰撞诊断证据归档已完成：代码c2eab0d后12项CPU测试通过，results/t01_collision_summary_01.json汇总验真成功，416个原始文件共82566298字节已由脚本按hash复制到logs/runs/t01_collision_summary_01/evidence。原probe退出1、diagnostic_completed=false、physical_validity/task_acceptance=null保持不变。正式已测对象结果为33个旧列表非空→原位Teleport拒绝、1个旧列表空→拒绝、1个旧列表空→成功；这是有选择停止的未完成诊断，不外推通过率或物理合法性。三个场景的末项有旋转metadata微变，205在落定阶段停止。诊断报告待原始案例审查整理；新采集未提交。
 
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
