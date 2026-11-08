@@ -1,0 +1,10 @@
+diff --git a/STATUS.md b/STATUS.md
+index fee730b..aee980a 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -136,3 +136,5 @@
+ 复制候选后端子步骤：独立模块已提交1312a8d；7项后端控制流+10项CPU政策fixtures均通过（results/t01v2_clone_backend_cpu_01.json、results/t01v2_clone_policy_cpu_01.json）。只验证程序，不含Unity实测/新增GPU用量；第二轮入口仍在接线，尚未提交第二轮作业。
+ 
+ 第二轮提交与首轮汇总子步骤：56549a5新增独立clone入口、同一8/60预算与黑帧门控支持、显式已结束分片汇总器；95项v2 CPU集成测试通过（results/t01v2_clone_infra_cpu_01.json）。首轮源文件未改；数量缺失保持unknown，只有完整四类计数的<5规则触发clone。尚未提交第二轮GPU作业。
++
++4卡测速707054变体已结束（results/t00b_scale4_worker_cache_retry_vllm04.json）：gpu_memory_utilization=0.4记录5个完成更新，但后续validation阶段达到2100.0秒watchdog，exit124，timed_out=True，acceptance_passed=False，cleanup_remaining非空。外层作业记录也exit124。失败原始训练/server/资源/逐帧证据已完整分片归档，必须保留；完成更新的计时只作失败运行诊断，不当成功测速或主实验成本依据。baseline此前20更新成功不改写。PBS最终占用时间、排队时间及扣费待下一次终态记账；预算仍按该作业原12 GPU·小时上限预留。
