@@ -1,0 +1,55 @@
+Direct write is requested for job: 706348.hopper-m-02, but the destination is not usecp-able from hopper-21.cm.cluster
+[run_logged] stamped results/pilot_pairs_probe.json (exit_code=0)
+RUNTIME_CONFIG: {"ai2thor_version": "5.0.0", "controller_gpu_device": 0, "cpu_affinity": [48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70], "cuda_visible_devices": "GPU-1c909297-37ab-846e-db01-342162a7544e", "gpu_index": 0, "gpu_name": "NVIDIA H200", "gpu_uuid": "GPU-1c909297-37ab-846e-db01-342162a7544e", "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/pilot_pairs_probe", "mig_mode": "Disabled", "pbs_jobid": "706348.hopper-m-02", "scratch": "/scratch/e1583364/cvpr2027", "vulkan_device_index": 0}
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 463, in generator_worker
+    row, pictures = build_attempt(sim, config_for_pair, attempt_id, kind, task, rng, directory, row)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 261, in build_attempt
+    chosen = choose_prefix(sim, (w0, w1), task, targets, desired_kind)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 185, in choose_prefix
+    before = [sim.observe(world, state, task) for world in worlds]
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 185, in <listcomp>
+    before = [sim.observe(world, state, task) for world in worlds]
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_simulator.py", line 263, in observe
+    return self.capture(world, state, task, graph)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_simulator.py", line 229, in capture
+    rgb = valid_frame(event, self.config["resolution"]).copy()
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/thor_common.py", line 204, in valid_frame
+    raise RuntimeError(f"Invalid/empty rendered frame: {getattr(frame, 'shape', None)}")
+RuntimeError: Invalid/empty rendered frame: (224, 224, 3)
+T01_ATTEMPT_JSON: {"attempt_id": "pair_00000", "kind": "direct_stay", "status": "rejected", "discard_reasons": ["RuntimeError: Invalid/empty rendered frame: (224, 224, 3)"], "same_input_at_t_strict": null, "prefix_max_abs_diff": null}
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 463, in generator_worker
+    row, pictures = build_attempt(sim, config_for_pair, attempt_id, kind, task, rng, directory, row)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 261, in build_attempt
+    chosen = choose_prefix(sim, (w0, w1), task, targets, desired_kind)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 185, in choose_prefix
+    before = [sim.observe(world, state, task) for world in worlds]
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_generator.py", line 185, in <listcomp>
+    before = [sim.observe(world, state, task) for world in worlds]
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_simulator.py", line 263, in observe
+    return self.capture(world, state, task, graph)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_simulator.py", line 229, in capture
+    rgb = valid_frame(event, self.config["resolution"]).copy()
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/thor_common.py", line 204, in valid_frame
+    raise RuntimeError(f"Invalid/empty rendered frame: {getattr(frame, 'shape', None)}")
+RuntimeError: Invalid/empty rendered frame: (224, 224, 3)
+T01_ATTEMPT_JSON: {"attempt_id": "pair_00001", "kind": "direct_stay", "status": "rejected", "discard_reasons": ["RuntimeError: Invalid/empty rendered frame: (224, 224, 3)"], "same_input_at_t_strict": null, "prefix_max_abs_diff": null}
+T01_ATTEMPT_JSON: {"attempt_id": "pair_00002", "kind": "look_flip", "status": "rejected", "discard_reasons": ["target_not_unique_or_relation_unknown"], "same_input_at_t_strict": null, "prefix_max_abs_diff": null}
+FINAL_METRICS_JSON: {"acceptance_passed": false, "all_attempts_path": "data/world_pairs/pilot_pairs_probe_raw_attempts.jsonl", "attempts": 3, "collect_only": true, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 0}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 2}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 1}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 0}}, "discard_reason_counts": {"direct_flip": {}, "direct_stay": {"RuntimeError: Invalid/empty rendered frame: (224, 224, 3)": 2}, "look_flip": {"target_not_unique_or_relation_unknown": 1}, "look_stay": {}}, "generation_time_denominator": "all attempted pairs with recorded duration, including rejected attempts; not amortized successful-pair cost", "generation_time_observed_attempts": 3, "look_passed_flip_stay_ratio": null, "look_prefix_comparisons": 0, "look_strict_prefix_count": 0, "look_strict_prefix_fraction": null, "mean_pair_generation_seconds": 3.769252394675277, "output_files": [{"path": "data/world_pairs/pilot_pairs_probe_raw_attempts.jsonl", "sha256": "52b63fe804b598f62b9f043a9942fbe89b0328170e2b9cd14ae9f724ce1534f9"}, {"path": "data/world_pairs/pilot_pairs_probe_raw_candidates.jsonl", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}], "passed_pairs_path": null, "pending_pairs_path": null, "pending_prefix_only_by_class": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "raw_candidates_path": "data/world_pairs/pilot_pairs_probe_raw_candidates.jsonl", "review_images": [], "scene_failures": [{"error": "RuntimeError: No relation tasks with duplicate candidate category and unique anchor", "evidence_directory": "/scratch/e1583364/cvpr2027/t01_raw/pilot_pairs_probe/706348.hopper-m-02/FloorPlan2", "scene": "FloorPlan2"}, {"error": "RuntimeError: No relation tasks with duplicate candidate category and unique anchor", "evidence_directory": "/scratch/e1583364/cvpr2027/t01_raw/pilot_pairs_probe/706348.hopper-m-02/FloorPlan202", "scene": "FloorPlan202"}, {"error": "RuntimeError: insufficient_reachable_points_at_required_spacing", "evidence_directory": "/scratch/e1583364/cvpr2027/t01_raw/pilot_pairs_probe/706348.hopper-m-02/FloorPlan25", "scene": "FloorPlan25"}], "status": "completed_search"}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2026-11-08 13:44:10.964937:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 706348.hopper-m-02
+	Project: CFP04-SF-125
+	Exit Status: 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(12), Used(12)
+	CPU Time Used: 00:00:35
+	Memory: Requested(225gb), Used(496764kb)
+	Vmem Used: 87312kb
+	Walltime: Requested(00:15:00), Used(00:01:40)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (hopper-21:ngpus=1:ncpus=12:mem=235929600kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	No GPU-related information available for this job.
