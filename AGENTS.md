@@ -46,6 +46,7 @@ CVPR 2027 投稿：*Don't Reward Lucky Guesses: Counterfactual World Pairs Teach
 
 ## 算力：NUS Hopper（PBS）
 - 每张卡是 H200（约 141GB 显存），配 12 个 CPU 核、225GB 内存。用项目 `CFP04-SF-125` 的 Express 队列（提交方式见 `hpc autox`）。
+- **按人类要求（2026-11-08），所有 GPU 作业都使用 premium。** 具体的队列名或参数，以 `hpc autox`、`qstat -Qf` 和集群说明为准。如果 premium 的计费倍率和普通 Express 不同，要在 STATUS.md 里写明倍率，预算一律按实际扣费的 GPU·小时计算。
 - 这个项目的 GPU·小时余额由项目成员共用。每份报告都要写明本任务用掉多少 GPU·小时，以及对应的 PBS 作业号。
 - 登录节点只做轻量的事：改代码、git、提交和查看作业、几秒钟的检查。所有 GPU 工作都通过 PBS 作业完成。
 - walltime 按需要设紧。交互式作业用完马上结束，不许让卡空等。
