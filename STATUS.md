@@ -142,6 +142,8 @@
 
 - 2026-11-08 晚（Claude 审查）：首批 5 张审查图（logs/review/t01v2_checkpoint_single_02，均为 FloorPlan203 的直接类）没有阻塞问题，可以启动 E2E。只有直接类时，T3 的证据前逻辑测不到，Look 对出来后补跑 E2E 第 5 步。直接 Stay 两对的 X 位移很小，建池时再定最小位移。第二轮 Look 为 0：原因是放置只取最近的 6 个点、`PlaceObjectAtPoint` 只试一个点；另有 3 个场景恢复基线出错。T01v2 补充 6 只改搜索方式，不改阈值。
 
+- 2026-11-08 18:25（人类批准）：T01v2 补充 7。候选放宽为 v0 画面中任意两个可拾取物体（优先同类），指令改为「Select the marked object closest to the <anchor>」，默认不再复制候选；下一轮扩到 40 个训练场景（厨房 1–20、客厅 201–220）。有效性标准、方法和指标都不变。产出世界对是第一优先，暂停新增附属工具。
+
 ## Blockers（需要 lead / 人类拍板）
 - VAGEN 是否发布训练好的 checkpoint 未确认；没有则 ctrl_vagen 需自训。
 - AI2-THOR 能否做到确定性恢复与像素级输入比较；`SetObjectPoses` 需传完整物体列表（未列出的可移动物体会被删除）。由 T00 验证。
