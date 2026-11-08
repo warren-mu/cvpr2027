@@ -1,0 +1,715 @@
+{
+  "metrics": {
+    "status": "review_recorded",
+    "reviews": [
+      {
+        "key": "vagen2025",
+        "verdict": "相符",
+        "description": "Introduction: simulated multi-turn VLM RL and a trainer foundation. Related work: world-model rewards, structured ground-truth evaluation, historical repetition penalty.",
+        "qualification": "Section 4.1 and Appendix D.2 explicitly support the reward/evaluation clauses. Whether our implementation actually includes each baseline remains an implementation/result question, not a bibliographic fact.",
+        "source_url": "https://arxiv.org/html/2510.16907v1",
+        "quote": "To address reward, we developed and implemented a composite reward mechanism that combines structured evaluation with a penalty for historical repetition.",
+        "quote_kind": "sentence",
+        "locator": "Appendix D.2",
+        "citation_lines": [
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 9,
+            "text": "Vision-language models (VLMs) are increasingly trained as such agents with reinforcement learning (RL) in simulation~\\cite{vagen2025,glance2026,seekvln2026}."
+          },
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 35,
+            "text": "\\item Information-set credit and post-evidence consistency objectives that plug into multi-turn PPO for VLM agents~\\cite{vagen2025}, with an analysis showing that they keep the expected credit unchanged while removing between-world variance (\\cref{sec:method})."
+          },
+          {
+            "file": "paper/sections/related.tex",
+            "line": 6,
+            "text": "VAGEN~\\cite{vagen2025} trains VLM agents with multi-turn RL and world-model reasoning rewards, and mitigates templated reasoning with structured ground-truth evaluation and repetition penalties; we build on its trainer and include it as a baseline."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "a69a3318ce6d71a13d97ea18ded60c53a2dfc04bb2a2db41a4b8833275db0dc1"
+      },
+      {
+        "key": "glance2026",
+        "verdict": "部分相符",
+        "description": "Introduction: VLM RL in simulation. Related work: predicted-versus-observed frames as curiosity in the same environments.",
+        "qualification": "Simulation, shared environment suite, and curiosity are supported. Predicted frames is imprecise: linguistic prediction tokens are projected to visual representations and aligned with future observation embeddings; the method does not require predicting RGB frames. Recommend linguistic predictions versus observed visual representations.",
+        "source_url": "https://arxiv.org/html/2605.03782v1",
+        "quote": "We introduce GLANCE, a unified framework that transforms the agent’s linguistic predictions into a source of curiosity-driven exploration.",
+        "quote_kind": "sentence",
+        "locator": "Section 7; mechanism in Sections 3.1–3.3",
+        "citation_lines": [
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 9,
+            "text": "Vision-language models (VLMs) are increasingly trained as such agents with reinforcement learning (RL) in simulation~\\cite{vagen2025,glance2026,seekvln2026}."
+          },
+          {
+            "file": "paper/sections/related.tex",
+            "line": 7,
+            "text": "GLANCE~\\cite{glance2026} rewards the discrepancy between predicted and observed frames as visual curiosity in the same environments."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "675a179bd56031ecdcd2ce81fe8fa37c7fb4dace836a22792c60e6ebbe32ae8b"
+      },
+      {
+        "key": "seekvln2026",
+        "verdict": "相符",
+        "description": "Confident navigation despite missing evidence; same-state seeking versus direct navigation branches credited by later navigation returns. Introduction uses it as a same-world comparison.",
+        "qualification": "The cited design is supported. Our same-prior unbiasedness statement is a conditional mathematical claim of our paper, not an unbiasedness theorem established by this citation.",
+        "source_url": "https://arxiv.org/abs/2609.37353",
+        "quote": "By comparing each evidence-seeking branch with a counterfactual direct-navigation branch from the same state",
+        "quote_kind": "excerpt",
+        "locator": "Abstract, C2PO sentence",
+        "citation_lines": [
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 9,
+            "text": "Vision-language models (VLMs) are increasingly trained as such agents with reinforcement learning (RL) in simulation~\\cite{vagen2025,glance2026,seekvln2026}."
+          },
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 27,
+            "text": "If worlds are sampled from the same prior, a same-world comparison between looking and committing, as in recent evidence-seeking navigation work~\\cite{seekvln2026}, is also unbiased."
+          },
+          {
+            "file": "paper/sections/related.tex",
+            "line": 8,
+            "text": "Closest to us, SeekVLN~\\cite{seekvln2026} observes that VLM navigation agents act confidently when key evidence is missing, and branches from the same state into evidence seeking and direct navigation to credit the seeking decision by the subsequent navigation return."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "5b9010df7e4e598652b52d7f0853934782c3bbe8727b0979d574257199eff757"
+      },
+      {
+        "key": "askforhelp2025",
+        "verdict": "相符",
+        "description": "Deciding when to act versus obtaining clarification under uncertain information.",
+        "qualification": "The information action is asking a human clarification question; do not equate it with our camera/look action.",
+        "source_url": "https://arxiv.org/abs/2504.00907",
+        "quote": "The agent must strategically ask minimal, yet relevant, clarification questions to resolve ambiguity while navigating under partial observability.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 10,
+            "text": "Asking for help~\\cite{askforhelp2025} and compare-before-commit navigation~\\cite{c2nav2026} address related decisions about when to act on uncertain information."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "d4636f032282dc76c681d177a82b9c104994b38c785fef0a91aa95ecdc2ed24c"
+      },
+      {
+        "key": "c2nav2026",
+        "verdict": "相符",
+        "description": "Compare-before-commit navigation addresses decisions under uncertain information.",
+        "qualification": "This is a training-free comparator interface, not an RL credit-assignment method. Current sentence does not claim RL.",
+        "source_url": "https://arxiv.org/abs/2609.15142",
+        "quote": "We instantiate this idea in C2Nav, a training-free framework with three coordinated faculties.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 10,
+            "text": "Asking for help~\\cite{askforhelp2025} and compare-before-commit navigation~\\cite{c2nav2026} address related decisions about when to act on uncertain information."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "1ddfac626eac29223ed13c23abd759fe78faec706f8e7ee60877e50aa48dde67"
+      },
+      {
+        "key": "counterfactualvln2020",
+        "verdict": "相符",
+        "description": "Navigation behavior is encouraged to remain consistent across original and counterfactual environments.",
+        "qualification": "Counterfactual observations are generated as linear combinations; the reference is not evidence of physically restored hidden-world pairs or RGB equality.",
+        "source_url": "https://proceedings.neurips.cc/paper/2020/hash/39016cfe079db1bfb359ca72fcba3fd8-Abstract.html",
+        "quote": "We describe an effective algorithm to generate counterfactual observations on the fly for VLN, as linear combinations of existing environments.",
+        "quote_kind": "sentence",
+        "locator": "Abstract; following sentence states action stability",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 13,
+            "text": "Counterfactual VLN~\\cite{counterfactualvln2020} trains navigation agents to behave consistently across original and counterfactual environments."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "d88e8a925a3a82607e753a46ea2dbc55480bfeb2110caad3a92e0f944a17d4bc"
+      },
+      {
+        "key": "groundingonrequest2026",
+        "verdict": "部分相符",
+        "description": "Flip/Stay image–text conflicts and Counterfactual Twin-Margin supervision on static data, contrasted with interactive evidence acquisition.",
+        "qualification": "Flip/Stay and CTM are supported. Static data is appropriate for the paired training examples, but the paper also reports real-world video evaluation, so it should not be read as image-only evaluation or a general claim that every datum is static.",
+        "source_url": "https://arxiv.org/abs/2610.33841",
+        "quote": "uses paired interventions to teach how answer probabilities should change when the requested evidence changes",
+        "quote_kind": "excerpt",
+        "locator": "Abstract, CTM sentence",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 14,
+            "text": "Grounding on Request~\\cite{groundingonrequest2026} evaluates \\Flip/\\Stay\\ behavior under image--text conflicts and uses a counterfactual twin-margin objective on static data; our consistency terms are related but act only after evidence has been acquired through interaction."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "4a2f31107e69a1d60a15522d2dfd1f5fac0e2552c50f686c8abb0c7d59d06baa"
+      },
+      {
+        "key": "deer3d2025",
+        "verdict": "相符",
+        "description": "Edits 3D scenes to form counterfactual QA supervision for grounding, without embodied evidence-seeking action selection.",
+        "qualification": "Static refers to QA supervision/evaluation, not absence of 3D scene editing. Prefer saying their supervision does not train sequential evidence acquisition.",
+        "source_url": "https://arxiv.org/abs/2511.14086",
+        "quote": "Specifically, given a grounding failure, DEER-3D first identifies the predicate-level error (e.g., attribute or spatial relation).",
+        "quote_kind": "sentence",
+        "locator": "Abstract; following sentence describes scene edits and aligned QA",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 15,
+            "text": "DEER-3D~\\cite{deer3d2025} edits 3D scenes to produce counterfactual question--answer pairs for grounding, and DUEL~\\cite{duel2026} perturbs textual statements in a self-play loop; both are static and do not involve acquiring evidence."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "de100c13efa47e5a20f4f46576ea9daaacaad9d1d2dde787d4a73162d6de4984"
+      },
+      {
+        "key": "duel2026",
+        "verdict": "相符",
+        "description": "Perturbs textual statements in adversarial self-play and verifies them against a given image, rather than acquiring new observations.",
+        "qualification": "The static-image verification distinction is supported; its self-play is still an interactive training loop, so avoid using static to mean no interaction of any kind.",
+        "source_url": "https://arxiv.org/abs/2605.24794",
+        "quote": "A Challenger generates an image-grounded true claim together with a minimally perturbed hard-negative counterpart",
+        "quote_kind": "excerpt",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 15,
+            "text": "DEER-3D~\\cite{deer3d2025} edits 3D scenes to produce counterfactual question--answer pairs for grounding, and DUEL~\\cite{duel2026} perturbs textual statements in a self-play loop; both are static and do not involve acquiring evidence."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "8d554ba6a52ee93464d0f5d0697f7938b95b68bda41a0936e53a686910b7e6f9"
+      },
+      {
+        "key": "thinkingdeltas2026",
+        "verdict": "相符",
+        "description": "Studies static VLM reasoning dependence on image inputs.",
+        "qualification": "Tests image removal and introduces original/masked/perturbed visual triplets. Does not establish our embodied causal or variance claims.",
+        "source_url": "https://arxiv.org/abs/2601.06801",
+        "quote": "DVRP introduces intrinsic supervision via visual triplets, comprising original, masked, and perturbed inputs.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 16,
+            "text": "Several works study how much static VLM reasoning depends on the image~\\cite{thinkingdeltas2026,morethinking2025}."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "0b032d488989c5501c18d9584d36f09b93f61a874906409b8468082fc70e1d32"
+      },
+      {
+        "key": "morethinking2025",
+        "verdict": "相符",
+        "description": "Studies how much static multimodal reasoning depends on visual input.",
+        "qualification": "The source connects longer reasoning with reduced visual attention and hallucination, rather than showing that all reasoning is harmful.",
+        "source_url": "https://arxiv.org/abs/2505.21523",
+        "quote": "Attention analysis shows that longer reasoning chains lead to reduced focus on visual inputs, which contributes to hallucination.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 16,
+            "text": "Several works study how much static VLM reasoning depends on the image~\\cite{thinkingdeltas2026,morethinking2025}."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "b97a954863df056af51561d09e1dd8d475d5b165062fcfd234189ff96aaa5625"
+      },
+      {
+        "key": "encodednotcontrol2026",
+        "verdict": "相符",
+        "description": "Under scene-preserving language interventions, embodied policies often act toward the original goal.",
+        "qualification": "The claim is about the evaluated policies and interventions; do not universalize to all VLA policies.",
+        "source_url": "https://arxiv.org/abs/2610.06235",
+        "quote": "When instructions request a different visible object, all evaluated policies predominantly approach and pick up the incorrect original target associated with the scene.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 17,
+            "text": "For embodied policies, language interventions show that vision-language-action models often execute the original goal~\\cite{encodednotcontrol2026}."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "02c738e5528b5afd903431af59b3d5a7d4d14ee4ae0030e83e68494ff3dd056c"
+      },
+      {
+        "key": "paired2020",
+        "verdict": "相符",
+        "description": "Unsupervised environment design generates challenging environments for an agent.",
+        "qualification": "PAIRED specifically maximizes protagonist–antagonist regret to retain solvability, rather than arbitrary worst-case difficulty.",
+        "source_url": "https://proceedings.neurips.cc/paper/2020/hash/985e9a46e10005356bbaf194249f6856-Abstract.html",
+        "quote": "We call our technique Protagonist Antagonist Induced Regret Environment Design (PAIRED).",
+        "quote_kind": "sentence",
+        "locator": "Abstract; preceding sentences specify regret and solvability",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "0297d8ad67ac7ef3f3d39973d5da85441266e53197398abcf290fa82d498350f"
+      },
+      {
+        "key": "accel2022",
+        "verdict": "相符",
+        "description": "Unsupervised environment design evolves curricula that challenge the current agent.",
+        "qualification": "The reference supports regret-guided curriculum generation, not our hidden-pair validity checks.",
+        "source_url": "https://proceedings.mlr.press/v162/parker-holder22a.html",
+        "quote": "This work proposes harnessing the power of evolution in a principled, regret-based curriculum.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "025bb2ebb866c92b070f7aa44b1baaaa8185a02ed8823e4299dd04bcf65171b7"
+      },
+      {
+        "key": "spade2026",
+        "verdict": "相符",
+        "description": "LLM-driven environment design generates environments for agent training.",
+        "qualification": "These are executable stateful environments for language agents; do not imply that SPADE itself guarantees 3D embodied physical validity.",
+        "source_url": "https://arxiv.org/abs/2608.19197",
+        "quote": "an Environment Designer that writes complete, long-horizon training environments as executable code with an OpenAI Gym-style reset()/step() interface",
+        "quote_kind": "excerpt",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "f78bd7f55082f8fcc0af8136f18b2e2734f16df9987b633a1c7f5a5cc24173fb"
+      },
+      {
+        "key": "simworldstudio2026",
+        "verdict": "相符",
+        "description": "LLM-driven environment design for embodied agents with adaptive difficulty.",
+        "qualification": "The platform uses an evolving coding agent and verifier feedback; this is different from our fixed information-set construction.",
+        "source_url": "https://arxiv.org/abs/2605.09423",
+        "quote": "Generated worlds are exported as Gym-style environments for embodied agent learning.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "26813099a61a506c3db2d3c4f4f0b7fa7e1043d9023a6aa42c4d0368f010179f"
+      },
+      {
+        "key": "qdeg2026",
+        "verdict": "相符",
+        "description": "Quality-diversity red-teaming searches for challenging VLA environments.",
+        "qualification": "The paper explicitly uses quality-diversity optimization and policy-embedding diversity.",
+        "source_url": "https://arxiv.org/abs/2610.14415",
+        "quote": "Q-DEG uses Quality Diversity (QD) optimization to find a set of high-failure environments, while promoting diversity using policy embeddings extracted from the VLA.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "1daf0024968644837e49622449b6d43b80b9f16359d02d7c29acbe69c3581eae"
+      },
+      {
+        "key": "redvla2026",
+        "verdict": "部分相符",
+        "description": "Grouped under quality-diversity red-teaming of VLA policies.",
+        "qualification": "Physical red-teaming and challenging feasible scenes are supported. The method describes risk synthesis followed by trajectory-guided gradient-free risk amplification; the reviewed source does not establish that this is quality-diversity optimization. Separate Q-DEG's quality-diversity claim from RedVLA's physical red-teaming claim.",
+        "source_url": "https://arxiv.org/html/2604.22591v2",
+        "quote": "It iteratively refines the risk factor state through gradient-free optimization guided by trajectory features.",
+        "quote_kind": "sentence",
+        "locator": "Abstract; Section 4.2",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "be447f887d068ee8fb7ca1ad66a3af8e2abec0e52da0cfe48877636588de1fd2"
+      },
+      {
+        "key": "liberoplus2026",
+        "verdict": "相符",
+        "description": "Perturbation benchmark creates environments that challenge an agent.",
+        "qualification": "The CVPR title differs from arXiv 2510.13626; use the conference bibliography while retaining the linkage. It evaluates robustness, not paired-policy credit.",
+        "source_url": "https://arxiv.org/abs/2510.13626",
+        "quote": "Our findings challenge the assumption that high benchmark scores equate to true competency",
+        "quote_kind": "excerpt",
+        "locator": "Abstract; preceding text lists perturbation dimensions",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 20,
+            "text": "Unsupervised environment design~\\cite{paired2020,accel2022}, LLM-driven environment designers~\\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\\cite{liberoplus2026} generate or search for environments that challenge an agent."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "02aa7cc3f478655d12a82916898f5443d7ece836f52e5dabc622399bc013f893"
+      },
+      {
+        "key": "clwm2026",
+        "verdict": "相符",
+        "description": "Studies distinguishable consequences of interventions under partial observability.",
+        "qualification": "Its learned latent representations distinguish action-conditioned futures; this is not a proof of exact observable-prefix equality for our simulator pairs.",
+        "source_url": "https://arxiv.org/abs/2609.05834",
+        "quote": "a contrastive counterfactual objective that separates futures induced by distinct interventions even when their observations look alike",
+        "quote_kind": "excerpt",
+        "locator": "Abstract, CLWM definition",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 24,
+            "text": "Learning counterfactual world models under partial observability~\\cite{clwm2026} studies when action sequences have distinguishable consequences."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "27eab8866fece0b64ffad7ea2cd2765200d659841f971dcc980b9b14aeb3c4ca"
+      },
+      {
+        "key": "gae2016",
+        "verdict": "相符",
+        "description": "General connection to classical variance reduction.",
+        "qualification": "GAE uses value functions and an exponentially weighted advantage estimator, allowing bias. It does not justify our separate stratified hidden-world estimator or an unbiasedness claim; those need our own derivation.",
+        "source_url": "https://arxiv.org/abs/1506.02438",
+        "quote": "using value functions to substantially reduce the variance of policy gradient estimates at the cost of some bias",
+        "quote_kind": "excerpt",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/related.tex",
+            "line": 25,
+            "text": "Our information-set credit is a stratified estimator over hidden world states, related to classical variance reduction~\\cite{gae2016} but applied to evidence-seeking decisions with verified counterfactual worlds."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "81d0192553444378829c73c21d8f1d88d710fb2f62f0e7d595b1f552091b04a5"
+      },
+      {
+        "key": "ai2thor2017",
+        "verdict": "相符",
+        "description": "AI2-THOR is the interactive simulator used for our proposed construction.",
+        "qualification": "The source supports navigation/object interaction; exact restoration, physical validity, and our completed implementation are not established by citing the simulator paper.",
+        "source_url": "https://arxiv.org/abs/1712.05474",
+        "quote": "AI2-THOR consists of near photo-realistic 3D indoor scenes, where AI agents can navigate in the scenes and interact with objects to perform tasks.",
+        "quote_kind": "sentence",
+        "locator": "Abstract",
+        "citation_lines": [
+          {
+            "file": "paper/sections/intro.tex",
+            "line": 34,
+            "text": "\\item A procedure for constructing and validating counterfactual world pairs in AI2-THOR~\\cite{ai2thor2017}, including pixel-level checks of information consistency and evidence visibility (\\cref{sec:setup})."
+          }
+        ],
+        "quote_found_in_saved_source": true,
+        "source_sha256": "a9f765b441d9359cab6daa0bc7ea0110a5ef2df5875a1507a6615e8a821dd265"
+      }
+    ],
+    "judgments_are_editorial": true,
+    "unreviewed_cited_keys": [],
+    "evidence_unconfirmed_keys": [],
+    "editorial_issues": [
+      "glance2026",
+      "groundingonrequest2026",
+      "redvla2026"
+    ],
+    "table": "logs/runs/r01_description_review_retry1/description_review.md",
+    "table_sha256": "a2ac6421ec25e42523bf8ee57403d27d0e5a7bc2c38e01e7b4227e55b78df4cb",
+    "source_requests": [
+      {
+        "url": "https://arxiv.org/html/2510.16907v1",
+        "label": "vagen2025",
+        "retrieved_utc": "2026-11-08T08:31:57.132723+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/html/2510.16907v1",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "a69a3318ce6d71a13d97ea18ded60c53a2dfc04bb2a2db41a4b8833275db0dc1",
+        "file": "logs/runs/r01_description_review_retry1/vagen2025.response"
+      },
+      {
+        "url": "https://arxiv.org/html/2605.03782v1",
+        "label": "glance2026",
+        "retrieved_utc": "2026-11-08T08:32:00.235082+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/html/2605.03782v1",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "675a179bd56031ecdcd2ce81fe8fa37c7fb4dace836a22792c60e6ebbe32ae8b",
+        "file": "logs/runs/r01_description_review_retry1/glance2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2609.37353",
+        "label": "seekvln2026",
+        "retrieved_utc": "2026-11-08T08:32:05.621631+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2609.37353",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "5b9010df7e4e598652b52d7f0853934782c3bbe8727b0979d574257199eff757",
+        "file": "logs/runs/r01_description_review_retry1/seekvln2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2504.00907",
+        "label": "askforhelp2025",
+        "retrieved_utc": "2026-11-08T08:32:10.661339+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2504.00907",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "d4636f032282dc76c681d177a82b9c104994b38c785fef0a91aa95ecdc2ed24c",
+        "file": "logs/runs/r01_description_review_retry1/askforhelp2025.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2609.15142",
+        "label": "c2nav2026",
+        "retrieved_utc": "2026-11-08T08:32:15.706717+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2609.15142",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "1ddfac626eac29223ed13c23abd759fe78faec706f8e7ee60877e50aa48dde67",
+        "file": "logs/runs/r01_description_review_retry1/c2nav2026.response"
+      },
+      {
+        "url": "https://proceedings.neurips.cc/paper/2020/hash/39016cfe079db1bfb359ca72fcba3fd8-Abstract.html",
+        "label": "counterfactualvln2020",
+        "retrieved_utc": "2026-11-08T08:32:20.759287+00:00",
+        "http_status": 200,
+        "final_url": "https://proceedings.neurips.cc/paper/2020/hash/39016cfe079db1bfb359ca72fcba3fd8-Abstract.html",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "d88e8a925a3a82607e753a46ea2dbc55480bfeb2110caad3a92e0f944a17d4bc",
+        "file": "logs/runs/r01_description_review_retry1/counterfactualvln2020.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2610.33841",
+        "label": "groundingonrequest2026",
+        "retrieved_utc": "2026-11-08T08:32:26.610983+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2610.33841",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "4a2f31107e69a1d60a15522d2dfd1f5fac0e2552c50f686c8abb0c7d59d06baa",
+        "file": "logs/runs/r01_description_review_retry1/groundingonrequest2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2511.14086",
+        "label": "deer3d2025",
+        "retrieved_utc": "2026-11-08T08:32:31.652902+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2511.14086",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "de100c13efa47e5a20f4f46576ea9daaacaad9d1d2dde787d4a73162d6de4984",
+        "file": "logs/runs/r01_description_review_retry1/deer3d2025.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2605.24794",
+        "label": "duel2026",
+        "retrieved_utc": "2026-11-08T08:32:36.689612+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2605.24794",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "8d554ba6a52ee93464d0f5d0697f7938b95b68bda41a0936e53a686910b7e6f9",
+        "file": "logs/runs/r01_description_review_retry1/duel2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2601.06801",
+        "label": "thinkingdeltas2026",
+        "retrieved_utc": "2026-11-08T08:32:41.730709+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2601.06801",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "0b032d488989c5501c18d9584d36f09b93f61a874906409b8468082fc70e1d32",
+        "file": "logs/runs/r01_description_review_retry1/thinkingdeltas2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2505.21523",
+        "label": "morethinking2025",
+        "retrieved_utc": "2026-11-08T08:32:46.772345+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2505.21523",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "b97a954863df056af51561d09e1dd8d475d5b165062fcfd234189ff96aaa5625",
+        "file": "logs/runs/r01_description_review_retry1/morethinking2025.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2610.06235",
+        "label": "encodednotcontrol2026",
+        "retrieved_utc": "2026-11-08T08:32:49.875171+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2610.06235",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "02c738e5528b5afd903431af59b3d5a7d4d14ee4ae0030e83e68494ff3dd056c",
+        "file": "logs/runs/r01_description_review_retry1/encodednotcontrol2026.response"
+      },
+      {
+        "url": "https://proceedings.neurips.cc/paper/2020/hash/985e9a46e10005356bbaf194249f6856-Abstract.html",
+        "label": "paired2020",
+        "retrieved_utc": "2026-11-08T08:32:50.136851+00:00",
+        "http_status": 200,
+        "final_url": "https://proceedings.neurips.cc/paper/2020/hash/985e9a46e10005356bbaf194249f6856-Abstract.html",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "0297d8ad67ac7ef3f3d39973d5da85441266e53197398abcf290fa82d498350f",
+        "file": "logs/runs/r01_description_review_retry1/paired2020.response"
+      },
+      {
+        "url": "https://proceedings.mlr.press/v162/parker-holder22a.html",
+        "label": "accel2022",
+        "retrieved_utc": "2026-11-08T08:32:55.940206+00:00",
+        "http_status": 200,
+        "final_url": "https://proceedings.mlr.press/v162/parker-holder22a.html",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "025bb2ebb866c92b070f7aa44b1baaaa8185a02ed8823e4299dd04bcf65171b7",
+        "file": "logs/runs/r01_description_review_retry1/accel2022.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2608.19197",
+        "label": "spade2026",
+        "retrieved_utc": "2026-11-08T08:32:56.213496+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2608.19197",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "f78bd7f55082f8fcc0af8136f18b2e2734f16df9987b633a1c7f5a5cc24173fb",
+        "file": "logs/runs/r01_description_review_retry1/spade2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2605.09423",
+        "label": "simworldstudio2026",
+        "retrieved_utc": "2026-11-08T08:33:01.254566+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2605.09423",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "26813099a61a506c3db2d3c4f4f0b7fa7e1043d9023a6aa42c4d0368f010179f",
+        "file": "logs/runs/r01_description_review_retry1/simworldstudio2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2610.14415",
+        "label": "qdeg2026",
+        "retrieved_utc": "2026-11-08T08:33:06.297872+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2610.14415",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "1daf0024968644837e49622449b6d43b80b9f16359d02d7c29acbe69c3581eae",
+        "file": "logs/runs/r01_description_review_retry1/qdeg2026.response"
+      },
+      {
+        "url": "https://arxiv.org/html/2604.22591v2",
+        "label": "redvla2026",
+        "retrieved_utc": "2026-11-08T08:33:11.339011+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/html/2604.22591v2",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "be447f887d068ee8fb7ca1ad66a3af8e2abec0e52da0cfe48877636588de1fd2",
+        "file": "logs/runs/r01_description_review_retry1/redvla2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2510.13626",
+        "label": "liberoplus2026",
+        "retrieved_utc": "2026-11-08T08:33:16.607581+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2510.13626",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "02aa7cc3f478655d12a82916898f5443d7ece836f52e5dabc622399bc013f893",
+        "file": "logs/runs/r01_description_review_retry1/liberoplus2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/2609.05834",
+        "label": "clwm2026",
+        "retrieved_utc": "2026-11-08T08:33:21.649675+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/2609.05834",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "27eab8866fece0b64ffad7ea2cd2765200d659841f971dcc980b9b14aeb3c4ca",
+        "file": "logs/runs/r01_description_review_retry1/clwm2026.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/1506.02438",
+        "label": "gae2016",
+        "retrieved_utc": "2026-11-08T08:33:26.690683+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/1506.02438",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "81d0192553444378829c73c21d8f1d88d710fb2f62f0e7d595b1f552091b04a5",
+        "file": "logs/runs/r01_description_review_retry1/gae2016.response"
+      },
+      {
+        "url": "https://arxiv.org/abs/1712.05474",
+        "label": "ai2thor2017",
+        "retrieved_utc": "2026-11-08T08:33:31.736134+00:00",
+        "http_status": 200,
+        "final_url": "https://arxiv.org/abs/1712.05474",
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "a9f765b441d9359cab6daa0bc7ea0110a5ef2df5875a1507a6615e8a821dd265",
+        "file": "logs/runs/r01_description_review_retry1/ai2thor2017.response"
+      }
+    ]
+  },
+  "config": {
+    "review_config": "configs/r01_claim_review.json",
+    "review_config_sha256": "dc8e6f6ec5c336b1e3c4fdb3abdb20a2ae2354396b8620e35f81ab003b0b7048",
+    "scope_sha256": {
+      "paper/sections/intro.tex": "eb3fb858880ce187cd8087fb73747db6b6bfadaba5a91002c0abf01ac4c4c0d4",
+      "paper/sections/related.tex": "dbf9c693f940fc8d7f2edbe78811d9292b812d3cffe0071f0a453a751a792439"
+    },
+    "policy": "Editorial source review, not experimental validation. Quotes are short verbatim sentences or explicitly labelled excerpts. Our proposed method and conditional unbiasedness/variance claims require our own proof and results; citations do not validate them."
+  },
+  "_meta": {
+    "name": "r01_description_review_retry1",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.r01_review",
+      "--name",
+      "r01_description_review_retry1"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-08T16:31:56",
+    "log_path": "logs/runs/r01_description_review_retry1.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "14706f0076884b41bdf4a3a834c0fef8e7ba40be",
+    "git_dirty": false,
+    "end": "2026-11-08T16:33:36",
+    "duration_sec": 99.8,
+    "exit_code": 0,
+    "metrics_sha256": "ab4ca39fd46481bc10988bb6dec0c6b13ac8b04868b4fbbaaf7212179e6a29ed"
+  }
+}
