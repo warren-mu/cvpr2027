@@ -280,3 +280,7 @@ t01v2_single_progress_07（22:10:06 UTC）记录厨房12场景均结束且四类
 ### T02 CPU 子步骤 — 正式缓存检查入口
 
 新增正式 >=200 distinct(pair,state) 缓存检查 CLI：完整显式导出集合、固定seed0采样、每对新Controller、同相机逐状态双世界渲染，重读PNG/NPZ和原生动作证据后认证；任何失败/缺失/清理未知都阻断整个流程，不删除失败状态或更换抽样。仅完成CPU代码和独立静态审查，真实GPU检查尚未运行，未宣称T02验收。另修复每对Unity日志路径独立，避免后一个Controller覆盖前一个Player.log；不影响已存实验数据。先提交，再run_logged测试。
+
+### 2026-11-08 22:16 UTC — T02 正式缓存 CPU 检查通过
+
+代码44b9ba1先推送后测试：t02_P_cache_cpu_01 的11项、t02_P_export_cpu_02 的12项、t02_P_table_regression_02 的55项全部通过。实际缓存GPU检查未运行；测试夹具不能作为真实 cache_matches_live 证明，本子步骤GPU用量0。
