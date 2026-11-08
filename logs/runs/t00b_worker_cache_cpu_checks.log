@@ -1,0 +1,81 @@
+# run_logged: python3 src/tools/record_command.py --name t00b_worker_cache_cpu_checks -- python3 -m unittest discover -s tests -p test_t00b_*.py -v
+# start: 2026-11-08T23:41:50
+test_distinct_jobs_and_variants_never_share_compiler_cache (test_t00b_compile_cache.CompileCacheTests) ... ok
+test_existing_run_cache_is_never_reused_or_removed (test_t00b_compile_cache.CompileCacheTests) ... ok
+test_only_generated_cache_paths_change_and_old_state_is_preserved (test_t00b_compile_cache.CompileCacheTests) ... ok
+test_wrong_job_outside_scratch_and_manifest_path_drift_fail_closed (test_t00b_compile_cache.CompileCacheTests) ... ok
+test_artifact_shards_roundtrip_without_deleting_raw (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_black_rgb_cannot_hide_behind_nonzero_alpha (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_console_step_needs_two_phase_boundaries (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_current_packet_dimensions_allow_startup_resolution (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_dropped_event_wrong_scope_or_wrong_gpu_fails (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_frame_cache_and_validation_attribution (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_launcher_only_authorized_changes (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_only_completed_console_records_count_and_all_timings_survive (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_overlay_preserves_source_and_relative_assets (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_phase_token_stays_in_private_file_not_ray_environment (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_pinned_fifo_cached_bytes_do_not_count_as_new_rgb (test_t00b_instrumentation.T00bInstrumentationTests) ... <unknown>:156: DeprecationWarning: invalid escape sequence '\ '
+<unknown>:157: DeprecationWarning: invalid escape sequence '\ '
+<unknown>:156: DeprecationWarning: invalid escape sequence '\ '
+<unknown>:157: DeprecationWarning: invalid escape sequence '\ '
+ok
+test_pinned_vagen_source_anchors_and_launcher (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_variant_baseline_gate_rejects_failure_or_other_allocation (test_t00b_instrumentation.T00bInstrumentationTests) ... ok
+test_controller_caches_are_private_and_gpu_is_selected_by_uuid (test_t00b_runtime.AllocationSelectionTests) ... ok
+test_hardware_and_count_must_match (test_t00b_runtime.AllocationSelectionTests) ... ok
+test_no_duplicate_or_unassigned_gpu (test_t00b_runtime.AllocationSelectionTests) ... ok
+test_numeric_mask_uses_physical_identity (test_t00b_runtime.AllocationSelectionTests) ... ok
+test_uuid_order_is_pbs_order_not_nvml_order (test_t00b_runtime.AllocationSelectionTests) ... ok
+test_authorized_gpu_counts_and_walltime_limits (test_t00b_runtime.BudgetTests) ... ok
+test_changed_charge_rate_reserves_actual_billing_units (test_t00b_runtime.BudgetTests) ... ok
+test_expanded_plan_and_large_queue_minimum (test_t00b_runtime.BudgetTests) ... ok
+test_final_accounting_applies_the_recorded_nonunit_charge_rate (test_t00b_runtime.BudgetTests) ... ok
+test_lost_submission_acknowledgement_does_not_release_budget (test_t00b_runtime.BudgetTests) ... ok
+test_missing_rate_rejects_submission (test_t00b_runtime.BudgetTests) ... ok
+test_only_substantiated_final_accounting_replaces_reservation (test_t00b_runtime.BudgetTests) ... ok
+test_second_submission_cannot_share_output_name (test_t00b_runtime.BudgetTests) ... ok
+test_task_budget_still_applies_with_global_room (test_t00b_runtime.BudgetTests) ... ok
+test_total_budget_also_enforced (test_t00b_runtime.BudgetTests) ... ok
+test_two_gpu_request_reserves_both_cards (test_t00b_runtime.BudgetTests) ... ok
+test_unknown_receipt_reserves_greater_recorded_or_current_rate (test_t00b_runtime.BudgetTests) ... ok
+test_optional_host_accepts_only_compute_hostname (test_t00b_runtime.HostConstraintTests) ... ok
+test_render_changes_only_select_host_and_keeps_gpu_count (test_t00b_runtime.HostConstraintTests) ... ok
+test_black_is_distinct_from_missing_shape_or_cleanup_error (test_t00b_scale.GateFixtures) ... ok
+test_gate_is_tied_to_logged_job_mask_topology_and_pixels (test_t00b_scale.GateFixtures) ... ok
+test_new_equal_bytes_are_frames_but_cached_object_is_not (test_t00b_scale.GateFixtures) ... ok
+test_rgb_black_does_not_accept_alpha_or_missing_pixels (test_t00b_scale.GateFixtures) ... ok
+test_duplicate_anchor_or_invalid_topology_fails_closed (test_t00b_scale.LauncherFixtures) ... ok
+test_topology_and_only_variant_utilization_change (test_t00b_scale.LauncherFixtures) ... ok
+test_eight_gpu_sampling_and_allocation_estimates (test_t00b_scale.ParserFixtures) ... ok
+test_missing_one_gpu_rejects_acceptance (test_t00b_scale.ParserFixtures) ... ok
+test_accounting_deduplicates_and_rejects_conflicting_final_charge_or_wait (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_baseline_stays_eligible_when_later_variant_and_whole_pbs_fail (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_completed_update_thresholds_and_nonfinite_timing (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_declared_variant_topology_and_uuid_evidence_must_match (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_duplicate_paths_run_identities_and_auditor_failure_are_rejected (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_each_exit_and_acceptance_is_required_not_truthy (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_failed_run_with_twenty_updates_retains_raw_but_no_comparison (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_missing_accounting_never_becomes_zero_or_complete (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_missing_slot_stays_null_even_with_successful_history (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_old_two_gpu_schema_does_not_require_optional_scale_count (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_selected_gpu_count_must_match_final_job_even_when_bill_is_self_consistent (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_six_explicit_slots_copy_evidence_and_estimates_without_recomputing (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_slot_and_path_ambiguity_rejected (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_source_audit_hash_final_and_missing_semantics (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_variant_must_reference_explicit_baseline_file_sha_and_job (test_t00b_training_summary.TrainingSummaryTests) ... ok
+test_distinct_workers_and_reused_pid_have_distinct_directories (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_frozen_source_and_config_hashes_and_exclusive_copies (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_manifest_raw_bytes_and_sha_survive_evidence_collection (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_only_two_keys_change_preserving_driver_and_old_cache_evidence (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_overlay_hook_is_sibling_to_env_vars_and_runs_no_compile (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_partial_directory_is_preserved_and_rejected (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_repeated_hook_preserves_manifest_and_worker_cache (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_tampered_existing_worker_manifest_is_rejected_without_rewrite (test_t00b_worker_cache.WorkerCacheTests) ... ok
+test_wrong_job_outside_or_redirected_paths_are_rejected (test_t00b_worker_cache.WorkerCacheTests) ... ok
+
+----------------------------------------------------------------------
+Ran 68 tests in 3.082s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.7221311519970186}
+# exit_code: 0

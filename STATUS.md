@@ -44,6 +44,8 @@
 
 - 4卡缓存隔离重试706732的四卡gate通过，但仍在首次编译时发生.cubin FileNotFoundError，未完成训练更新，vllm04未启动；run级私有目录没有解决问题。失败日志与源码只读检查显示编译流水线put_group后立即读取产物失败，后续查看产物又已存在；不能证明NFS或并发谁是根因。保持官方compile/TP/参数/计时，下一候选为Ray worker启动时隔离缓存，需正式CPU验证和Q状态预检后再部署。该作业等待16205秒、实际分配用量0.2088888888888889 GPUh（`results/t00b_active_watch_02_accounting.json`）；完整失败记录保留。
 
+- Ray worker 缓存候选已完成 CPU 子步骤：部署前正式记录 t00b_worker_cache_preflight 确认原2/8卡训练均为Q；代码提交515b21d后，t00b_worker_cache_cpu_checks通过68项CPU测试（含9项新worker缓存fixture）。每个Ray worker启动时使用独立的scratch缓存，普通编译子进程继承所属worker路径，driver保留run级路径；只修改两项编译缓存变量。冻结hook/config哈希和worker原始manifest进入归档；新增归档发生在完成计时取值之后。CPU成功不证明GPU编译故障已修复，下一步仅按原参数4卡重试706732，保留所有失败证据。
+
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
 | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |

@@ -1,0 +1,25 @@
+diff --git a/STATUS.md b/STATUS.md
+index 3a63973..da37fb3 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -44,6 +44,8 @@
+ 
+ - 4卡缓存隔离重试706732的四卡gate通过，但仍在首次编译时发生.cubin FileNotFoundError，未完成训练更新，vllm04未启动；run级私有目录没有解决问题。失败日志与源码只读检查显示编译流水线put_group后立即读取产物失败，后续查看产物又已存在；不能证明NFS或并发谁是根因。保持官方compile/TP/参数/计时，下一候选为Ray worker启动时隔离缓存，需正式CPU验证和Q状态预检后再部署。该作业等待16205秒、实际分配用量0.2088888888888889 GPUh（`results/t00b_active_watch_02_accounting.json`）；完整失败记录保留。
+ 
++- Ray worker 缓存候选已完成 CPU 子步骤：部署前正式记录 t00b_worker_cache_preflight 确认原2/8卡训练均为Q；代码提交515b21d后，t00b_worker_cache_cpu_checks通过68项CPU测试（含9项新worker缓存fixture）。每个Ray worker启动时使用独立的scratch缓存，普通编译子进程继承所属worker路径，driver保留run级路径；只修改两项编译缓存变量。冻结hook/config哈希和worker原始manifest进入归档；新增归档发生在完成计时取值之后。CPU成功不证明GPU编译故障已修复，下一步仅按原参数4卡重试706732，保留所有失败证据。
++
+ ## 旧任务板（v3.1，已由 tasks/ 取代）
+ 
+ | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
+diff --git a/tasks/T00b.training.progress.report.md b/tasks/T00b.training.progress.report.md
+index 6fc4269..99db567 100644
+--- a/tasks/T00b.training.progress.report.md
++++ b/tasks/T00b.training.progress.report.md
+@@ -124,3 +124,7 @@ FileNotFoundError: [Errno 2] No such file or directory:
+ [最终 PBS 会计](../results/t00b_active_watch_02_accounting.json) 记录 706732 等待 `16205 s`、分配 GPUh `0.2088888888888889`，费率为 1。未用训练命令耗时替代 PBS 用量。共同预算 [budget_10](../results/t00b_premium_budget_10.json) 记录已计费 `2.002222222222222 GPUh`、未完成全申请预留 `29.333333333333332 GPUh`、合计 `31.33555555555556 / 60 GPUh`；包括同时结束的 T01 B，而非仅本训练作业。后续提交仍经完整预算 guard。
+ 
+ [active_watch_02](../results/t00b_active_watch_02.json) 观察中，原 2 卡 706354 与 8 卡 706682 仍 Q，没有取消或动运行中的作业。当前仍无可据以报告的每步训练时长、扩展效率或约 20 次主实验工期建议。
++
++## Ray worker 缓存 CPU 子步骤
++
++代码515b21d后，正式运行results/t00b_worker_cache_cpu_checks.json完成68项CPU检查，退出0；包含9项worker缓存fixture。预检results/t00b_worker_cache_preflight.json确认原2/8卡训练当时均为Q。每个worker独立缓存、编译子进程继承；未改官方拓扑、参数、编译模式或训练计时。此子步骤使用0 GPU·小时；GPU有效性尚未测得，拟原参数4卡03:00:00重试706732，提交时保留12 GPU·小时预算上限。
