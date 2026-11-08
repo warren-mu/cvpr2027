@@ -134,3 +134,5 @@
 按人类最新规则，任何首轮分片任一情况<5对，下一轮启用同一完整SetObjectPoses列表重复source的候选复制，复制只发生在共同基线构造阶段，之后w0→w1仍只编辑X；合法放置、落定和独立回放标准不变。第二轮用独立入口准备，首轮源文件保持冻结。独立合并器新增身份/门控证据绑定与失败来源ledger处理，17个CPU fixtures通过（results/t01v2_merge_cpu_02.json）；这是程序验证，不是GPU科学结果。原始动作证据仍在scratch，当前没有声称数据可脱离scratch完全复核。
 
 复制候选后端子步骤：独立模块已提交1312a8d；7项后端控制流+10项CPU政策fixtures均通过（results/t01v2_clone_backend_cpu_01.json、results/t01v2_clone_policy_cpu_01.json）。只验证程序，不含Unity实测/新增GPU用量；第二轮入口仍在接线，尚未提交第二轮作业。
+
+第二轮提交与首轮汇总子步骤：56549a5新增独立clone入口、同一8/60预算与黑帧门控支持、显式已结束分片汇总器；95项v2 CPU集成测试通过（results/t01v2_clone_infra_cpu_01.json）。首轮源文件未改；数量缺失保持unknown，只有完整四类计数的<5规则触发clone。尚未提交第二轮GPU作业。
