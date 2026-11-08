@@ -113,6 +113,8 @@ t00b_stage=prepare_overlay
 python3 src/tools/t00b_prepare.py --name "$t00b_name" --variant "$t00b_variant" \
   --work-dir "$t00b_work" --log-dir "$t00b_logs" --timeout "$t00b_timeout" \
   --baseline-result "$t00b_repo/results/$t00b_base.json"
+t00b_stage=pretraining_rgb_smoke
+python3 src/tools/t00b_rgb_smoke.py --manifest "$t00b_logs/config.json"
 export PYTHONPATH="$t00b_work/overlay:$t00b_repo${PYTHONPATH:+:$PYTHONPATH}"
 t00b_stage=start_navigation_server
 cd "$t00b_work"
@@ -144,6 +146,14 @@ else:
     raise RuntimeError('Instrumented Navigation server did not become ready; see server.log')
 PY
 t00b_stage=training
+t00b_timeout=$(python3 - "$t00b_timeout" <<'PY'
+import os, sys, time
+remaining = float(os.environ['T00B_DEADLINE_EPOCH']) - time.time() - 180
+if remaining < 300:
+    raise SystemExit('Insufficient job budget after render preflight')
+print(min(float(sys.argv[1]), remaining))
+PY
+)
 python3 "$t00b_repo/src/tools/t00b_monitor.py" \
   --train-log "$t00b_work/train.log" --resource-log "$t00b_work/resources.jsonl" \
   --manifest "$t00b_logs/config.json" --server-pid "$t00b_server_pid" \

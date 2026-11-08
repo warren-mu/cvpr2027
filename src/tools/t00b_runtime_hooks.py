@@ -23,6 +23,44 @@ _writer = None
 _controller_class = None
 _runtime = None
 _context = threading.local()
+_fatal_rgb = None
+
+
+def rgb_wire_observation(body, height, width):
+    """AI2THOR 5 CloudRendering sends raw RGBA, not an encoded PNG.
+
+    Event.add_image drops alpha. A black RGB image with opaque alpha is invalid
+    here even though the complete four-channel byte buffer contains nonzero data.
+    """
+    import numpy as np
+    pixels = height * width
+    channels = len(body) // pixels if pixels and len(body) % pixels == 0 else None
+    shape_valid = channels in (3, 4)
+    any_nonzero = bool(np.frombuffer(body, dtype=np.uint8).reshape(height, width, channels)[..., :3].any()) if shape_valid else None
+    return {"rgb_shape": [height, width, 3], "wire_channels": channels,
+            "rgb_shape_valid": shape_valid, "rgb_any_nonzero": any_nonzero,
+            "rgb_valid": shape_valid and any_nonzero is True}
+
+
+def packet_dimensions(metadata):
+    """Dimensions from THIS wire message, never the preceding raw_metadata."""
+    agents = metadata.get("agents", []) if isinstance(metadata, dict) else []
+    if len(agents) != 1:
+        return None
+    height, width = agents[0].get("screenHeight"), agents[0].get("screenWidth")
+    if type(height) is int and type(width) is int and height > 0 and width > 0:
+        return height, width
+    return None
+
+
+def fail_rgb(row):
+    global _fatal_rgb
+    if _fatal_rgb is None:
+        _fatal_rgb = row
+        failure = Path(os.environ["T00B_FRAME_EVENTS"]).with_name("rgb_failure.json")
+        with failure.open("x") as output:
+            json.dump(row, output, indent=2)
+            output.write("\n")
 
 
 def phase_token():
@@ -53,7 +91,7 @@ def _emit(kind, **fields):
     return row
 
 
-def fifo_packet(server, field_name, body):
+def fifo_packet(server, field_name, body, metadata=None):
     """Called only on a real FIFO wire field, before cached files are reused."""
     if field_name not in ("RGB_IMAGE", "THIRD_PARTY_IMAGE", "METADATA_PATCH"):
         return
@@ -65,13 +103,31 @@ def fifo_packet(server, field_name, body):
             pass
     unity = getattr(server, "unity_proc", None)
     identity = getattr(server, "_t00b_gpu_identity", getattr(_context, "device", None))
+    constructing = getattr(_context, "constructing", False)
+    rgb = {}
+    if field_name != "METADATA_PATCH":
+        shape = packet_dimensions(metadata)
+        rgb = (rgb_wire_observation(body, *shape) if shape else
+               {"rgb_shape": None, "wire_channels": None, "rgb_shape_valid": False,
+                "rgb_any_nonzero": None, "rgb_valid": False})
+        if not constructing and shape != getattr(server, "_t00b_frame_shape", None):
+            rgb.update(rgb_shape_valid=False, rgb_valid=False)
     with _lock:
-        _emit("rgb" if field_name != "METADATA_PATCH" else "cached_metadata",
+        # Before Controller.__init__ returns, Unity can emit 300px startup and
+        # intermediate Reset images. Keep them visible, but validate the final
+        # initialized frame separately before allowing this environment to run.
+        invalid = bool(rgb) and (not rgb["rgb_shape_valid"] or (not constructing and not rgb["rgb_valid"]))
+        row = _emit("invalid_rgb" if invalid else ("rgb" if field_name != "METADATA_PATCH" else "cached_metadata"),
               field_type=field_name, payload_bytes=len(body),
               payload_sha256=hashlib.sha256(body).hexdigest(),
               stream_id=hashlib.sha256(server.server_pipe_path.encode()).hexdigest()[:24],
               unity_pid=getattr(unity, "pid", None), sequence_id=server.sequence_id,
-              action=action, active_requests=_active_requests, gpu_identity=identity)
+              action=action, active_requests=_active_requests, gpu_identity=identity,
+              controller_initialization=constructing, **rgb)
+        if invalid:
+            fail_rgb(row)
+        if _fatal_rgb is not None:
+            raise RuntimeError("Invalid fresh RGB packet (empty, wrong shape, or all-zero RGB); see rgb_failure.json")
 
 
 def install_server(app):
@@ -111,6 +167,8 @@ def install_server(app):
         data = request.get_json(force=True)
         operation, step = data.get("operation"), data.get("step")
         with _lock:
+            if _fatal_rgb is not None:
+                return jsonify({"error": "invalid RGB packet observed", "event_id": _fatal_rgb["event_id"]}), 400
             if _active_requests:
                 # A response can be sent just before Flask teardown runs. The
                 # client retries only this busy barrier; no ambiguous transition.
@@ -194,12 +252,29 @@ def navigation_controller(**kwargs):
             _controller_class = make_controller_class(_runtime, role="navigation")
     device = next(row for row in _runtime["devices"] if row["logical_index"] == kwargs.get("gpu_device", 0))
     _context.device = device
+    _context.frame_shape = (kwargs["height"], kwargs["width"])
+    _context.constructing = True
     try:
         controller = _controller_class(**kwargs)
         controller.server._t00b_gpu_identity = device
+        controller.server._t00b_frame_shape = _context.frame_shape
+        import numpy as np
+        frame = getattr(controller.last_event, "frame", None)
+        valid = (isinstance(frame, np.ndarray) and frame.shape == (*_context.frame_shape, 3)
+                 and frame.dtype == np.uint8 and bool(frame.any()))
+        with _lock:
+            row = _emit("controller_ready", gpu_identity=device, rgb_valid=bool(valid),
+                        rgb_shape=list(frame.shape) if isinstance(frame, np.ndarray) else None,
+                        stream_id=hashlib.sha256(controller.server.server_pipe_path.encode()).hexdigest()[:24])
+            if not valid:
+                fail_rgb(row)
+                controller.stop()
+                raise RuntimeError("Navigation controller initialized with missing, wrong-shape or all-zero RGB")
         return controller
     finally:
         del _context.device
+        del _context.frame_shape
+        del _context.constructing
 
 
 def ray_environment():

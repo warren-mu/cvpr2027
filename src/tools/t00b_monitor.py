@@ -87,6 +87,10 @@ def main():
             console_buffer = ""
             while True:
                 now = time.monotonic()
+                if (Path(manifest["working_directory"]) / "rgb_failure.json").exists():
+                    print("T00B_INVALID_RGB: stopping training; raw failure event retained", flush=True)
+                    returncode = 1
+                    break
                 if interrupted["signal"] is not None or now - started >= args.timeout:
                     timed_out = interrupted["signal"] is None
                     returncode = 124 if timed_out else 128 + interrupted["signal"]

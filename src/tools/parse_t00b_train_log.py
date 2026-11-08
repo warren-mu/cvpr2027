@@ -52,7 +52,7 @@ def frame_summary(rows, completed_steps, hook_sha256, gpu_uuids=None):
     errors, by_step, other, began, ended = [], {}, Counter(), set(), set()
     scope = {"phase": "initialization", "training_step": None, "validation_step": None}
     stack, last_id, server_pid, sessions = [], 0, None, 0
-    cached, rgb = 0, 0
+    cached, rgb, startup_rgb, startup_black = 0, 0, 0, 0
     for row in rows:
         event_id = row.get("event_id")
         if type(event_id) is not int or event_id != last_id + 1:
@@ -95,6 +95,11 @@ def frame_summary(rows, completed_steps, hook_sha256, gpu_uuids=None):
                 errors.append(f"Unknown phase operation {operation}")
             if row.get("failed"):
                 errors.append(f"Phase failed at event {event_id}")
+        elif kind == "invalid_rgb":
+            errors.append(f"Invalid fresh RGB packet at event {event_id}: shape={row.get('rgb_shape')}, nonzero={row.get('rgb_any_nonzero')}")
+        elif kind == "controller_ready":
+            if row.get("rgb_valid") is not True or row.get("rgb_shape") != [255, 255, 3]:
+                errors.append(f"Controller completed initialization with invalid RGB at event {event_id}")
         elif kind in ("rgb", "cached_metadata"):
             if row.get("scope") != scope:
                 errors.append(f"Packet phase mismatch at event {event_id}")
@@ -112,10 +117,16 @@ def frame_summary(rows, completed_steps, hook_sha256, gpu_uuids=None):
                     errors.append("Cached response marked with non-cache field type")
                 continue
             field_type = row.get("field_type")
+            initialization = row.get("controller_initialization") is True
+            if (row.get("rgb_shape_valid") is not True or
+                    (not initialization and (row.get("rgb_valid") is not True or row.get("rgb_any_nonzero") is not True))):
+                errors.append(f"Fresh RGB packet lacks valid nonblack evidence at event {event_id}")
             if field_type not in ("RGB_IMAGE", "THIRD_PARTY_IMAGE"):
                 errors.append(f"Non-RGB transport field counted at event {event_id}")
                 continue
             rgb += 1
+            startup_rgb += initialization
+            startup_black += initialization and row.get("rgb_any_nonzero") is False
             camera = "main" if field_type == "RGB_IMAGE" else "third_party"
             step = scope["training_step"]
             if step is None:
@@ -124,6 +135,8 @@ def frame_summary(rows, completed_steps, hook_sha256, gpu_uuids=None):
                 target = by_step.setdefault(step, Counter())
                 target[f"{scope['phase']}_{camera}"] += 1
                 target[f"total_{camera}"] += 1
+                target["constructor_rgb"] += initialization
+                target["constructor_black_rgb"] += initialization and row.get("rgb_any_nonzero") is False
         else:
             errors.append(f"Unexpected event kind {kind!r}")
         if row.get("scope") != scope:
@@ -145,11 +158,15 @@ def frame_summary(rows, completed_steps, hook_sha256, gpu_uuids=None):
             "validation_main_rgb_frames_within_step": row["validation_main"],
             "validation_third_party_rgb_frames_within_step": row["validation_third_party"],
             "total_new_rgb_frames": row["total_main"] + row["total_third_party"],
+            "constructor_rgb_frames_in_total": row["constructor_rgb"],
+            "constructor_black_rgb_frames_in_total": row["constructor_black_rgb"],
             "phase_begin_observed": step in began, "phase_end_observed": step in ended,
             "console_completed_update": step in completed_steps,
         }
     return {"valid": not errors, "errors": errors, "raw_event_count": len(rows),
             "new_rgb_packet_count_all_phases": rgb, "cached_metadata_response_count": cached,
+            "constructor_rgb_packet_count_all_phases": startup_rgb,
+            "constructor_black_rgb_packet_count_all_phases": startup_black,
             "steps": counts, "rgb_packets_outside_training_steps": dict(other),
             "last_scope": scope, "unclosed_validation_scopes": stack}
 
@@ -171,7 +188,12 @@ def main():
     parser.add_argument("--stage", required=True)
     args = parser.parse_args()
     warnings, config, steps = [], {}, {}
-    archive = {}
+    archive, smoke = {}, {}
+    smoke_path = args.manifest.with_name("rgb_smoke.json")
+    try:
+        smoke = json.loads(smoke_path.read_text())
+    except (OSError, ValueError) as error:
+        warnings.append(f"Unreadable pretraining RGB smoke evidence: {error}")
     try:
         archive = json.loads(args.archive_index.read_text())
         if not archive.get("complete"):
@@ -244,13 +266,14 @@ def main():
         "training_command_exit_code": completion.get("returncode"), "wrapper_exit_code": args.exit_code,
         "timed_out": completion.get("timed_out"),
         "cleanup_remaining": completion.get("cleanup_remaining"),
+        "pretraining_rgb_smoke_passed": smoke.get("passed"),
         "actual_new_rgb_frames_per_training_step": new_frames,
         "required_render_fps_per_training_step": fps,
         "render_frame_accounting": frames, "full_training_estimates": estimates,
     }
     required = config.get("required_completed_updates")
     contiguous = sorted(steps) == list(range(1, len(steps) + 1))
-    passed = (args.exit_code == 0 and completion.get("returncode") == 0
+    passed = (args.exit_code == 0 and completion.get("returncode") == 0 and smoke.get("passed") is True
               and type(required) is int and len(steps) >= required and contiguous
               and frames["valid"] and not missing_timings and len(per_gpu) == 2
               and frames["last_scope"]["phase"] == "idle" and not frames["unclosed_validation_scopes"]
@@ -259,7 +282,7 @@ def main():
     if not passed:
         warnings.append("T00b acceptance not met: exit 0, required completed updates, complete timings, fresh-frame accounting and dual-GPU resources required")
     evidence = []
-    for path in (args.train_log, args.resource_log, args.frame_events, args.manifest, args.archive_index):
+    for path in (args.train_log, args.resource_log, args.frame_events, args.manifest, args.archive_index, smoke_path):
         if path.exists():
             evidence.append({"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
     archive_valid = bool(archive.get("complete"))
@@ -276,9 +299,11 @@ def main():
     result = {"metrics": metrics, "config": config, "acceptance_passed": passed,
               "last_stage": args.stage, "completed_step_timings": {str(k): v for k, v in steps.items()},
               "warnings": warnings, "evidence_files": evidence, "evidence_archive": archive,
+              "pretraining_rgb_smoke": smoke,
               "measurement_notes": [
                   "Only step:<id> plus timing_s/step console records count as completed updates; raw values are rounded upstream.",
                   "RGB counts are fresh FIFO RGB_IMAGE and THIRD_PARTY_IMAGE payloads; metadata-patch cached images are excluded.",
+                  "Fresh-frame totals include separately reported constructor startup overhead; black startup packets are not valid observations. Controller return frames and all later packets must be nonblack RGB.",
                   "Step total includes validation renders performed inside the step; separate training/validation/main/third-party counts remain available.",
                   "Explicit phase barriers reject outstanding server requests; incomplete steps and all initialization/final-validation events are retained.",
                   "required_render_fps is measured fresh step RGB frames / measured step seconds, not model turns or pure simulator benchmark FPS.",

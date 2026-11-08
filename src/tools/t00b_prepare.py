@@ -62,7 +62,7 @@ def instrument(relative, original):
         text = replace_once(text, "            elif field_type is FieldType.METADATA_PATCH:\n",
                             "            elif field_type is FieldType.METADATA_PATCH:\n                _t00b_fifo_packet(self, field_type.name, body)\n")
         text = replace_once(text, "            elif field_type in self.image_fields:\n",
-                            "            elif field_type in self.image_fields:\n                _t00b_fifo_packet(self, field_type.name, body)\n")
+                            "            elif field_type in self.image_fields:\n                _t00b_fifo_packet(self, field_type.name, body, metadata)\n")
     else:
         raise ValueError(f"Unrecognized instrumentation target {relative}")
     ast.parse(text)

@@ -64,7 +64,8 @@ def main():
     args = parser.parse_args()
     result = {"format": "ordered-gzip-byte-shards-v1", "raw_chunk_bytes": RAW_CHUNK_BYTES,
               "max_repository_shard_bytes": MAX_GZIP_BYTES, "files": {}, "errors": []}
-    for name in NAMES:
+    names = NAMES + (("rgb_failure.json",) if (args.raw_dir / "rgb_failure.json").exists() else ())
+    for name in names:
         source = args.raw_dir / name
         if not source.exists():
             result["files"][name] = {"source_path": str(source), "complete": False, "missing": True}
