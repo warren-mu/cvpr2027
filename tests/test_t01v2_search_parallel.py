@@ -34,7 +34,7 @@ class SearchInfraTests(unittest.TestCase):
                 search.main()
             self.assertIs(original.launch_logged, delegate)
 
-    def test_search_cannot_escape_same_eight_hour_subbudget(self):
+    def test_search_cannot_escape_same_sixteen_hour_subbudget(self):
         name = 'pilot_pairs_v2_search_fixture'
         command = ['bash', 'experiments/t01v2_search_pairs.sh', '--name', name]
         self.assertEqual(fixtures.submit.budget_group('T01', name, command), 'T01v2')

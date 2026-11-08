@@ -23,8 +23,8 @@ import uuid
 BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 60.0}
 TOTAL_LIMIT = 60.0
-BUDGET_REVISION = "20261108_premium_charged_60"
-SUBBUDGET_LIMITS = {"T01v2": 8.0}
+BUDGET_REVISION = "20261108_premium_charged_60_t01v2_16_e2e_4"
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0}
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 
 
@@ -32,9 +32,16 @@ def budget_group(task, name, command, declared=None):
     """v2 is a subset of T01/60, never an alternative ledger or a new allowance."""
     named = isinstance(name, str) and (name == "pilot_pairs_v2" or name.startswith("pilot_pairs_v2_"))
     launched = any(isinstance(arg, str) and
-                   (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh", "/t01v2_search_pairs.sh", "/t01v2_solvable_pairs.sh", "/t01v2_isolated_pairs.sh"))
-                    or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel", "src.tools.t01v2_search_parallel", "src.tools.t01v2_solvable_parallel", "src.tools.t01v2_isolated_parallel"))
+                   (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh", "/t01v2_search_pairs.sh", "/t01v2_solvable_pairs.sh", "/t01v2_isolated_pairs.sh", "/t01v2_marked_pairs.sh"))
+                    or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel", "src.tools.t01v2_search_parallel", "src.tools.t01v2_solvable_parallel", "src.tools.t01v2_isolated_parallel", "src.tools.t01v2_marked_parallel"))
                    for arg in (command or []))
+    e2e = isinstance(name, str) and name.startswith("smoke_e2e_")
+    e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
+        or arg == "src.tools.e2e_export") for arg in (command or []))
+    if e2e or e2e_launch or declared == "E2E":
+        if task != "T01" or not e2e or named or launched or declared not in (None, "E2E"):
+            raise ValueError("E2E requires task T01 and a unique smoke_e2e name")
+        return "E2E"
     if declared not in (None, "T01v2"):
         raise ValueError("Unknown phase subbudget")
     group = "T01v2" if named or launched or declared == "T01v2" else None
@@ -280,7 +287,7 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
-    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?)"
+    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
     if any(row["name"] == name for row in state["submissions"]):
@@ -297,12 +304,14 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 60 GPU-hour budget")
     group = budget_group(task, name, [], group)
+    if group == "E2E" and gpus != 1:
+        raise ValueError("E2E uses exactly one GPU per job")
     if group:
         recorded = state.get("accounted_or_reserved_by_subbudget", {}).get(group)
         if isinstance(recorded, bool) or not isinstance(recorded, (int, float)) or not math.isfinite(recorded) or recorded < 0:
-            raise ValueError("Missing or invalid T01v2 measured-plus-reserved subbudget")
+            raise ValueError(f"Missing or invalid {group} measured-plus-reserved subbudget")
         if recorded + proposed > SUBBUDGET_LIMITS[group] + 1e-12:
-            raise ValueError("Request would exceed the T01v2 8 charged GPU-hour pilot subbudget")
+            raise ValueError(f"Request would exceed the {group} {SUBBUDGET_LIMITS[group]:g} charged GPU-hour subbudget")
 
 
 def main():
@@ -339,7 +348,7 @@ def main():
         seconds = wall_seconds(args.walltime)
         group = budget_group(args.task, args.name, command, args.budget_group)
         if group and args.host is not None:
-            raise ValueError("T01v2 uses unpinned Express allocations with the per-card render gate")
+            raise ValueError("Budgeted pilots use unpinned Express allocations with the per-card render gate")
         state = budget_state(repo)
         validate_request(args.task, args.gpus, seconds, args.name, state, group)
     except (ValueError, RuntimeError) as error:

@@ -47,11 +47,11 @@ def write_submission(root, directory, data, receipt=JOB):
 
 class V2BudgetTests(unittest.TestCase):
     def test_subbudget_is_additional_to_global_and_rate_aware(self):
-        submit.validate_request("T01", 2, 1800, "pilot_pairs_v2_next", state(7, 59))
-        for value in (state(7.01, 0), state(0, 59.01)):
+        submit.validate_request("T01", 2, 1800, "pilot_pairs_v2_next", state(15, 59))
+        for value in (state(15.01, 0), state(0, 59.01)):
             with self.assertRaises(ValueError):
                 submit.validate_request("T01", 2, 1800, "pilot_pairs_v2_next", value)
-        doubled = state(7)
+        doubled = state(15)
         doubled["charge_policy"]["rates"]["smallx"] = 2
         with self.assertRaises(ValueError):
             submit.validate_request("T01", 2, 1800, "pilot_pairs_v2_next", doubled)

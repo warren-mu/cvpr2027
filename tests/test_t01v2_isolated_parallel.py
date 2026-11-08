@@ -69,12 +69,12 @@ class IsolatedInfraTests(unittest.TestCase):
         self.assertEqual(isolated.isolated_tags()['attempt_setup_policy'], ATTEMPT_SETUP_POLICY)
         self.assertNotEqual(metrics['attempt_setup_policy'], config['attempt_setup_policy'])
 
-    def test_new_entry_still_uses_same_eight_and_sixty_hour_budget(self):
+    def test_new_entry_still_uses_same_sixteen_and_sixty_hour_budget(self):
         name = 'pilot_pairs_v2_isolated_fixture'
         command = ['bash', 'experiments/t01v2_isolated_pairs.sh', '--name', name]
         self.assertEqual(watch.entrypoint(command, name, ROOT), 't01v2_isolated')
         self.assertEqual(submit.budget_group('T01', name, command), 'T01v2')
-        self.assertEqual(submit.SUBBUDGET_LIMITS['T01v2'], 8.0)
+        self.assertEqual(submit.SUBBUDGET_LIMITS['T01v2'], 16.0)
         self.assertEqual(submit.TOTAL_LIMIT, 60.0)
         for task, bad_name in (('T00b', name), ('T01', 'pilot_unversioned')):
             with self.assertRaises(ValueError):
