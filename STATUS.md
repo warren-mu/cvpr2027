@@ -214,3 +214,8 @@ T02 P代码CPU验证完成：results/t02_P_table_cpu_01.json的44项查表/导�
 T05新规格CPU代码子步骤：Q_commit在完整当前公开select标号集合上归一化；证据前无标号或无法解析输出按GAE回退，T3/T4以世界先验加权后双方使用相同优势。配对提示每轮比较完整图像字节与text token，允许精确重合后重新共享，真实生成token/模型调用单独记账。T4仅在自己t>=τ_seen的select生效，Stay要求两边满足；S1按独立episode/pair_instance保留逐步原始信用及加权c_u（paired只除2一次），包括实际0证据前步单元；S2按实际完成更新每20步记录。配置maximum_episode_rounds_from_T04=5、renormalize_over_select_candidates=true；必做T0/T2/T3/T4、T1应做。生产prompt/scorer、T04冻结配置、GPU冒烟仍未完成，training_execution_enabled=false。先提交后正式CPU测试。
 
 T05新规格CPU验证：results/t05_P_credit_cpu_01.json的32项测试全部通过（包括select归一化/no-mark GAE、共享优势、逐轮实际prompt去重、自己的τ_seen边界、S1/S2/实际回合与token会计及torch梯度）。这是信用与记录层的合成CPU验证，不是T04公共配置冻结、真实模型接线或T05 GPU冒烟验收；GPU用量0。随后补窄接口测试验证真实T02合成查表环境输出能被配对回合层消费。
+
+
+按人类最新7166628排队指令执行：707257（旧2卡客厅）、706354（2卡导航测速）、706682（8卡导航测速）已取消；logs/results中preflight→qdel→postflight三段证明均为Q无分配→qdel exit0→F无分配。results/t01v2_single_cancel_accounting.json正式验证三者实际均0 GPUh，run_count与提交到启动等待时间缺失保留null，不补0。707255厨房4卡保留；其他作业未动。并发monitor21曾先于专用取消核账触发通用核账，因无run_count/用量不能自行认定0而失败；该失败及外层monitor21完整保留，不影响随后通过的专用证据核账。monitor20不完整父log也保留，未补造最终结果。
+客厅拟拆为201–204、205–208、209–212三个独立1卡单元，各walltime=4×500×1.30=2600秒（00:43:20），scene500/outer2570/gate180；无host，Express/autox，完整逐卡出图和黑帧证据规则不变。现有代码支持1卡，不改生成器阈值。先推本记录，再由现有8/60预算守卫逐项检查并提交。全部客厅及其黑帧后继结束后，如果fresh查询厨房707255仍从未启动且Q，再按同样方式取消并拆1–4/5–8/9–12。训练速度改由E2E自己的环境与设置测，不重提取消的导航测速。
+E2E仅在至少2类各1合格且人类转达Claude图审无问题后触发（全1卡，≤4GPUh）；G01仅在每类≥5且同样图审条件后触发，先测每卡2/4/6场景进程吞吐再估算，超过20GPUh报告等批准。图像一产出即推送告知人类，尚未有合格图，不把CPU测试当触发条件。
