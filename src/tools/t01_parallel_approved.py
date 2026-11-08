@@ -120,7 +120,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--partition", choices=("a", "b"), required=True)
+    parser.add_argument("--partition", choices=("a", "b", "legacy"), required=True)
     parser.add_argument("--timeout-seconds", type=float, required=True)
     parser.add_argument("--scene-timeout-seconds", type=float, required=True)
     parser.add_argument("--gate-timeout-seconds", type=float, default=180)
@@ -155,6 +155,8 @@ def main():
     deadline = time.monotonic() + args.timeout_seconds
     try:
         manifest, identity = load_manifest(args.manifest)
+        from src.tools.t01_partition_approved import require_launch_partition
+        require_launch_partition(manifest, args.partition)
         config["manifest"] = identity
         if not config["pbs_jobid"] or not os.environ.get("CVPR_SCRATCH"):
             raise RuntimeError("PBS_JOBID and CVPR_SCRATCH are required")

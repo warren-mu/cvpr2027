@@ -1,0 +1,30 @@
+{
+  "schema_version": 3,
+  "manifest_id": "t01_parallel_approved_v3",
+  "seed": 0,
+  "collect_only": false,
+  "acceptance_policy": "t01_human_20261108",
+  "launch_partition": "legacy",
+  "launch_label": "C",
+  "legacy_logical_source": "legacy_six",
+  "legacy_original_job_number": "706410",
+  "submission_precondition": "Root must verify the previous legacy-six allocation is final before submitting C; this file does not submit or cancel jobs.",
+  "split_policy": "last six kitchens and last six living rooms are whole-scene holdout; 12 of 60",
+  "test_scenes": ["FloorPlan25", "FloorPlan26", "FloorPlan27", "FloorPlan28", "FloorPlan29", "FloorPlan30", "FloorPlan225", "FloorPlan226", "FloorPlan227", "FloorPlan228", "FloorPlan229", "FloorPlan230"],
+  "partitions": {
+    "legacy": {"gpus": 2, "scenes": ["FloorPlan1", "FloorPlan2", "FloorPlan201", "FloorPlan202", "FloorPlan25", "FloorPlan225"]},
+    "a": {"gpus": 2, "scenes": ["FloorPlan3", "FloorPlan4", "FloorPlan5", "FloorPlan6", "FloorPlan7", "FloorPlan8", "FloorPlan9", "FloorPlan10", "FloorPlan11", "FloorPlan12", "FloorPlan13", "FloorPlan14", "FloorPlan15", "FloorPlan16", "FloorPlan17", "FloorPlan18", "FloorPlan19", "FloorPlan20", "FloorPlan21", "FloorPlan22", "FloorPlan23", "FloorPlan24", "FloorPlan26", "FloorPlan27", "FloorPlan28", "FloorPlan29", "FloorPlan30"]},
+    "b": {"gpus": 4, "scenes": ["FloorPlan203", "FloorPlan204", "FloorPlan205", "FloorPlan206", "FloorPlan207", "FloorPlan208", "FloorPlan209", "FloorPlan210", "FloorPlan211", "FloorPlan212", "FloorPlan213", "FloorPlan214", "FloorPlan215", "FloorPlan216", "FloorPlan217", "FloorPlan218", "FloorPlan219", "FloorPlan220", "FloorPlan221", "FloorPlan222", "FloorPlan223", "FloorPlan224", "FloorPlan226", "FloorPlan227", "FloorPlan228", "FloorPlan229", "FloorPlan230"]}
+  },
+  "gpu_assignment": "fixed round robin within each declared ordered partition",
+  "simultaneous_thor_instances_per_gpu": 1,
+  "cpu_cores_per_gpu": 12,
+  "maximum_attempts_per_scene": 40,
+  "notes": [
+    "Only C launches from v3: the same six legacy-owned scenes, now two GPUs with one Unity and twelve disjoint allocated CPU cores per GPU.",
+    "A/B continue using unchanged approved v2; no scene moves between owners and the full sixty-scene holdout split is unchanged.",
+    "No scene or seed replacement on failure. All prior collect-only outcomes remain ledger evidence and are never promoted to approved acceptance.",
+    "Human-approved physical settling and evidence criteria remain unchanged; only exact Look prefixes with all required checks true may pass.",
+    "Queue, billing, timeout and prior-job final-state verification belong to the authorized submitter. No host is selected here."
+  ]
+}

@@ -19,8 +19,8 @@ import shutil
 from src.envs.pair_approved_policy import POLICY, evidence_passes, position_distance
 
 from src.envs.thor_common import ROOT, write_result
-from src.tools.t01_partition_approved import (DEFAULT_MANIFEST, audited_result, candidate_identity, candidate_outcome,
-                                             canonical_hash, load_manifest, sha_file)
+from src.tools.t01_partition_approved import (C_MANIFEST, DEFAULT_MANIFEST, audited_result, candidate_identity, candidate_outcome,
+                                             canonical_hash, load_manifest, require_same_scene_ownership, sha_file)
 from src.tools.t01_partition import DEFAULT_MANIFEST as LEGACY_MANIFEST, load_manifest as load_legacy_manifest
 
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
@@ -42,12 +42,39 @@ def finite_nonnegative(value):
     return type(value) in (int, float) and math.isfinite(value) and value >= 0
 
 
-def require_source_manifest(record, collect_only, approved_ref, legacy_ref):
+def require_source_manifest(record, collect_only, approved_ref, legacy_ref, *, partition=None):
     if type(collect_only) is not bool:
         raise ValueError("Source must identify its collection mode")
-    expected = legacy_ref if collect_only else approved_ref
-    if not isinstance(record, dict) or any(record.get(key) != expected[key] for key in ("sha256", "manifest_id")):
-        raise ValueError("Source manifest does not match its exact v1/v2 measurement policy")
+    expected = [legacy_ref] if collect_only else (approved_ref if isinstance(approved_ref, list) else [approved_ref])
+    matches = [item for item in expected if isinstance(record, dict)
+               and all(record.get(key) == item[key] for key in ("sha256", "manifest_id"))]
+    if len(matches) != 1:
+        raise ValueError("Source manifest does not match one exact registered v1/v2/v3 measurement policy")
+    matched = matches[0]
+    if partition is not None and not collect_only:
+        permitted = {2: ("a", "b"), 3: ("legacy",)}.get(matched.get("schema_version"), ())
+        if partition not in permitted:
+            raise ValueError("Approved source partition is not authorized by its exact manifest version")
+    return matched
+
+
+def validate_leaf_scope(config, scenes, partition, manifest, approved_refs, legacy_ref):
+    """C has one-scene leaves; the historical six-scene run is ledger-only."""
+    if partition not in manifest["partitions"] or any(
+            scene not in manifest["partitions"][partition]["scenes"] for scene in scenes):
+        raise ValueError("Leaf scene is outside its fixed logical owner")
+    if "shard" in config:
+        shard = config["shard"]
+        if not isinstance(shard, dict):
+            raise ValueError("Invalid shard metadata")
+        require_source_manifest(shard.get("manifest"), config.get("collect_only"),
+                                approved_refs, legacy_ref, partition=partition)
+        if (len(scenes) != 1 or config.get("pilot_scenes") != scenes or shard.get("scene") != scenes[0]
+                or shard.get("partition") != partition):
+            raise ValueError("Shard metadata does not match its parent/manifest scene")
+    elif (partition != "legacy" or scenes != manifest["partitions"]["legacy"]["scenes"]
+          or config.get("pilot_scenes") != scenes or config.get("collect_only") is not True):
+        raise ValueError("Only the historical collect-only source may be a monolithic six-scene legacy run")
 
 
 def approved_reasons(row, policy):
@@ -351,9 +378,14 @@ def main():
     try:
         manifest, manifest_ref = load_manifest(args.manifest)
         legacy_manifest, legacy_ref = load_legacy_manifest(LEGACY_MANIFEST)
-        if manifest["partitions"] != legacy_manifest["partitions"] or manifest["test_scenes"] != legacy_manifest["test_scenes"]:
-            raise ValueError("Approved and legacy scene ownership/split differ")
+        registered = [load_manifest(path) for path in (DEFAULT_MANIFEST, C_MANIFEST)]
+        approved_refs = [reference for _, reference in registered]
+        for other_manifest, _ in registered:
+            require_same_scene_ownership(manifest, other_manifest)
+        require_same_scene_ownership(manifest, legacy_manifest)
+        require_source_manifest(manifest_ref, False, approved_refs, legacy_ref)
         config["manifest"], config["legacy_ledger_manifest"] = manifest_ref, legacy_ref
+        config["approved_manifest_catalog"] = approved_refs
         paths = [str((ROOT / path).resolve()) for path in args.source]
         if len(paths) != len(set(paths)):
             raise ValueError("Duplicate explicit source path")
@@ -379,7 +411,8 @@ def main():
             root_partitions[roots[origin]] = partition
             declared = data["config"].get("pilot_scenes", [])
             if is_collection:
-                require_source_manifest(data["config"].get("manifest"), data["config"].get("collect_only"), manifest_ref, legacy_ref)
+                require_source_manifest(data["config"].get("manifest"), data["config"].get("collect_only"),
+                                        approved_refs, legacy_ref, partition=partition)
                 if declared != manifest["partitions"][partition]["scenes"]:
                     raise ValueError("Collection scene manifest differs from the declared partition")
                 if not (data["config"].get("collect_only") is True or
@@ -442,17 +475,7 @@ def main():
             if cfg.get("seed") != manifest["seed"]:
                 raise ValueError("Only the predeclared seed-zero evidence is supported")
             policy = measurement_policy(cfg, measured)
-            if partition == "legacy":
-                if scenes != manifest["partitions"]["legacy"]["scenes"]:
-                    raise ValueError("Legacy source must retain all six reserved scenes")
-                if policy == POLICY["id"]:
-                    require_source_manifest(cfg.get("manifest"), False, manifest_ref, legacy_ref)
-            else:
-                shard = cfg.get("shard", {})
-                require_source_manifest(shard.get("manifest"), cfg.get("collect_only"), manifest_ref, legacy_ref)
-                if (len(scenes) != 1 or cfg.get("pilot_scenes") != scenes or shard.get("scene") != scenes[0]
-                        or shard.get("partition") != partition):
-                    raise ValueError("Shard metadata does not match its parent/manifest scene")
+            validate_leaf_scope(cfg, scenes, partition, manifest, approved_refs, legacy_ref)
             record = {"source": ref, "origin": str(Path(origin).relative_to(ROOT)), "partition": partition,
                       "scenes": scenes, "pbs_jobid": cfg.get("runtime", {}).get("pbs_jobid") or cfg.get("shard", {}).get("pbs_jobid"),
                       "status": measured.get("status"), "recorded_attempts": measured.get("attempts"),

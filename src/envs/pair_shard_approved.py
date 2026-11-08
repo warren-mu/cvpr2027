@@ -9,7 +9,7 @@ import shutil
 import traceback
 
 from src.envs.thor_common import ROOT, interrupted, write_result
-from src.tools.t01_partition_approved import DEFAULT_MANIFEST, audited_result, load_manifest, sha_file
+from src.tools.t01_partition_approved import DEFAULT_MANIFEST, audited_result, load_manifest, require_launch_partition, sha_file
 
 
 def is_black_frame(measurement, resolution):
@@ -69,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--partition", choices=("a", "b"), required=True)
+    parser.add_argument("--partition", choices=("a", "b", "legacy"), required=True)
     parser.add_argument("--scene", required=True)
     parser.add_argument("--gpu-uuid", required=True)
     parser.add_argument("--cpu-list", required=True)
@@ -88,6 +88,7 @@ def main():
         signal.signal(sig, interrupted)
     try:
         manifest, identity = load_manifest(args.manifest)
+        require_launch_partition(manifest, args.partition)
         config["shard"]["manifest"] = identity
         if args.scene not in manifest["partitions"][args.partition]["scenes"]:
             raise ValueError("Scene is outside the declared partition")
