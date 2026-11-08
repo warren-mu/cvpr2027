@@ -12,6 +12,9 @@ import statistics
 
 NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 TIMING = re.compile(r"timing_s/([A-Za-z_]+):(" + NUMBER + r")")
+NAVIGATION_TURNS = re.compile(
+    r"(?<!\S)(train/step/NavigationEnvConfig\([^\r\n)]*\)):(" + NUMBER + r")(?= - |$)"
+)
 STEP = re.compile(r"\bstep:(\d+)\b")
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
@@ -24,7 +27,11 @@ def read_steps(text):
         match = STEP.search(line)
         values = {key: float(value) for key, value in TIMING.findall(line)}
         if match and "step" in values and all(math.isfinite(v) and v >= 0 for v in values.values()):
-            steps[int(match.group(1))] = {"line": line_number, "timing_s": values}
+            turns = {key: float(value) for key, value in NAVIGATION_TURNS.findall(line)
+                     if math.isfinite(float(value)) and float(value) >= 0}
+            steps[int(match.group(1))] = {
+                "line": line_number, "timing_s": values, "navigation_mean_model_turns": turns,
+            }
     return steps
 
 
@@ -89,6 +96,11 @@ def main():
         "training_command_wall_seconds": completion.get("elapsed_seconds"),
         "training_command_exit_code": completion.get("returncode"),
         "wrapper_exit_code": args.exit_code,
+        "navigation_mean_model_turns_by_step": {
+            str(step): entry["navigation_mean_model_turns"] for step, entry in sorted(steps.items())
+        },
+        "actual_new_rgb_frames_per_train_step": None,
+        "required_render_fps": None,
     }
     official_steps = config.get("official_total_training_steps")
     if official_steps is not None:
@@ -115,6 +127,8 @@ def main():
         "measurement_notes": [
             "Only console records containing step:<id> and timing_s/step count as completed updates.",
             "Official console timings are rounded to three decimals; gen includes rollout and remote rendering.",
+            "Navigation train/step scalars are rounded per-configuration mean model turns, retained separately with source lines in completed_step_timings; no weighted global mean is inferred.",
+            "Actual new RGB frames and required render FPS are unmeasured: turns can execute zero to five actions and return a cached frame, reset adds transactions, and transactions do not necessarily produce new images. These counts cannot be recovered from the logged scalar means.",
             "Update time is update_actor + update_critic for the same step; other forward/reward/validation costs remain separate.",
             "Resource peaks are sampled, not guaranteed instantaneous peaks. GPU memory covers the sole allocated board.",
             "CPU 100% means one core; RSS is summed over observed training/server descendants, including shared pages.",

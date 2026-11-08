@@ -78,6 +78,12 @@ import sys
 assert sys.version_info[:2] == (3, 10), f"README requires Python 3.10, found {sys.version}"
 print("Environment:", sys.executable, sys.version)
 PY
+# Observed PBS 706152 startup failure: gym_sokoban imports pkg_resources,
+# which the installed setuptools 84 no longer provides. Version 80.9.0
+# retains that module and supports Python >=3.9, including this Python 3.10.
+# https://github.com/pypa/setuptools/blob/v80.9.0/pyproject.toml
+# https://github.com/pypa/setuptools/blob/v80.9.0/pkg_resources/__init__.py
+python -m pip install setuptools==80.9.0
 [[ "$stage" != --bootstrap ]] || exit 0
 
 init_modules() {
@@ -202,6 +208,19 @@ python -m pip install --no-build-isolation flash-attn==2.7.4.post1
 # Navigation README dependencies are separate from the top-level installation.
 python -m pip install ai2thor==5.0.0 numpy==1.25.1 psutil==6.1.1 nvidia-ml-py==12.560.30
 python -m pip check
+# Metadata consistency alone missed gym_sokoban's legacy pkg_resources import.
+# Validate the actual server and training imports inside this PBS allocation.
+python - <<'PY'
+import importlib
+from vagen.env import REGISTERED_ENV
+if "navigation" not in REGISTERED_ENV:
+    # The registry suppresses optional ImportError; expose its original cause.
+    importlib.import_module("vagen.env.navigation")
+    raise RuntimeError("Navigation was not registered")
+for name in ("vagen.server.server", "torch", "flash_attn", "vllm"):
+    importlib.import_module(name)
+print("SETUP_IMPORT_CHECK: Navigation registered; server, torch, flash_attn, vllm imported")
+PY
 python -m pip freeze
 conda list --explicit
 printf 'SETUP_COMPLETE stage=%s VAGEN=%s VERL=%s XGRAMMAR=%s\n' "$stage" "$VAGEN_COMMIT" "$VERL_COMMIT" "$XGRAMMAR_COMMIT"

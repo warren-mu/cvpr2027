@@ -19,6 +19,8 @@ import re
 import statistics
 import sys
 
+from pbs_usage import queue_wait_record
+
 ROOT = Path(__file__).resolve().parents[2]
 CHECK_FIELDS = (
     "status", "smoke_frame_path", "smoke_frame_shape", "instance_count",
@@ -160,7 +162,7 @@ def allocation_record(job, recorded_hours):
             "allocation_gpu_hours": hours, "basis": basis,
             "pbs_exit_status": fields.get("Exit_status"), "run_count": fields.get("run_count"),
             "exec_host": fields.get("exec_host"), "queue": fields.get("queue"),
-            "project": fields.get("project")}
+            "project": fields.get("project"), **queue_wait_record(fields)}
 
 
 def accounting_summary(inputs):
@@ -221,6 +223,9 @@ def main():
             "Accounting covers the supplied job IDs only; the caller must supply all T00 allocations, including failed attempts.",
             "GPU-hours = allocated GPUs * scheduler measured walltime seconds / 3600; overlapping final job records count once.",
             "GPU-hours are allocation usage, not independently reconciled project credit charges.",
+            "Queue waiting is recomputed from saved final PBS fields, without scheduler queries: queue_wait_seconds=stime-qtime; eligible_wait_seconds=stime-etime.",
+            "PBS timestamp strings use server Asia/Singapore (+08:00); raw and offset-bearing timestamps are retained per job.",
+            "Queue waits are recorded single-run intervals, not cumulative transfer/requeue history; run_count other than 1, missing/invalid timestamps, or negative intervals remain null with reasons.",
             "Single median FPS and total FPS are copied from recorded measurements; single K=1 and concurrent K=1 stay distinct.",
             "CPU cores are measured worker-plus-Unity CPU seconds / measurement walltime; each instance's 1.0 means one core.",
             "Ranges/means use available instance measurements only, with counts; absent measurements remain null, never zero-filled.",
