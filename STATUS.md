@@ -158,3 +158,7 @@ T01v2厨房首轮707189完成：12个分片四类均0；FloorPlan1/5/8/9原场�
 
 补充3执行检查点（635afb6）：已先取消新stable采集707229（厨房4卡20min，替代707216）与707230（客厅2卡40min，替代707191）；二者均Q/no allocation后qdel成功，终态F仍无运行字段。results/t01v2_supp3_cancel_accounting_02.json验证完整三段原始证据，实际均0GPUh；运行次数与排队等待时间缺失仍为null，未补为0。两份原始提交回执和所有取消/失败核账记录均保留。第一份核账失败是记录器使用Python -m入口而旧证据helper只识别文件入口；a6a319b仅新增严格的同一模块argv身份支持，6项CPU边界测试通过，未更改PBS原字段、结果或研究阈值。2卡706354、8卡706682训练任务未动。T01v2实际用量仍为首轮707189的0.1666666667GPUh。
 新增采集暂停于代码整改阶段：锚点/clone源排除规定滚动类别及切片/碎裂变体，天然不移动候选不限；最多6个固定顺序源各fresh Controller，保留天然∪clone组合，组合轮换及连续10物理拒绝退组；raw上限降为存储停止而非worker停止，证据不足的科学候选不会被伪报成可验收数据；增加锚点w0通过/尝试及逐scene clone ledger。将先推代码和CPU测试结果再提交，预算仍8/60。
+
+
+补充3代码与CPU验证（2026-11-08 19:42 UTC）：b40ac6d新增版本化search入口；规定滚动/切片/碎裂类别仅从锚点与clone源排除，天然不移动候选保留；固定首次预检的最多6源，各fresh Controller，首成功即停止，保留天然∪clone组及必要fresh natural fallback。各组合轮换，连续10次实际物理拒绝退组。所有Controller共用scene绝对deadline；每个组合首次查询原生放置点前先恢复共同基线，仍只使用已批准的状态恢复门槛，不要求旧像素零差。raw满后停止保存raw但继续测量与compact记录，证据不全不能入选；原始文件不删除，memory-only引用显式materialized=false；真实黑帧的完整小证明和清理仍须满足严格门槛才可86重提。
+results/t01v2_search_integration_cpu_01.json：222项v2 CPU测试全部通过，覆盖补充3第1–5点及旧入口回归；results/t01v2_search_watch_cpu_01.json：9项phase_watch回归全部通过。results/t01v2_search_code_audit.json审计477文件、0 FAIL。均为CPU程序验证，无新增GPU科学结果；T01v2已结束实际仍0.1666666667GPUh。先推送本代码/测试检查点，再经最新8/60预算guard提交无节点限制的厨房与客厅独立分片；新旧作业映射在实际回执后记录。
