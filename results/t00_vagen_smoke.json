@@ -1,0 +1,168 @@
+{
+  "metrics": {
+    "completed_training_steps": 0,
+    "median_step_seconds": null,
+    "median_rollout_seconds": null,
+    "median_parameter_update_seconds": null,
+    "median_rollout_fraction_of_step": null,
+    "median_update_fraction_of_step": null,
+    "median_actor_update_seconds": null,
+    "median_critic_update_seconds": null,
+    "gpu_memory_peak_mib_sampled": null,
+    "process_tree_cpu_percent_median": null,
+    "process_tree_cpu_percent_peak": null,
+    "process_tree_rss_peak_bytes": null,
+    "resource_sample_count": 0,
+    "training_command_wall_seconds": null,
+    "training_command_exit_code": null,
+    "wrapper_exit_code": 1,
+    "official_config_total_training_steps": 300,
+    "estimated_full_training_hours": null
+  },
+  "config": {
+    "baseline": "official_vagen_base_navigation_not_vagen_full",
+    "vagen_commit": "4e2976d87c0f92c97f9a820803e71908cde5fb71",
+    "official_launcher": "scripts/examples/vagen_base/navigation/run.sh",
+    "official_launcher_sha256": "6465e1ca0ec653dad41471864b59f4d1c2568ebe1c2d121e1fefb20ea1dac3c2",
+    "verl_commit": "3f55021e08b98315213e10d10b709c7f6bbe84f7",
+    "installed_versions": {
+      "torch": "2.6.0",
+      "vllm": "0.8.2",
+      "transformers": "4.49.0",
+      "ai2thor": "5.0.0",
+      "numpy": "1.25.1",
+      "psutil": "6.1.1"
+    },
+    "official_env_config_sha256": "79c4007664f454d8e66ed80340e0d691541fff635244b002d448107a09ab8122",
+    "official_total_training_steps": 300,
+    "configured_total_training_steps": 21,
+    "required_completed_updates": 20,
+    "default_resolution": 255,
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "training_config_changes": {
+      "trainer.n_gpus_per_node=4": "trainer.n_gpus_per_node=1",
+      "actor_rollout_ref.rollout.tensor_model_parallel_size=4": "actor_rollout_ref.rollout.tensor_model_parallel_size=1",
+      "trainer.total_training_steps=300": "trainer.total_training_steps=21"
+    },
+    "server_gpu_topology_change": {
+      "navigation.devices": [
+        0
+      ]
+    },
+    "server_host": "127.0.0.1",
+    "server_port": 5000,
+    "watchdog_seconds": 3600,
+    "use_state_reward": false,
+    "judge_credentials_required": false,
+    "wandb_mode": "offline",
+    "working_directory": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke-706152.hopper-m-02",
+    "generated_launcher": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke-706152.hopper-m-02/official/scripts/examples/vagen_base/navigation/run.sh",
+    "pbs_jobid": "706152.hopper-m-02",
+    "cuda_visible_devices": "GPU-79cc1819-dd2c-e4bd-779d-d790bb0fddbc",
+    "gpu_uuid": "GPU-79cc1819-dd2c-e4bd-779d-d790bb0fddbc",
+    "gpu_name": "NVIDIA H200",
+    "gpu_device_for_ai2thor": 0,
+    "gpu_preflight": {
+      "pbs_jobid": "706152.hopper-m-02",
+      "cuda_visible_devices": "GPU-79cc1819-dd2c-e4bd-779d-d790bb0fddbc",
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-79cc1819-dd2c-e4bd-779d-d790bb0fddbc",
+      "gpu_name": "NVIDIA H200",
+      "vulkan_device_index": 0,
+      "mig_mode": "Disabled",
+      "ai2thor_version": "5.0.0",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46
+      ]
+    },
+    "ai2thor_mapping_cache": {
+      "path": "/scratch/e1583364/cvpr2027/ai2thor/cuda-vulkan-mapping.json",
+      "created_exclusively": true,
+      "sha256": "d8fd961c269b8e5da9af2e909c673897cc315d2e062b8a80e5ab735bb74e6f37",
+      "verified_cuda_index": 0,
+      "verified_vulkan_index": 0,
+      "shared_cache": true
+    },
+    "ai2thor_release_prune_guard": {
+      "path": "/scratch/e1583364/cvpr2027/ai2thor/releases",
+      "existing_directories": [
+        "thor-CloudRendering-f0825767cd50d69f666c7f282e54abfe58f1e917"
+      ],
+      "maximum_existing_directories": 2,
+      "reserved_new_build_slots": 1,
+      "upstream_retained_release_count": 3
+    },
+    "notes": [
+      "Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.",
+      "Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.",
+      "Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer settings are unchanged.",
+      "Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.",
+      "At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.",
+      "Official shell is executed with -e and pipefail so tee cannot hide a training failure."
+    ]
+  },
+  "kind": "T00_official_Navigation_feasibility",
+  "acceptance_passed": false,
+  "last_stage": "start_navigation_server",
+  "warnings": [
+    "Not observed: median_step_seconds; no substitute value was generated",
+    "Not observed: median_rollout_seconds; no substitute value was generated",
+    "Not observed: median_parameter_update_seconds; no substitute value was generated",
+    "Not observed: gpu_memory_peak_mib_sampled; no substitute value was generated",
+    "Not observed: process_tree_rss_peak_bytes; no substitute value was generated",
+    "T00 training acceptance not met: requires exit 0 and at least 20 completed updates"
+  ],
+  "evidence_files": [
+    {
+      "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke/config.json",
+      "sha256": "aed36c5787996ab05ef226bfbf2fc7fd95d20958f4fe7974eeefcfcf481a9b58"
+    }
+  ],
+  "completed_step_timings": {},
+  "measurement_notes": [
+    "Only console records containing step:<id> and timing_s/step count as completed updates.",
+    "Official console timings are rounded to three decimals; gen includes rollout and remote rendering.",
+    "Update time is update_actor + update_critic for the same step; other forward/reward/validation costs remain separate.",
+    "Resource peaks are sampled, not guaranteed instantaneous peaks. GPU memory covers the sole allocated board.",
+    "CPU 100% means one core; RSS is summed over observed training/server descendants, including shared pages.",
+    "Full-training estimate = official configured steps * observed median step seconds / 3600; excludes setup/startup and extra final validation/save overhead.",
+    "Training command wall time is not PBS charged walltime; account total GPU-hours from scheduler records."
+  ],
+  "_meta": {
+    "name": "t00_vagen_smoke",
+    "command": [
+      "bash",
+      "experiments/t00_vagen_smoke.sh"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-21",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-08T10:54:46",
+    "log_path": "logs/runs/t00_vagen_smoke.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "eb55740a9f4288da80388b8cf19e316a197f236e",
+    "git_dirty": false,
+    "end": "2026-11-08T10:54:50",
+    "duration_sec": 3.8,
+    "exit_code": 1,
+    "metrics_sha256": "9df0bdfd0fc2f99d4e21b08269d21514541f06c164d031d0070b5219d4037316"
+  }
+}

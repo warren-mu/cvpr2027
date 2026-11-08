@@ -1,0 +1,20 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/server/server.py", line 6, in <module>
+    from vagen.env import REGISTERED_ENV
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/env/__init__.py", line 2, in <module>
+    from .sokoban import SokobanEnv, SokobanEnvConfig, SokobanService, SokobanServiceConfig
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/env/sokoban/__init__.py", line 1, in <module>
+    from .env import SokobanEnv
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/env/sokoban/env.py", line 3, in <module>
+    from gym_sokoban.envs.sokoban_env import SokobanEnv as GymSokobanEnv
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py", line 2, in <module>
+    import pkg_resources
+ModuleNotFoundError: No module named 'pkg_resources'
