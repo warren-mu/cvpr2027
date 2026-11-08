@@ -1,0 +1,81 @@
+# run_logged: python3 src/tools/record_command.py --name t01v2_look_diagnostic_cpu_01 -- python3 -m unittest discover -s tests -p test_t01v2_look_diagnostic.py -v
+# start: 2026-11-09T07:13:26
+test_before_search_and_unknown_report_are_not_unsolvability (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ok
+test_changed_journal_hash_and_raw_hash_are_detected (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ERROR
+test_hidden_rgb_failure_is_distinct_from_anchor_visibility_without_causal_claim (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ok
+test_main_emits_exact_final_p8_sources_and_bounded_examples (test_t01v2_look_diagnostic.LookDiagnosticTests) ... FAIL
+test_missing_raw_is_unknown_and_counter_mismatch_remains_explicit (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ERROR
+test_raw_identity_mismatch_and_escaped_path_are_rejected (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ERROR
+test_retained_subset_denominators_and_actual_target_subreasons (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ERROR
+test_unavailable_journal_does_not_create_zero_attempts (test_t01v2_look_diagnostic.LookDiagnosticTests) ... ok
+
+======================================================================
+ERROR: test_changed_journal_hash_and_raw_hash_are_detected (test_t01v2_look_diagnostic.LookDiagnosticTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t01v2_look_diagnostic.py", line 94, in test_changed_journal_hash_and_raw_hash_are_detected
+    result = diagnostic.describe_source(data, ref)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 129, in describe_source
+    journal, rows = journal_rows(data)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 109, in journal_rows
+    path = merge.reference_path(reference, within=merge.ROOT / 'data/world_pairs/v2')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/merge_pair_v2.py", line 67, in reference_path
+    raise ValueError("Artifact escaped its declared evidence directory")
+ValueError: Artifact escaped its declared evidence directory
+
+======================================================================
+ERROR: test_missing_raw_is_unknown_and_counter_mismatch_remains_explicit (test_t01v2_look_diagnostic.LookDiagnosticTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t01v2_look_diagnostic.py", line 105, in test_missing_raw_is_unknown_and_counter_mismatch_remains_explicit
+    result = diagnostic.describe_source(data, ref, attempt_reader=lambda *_: None)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 129, in describe_source
+    journal, rows = journal_rows(data)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 109, in journal_rows
+    path = merge.reference_path(reference, within=merge.ROOT / 'data/world_pairs/v2')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/merge_pair_v2.py", line 67, in reference_path
+    raise ValueError("Artifact escaped its declared evidence directory")
+ValueError: Artifact escaped its declared evidence directory
+
+======================================================================
+ERROR: test_raw_identity_mismatch_and_escaped_path_are_rejected (test_t01v2_look_diagnostic.LookDiagnosticTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t01v2_look_diagnostic.py", line 116, in test_raw_identity_mismatch_and_escaped_path_are_rejected
+    result = diagnostic.describe_source(data, ref, attempt_reader=lambda *_: {'pair_id': 'wrong'})
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 129, in describe_source
+    journal, rows = journal_rows(data)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 109, in journal_rows
+    path = merge.reference_path(reference, within=merge.ROOT / 'data/world_pairs/v2')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/merge_pair_v2.py", line 67, in reference_path
+    raise ValueError("Artifact escaped its declared evidence directory")
+ValueError: Artifact escaped its declared evidence directory
+
+======================================================================
+ERROR: test_retained_subset_denominators_and_actual_target_subreasons (test_t01v2_look_diagnostic.LookDiagnosticTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t01v2_look_diagnostic.py", line 79, in test_retained_subset_denominators_and_actual_target_subreasons
+    result = diagnostic.describe_source(data, ref)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 129, in describe_source
+    journal, rows = journal_rows(data)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_look_diagnostic.py", line 109, in journal_rows
+    path = merge.reference_path(reference, within=merge.ROOT / 'data/world_pairs/v2')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/merge_pair_v2.py", line 67, in reference_path
+    raise ValueError("Artifact escaped its declared evidence directory")
+ValueError: Artifact escaped its declared evidence directory
+
+======================================================================
+FAIL: test_main_emits_exact_final_p8_sources_and_bounded_examples (test_t01v2_look_diagnostic.LookDiagnosticTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t01v2_look_diagnostic.py", line 137, in test_main_emits_exact_final_p8_sources_and_bounded_examples
+    self.assertEqual(code, 0)
+AssertionError: 1 != 0
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.333s
+
+FAILED (failures=1, errors=4)
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.5461086319992319}
+# exit_code: 1
