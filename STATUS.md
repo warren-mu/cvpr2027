@@ -229,3 +229,15 @@ E2E仅在至少2类各1合格且人类转达Claude图审无问题后触发（全
 
 
 单卡客厅拆分提交完成：旧707257→707307.hopper-m-02（201–204）、707309.hopper-m-02（205–208）、707310.hopper-m-02（209–212），各1GPU/12CPU/225GB、walltime00:43:20、autox无host。现有生成器带补充3/4/5及逐卡出图，源代码e23afc5已在首个qsub之前推送。每次提交均通过8/60双预算守卫并保留原始费率/预留快照、payload和回执；三项提交命令均exit0。取消旧训练与客厅的0用量证明已推，707255厨房保留。21:05:36 UTC的首个单卡进度快照尚无场景结果（当时只包含厨房12+已知第一组4），不能报0对；随后已扩展监控到24场景。未声称单卡已启动，待新PBS观察。排队表终态按真实qtime→stime给出，未启动取消项记未启动/null。
+
+
+单卡首批门控与自动重提：707307/707309/707310均在hopper-22、同一GPU UUID GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56上发生真实黑帧，Initialize/Pass成功但RGB与分割全0；FIFO实际收到新图像包，非缓存旧帧，cleanup_errors=[]。Unity Player.log也确认选择Vulkan设备0的NVIDIA H200；静态核查未发现单卡映射错误，但不能由此断言节点/GPU/驱动根因。原始PNG、Player.log、UUID、失败outer/gate与用量均保留；没有场景搜索，所以不是两个场景0对。正式核账results/t01v2_single_watch_01_accounting.json：三项GPUh为0.0052777778/0.0055555556/0.0052777778，合计0.0161111111。
+
+| 作业 | GPU数 | 提交到启动（分钟；原始秒） | 结局/后继 |
+|---|---:|---:|---|
+| 707307 | 1 | 3.93；236秒 | 黑帧86 → 707329 |
+| 707309 | 1 | 2.38；143秒 | 黑帧86 → 707330 |
+| 707310 | 1 | 1.22；73秒 | 黑帧86 → 707331 |
+
+自动重提映射分别是pilot_pairs_v2_living_201_204_a00_r32d46927、pilot_pairs_v2_living_205_208_a00_r292586e2、pilot_pairs_v2_living_209_212_a00_r1ba34adc；三项均保持1GPU/2600秒/原场景/无host，通过同一8/60预算守卫。21:19:55 UTC的results/t01v2_single_watch_02.json观察厨房707255及707329/330/331均Q，errors=[]。results/t01v2_single_after_retry_budget.json记录已结束实际11.8661111111、未结束完整预留4.1666666667、合计16.0327777778/60；T01v2实际+预留4.3494444444/8，费率1，仍为PBS调度扣费而非独立账单核销。
+早期图审checkpoint和T02→T05接线子步骤完成：10项checkpoint CPU tests及3项实际TableEnvironment→T02EpisodePort→collect_pair接口tests全部通过（results/t01v2_review_checkpoint_cpu_01.json、results/t02_t05_table_integration_cpu_01.json）。独立checkpoint复用完整来源/whole-journal/native验真、补4/5政策与去重；少量合格可以发布真实图和清单，不占用最终80/40固定输出路径，真正证据矛盾禁止发布。人类图审和正式T02验收仍unknown，数据数量门槛不自动等于批准。接口tests验证标号距离过滤、公开输入共享、分叉再返回共享时τ保留/独立τ_seen及五轮限制。GPU生成器与最终merger未改。
