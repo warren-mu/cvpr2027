@@ -234,6 +234,8 @@ class PairV2ShardIntegration(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / 'raw').mkdir()
+            sim.store.directory=root/'raw'
+            (sim.store.directory/'scene_preflight.json').write_text(json.dumps({'passed':True,'synthetic_fixture':True}))
             config = {'name': 'synthetic', 'scene': 'FloorPlan1', 'attempt_journal': 'journal.jsonl',
                       'raw_evidence_dir': str(root / 'raw'), 'max_identity_sets': 1, 'max_receptacles': 1,
                       'max_points_per_side': 1, 'max_view_positions': 1, 'max_attempts': 5, 'scene_pairs_per_class': 1}
@@ -256,6 +258,7 @@ class PairV2ShardIntegration(unittest.TestCase):
             self.assertEqual(result['attempts'], 1)
             self.assertEqual(result['passed_pair_files'], [])
             self.assertEqual(result['passed_by_class']['direct_flip'], 0)
+            self.assertEqual(result['scene_preflight_reference']['sha256'],shard.sha(sim.store.directory/'scene_preflight.json'))
 
 
 if __name__ == '__main__':

@@ -220,6 +220,14 @@ def export_pair(config, row, worlds, prefix, after, witnesses, constructions):
     directory.mkdir(parents=True,exist_ok=False)
     files = []
     observations = {'prefix': [], 'after': []}
+    preflight_ref=config['scene_preflight_reference']
+    if sha(preflight_ref['file'])!=preflight_ref['sha256']:
+        raise ValueError('Original scene preflight evidence changed')
+    preflight_path=directory/'scene_preflight.json'
+    with Path(preflight_ref['file']).open('rb') as incoming,preflight_path.open('xb') as outgoing:
+        shutil.copyfileobj(incoming,outgoing)
+    row['scene_preflight_reference']={'file':str(preflight_path.relative_to(ROOT)),'sha256':sha(preflight_path)}
+    files.append(row['scene_preflight_reference'])
     for label, captures in [('prefix',prefix),('after',after)]:
         for index, obs in enumerate(captures):
             entry={k:copy.deepcopy(obs[k]) for k in ('metadata','marks','mark_labels_by_name','input_text','history')}
@@ -374,7 +382,8 @@ def summarize(rows,excluded,status,config):
         'mean_attempt_generation_seconds':sum(times)/len(times) if times else None,
         'timing_denominator':'all recorded pair construction attempts including rejections',
         'passed_pair_files':[{'file':row['pair_file'],'sha256':row['pair_sha256']} for row in rows if row.get('pair_file')],
-        'attempt_journal':config['attempt_journal'],'cleanup_errors':[], 'black_frame_detected':False}
+        'attempt_journal':config['attempt_journal'],'cleanup_errors':[], 'black_frame_detected':False,
+        'scene_preflight_reference':config.get('scene_preflight_reference')}
 
 
 def generator_worker(config,connection):
@@ -389,6 +398,8 @@ def generator_worker(config,connection):
                     raise RuntimeError('Unity build differs from reviewed fixed source')
                 sim=V2Simulator(controller,config,Path(config['raw_evidence_dir'])/'construction')
                 preflight=sim.preflight_scene()
+                preflight_path=sim.store.directory/'scene_preflight.json'
+                config['scene_preflight_reference']={'file':str(preflight_path),'sha256':sha(preflight_path)}
                 if not preflight['passed']:
                     preflight_path=sim.store.directory/'scene_preflight.json'
                     excluded={'scene':config['scene'],'reason':'original_scene_not_settled_within_1cm',
@@ -469,7 +480,7 @@ def main():
         'grid_size':.25,'visibility_distance':10,'field_of_view':100,
         'settle_max_steps':50,'physics_time_step':.02,'physics_seconds_per_step':.1,
         'max_attempts':160,'max_identity_sets':8,'max_receptacles':4,'max_points_per_side':6,
-        'max_view_positions':8,'scene_pairs_per_class':4,'max_raw_bytes':512*1024*1024,
+        'max_view_positions':8,'scene_pairs_per_class':5,'max_raw_bytes':512*1024*1024,
         'raw_evidence_dir':shard['raw_evidence_dir'],
         'attempt_journal':f'data/world_pairs/v2/{args.name}_attempts.jsonl',
         'metrics_spec_sha256':sha(ROOT/'docs/METRICS_SPEC.md'),
