@@ -113,7 +113,8 @@ class EvidenceSession:
         def opened(path, mode='r', buffering=-1, encoding=None, errors=None, newline=None):
             data = session.data(path)
             if data is not None and mode in ('r', 'rt', 'rb'):
-                return io.BytesIO(data) if 'b' in mode else io.StringIO(data.decode(encoding or 'utf-8', errors or 'strict'))
+                return io.BytesIO(data) if 'b' in mode else io.TextIOWrapper(
+                    io.BytesIO(data), encoding=encoding, errors=errors, newline=newline)
             return old_open(path, mode=mode, buffering=buffering, encoding=encoding, errors=errors, newline=newline)
 
         def stated(path, *, follow_symlinks=True):
@@ -126,7 +127,8 @@ class EvidenceSession:
                            newline=None, closefd=True, opener=None):
             data = session.data(file) if isinstance(file, (str, bytes, os.PathLike)) else None
             if data is not None and mode in ('r', 'rt', 'rb'):
-                return io.BytesIO(data) if 'b' in mode else io.StringIO(data.decode(encoding or 'utf-8', errors or 'strict'))
+                return io.BytesIO(data) if 'b' in mode else io.TextIOWrapper(
+                    io.BytesIO(data), encoding=encoding, errors=errors, newline=newline)
             return old_builtin_open(file, mode=mode, buffering=buffering, encoding=encoding,
                                     errors=errors, newline=newline, closefd=closefd, opener=opener)
 

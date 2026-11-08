@@ -96,6 +96,25 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 EvidenceSession(scratch, imports={str(scratch.parent / 'outside'): b'x'})
 
+    def test_buffered_text_preserves_locale_default_and_newline_semantics(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary).resolve()
+            session = EvidenceSession(scratch, buffer_all=True)
+            store = session.store(scratch / 'worker', 1000)
+            ref = store.save('text.txt', b'first\r\nsecond\r\n')
+            path = Path(ref['file'])
+            with session.reading():
+                self.assertEqual(path.read_text(encoding='locale'), 'first\nsecond\n')
+                self.assertEqual(path.read_text(), 'first\nsecond\n')
+                with path.open('r', encoding='locale', newline='') as stream:
+                    self.assertEqual(stream.read(), 'first\r\nsecond\r\n')
+                with builtins.open(path, 'r', encoding='locale') as stream:
+                    self.assertEqual(stream.read(), 'first\nsecond\n')
+                with builtins.open(path, 'r') as stream:
+                    self.assertEqual(stream.read(), 'first\nsecond\n')
+                self.assertEqual(path.read_bytes(), b'first\r\nsecond\r\n')
+            self.assertFalse(path.exists())
+
     def test_real_png_decodes_from_path_bytes_and_pil_string_filename_in_view(self):
         from PIL import Image
         with tempfile.TemporaryDirectory() as temporary:
