@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Submit T00b/T01 work with a conservative shared allocation budget.
+"""Submit T00b/T01 work with a conservative shared scheduler-charged budget.
 
 Unfinished or unaccounted jobs reserve their entire requested GPU walltime.
 Only final, provenance-checked PBS accounting can replace that reservation.
@@ -21,8 +21,9 @@ import sys
 import uuid
 
 BATCH = "t00b_t01_20261108"
-LIMITS = {"T00b": 8.0, "T01": 4.0}
-TOTAL_LIMIT = 12.0
+LIMITS = {"T00b": 60.0, "T01": 60.0}
+TOTAL_LIMIT = 60.0
+BUDGET_REVISION = "20261108_premium_charged_60"
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 
 
@@ -35,11 +36,12 @@ def validate_host(value):
 def render_job_script(template, gpus, payload_path, host=None):
     """Add only the optional compute-host constraint to the normal select."""
     validate_host(host)
-    if type(gpus) is not int or gpus not in (1, 2):
-        raise ValueError("Select requires one or two GPUs")
+    if type(gpus) is not int or not 1 <= gpus <= 8:
+        raise ValueError("Select requires one to eight GPUs on one node")
     anchor = "#PBS -l select=1:ngpus=1"
     if (template.count("@@CVPR_PAYLOAD@@") != 1 or template.count(anchor) != 1
-            or template.splitlines().count(anchor) != 1):
+            or template.splitlines().count(anchor) != 1
+            or [line for line in template.splitlines() if line.startswith("#PBS -q")] != ["#PBS -q autox"]):
         raise ValueError("Unexpected PBS template")
     resource = f"#PBS -l select=1:ngpus={gpus}"
     if host is not None:
@@ -53,6 +55,68 @@ def wall_seconds(value):
         raise ValueError("walltime must be HH:MM:SS")
     h, m, s = map(int, match.groups())
     return h * 3600 + m * 60 + s
+
+
+def positive_rate(value):
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        raise RuntimeError("Missing scheduler queue_charge_rate; refuse an inferred billing rate")
+    if isinstance(value, bool) or not math.isfinite(rate) or rate <= 0:
+        raise RuntimeError("queue_charge_rate must be finite and positive")
+    return rate
+
+
+def pbs_blocks(output, heading):
+    blocks, current, key = {}, None, None
+    for line in output.splitlines():
+        match = re.match(r"^" + re.escape(heading) + r":\s*(\S+)", line)
+        if match:
+            current, key = blocks.setdefault(match[1], {}), None
+            continue
+        match = re.match(r"^    (\S+) = (.*)$", line)
+        if current is not None and match:
+            key, current_value = match.groups()
+            current[key] = current_value
+        elif current is not None and key and line.startswith("\t"):
+            current[key] += line.strip()
+    return blocks
+
+
+def charge_policy():
+    command = ["qstat", "-Qf"]
+    query = subprocess.run(command, capture_output=True, text=True, timeout=180)
+    if query.returncode:
+        raise RuntimeError("Cannot verify current Express queue rates: " + query.stderr)
+    queues = pbs_blocks(query.stdout, "Queue")
+    if set(queues.get("autox", {}).get("route_destinations", "").split(",")) != {"smallx", "mediumx", "largex"}:
+        raise RuntimeError("Express/autox routing differs from the human-approved service")
+    rates = {q: positive_rate(queues.get(q, {}).get("resources_default.queue_charge_rate"))
+             for q in ("smallx", "mediumx", "largex")}
+    return {"human_premium_alias": "Express/autox", "queue": "autox", "rates": rates,
+            "queried_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "command": command, "raw_queue_configuration": query.stdout,
+            "charge_basis": "PBS allocation GPU-hours multiplied by scheduler queue_charge_rate; not an independent credit-ledger reconciliation"}
+
+
+def queue_for_gpus(gpus):
+    return "smallx" if gpus <= 2 else "mediumx" if gpus <= 7 else "largex"
+
+
+def live_job_rates(job_ids):
+    if not job_ids:
+        return {}
+    proc = subprocess.run(["qstat", "-fx", *sorted(job_ids)], capture_output=True, text=True, timeout=180)
+    if proc.returncode:
+        raise RuntimeError("Cannot verify unfinished job billing rates: " + proc.stderr)
+    blocks = pbs_blocks(proc.stdout, "Job Id")
+    rates = {}
+    for job_id in job_ids:
+        fields = blocks.get(job_id, {})
+        if fields.get("project") != "CFP04-SF-125":
+            raise RuntimeError("Unexpected/missing project for budgeted job: " + job_id)
+        rates[job_id] = positive_rate(fields.get("Resource_List.queue_charge_rate"))
+    return rates
 
 
 def recorded_final_hours(fields, hours, job_id):
@@ -113,11 +177,17 @@ def _final_accounting(repo, wanted):
                 continue
             if job["job_id"] in records and records[job["job_id"]]["gpu_hours"] != hours:
                 raise RuntimeError(f"Conflicting final accounting: {job['job_id']}")
-            records[job["job_id"]] = {"gpu_hours": hours, "accounting_result": str(path.relative_to(repo))}
+            rate = positive_rate(fields.get("Resource_List.queue_charge_rate"))
+            if job["job_id"] in records and records[job["job_id"]]["queue_charge_rate"] != rate:
+                raise RuntimeError("Conflicting final billing rate: " + job["job_id"])
+            records[job["job_id"]] = {"gpu_hours": hours, "queue_charge_rate": rate,
+                                      "charged_gpu_hours": hours * rate,
+                                      "accounting_result": str(path.relative_to(repo))}
     return records
 
 
-def budget_state(repo):
+def budget_state(repo, policy=None, live_rates=None):
+    policy = policy if policy is not None else charge_policy()
     submissions, seen = [], set()
     for path in sorted((repo / "logs/pbs").glob("*/payload.json")):
         payload = json.loads(path.read_text())
@@ -138,28 +208,42 @@ def budget_state(repo):
             raise RuntimeError(f"Unknown task in this budget batch: {task}")
         requested = payload["requested_gpu_count"] * payload["requested_wall_seconds"] / 3600
         submissions.append({"task": task, "name": payload["name"], "job_id": job_id, "payload": str(path.relative_to(repo)),
-                            "requested_gpu_hours": requested,
+                            "requested_gpu_hours": requested, "gpus": payload["requested_gpu_count"],
+                            "recorded_reservation_rate": payload.get("requested_queue_charge_rate"),
                             "submission_returncode": receipt.get("returncode")})
     final = _final_accounting(repo, seen)
+    live_rates = live_rates if live_rates is not None else live_job_rates(seen - set(final))
     used = {task: 0.0 for task in LIMITS}
     for row in submissions:
         observed = final.get(row["job_id"])
         # A nonzero qsub return can also mean a lost acknowledgement. It does
         # not independently prove that the scheduler never accepted the job.
-        cost = observed["gpu_hours"] if observed else row["requested_gpu_hours"]
-        row.update(accounted_or_reserved_gpu_hours=cost,
+        if observed:
+            rate = observed["queue_charge_rate"]
+        elif row["job_id"]:
+            rate = positive_rate(live_rates.get(row["job_id"]))
+        else:
+            # Lost acknowledgement is still fully reserved, at the greater
+            # of recorded and currently configured route rates.
+            rate = max(positive_rate(policy["rates"][queue_for_gpus(row["gpus"])]),
+                       positive_rate(row["recorded_reservation_rate"]) if row["recorded_reservation_rate"] is not None else 0)
+        allocation = observed["gpu_hours"] if observed else row["requested_gpu_hours"]
+        cost = allocation * rate
+        row.update(accounted_or_reserved_gpu_hours=cost, queue_charge_rate=rate,
+                   accounted_or_reserved_allocation_gpu_hours=allocation,
                    basis="final_accounting" if observed else "full_request_reservation")
         if observed:
             row["accounting_result"] = observed["accounting_result"]
         used[row["task"]] += cost
-    return {"batch": BATCH, "limits_gpu_hours": LIMITS, "total_limit_gpu_hours": TOTAL_LIMIT,
+    return {"batch": BATCH, "charge_policy": policy, "units": "scheduler_charged_gpu_hours", "limits_gpu_hours": LIMITS, "total_limit_gpu_hours": TOTAL_LIMIT,
             "accounted_or_reserved_by_task": used, "accounted_or_reserved_total": math.fsum(used.values()),
             "submissions": submissions}
 
 
 def validate_request(task, gpus, seconds, name, state):
-    if task not in LIMITS or gpus not in (1, 2) or (task == "T01" and gpus != 1):
-        raise ValueError("T01 requires one GPU; T00b permits one or two")
+    permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
+    if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
+        raise ValueError("GPU count is outside the authorized single-node task plan")
     allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
@@ -167,18 +251,22 @@ def validate_request(task, gpus, seconds, name, state):
         raise ValueError("Run name already has a submission; use a distinct evidence name")
     if not 0 < seconds <= (3 * 3600 if task == "T00b" else 4 * 3600):
         raise ValueError("Request exceeds this task's per-job walltime limit")
-    proposed = gpus * seconds / 3600
+    proposed = gpus * seconds / 3600 * positive_rate(state["charge_policy"]["rates"][queue_for_gpus(gpus)])
+    if gpus >= 8 and seconds < 7201:
+        raise ValueError("largex requires walltime of at least 02:00:01")
+    if gpus * seconds / 3600 > 20:
+        raise ValueError("This request exceeds the existing per-job 20 GPU-hour approval boundary")
     if state["accounted_or_reserved_by_task"][task] + proposed > LIMITS[task] + 1e-12:
         raise ValueError("Request would exceed the task's measured-plus-reserved GPU budget")
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
-        raise ValueError("Request would exceed the combined 12 GPU-hour budget")
+        raise ValueError("Request would exceed the combined 60 GPU-hour budget")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True)
     parser.add_argument("--task", required=True, choices=sorted(LIMITS))
-    parser.add_argument("--gpus", type=int, required=True, choices=(1, 2))
+    parser.add_argument("--gpus", type=int, required=True, choices=(1, 2, 3, 4, 8))
     parser.add_argument("--walltime", required=True)
     parser.add_argument("--host", type=validate_host, help="Optional compute host, e.g. hopper-29")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
@@ -219,7 +307,9 @@ def main():
             environment[key] = os.environ[key]
     payload = {"repo": str(repo), "name": args.name, "command": command, "environment": environment,
                "task_id": args.task, "budget_batch": BATCH, "requested_gpu_count": args.gpus,
-               "requested_wall_seconds": seconds, "requested_host": args.host, "dry_run": args.dry_run}
+               "requested_wall_seconds": seconds, "requested_host": args.host, "dry_run": args.dry_run,
+               "budget_revision": BUDGET_REVISION, "queue": "autox",
+               "requested_queue_charge_rate": state["charge_policy"]["rates"][queue_for_gpus(args.gpus)]}
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")
     payload_path.chmod(0o444)

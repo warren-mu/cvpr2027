@@ -79,29 +79,53 @@ class BudgetTests(unittest.TestCase):
     def state(self, t00b=0, t01=0, names=()):
         return {"accounted_or_reserved_by_task": {"T00b": t00b, "T01": t01},
                 "accounted_or_reserved_total": t00b + t01,
-                "submissions": [{"name": name} for name in names]}
+                "submissions": [{"name": name} for name in names],
+                "charge_policy": {"rates": {q: 1.0 for q in ("smallx", "mediumx", "largex")}}}
 
     def test_two_gpu_request_reserves_both_cards(self):
-        submit.validate_request("T00b", 2, 10800, "t00b_training", self.state(t00b=2))
+        submit.validate_request("T00b", 2, 10800, "t00b_training", self.state(t00b=54))
         with self.assertRaises(ValueError):
-            submit.validate_request("T00b", 2, 10800, "t00b_training", self.state(t00b=2.01))
+            submit.validate_request("T00b", 2, 10800, "t00b_training", self.state(t00b=54.01))
 
     def test_task_budget_still_applies_with_global_room(self):
         with self.assertRaises(ValueError):
-            submit.validate_request("T01", 1, 3600, "pilot_pairs", self.state(t01=3.01))
+            submit.validate_request("T01", 1, 3600, "pilot_pairs", self.state(t01=59.01))
 
     def test_total_budget_also_enforced(self):
         state = self.state(t00b=1, t01=0)
-        state["accounted_or_reserved_total"] = 11.1
+        state["accounted_or_reserved_total"] = 59.1
         with self.assertRaises(ValueError):
             submit.validate_request("T00b", 1, 3600, "t00b_retry", state)
+
+    def test_changed_charge_rate_reserves_actual_billing_units(self):
+        state = self.state(t00b=49)
+        state["charge_policy"]["rates"]["smallx"] = 2
+        with self.assertRaises(ValueError):
+            submit.validate_request("T00b", 2, 10800, "t00b_training", state)
+        state = self.state(t00b=48)
+        state["charge_policy"]["rates"]["smallx"] = 2
+        submit.validate_request("T00b", 2, 10800, "t00b_training", state)
+
+    def test_missing_rate_rejects_submission(self):
+        for bad in (None, "", 0, -1, float("nan"), True):
+            with self.subTest(rate=bad), self.assertRaises(RuntimeError):
+                submit.positive_rate(bad)
+
+    def test_expanded_plan_and_large_queue_minimum(self):
+        for task, cards, seconds, name in (("T00b", 4, 10800, "t00b_scale4"),
+                                          ("T00b", 8, 7800, "t00b_scale8"),
+                                          ("T01", 2, 7200, "t01_kitchens"),
+                                          ("T01", 4, 7200, "t01_living")):
+            submit.validate_request(task, cards, seconds, name, self.state())
+        with self.assertRaises(ValueError):
+            submit.validate_request("T00b", 8, 7200, "t00b_scale8", self.state())
 
     def test_second_submission_cannot_share_output_name(self):
         with self.assertRaises(ValueError):
             submit.validate_request("T01", 1, 60, "pilot_pairs", self.state(names=["pilot_pairs"]))
 
-    def test_t01_stays_single_gpu_and_t00b_within_three_hours(self):
-        for task, gpus, seconds, name in (("T01", 2, 60, "pilot_pairs"),
+    def test_authorized_gpu_counts_and_walltime_limits(self):
+        for task, gpus, seconds, name in (("T01", 8, 7201, "pilot_pairs"),
                                             ("T00b", 2, 10801, "t00b_training"),
                                             ("T01", 1, 60, "t00b_wrong_task")):
             with self.subTest(task=task, name=name), self.assertRaises(ValueError):
@@ -117,7 +141,7 @@ class BudgetTests(unittest.TestCase):
             (item / "payload.json").write_text(json.dumps(payload))
             (item / "submission.json").write_text(json.dumps({"returncode": 1, "stdout": "",
                                                                "stderr": "connection lost"}))
-            result = submit.budget_state(root)
+            result = submit.budget_state(root, policy=self.state()["charge_policy"], live_rates={})
             self.assertEqual(result["accounted_or_reserved_by_task"]["T00b"], 6.0)
             self.assertEqual(result["submissions"][0]["basis"], "full_request_reservation")
 
@@ -143,7 +167,7 @@ class HostConstraintTests(unittest.TestCase):
     def test_render_changes_only_select_host_and_keeps_gpu_count(self):
         template = (ROOT / "scripts/pbs/job_1gpu.pbs").read_text()
         payload = Path("/scratch/fixture/payload with spaces.json")
-        for gpus in (1, 2):
+        for gpus in (1, 2, 3, 4, 8):
             default = submit.render_job_script(template, gpus, payload)
             constrained = submit.render_job_script(template, gpus, payload, "hopper-29")
             self.assertEqual(constrained.replace(":host=hopper-29", ""), default)
@@ -157,6 +181,8 @@ class HostConstraintTests(unittest.TestCase):
             submit.render_job_script(template, 2, payload, "hopper-29:ngpus=8")
         with self.assertRaises(ValueError):
             submit.render_job_script(template.replace("select=1:ngpus=1", "select=1:ngpus=10"), 2, payload)
+        with self.assertRaises(ValueError):
+            submit.render_job_script(template.replace("#PBS -q autox", "#PBS -q auto"), 2, payload)
 
 
 if __name__ == "__main__":

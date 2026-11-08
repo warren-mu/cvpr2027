@@ -70,7 +70,8 @@ def cuda_driver_uuids():
 
 
 def prepare_allocation(name, expected_gpus=2):
-    if not re.fullmatch(r"[A-Za-z0-9_]+", name) or expected_gpus not in (1, 2):
+    if (not re.fullmatch(r"[A-Za-z0-9_]+", name) or type(expected_gpus) is not int
+            or not 1 <= expected_gpus <= 8):
         raise ValueError("Invalid allocation name or GPU count")
     if not os.environ.get("PBS_JOBID"):
         raise RuntimeError("GPU validation requires a PBS allocation")
