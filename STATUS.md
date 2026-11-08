@@ -154,3 +154,7 @@ T01v2厨房首轮707189完成：12个分片四类均0；FloorPlan1/5/8/9原场�
 
 新stable入口子步骤：代码6d078e4及兼容修复9538237实现落定后基准（N50，nativeRest或10次每物体单步<1mm，初始→当前位移上限0.5m）和完整M50窗口（相对落定基准≤1cm）。两world非编辑物体统一对settled/validated-clone共同基准检查，防止逐次累计漂移；X继续用PlaceObjectAtPoint返回位姿作2cm漂移基准。拒绝尝试只存简要JSON与小缩略图，合格pair/每种完整拒绝原因前三例保留raw；黑帧原图和UUID证据完整落盘后才允许86。上游补充2（1f1359e）已同步：Look首次观察只在X掩码并集内计算证据，不再要求两world各可见X；Direct两world的X均≥250像素；v0双方candidate均≤1.5m，原D1/状态恢复/见证门槛保留。METRICS_SPEC §1b仍标为提案，未用于本轮采集。
 正式CPU首次161项中3项因Python3.10的encoding=locale文本view兼容失败，失败记录完整保留；修复后162项v2集成tests全部通过（results/t01v2_stable_integration_cpu_02.json），独立phase_watch回归9项通过。以上为程序验证，没有GPU科学结果。每场景预检、clone准备和物理拒绝分类的source-reported汇总入口已准备，缺失值保留unknown。先审计推代码，再提交厨房全部12scene与客厅201..212。
+
+
+补充3执行检查点（635afb6）：已先取消新stable采集707229（厨房4卡20min，替代707216）与707230（客厅2卡40min，替代707191）；二者均Q/no allocation后qdel成功，终态F仍无运行字段。results/t01v2_supp3_cancel_accounting_02.json验证完整三段原始证据，实际均0GPUh；运行次数与排队等待时间缺失仍为null，未补为0。两份原始提交回执和所有取消/失败核账记录均保留。第一份核账失败是记录器使用Python -m入口而旧证据helper只识别文件入口；a6a319b仅新增严格的同一模块argv身份支持，6项CPU边界测试通过，未更改PBS原字段、结果或研究阈值。2卡706354、8卡706682训练任务未动。T01v2实际用量仍为首轮707189的0.1666666667GPUh。
+新增采集暂停于代码整改阶段：锚点/clone源排除规定滚动类别及切片/碎裂变体，天然不移动候选不限；最多6个固定顺序源各fresh Controller，保留天然∪clone组合，组合轮换及连续10物理拒绝退组；raw上限降为存储停止而非worker停止，证据不足的科学候选不会被伪报成可验收数据；增加锚点w0通过/尝试及逐scene clone ledger。将先推代码和CPU测试结果再提交，预算仍8/60。
