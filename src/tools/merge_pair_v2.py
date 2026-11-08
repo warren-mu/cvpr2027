@@ -86,6 +86,11 @@ def shard_producer(command, config):
                 or config.get("evidence_version") != "anchor_union_look_v1"):
             raise ValueError("Unknown stable preflight version or missing clone opt-in")
         module = "src.envs.pair_v2_stable_shard"
+        if config.get("search_version") is not None:
+            from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
+            if config.get("search_version") != SEARCH_VERSION or config.get("search_policy") != SEARCH_POLICY:
+                raise ValueError("Unknown search policy or altered fixed search configuration")
+            module = "src.envs.pair_v2_search_shard"
     elif enabled is True:
         module = "src.envs.pair_v2_clone_shard"
     elif enabled is None or enabled is False:
@@ -94,6 +99,9 @@ def shard_producer(command, config):
         raise ValueError("Clone opt-in must be an explicit boolean")
     if version is None and config.get("evidence_version") is not None:
         raise ValueError("New evidence rule requires its explicit stable producer")
+    if ((version is None and config.get("search_version") is not None)
+            or (config.get("search_version") is None and config.get("search_policy") is not None)):
+        raise ValueError("Search configuration requires its explicit stable search producer")
     return producer_arguments(command, module), enabled is True
 
 
@@ -205,6 +213,8 @@ def load_source(path):
         raise ValueError("Hashed metrics preflight version differs from source config")
     if data["metrics"].get("evidence_version") != config.get("evidence_version"):
         raise ValueError("Hashed metrics evidence rule differs from source config")
+    if any(data["metrics"].get(key) != config.get(key) for key in ("search_version", "search_policy")):
+        raise ValueError("Hashed metrics search configuration differs from source config")
     if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
             or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
             or config.get("seed") != 0 or config.get("resolution") != 255):
@@ -366,7 +376,79 @@ def verify_preflight(preflight, read=None):
             "scope": "original-to-final-rest positions; no additional transient or rotation threshold"}
 
 
-def verify_clone_measurements(row, worlds, replays, restored, constructions, preflight, read):
+def verify_search_identity(row, objects, *, lineage=None, original_objects=None):
+    """Bind the selected task to the full actual natural/clone inventory union."""
+    from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY, eligible_moved_object, object_inventory, union_identity_sets
+    if row.get("search_version") != SEARCH_VERSION or row.get("search_policy") != SEARCH_POLICY:
+        raise ValueError("Pair lacks its exact independently recognized search policy")
+    if lineage is not None:
+        original = object_inventory(original_objects or [])
+        chosen = original.get(lineage["source_name"])
+        if (chosen is None or not eligible_moved_object(chosen)
+                or sum(obj["objectType"] == chosen["objectType"] for obj in original.values()) != 1):
+            raise ValueError("Clone source is not currently an eligible singleton; first-controller order is checked separately")
+    fields = ("candidate_names", "anchor_name", "target_type", "anchor_type")
+    actual = row["identities"]
+    matches = [group for group in union_identity_sets(objects, lineage)
+               if all(actual.get(field) == group[field] for field in fields)]
+    if len(matches) != 1 or row.get("search_candidate_origin") != matches[0]["search_candidate_origin"]:
+        raise ValueError("Selected identities/origin do not belong to the actual eligible natural/clone union")
+    return {"passed": True, "search_version": SEARCH_VERSION, "identities": copy.deepcopy(matches[0])}
+
+
+def verify_search_ledger(metrics, original_objects):
+    """Check reported ordering/Controller identity, without inventing failed trials.
+
+Called only for sources contributing pairs. Raw per-pair clone creation and
+placement/replay are checked independently by verify_clone_measurements.
+"""
+    from src.envs.pair_v2_search_policy import eligible_clone_sources
+    expected = [{"name": obj["name"], "objectType": obj["objectType"]}
+                for obj in eligible_clone_sources(original_objects)]
+    rows = metrics.get("clone_attempts")
+    if metrics.get("clone_source_order") != expected or not isinstance(rows, list) or len(rows) > len(expected):
+        raise ValueError("Clone attempt order/limit differs from eligible singleton ordering")
+    controllers, unity_processes, successes = set(), set(), []
+    for index, row in enumerate(rows):
+        identity = row.get("unity_identity") or {}
+        controller = row.get("controller_id")
+        process = (identity.get("pid"), identity.get("start_ticks"))
+        if (row.get("attempt_index") != index or row.get("fixed_source_index") != index
+                or row.get("source_name") != expected[index]["name"]
+                or row.get("source_type") != expected[index]["objectType"]
+                or not isinstance(controller, str) or not controller or controller in controllers
+                or any(type(identity.get(key)) is not int or identity[key] <= 0 for key in ("pid", "start_ticks", "pgid", "sid"))
+                or process in unity_processes or type(row.get("passed")) is not bool):
+            raise ValueError("Clone attempts do not show the fixed prefix on independent Controllers")
+        controllers.add(controller)
+        unity_processes.add(process)
+        if row["passed"]:
+            if (row.get("preflight_passed") is not True or row.get("clone_attempted") is not True
+                    or row.get("status") not in ("clone_ready", "clone_ready_no_eligible_identity")
+                    or not row.get("baseline_validation_reference")):
+                raise ValueError("Reported clone success lacks its actual validated setup")
+            successes.append(index)
+    if successes and successes != [len(rows) - 1]:
+        raise ValueError("Clone search continued after the first successful shared baseline")
+    if not successes and len(rows) != len(expected):
+        raise ValueError("Contributing natural fallback stopped before trying its declared eligible sources")
+    return {"passed": True, "attempt_count": len(rows), "successful_source_index": successes[0] if successes else None,
+            "successful_source_name": rows[successes[0]]["source_name"] if successes else None,
+            "scope": "reported fixed-order and fresh-Controller ledger; native pair proofs verified separately"}
+
+
+def search_source_inventory(metrics, read):
+    """The fixed proposal list comes from discovery, not a later fresh reset."""
+    visits = metrics.get("controller_visits")
+    if not isinstance(visits, list) or not visits or visits[0].get("preflight_passed") is not True:
+        raise ValueError("Contributing search source lacks its original discovery preflight")
+    first = read(visits[0]["preflight_reference"])
+    if first.get("passed") is not True or first.get("preflight_version") != "settled_baseline_window_v1":
+        raise ValueError("Fixed search source order is not bound to the original passed stable preflight")
+    return first["snapshot"]["objects"]
+
+
+def verify_clone_measurements(row, worlds, replays, restored, constructions, preflight, read, *, search_version=None):
     """Recompute clone validity from authenticated raw JSON, not saved PASS flags.
 
     ``read`` resolves an original file+SHA reference through the clone portable
@@ -404,7 +486,10 @@ def verify_clone_measurements(row, worlds, replays, restored, constructions, pre
     lineage = verify_clone_creation(original, creation["created_objects"], recipe, action_success=True)
     if not lineage["passed"] or context["lineage"] != lineage or creation["lineage"] != lineage:
         raise ValueError("Clone lineage cannot be independently reconstructed")
-    if (sorted(row["identities"]["candidate_names"]) != sorted(lineage["candidate_names"])
+    from src.envs.pair_v2_search_policy import SEARCH_VERSION
+    if search_version is not None and search_version != SEARCH_VERSION:
+        raise ValueError("Unknown independent clone-union verification version")
+    if ((search_version is None and sorted(row["identities"]["candidate_names"]) != sorted(lineage["candidate_names"]))
             or row["identities"]["anchor_name"] in lineage["candidate_names"]):
         raise ValueError("The pair does not use the shared source/clone candidates and distinct anchor")
     physical = record["construction_physical"]
@@ -421,6 +506,12 @@ def verify_clone_measurements(row, worlds, replays, restored, constructions, pre
         native_is_scene_at_rest=physical["native_is_scene_at_rest"])
     if not baseline["passed"] or record["clone_baseline_check"] != baseline:
         raise ValueError("Common clone baseline fails independent placement/rest/collateral checks")
+    search_identity = None
+    if search_version is not None:
+        search_identity = verify_search_identity(row, physical["realized_objects"], lineage=lineage, original_objects=original)
+        for world in worlds:
+            if verify_search_identity(row, world["objects"], lineage=lineage, original_objects=original) != search_identity:
+                raise ValueError("Search identities changed between the common baseline and a realized world")
     # The native duplicate creation can normalize Euler metadata. The subsequent
     # unique-name request preserves that measured created inventory, while the
     # independent baseline check above measures displacement from the ORIGINAL
@@ -486,8 +577,11 @@ def verify_clone_measurements(row, worlds, replays, restored, constructions, pre
         if not checked["passed"] or checked != {k: v for k, v in saved.items() if k != "action_reference"}:
             raise ValueError("Fresh replay actual inventory/name lineage differs from the saved shared baseline")
         replay_checks.append(checked)
-    return {"passed": True, "lineage": lineage, "baseline": baseline, "pair": paired,
-            "replay_recreation": replay_checks, "identity": {"recipe": recipe}}
+    result = {"passed": True, "lineage": lineage, "baseline": baseline, "pair": paired,
+              "replay_recreation": replay_checks, "identity": {"recipe": recipe}}
+    if search_identity is not None:
+        result["search_identity"] = search_identity
+    return result
 
 
 def clone_evidence_reader(row, context, directory, *, root=ROOT, raw_root=None):
@@ -554,7 +648,8 @@ def load_observation(record, portable, directory, *, root=ROOT):
     return result
 
 
-def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None, evidence_version=None):
+def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None,
+               evidence_version=None, search_version=None, search_policy=None, search_clone_source=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
@@ -566,6 +661,14 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             raise ValueError("Stable source lacks its explicit approved anchor-union evidence version")
     elif evidence_version is not None:
         raise ValueError("Historical sources cannot silently use the new evidence rule")
+    if search_version is not None:
+        from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
+        if (search_version != SEARCH_VERSION or search_policy != SEARCH_POLICY or not clone_enabled
+                or preflight_version != "settled_baseline_window_v1"
+                or row.get("search_version") != search_version or row.get("search_policy") != search_policy):
+            raise ValueError("Pair search policy differs from its explicit versioned source contract")
+    elif search_policy is not None or row.get("search_version") is not None or row.get("search_policy") is not None:
+        raise ValueError("Historical source cannot silently use a newer pair search policy")
     directory = Path(pair_path).resolve().parent
     if row.get("status") != "passed" or row.get("kind") not in KINDS or row.get("discard_reasons") != []:
         raise ValueError("Pair was not recorded as an unqualified completed pass")
@@ -603,14 +706,21 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             raise ValueError("Clone pair lacks its explicit second-round candidate-origin declaration")
         reader, clone_file_count = clone_evidence_reader(row, worlds[0].get("clone_context"), directory,
                                                         root=root, raw_root=raw_root)
-        clone = verify_clone_measurements(row, worlds, replays, restored, constructions, raw_preflight, reader)
+        clone = verify_clone_measurements(row, worlds, replays, restored, constructions, raw_preflight, reader,
+                                          search_version=search_version)
+        if search_version is not None and clone["lineage"]["source_name"] != search_clone_source:
+            raise ValueError("Pair's actual clone source differs from its fixed-order successful source ledger")
         clone["json_proof_file_count"] = clone_file_count
     elif clone_enabled:
         original_names = {o["name"] for o in raw_preflight["snapshot"]["objects"]}
         if (row.get("enable_candidate_clone") is not True or row.get("candidate_origin") != "natural_fallback"
-                or row.get("clone_selection", {}).get("status") != "natural_fallback"
+                or (search_version is None and row.get("clone_selection", {}).get("status") != "natural_fallback")
                 or any({o["name"] for o in world["objects"]} != original_names for world in worlds)):
             raise ValueError("Second-round natural fallback changed inventory or omitted its explicit declaration")
+    if search_version is not None and clone is None:
+        verify_search_identity(row, raw_preflight["snapshot"]["objects"])
+        for world in worlds:
+            verify_search_identity(row, world["objects"])
     record = read("observations.json")
     if set(record) != {"prefix", "after"} or any(len(record[key]) != 2 for key in record):
         raise ValueError("Require two actual prefix and two post-observation captures")
@@ -868,6 +978,15 @@ def main(argv=None):
                     passed_refs = []  # Validated against the journal below; not an inferred source metric.
                 if not isinstance(passed_refs, list):
                     raise ValueError("Missing recorded passed-pair references")
+                if cfg.get("search_version") is not None:
+                    source["search_version"] = cfg["search_version"]
+                    source["clone_source_order"] = copy.deepcopy(measured.get("clone_source_order"))
+                    source["clone_attempts"] = copy.deepcopy(measured.get("clone_attempts"))
+                    source["scheduler"] = copy.deepcopy(measured.get("scheduler"))
+                    if eligible["eligible"] and passed_refs:
+                        first_objects = search_source_inventory(measured,
+                            lambda ref: read_reference(ref, within=cfg["raw_evidence_dir"]))
+                        source["search_ledger_verification"] = verify_search_ledger(measured, first_objects)
                 by_path = {}
                 for item in passed_refs:
                     verified = reference_path(item, within=ROOT / "data/world_pairs/v2" / cfg["name"])
@@ -911,7 +1030,9 @@ def main(argv=None):
                         checked = check_pair(pair, pair_path, raw_root=cfg["raw_evidence_dir"],
                                              clone_enabled=cfg.get("enable_candidate_clone") is True,
                                              preflight_version=cfg.get("preflight_version"),
-                                             evidence_version=cfg.get("evidence_version"))
+                                             evidence_version=cfg.get("evidence_version"),
+                                             search_version=cfg.get("search_version"), search_policy=cfg.get("search_policy"),
+                                             search_clone_source=source.get("search_ledger_verification", {}).get("successful_source_name"))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],

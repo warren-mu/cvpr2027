@@ -9,7 +9,8 @@ import unittest
 from src.tools.merge_pair_v2 import (KINDS, balanced_selection, durations,
     clone_evidence_reader, journal_reference, load_observation, producer_arguments, proposal_identity,
     publication_eligible, reference_path, scene_number, source_eligibility,
-    shard_producer, verify_clone_measurements, verify_preflight, verify_source_identity)
+    shard_producer, search_source_inventory, verify_clone_measurements, verify_preflight,
+    verify_search_identity, verify_search_ledger, verify_source_identity)
 
 
 def source(exit_code=0, status="completed_search", cleanup=None):
@@ -59,7 +60,7 @@ def identity_fixture():
     return copy.deepcopy((data, gate, runtime, allocation))
 
 
-def clone_fixture(normalize_source_rotation=False):
+def clone_fixture(normalize_source_rotation=False, natural_pair=False, anchor_type="Apple"):
     from src.envs.pair_v2_clone_policy import (make_clone_recipe, verify_clone_creation,
         clone_baseline_check, clone_pair_check, clone_replay_check)
     def xyz(x, y=0.5):
@@ -77,7 +78,10 @@ def clone_fixture(normalize_source_rotation=False):
     original = [{"name": name, "objectType": category, "objectId": name + "_id", "position": xyz(x),
                  "rotation": xyz(0, 0), "pickupable": pickup, "moveable": False, "receptacle": not pickup,
                  "parentReceptacles": ["Table_id"]}
-                for name, category, x, pickup in (("A", "Mug", 0, True), ("X", "Apple", 2, True), ("Table", "Table", 1, False))]
+                for name, category, x, pickup in (("A", "Mug", 0, True), ("X", anchor_type, 2, True), ("Table", "Table", 1, False))]
+    if natural_pair:
+        original.extend([dict(copy.deepcopy(original[0]), name=name, objectType="Apple", objectId=name + "_id", position=xyz(x))
+                         for name, x in (("natural_a", 1.5), ("natural_b", 2.5))])
     source = {"scene": "FloorPlan1", "objects": original, "poses": poses(original)}
     source_ref = put("original_baseline", source)
     preflight = {"snapshot": {**source, "reference": source_ref}}
@@ -143,6 +147,150 @@ def clone_fixture(normalize_source_rotation=False):
 
 
 class MergePairV2Tests(unittest.TestCase):
+    def search_row(self, row, *, natural=False):
+        from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
+        row.update(search_version=SEARCH_VERSION, search_policy=copy.deepcopy(SEARCH_POLICY),
+                   search_candidate_origin="natural" if natural else "cloned")
+        row["identities"].update(target_type="Apple" if natural else "Mug", anchor_type="Book")
+        if natural:
+            row["identities"]["candidate_names"] = ["natural_a", "natural_b"]
+        return SEARCH_VERSION
+
+    def test_search_entry_requires_its_exact_full_versioned_configuration(self):
+        from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY
+        from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
+        cfg = {"enable_candidate_clone": True, "preflight_version": PREFLIGHT_VERSION,
+               "preflight_policy": copy.deepcopy(PREFLIGHT_POLICY), "evidence_version": "anchor_union_look_v1",
+               "search_version": SEARCH_VERSION, "search_policy": copy.deepcopy(SEARCH_POLICY)}
+        command = ["python", "-u", "-m", "src.envs.pair_v2_search_shard", "--name", "synthetic"]
+        self.assertTrue(shard_producer(command, cfg)[1])
+        for key, value in (("search_version", "unknown"), ("search_policy", {}),
+                           ("preflight_version", None), ("evidence_version", None)):
+            bad = copy.deepcopy(cfg)
+            bad[key] = value
+            with self.assertRaises(ValueError):
+                shard_producer(command, bad)
+        with self.assertRaises(ValueError):
+            shard_producer(["python", "-m", "src.envs.pair_v2_stable_shard"], cfg)
+
+    def test_search_union_accepts_natural_rolling_pair_inside_verified_clone_baseline(self):
+        args, _ = clone_fixture(natural_pair=True, anchor_type="Book")
+        version = self.search_row(args[0], natural=True)
+        result = verify_clone_measurements(*args, search_version=version)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["search_identity"]["identities"]["search_candidate_origin"], "natural")
+        self.assertTrue(result["baseline"]["passed"])
+        self.assertEqual(len(result["replay_recreation"]), 2)
+        with self.assertRaises(ValueError):  # Frozen historical source still only allows its cloned pair.
+            verify_clone_measurements(*args)
+
+    def test_search_clone_pair_remains_supported_in_union(self):
+        args, _ = clone_fixture(natural_pair=True, anchor_type="Book")
+        version = self.search_row(args[0])
+        result = verify_clone_measurements(*args, search_version=version)
+        self.assertEqual(result["search_identity"]["identities"]["search_candidate_origin"], "cloned")
+
+    def test_natural_union_does_not_bypass_clone_recreation_or_collateral_evidence(self):
+        args, evidence = clone_fixture(natural_pair=True, anchor_type="Book")
+        version = self.search_row(args[0], natural=True)
+        evidence["/synthetic/raw/recreate_1.json"]["after_metadata"]["lastActionSuccess"] = False
+        with self.assertRaises(ValueError):
+            verify_clone_measurements(*args, search_version=version)
+        args, _ = clone_fixture(natural_pair=True, anchor_type="Book")
+        version = self.search_row(args[0], natural=True)
+        args[4][0]["requested_poses"][0]["position"]["x"] += .001
+        with self.assertRaises(ValueError):
+            verify_clone_measurements(*args, search_version=version)
+
+    def test_search_union_origin_or_rolling_anchor_cannot_be_asserted_by_saved_pass(self):
+        args, _ = clone_fixture(natural_pair=True, anchor_type="Book")
+        version = self.search_row(args[0], natural=True)
+        args[0]["search_candidate_origin"] = "cloned"
+        with self.assertRaises(ValueError):
+            verify_clone_measurements(*args, search_version=version)
+        args, _ = clone_fixture()
+        version = self.search_row(args[0])
+        args[0]["identities"]["anchor_type"] = "Apple"
+        with self.assertRaises(ValueError):
+            verify_clone_measurements(*args, search_version=version)
+
+    def test_search_natural_inventory_needs_no_clone_but_exact_selected_roles(self):
+        args, _ = clone_fixture(natural_pair=True, anchor_type="Book")
+        self.search_row(args[0], natural=True)
+        objects = args[5]["snapshot"]["objects"]
+        self.assertTrue(verify_search_identity(args[0], objects)["passed"])
+        args[0]["identities"]["candidate_names"] = ["natural_a", "A"]
+        with self.assertRaises(ValueError):
+            verify_search_identity(args[0], objects)
+
+    def test_current_source_eligibility_does_not_reapply_first_controller_six_limit(self):
+        from src.envs.pair_v2_search_policy import eligible_clone_sources
+        original = [{"name": category, "objectType": category, "pickupable": True}
+                    for category in ("AlarmClock", "Book", "Bowl", "Candle", "CD", "Cloth", "Cup", "Mug")]
+        original += [{"name": name, "objectType": "Apple", "pickupable": True} for name in ("natural_a", "natural_b")]
+        expanded = original + [{"name": "copy", "objectType": "Mug", "pickupable": True}]
+        row = {"identities": {"candidate_names": ["natural_a", "natural_b"], "anchor_name": "Book"}}
+        self.search_row(row, natural=True)
+        self.assertNotIn("Mug", [obj["name"] for obj in eligible_clone_sources(original)])
+        checked = verify_search_identity(row, expanded,
+            lineage={"source_name": "Mug", "candidate_names": ["Mug", "copy"]}, original_objects=original)
+        self.assertTrue(checked["passed"])
+
+    def search_ledger(self):
+        objects = [{"name": name, "objectType": category, "pickupable": True}
+                   for name, category in (("x", "Book"), ("m", "Mug"), ("a", "Apple"), ("b", "Apple"))]
+        order = [{"name": "x", "objectType": "Book"}, {"name": "m", "objectType": "Mug"}]
+        rows = [{"attempt_index": i, "fixed_source_index": i, "source_name": row["name"],
+                 "source_type": row["objectType"], "controller_id": "synthetic_" + str(i),
+                 "unity_identity": {"pid": 100 + i, "start_ticks": 1000 + i, "pgid": 20, "sid": 20},
+                 "preflight_passed": True, "clone_attempted": True, "passed": i == 1,
+                 "status": "clone_ready" if i == 1 else "clone_setup_failed",
+                 "baseline_validation_reference": {"file": "synthetic", "sha256": "not-read-by-this-ledger-only-helper"} if i == 1 else None}
+                for i, row in enumerate(order)]
+        return {"clone_source_order": order, "clone_attempts": rows}, objects
+
+    def test_search_source_ledger_fixed_prefix_fresh_controllers_and_first_success(self):
+        ledger, objects = self.search_ledger()
+        self.assertTrue(verify_search_ledger(ledger, objects)["passed"])
+        for field, value in (("fixed_source_index", 0), ("controller_id", "synthetic_0"),
+                             ("unity_identity", ledger["clone_attempts"][0]["unity_identity"])):
+            bad = copy.deepcopy(ledger)
+            bad["clone_attempts"][1][field] = value
+            with self.assertRaises(ValueError):
+                verify_search_ledger(bad, objects)
+        ledger["clone_attempts"][0].update(passed=True, status="clone_ready", baseline_validation_reference={"file": "synthetic"})
+        with self.assertRaises(ValueError):
+            verify_search_ledger(ledger, objects)
+
+    def test_search_empty_union_success_still_stops_cloning_and_natural_fallback_is_possible(self):
+        ledger, objects = self.search_ledger()
+        ledger["clone_attempts"] = ledger["clone_attempts"][:1]
+        ledger["clone_attempts"][0].update(passed=True, status="clone_ready_no_eligible_identity",
+                                            baseline_validation_reference={"file": "synthetic"})
+        self.assertTrue(verify_search_ledger(ledger, objects)["passed"])
+
+    def test_search_incomplete_failed_clone_prefix_cannot_contribute_natural_fallback(self):
+        ledger, objects = self.search_ledger()
+        ledger["clone_attempts"] = ledger["clone_attempts"][:1]
+        with self.assertRaises(ValueError):
+            verify_search_ledger(ledger, objects)
+
+    def test_search_source_order_binds_first_preflight_not_selected_controller_reset(self):
+        ledger, objects = self.search_ledger()
+        first_ref, selected_ref = {"file": "first"}, {"file": "selected"}
+        records = {"first": {"passed": True, "preflight_version": "settled_baseline_window_v1",
+                              "snapshot": {"objects": objects}},
+                   "selected": {"passed": True, "preflight_version": "settled_baseline_window_v1",
+                                 "snapshot": {"objects": []}}}
+        ledger.update(controller_visits=[{"preflight_passed": True, "preflight_reference": first_ref}],
+                      scene_preflight_reference=selected_ref)
+        original = search_source_inventory(ledger, lambda ref: records[ref["file"]])
+        self.assertEqual(original, objects)
+        self.assertTrue(verify_search_ledger(ledger, original)["passed"])
+        records["first"]["passed"] = False
+        with self.assertRaises(ValueError):
+            search_source_inventory(ledger, lambda ref: records[ref["file"]])
+
     def test_clone_producer_requires_explicit_true_opt_in(self):
         command = ["python", "-u", "-m", "src.envs.pair_v2_clone_shard", "--name", "synthetic"]
         self.assertTrue(shard_producer(command, {"enable_candidate_clone": True})[1])

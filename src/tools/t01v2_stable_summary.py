@@ -51,12 +51,29 @@ def aggregate(rows, pending, errors):
         else:
             for key in categories:
                 physical[key] += distribution[key]
+    w0, w0_unknown = {}, []
+    for row in rows:
+        values = row.get('w0_by_anchor')
+        keys = ('measured_attempts', 'passed', 'rejected', 'measurement_unavailable')
+        valid = isinstance(values, dict) and all(isinstance(v, dict)
+            and all(type(v.get(k)) is int and v[k] >= 0 for k in keys)
+            and v['passed'] + v['rejected'] == v['measured_attempts'] for v in values.values())
+        if not valid:
+            w0_unknown.append(row['scene'])
+            continue
+        for anchor, values_for_anchor in values.items():
+            totals = w0.setdefault(anchor, {key: 0 for key in keys})
+            for key in keys:
+                totals[key] += values_for_anchor[key]
     return {'known_source_reported_passed_by_class': known, 'unknown_count_scenes': unknown,
         'all_requested_counts_known': not pending and not errors and not unknown,
         'known_physical_rejection_distribution': physical, 'unknown_physical_distribution_scenes': physical_unknown,
         'all_requested_physical_distributions_known': not pending and not errors and not physical_unknown,
         'physical_distribution_denominator': 'rejected attempts; each category once per attempt; categories may overlap',
-        'source_counts_independently_revalidated_as_accepted_pairs': False, 'task_acceptance': None}
+        'source_counts_independently_revalidated_as_accepted_pairs': False, 'task_acceptance': None,
+        'known_w0_by_anchor': w0, 'unknown_w0_scenes': w0_unknown,
+        'all_requested_w0_counts_known': not pending and not errors and not w0_unknown,
+        'w0_denominator': 'completed physical measurements only; unavailable measurements remain separate'}
 
 
 def main():
@@ -95,12 +112,23 @@ def main():
                 'physical_rejection_distribution': copy.deepcopy((metrics.get('evidence_retention') or {}).get('physical_rejection_distribution')),
                 'complete_rejection_reason_counts': copy.deepcopy((metrics.get('evidence_retention') or {}).get('complete_rejection_reason_counts')),
                 'physical_check_unavailable_rejections': (metrics.get('evidence_retention') or {}).get('physical_check_unavailable_rejections'),
-                'preflight': None, 'clone_preparation': None}
+                'preflight': None, 'clone_preparation': None,
+                'search_version': metrics.get('search_version'),
+                'w0_by_anchor': copy.deepcopy(metrics.get('w0_by_anchor')),
+                'clone_attempts': copy.deepcopy(metrics.get('clone_attempts')),
+                'controller_visits': copy.deepcopy(metrics.get('controller_visits')),
+                'raw_evidence_errors': []}
+            row['reported_clone_attempt_count'] = (len(row['clone_attempts'])
+                if isinstance(row['clone_attempts'], list) else None)
             preflight_ref = metrics.get('scene_preflight_reference')
             if preflight_ref:
-                raw = json.loads(reference_path(preflight_ref, within=config['raw_evidence_dir']).read_text())
-                row['preflight'] = preflight_numbers(raw)
-                row['preflight']['evidence'] = archive_reference(preflight_ref, evidence)
+                try:
+                    raw = json.loads(reference_path(preflight_ref, within=config['raw_evidence_dir']).read_text())
+                    row['preflight'] = preflight_numbers(raw)
+                    row['preflight']['evidence'] = archive_reference(preflight_ref, evidence)
+                except (OSError, ValueError) as error:
+                    row['raw_evidence_errors'].append({'scope': 'preflight', 'reference': preflight_ref,
+                        'error': f'{type(error).__name__}: {error}'})
             clone = metrics.get('clone_preparation')
             if clone is not None:
                 row['clone_preparation'] = {key: copy.deepcopy(clone.get(key)) for key in
@@ -109,13 +137,20 @@ def main():
                 row['clone_preparation']['physical_reasons'] = copy.deepcopy(check.get('reasons'))
                 row['clone_preparation']['physical_edits'] = copy.deepcopy((check.get('physical') or {}).get('edits'))
                 if clone.get('record_reference'):
-                    reference_path(clone['record_reference'], within=config['raw_evidence_dir'])
-                    row['clone_preparation']['evidence'] = archive_reference(clone['record_reference'], evidence)
+                    try:
+                        reference_path(clone['record_reference'], within=config['raw_evidence_dir'])
+                        row['clone_preparation']['evidence'] = archive_reference(clone['record_reference'], evidence)
+                    except (OSError, ValueError) as error:
+                        row['raw_evidence_errors'].append({'scope': 'clone_preparation', 'reference': clone['record_reference'],
+                            'error': f'{type(error).__name__}: {error}'})
             rows.append(row)
             sources.append(ref)
         except Exception as error:
             errors.append({'source_file': value, 'error': f'{type(error).__name__}: {error}'})
+    evidence_errors = [{'source_file': row['source_file'], 'scene': row['scene'], **error}
+        for row in rows for error in row['raw_evidence_errors']]
     metrics = {'kind': 't01v2_stable_progress', 'shards': rows, 'pending_sources': pending,
+        'raw_evidence_errors': evidence_errors,
         'source_errors': errors, **aggregate(rows, pending, errors)}
     config = {'name': args.name, 'explicit_sources': args.source,
         'scope': 'Audited source-reported progress plus authenticated preflight/clone JSON; final pair acceptance belongs to the independent final merger.',
@@ -125,7 +160,7 @@ def main():
         json.dump({'metrics': metrics, 'config': config, 'sources': sources}, stream, indent=2, allow_nan=False)
         stream.write('\n')
     print('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)
-    return int(bool(errors))
+    return int(bool(errors or evidence_errors))
 
 
 if __name__ == '__main__':

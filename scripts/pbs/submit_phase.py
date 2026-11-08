@@ -32,8 +32,8 @@ def budget_group(task, name, command, declared=None):
     """v2 is a subset of T01/60, never an alternative ledger or a new allowance."""
     named = isinstance(name, str) and (name == "pilot_pairs_v2" or name.startswith("pilot_pairs_v2_"))
     launched = any(isinstance(arg, str) and
-                   (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh"))
-                    or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel"))
+                   (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh", "/t01v2_search_pairs.sh"))
+                    or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel", "src.tools.t01v2_search_parallel"))
                    for arg in (command or []))
     if declared not in (None, "T01v2"):
         raise ValueError("Unknown phase subbudget")
