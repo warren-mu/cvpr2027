@@ -150,9 +150,16 @@ def probe_worker(config, connection):
 
     class ProbeServer(FifoServer):
         def receive(self, timeout=None):
+            previous_files = getattr(self, "_probe_last_raw_files", None)
             event = super().receive(timeout=timeout)
             action = json.loads(self._last_action_message) if self._last_action_message else None
             observation = capture_event(event, directory, len(metrics["captures"]), stage, action)
+            observation["cached_raw_files_mapping_reused"] = self.raw_files is previous_files
+            observation["rgb_wire_payloads"] = [
+                {"bytes": len(body), "nonzero_bytes_including_any_alpha": len(body) - body.count(b"\0"),
+                 "sha256": hashlib.sha256(body).hexdigest()}
+                for body in self.raw_files.get("image", [])]
+            self._probe_last_raw_files = self.raw_files
             metrics["captures"].append(observation)
             publish()
             return event
@@ -213,7 +220,9 @@ def probe_worker(config, connection):
             "initialization_parameters": copy.deepcopy(controller.initialization_parameters),
             "unity_build_commit_id": controller._build.commit_id,
             "executable": controller._build.executable_path,
-            "executable_sha256": file_hash(controller._build.executable_path)}
+            "executable_sha256": file_hash(controller._build.executable_path),
+            "fifo_server_pipe_path": controller.server.server_pipe_path,
+            "fifo_client_pipe_path": controller.server.client_pipe_path}
         if controller._build.commit_id != BUILD:
             raise RuntimeError("Unexpected Unity build")
         metrics["stages"].append({"stage": "initial", "capture_index": len(metrics["captures"]) - 1})
