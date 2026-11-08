@@ -113,9 +113,17 @@ def verify_evidence(repo, paths, auditor=None, user=None):
         data, reference = load_logged(repo, path, auditor)
         meta, command = data["_meta"], data.get("config", {}).get("command")
         argv = meta.get("command", [])
-        if (len(argv) < 6 or not re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(argv[0]).name)
-                or (repo / argv[1]).resolve() != repo / "src/tools/record_command.py"
-                or argv[2:5] != ["--name", meta.get("name"), "--"] or argv[5:] != command
+        # Both exact Python entry forms execute this same tracked recorder.
+        # Never rewrite the stored command or accept a module name in argv data.
+        arguments = None
+        if (isinstance(argv, list) and len(argv) >= 6 and all(isinstance(arg, str) for arg in argv)
+                and re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(argv[0]).name)):
+            if argv[1:3] == ["-m", "src.tools.record_command"]:
+                arguments = argv[3:]
+            elif (repo / argv[1]).resolve() == repo / "src/tools/record_command.py":
+                arguments = argv[2:]
+        if (arguments is None or arguments[:3] != ["--name", meta.get("name"), "--"]
+                or arguments[3:] != command
                 or meta.get("metrics_sha256") != hashlib.sha256(json.dumps(data["metrics"], sort_keys=True).encode()).hexdigest()):
             raise ValueError("Source config command is not its audited record_command invocation")
         reference.update(file=reference["path"], metrics_sha256=meta["metrics_sha256"])

@@ -56,6 +56,26 @@ def materialize(root, records, logs):
 
 
 class CancellationEvidenceTests(unittest.TestCase):
+    def test_exact_module_recorder_is_authenticated_without_rewriting_source(self):
+        records, logs = fixture()
+        for record in records:
+            argv = record['_meta']['command']
+            record['_meta']['command'] = [argv[0], '-m', 'src.tools.record_command', *argv[2:]]
+        auditor = SimpleNamespace(audit_file=lambda path: {'fail': [], 'warn': []})
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            paths = materialize(root, records, logs)
+            verified, _ = verify_evidence(root, paths, auditor, USER)
+            self.assertEqual(set(verified), {JOB})
+            for producer in (['python3', '-m', 'other.module'],
+                             ['python3', '-c', 'src.tools.record_command'],
+                             ['python3', 'other.py', '-m', 'src.tools.record_command']):
+                changed = copy.deepcopy(records[1])
+                changed['_meta']['command'] = producer + records[1]['_meta']['command'][3:]
+                (root / paths[1]).write_text(json.dumps(changed))
+                with self.assertRaises(ValueError):
+                    verify_evidence(root, paths, auditor, USER)
+
     def test_complete_chain_accepts_null_run_count_without_synthesizing_it(self):
         records, logs = fixture()
         evidence = validate_chain(records, logs, USER)
