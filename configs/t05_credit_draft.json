@@ -1,0 +1,56 @@
+{
+  "status": "draft_not_training_authorization",
+  "training_execution_enabled": false,
+  "common_config_sha256": null,
+  "public_configuration_frozen": false,
+  "episode_budget_per_actual_optimizer_update": 64,
+  "maximum_episode_rounds_from_T04": 8,
+  "maximum_reply_tokens_from_T04": 256,
+  "observation_reward_cost_lambda": 0.05,
+  "r_train": 0.5,
+  "flip_log_probability_margin": 1.0,
+  "consistency_beta": 0.1,
+  "arms": {
+    "T0": {"pool_draws": 64, "episodes_per_draw": 1, "pre_evidence_credit": "upstream_masked_gae"},
+    "T1": {"pool_draws": 32, "episodes_per_draw": 2, "pre_evidence_credit": "each_world_upstream_masked_gae"},
+    "T2": {"pool_draws": 64, "episodes_per_draw": 1, "pre_evidence_credit": "actual_world_G_minus_Q_or_R_minus_Q"},
+    "T3": {"pool_draws": 32, "episodes_per_draw": 2, "pre_evidence_credit": "p_world_weighted_same_world_components_identical_for_both_worlds"},
+    "T4": {"pool_draws": 32, "episodes_per_draw": 2, "pre_evidence_credit": "same_as_T3", "post_evidence_select_consistency": true}
+  },
+  "q_commit": {
+    "probability_space": "unconditional_model_action",
+    "sum_complete_action_token_log_probs": true,
+    "includes_action_termination_event": true,
+    "length_normalization": false,
+    "renormalize_over_select_candidates": false,
+    "target_identity": "stable_object_name",
+    "scorer_adapter_and_tokenization_contract": null
+  },
+  "awaiting_T04_freeze": {
+    "common_config_and_gae_parameters": null,
+    "upstream_token_to_decision_advantage_and_critic_target_adapter": null,
+    "realized_return_discount_definition": null,
+    "any_advantage_normalization_order": null,
+    "stay_selection_distribution_construction_and_provenance": null,
+    "symmetric_kl_sum_or_half_sum": null,
+    "flip_per_world_to_training_loss_reduction": null,
+    "pre_evidence_invalid_action_credit": null,
+    "missing_or_invisible_auxiliary_candidate_policy": null,
+    "train_scene_holdout_manifest_sha256": null,
+    "holdout_eval_decoding_and_budget_contract": null
+  },
+  "S1": {
+    "required_from_first_update": true,
+    "scope": "every pre-evidence decision in every batch, retaining both worlds and optimizer completion outcome",
+    "raw_fields": ["arm", "seed", "rho", "policy_id", "update_attempt", "actual_optimizer_update_count", "pair_id", "pool_pair_id", "episode_id", "world_id", "decision_index", "input_sha256", "shared_sample_id", "evidence_proof", "G", "R", "Q_commit", "standard_gae", "same_world_unaveraged_credit", "p_world", "raw_advantage", "applied_advantage", "action_scores", "return_definition", "advantage_transform"],
+    "variance_ddof": null,
+    "offline_world_variance_decomposition": null
+  },
+  "S2": {
+    "interval_actual_completed_optimizer_updates": 20,
+    "subset": "fixed_before_training_train_scene_holdout_not_optimization_pairs_or_frozen_test",
+    "record_per_episode_success": true,
+    "compute_auc_here": false,
+    "initial_or_terminal_endpoint_imputation": false
+  }
+}
