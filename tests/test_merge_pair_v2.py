@@ -10,7 +10,8 @@ from src.tools.merge_pair_v2 import (KINDS, balanced_selection, durations,
     clone_evidence_reader, journal_reference, load_observation, producer_arguments, proposal_identity,
     publication_eligible, reference_path, scene_number, source_eligibility,
     shard_producer, search_source_inventory, verify_clone_measurements, verify_preflight,
-    verify_search_identity, verify_search_ledger, verify_source_identity)
+    verify_search_identity, verify_search_ledger, verify_source_identity,
+    CONSTRUCTION_SPEC_REFERENCES, specification_provenance, final_pair_eligible, target_balance)
 
 
 def source(exit_code=0, status="completed_search", cleanup=None):
@@ -147,6 +148,75 @@ def clone_fixture(normalize_source_rotation=False, natural_pair=False, anchor_ty
 
 
 class MergePairV2Tests(unittest.TestCase):
+    def test_supplement4_source_requires_exact_solvability_and_role_contracts(self):
+        from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY
+        from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
+        from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY
+        from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
+        config = {'enable_candidate_clone': True, 'preflight_version': PREFLIGHT_VERSION,
+            'preflight_policy': copy.deepcopy(PREFLIGHT_POLICY), 'evidence_version': 'anchor_union_look_v1',
+            'search_version': SEARCH_VERSION, 'search_policy': copy.deepcopy(SEARCH_POLICY),
+            'solvability_version': SOLVABILITY_VERSION, 'solvability_policy': copy.deepcopy(SOLVABILITY_POLICY),
+            'generation_version': ROLE_VERSION, 'generation_policy': copy.deepcopy(ROLE_POLICY)}
+        command = ['python', '-u', '-m', 'src.envs.pair_v2_solvable_shard']
+        self.assertTrue(shard_producer(command, config)[1])
+        for key in ('solvability_policy', 'generation_version', 'generation_policy'):
+            bad = copy.deepcopy(config)
+            bad[key] = None
+            with self.assertRaises(ValueError):
+                shard_producer(command, bad)
+        with self.assertRaises(ValueError):
+            shard_producer(['python', '-m', 'src.envs.pair_v2_search_shard'], config)
+
+    def test_historical_spec_binds_exact_source_commit_and_approved_document(self):
+        commit = 'a' * 40
+        documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
+        documents[commit] = documents['635afb6']
+        sha = hashlib.sha256(documents[commit]).hexdigest()
+        checked = specification_provenance(sha, commit, documents.__getitem__)
+        self.assertTrue(checked['historical_spec'])
+        self.assertEqual(checked['compatible_references'], ['635afb6'])
+        documents[commit] = documents['d869611']
+        current = specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit, documents.__getitem__)
+        self.assertFalse(current['historical_spec'])
+
+    def test_unknown_or_mismatched_commit_spec_fails_closed(self):
+        commit = 'a' * 40
+        documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
+        documents[commit] = b'unknown document'
+        with self.assertRaises(ValueError):
+            specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit, documents.__getitem__)
+        documents[commit] = documents['635afb6']
+        with self.assertRaises(ValueError):
+            specification_provenance('0' * 64, commit, documents.__getitem__)
+        with self.assertRaises(KeyError):
+            specification_provenance('0' * 64, 'b' * 40, documents.__getitem__)
+        with self.assertRaises(ValueError):
+            specification_provenance('0' * 64, 'HEAD', documents.__getitem__)
+
+    def test_legacy_look_requires_new_or_separate_posthoc_evidence_not_fabricated_sets(self):
+        from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION
+        self.assertFalse(final_pair_eligible('look_flip', None))
+        self.assertFalse(final_pair_eligible('look_stay', 'unrecognized'))
+        self.assertTrue(final_pair_eligible('look_flip', SOLVABILITY_VERSION))
+        self.assertTrue(final_pair_eligible('direct_stay', None))
+
+    def test_target_balance_uses_actual_targets_rho_half_and_empty_denominators(self):
+        def row(kind, first, second):
+            return {'scene': 'FloorPlan1', 'kind': kind, 'identities': {'candidate_names': ['a', 'b']},
+                    'target_w0': first, 'target_w1': second}
+        report = target_balance([row('direct_flip', 'b', 'a'), row('direct_stay', 'a', 'a'),
+                                 row('direct_stay', 'b', 'b')], ['FloorPlan1', 'FloorPlan2'])
+        table = {(r['scene'], r['kind']): r for r in report['rows']}
+        self.assertEqual(table[('FloorPlan1', 'direct_flip')]['correct_target_a_probability_at_rho_half'], .5)
+        self.assertEqual(table[('FloorPlan1', 'direct_stay')]['stay_target_a_count'], 1)
+        self.assertEqual(table[('FloorPlan1', 'direct_stay')]['stay_target_b_count'], 1)
+        self.assertEqual(table[('FloorPlan2', 'direct_stay')]['pair_denominator'], 0)
+        self.assertIsNone(table[('FloorPlan2', 'direct_stay')]['correct_target_a_probability_at_rho_half'])
+        self.assertIsNone(report['balance_certified'])
+        unbalanced = target_balance([row('direct_stay', 'a', 'a')], ['FloorPlan1'])
+        self.assertEqual(unbalanced['rows'][1]['correct_target_a_probability_at_rho_half'], 1)
+
     def search_row(self, row, *, natural=False):
         from src.envs.pair_v2_search_policy import SEARCH_VERSION, SEARCH_POLICY
         row.update(search_version=SEARCH_VERSION, search_policy=copy.deepcopy(SEARCH_POLICY),

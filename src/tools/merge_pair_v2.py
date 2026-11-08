@@ -16,6 +16,8 @@ import math
 from pathlib import Path
 import re
 import shutil
+import subprocess
+from functools import lru_cache
 
 from src.envs.thor_common import ROOT
 from src.tools.t01_partition import audited_result, canonical_hash, sha_file
@@ -23,6 +25,33 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
 PER_CLASS = 20
 REVIEWS_PER_CLASS = 10
+CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611")
+CURRENT_SPEC_REFERENCE = "d869611"
+
+
+@lru_cache(maxsize=64)
+def committed_spec_bytes(commit):
+    if re.fullmatch(r"[0-9a-f]{7,40}", str(commit)) is None:
+        raise ValueError("Require an explicit audited hexadecimal commit")
+    completed = subprocess.run(["git", "show", commit + ":docs/METRICS_SPEC.md"], cwd=ROOT,
+                               capture_output=True, timeout=15, check=False)
+    if completed.returncode != 0:
+        raise ValueError("Cannot authenticate METRICS_SPEC at source/approved commit " + commit)
+    return completed.stdout
+
+
+def specification_provenance(declared_sha, source_commit, read_document=committed_spec_bytes):
+    if re.fullmatch(r"[0-9a-f]{40}", str(source_commit)) is None:
+        raise ValueError("Source specification requires its exact audited Git commit")
+    actual = hashlib.sha256(read_document(source_commit)).hexdigest()
+    known = {reference: hashlib.sha256(read_document(reference)).hexdigest()
+             for reference in CONSTRUCTION_SPEC_REFERENCES}
+    matches = [reference for reference, sha in known.items() if sha == actual]
+    if declared_sha != actual or not matches:
+        raise ValueError("Claimed/source-commit specification mismatch or unknown construction specification")
+    return {"historical_spec": actual != known[CURRENT_SPEC_REFERENCE], "source_commit": source_commit,
+            "actual_document_sha256": actual, "compatible_references": matches,
+            "scope": "known construction-compatible specification; full METRICS compliance is not asserted"}
 
 
 def finite_duration(value):
@@ -91,6 +120,14 @@ def shard_producer(command, config):
             if config.get("search_version") != SEARCH_VERSION or config.get("search_policy") != SEARCH_POLICY:
                 raise ValueError("Unknown search policy or altered fixed search configuration")
             module = "src.envs.pair_v2_search_shard"
+            if config.get("solvability_version") is not None:
+                from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY
+                from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
+                if config.get("solvability_version") != SOLVABILITY_VERSION or config.get("solvability_policy") != SOLVABILITY_POLICY:
+                    raise ValueError("Unknown per-world Look solvability policy")
+                if config.get("generation_version") != ROLE_VERSION or config.get("generation_policy") != ROLE_POLICY:
+                    raise ValueError("New solvability producer requires its fixed proposal-role policy")
+                module = "src.envs.pair_v2_solvable_shard"
     elif enabled is True:
         module = "src.envs.pair_v2_clone_shard"
     elif enabled is None or enabled is False:
@@ -102,6 +139,11 @@ def shard_producer(command, config):
     if ((version is None and config.get("search_version") is not None)
             or (config.get("search_version") is None and config.get("search_policy") is not None)):
         raise ValueError("Search configuration requires its explicit stable search producer")
+    if ((config.get("search_version") is None and config.get("solvability_version") is not None)
+            or (config.get("solvability_version") is None and config.get("solvability_policy") is not None)):
+        raise ValueError("Solvability configuration requires its explicit versioned search producer")
+    if config.get("solvability_version") is None and any(config.get(key) is not None for key in ("generation_version", "generation_policy")):
+        raise ValueError("Proposal-role metadata requires its explicit new producer")
     return producer_arguments(command, module), enabled is True
 
 
@@ -213,14 +255,14 @@ def load_source(path):
         raise ValueError("Hashed metrics preflight version differs from source config")
     if data["metrics"].get("evidence_version") != config.get("evidence_version"):
         raise ValueError("Hashed metrics evidence rule differs from source config")
-    if any(data["metrics"].get(key) != config.get(key) for key in ("search_version", "search_policy")):
+    if any(data["metrics"].get(key) != config.get(key) for key in
+           ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy")):
         raise ValueError("Hashed metrics search configuration differs from source config")
     if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
             or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
             or config.get("seed") != 0 or config.get("resolution") != 255):
         raise ValueError("Logged producer/name/scene does not identify a v2 shard")
-    if config.get("metrics_spec_sha256") != sha_file(ROOT / "docs/METRICS_SPEC.md"):
-        raise ValueError("Shard measured a different metrics specification")
+    spec_provenance = specification_provenance(config.get("metrics_spec_sha256"), meta.get("git_commit"))
     log = ROOT / meta.get("log_path", f"logs/runs/{expected_name}.log")
     side = ROOT / "logs/runs" / f"{expected_name}.meta.json"
     shard_file = (ROOT / option(arguments, "--shard-config")).resolve()
@@ -247,6 +289,7 @@ def load_source(path):
                meta_file=str(side.relative_to(ROOT)), meta_sha256=sha_file(side), gate_source=gate_ref,
                shard_config_file=str(shard_file), shard_config_sha256=sha_file(shard_file),
                candidate_clone_enabled=clone_enabled)
+    ref["metrics_specification"] = spec_provenance
     return data, ref
 
 
@@ -648,8 +691,38 @@ def load_observation(record, portable, directory, *, root=ROOT):
     return result
 
 
+def verify_portable_solvability(row, worlds, after, portable, directory, *, root=ROOT, raw_root=None):
+    from src.envs.pair_v2_solvable_export import verify_look_solvability
+    def read_portable(ref):
+        path = reference_path(ref, root=root, within=directory)
+        if portable.get(path) != ref["sha256"]:
+            raise ValueError("Solvability proof is not covered by the pair's portable manifest")
+        return path.read_bytes()
+    proof = json.loads(read_portable(row["look_solvability_reference"]))
+    native = {}
+    for entry in proof["raw_json_files"]:
+        source = Path(entry["source_file"])
+        if (not source.is_absolute() or source.suffix != ".json" or source in native
+                or raw_root is None or not source.resolve().is_relative_to(Path(raw_root).resolve())):
+            raise ValueError("Invalid/duplicate native solvability JSON source identity")
+        read_portable(entry)
+        native[source] = entry
+    def read_json(ref):
+        entry = native.get(Path(ref["file"]))
+        if entry is None or entry["sha256"] != ref["sha256"]:
+            raise ValueError("Native action/snapshot reference lacks its exact portable JSON hash")
+        return json.loads(read_portable(entry))
+    return verify_look_solvability(row, worlds, after, proof, read_json, read_portable)
+
+
+def final_pair_eligible(kind, solvability_version):
+    from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION
+    return kind in KINDS and (not kind.startswith("look") or solvability_version == SOLVABILITY_VERSION)
+
+
 def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None,
-               evidence_version=None, search_version=None, search_policy=None, search_clone_source=None):
+               evidence_version=None, search_version=None, search_policy=None, search_clone_source=None,
+               solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
@@ -669,6 +742,19 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             raise ValueError("Pair search policy differs from its explicit versioned source contract")
     elif search_policy is not None or row.get("search_version") is not None or row.get("search_policy") is not None:
         raise ValueError("Historical source cannot silently use a newer pair search policy")
+    if solvability_version is not None:
+        from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY, classify_pair
+        from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
+        if (solvability_version != SOLVABILITY_VERSION or solvability_policy != SOLVABILITY_POLICY
+                or search_version is None or row.get("solvability_version") != solvability_version
+                or row.get("solvability_policy") != solvability_policy
+                or generation_version != ROLE_VERSION or generation_policy != ROLE_POLICY
+                or row.get("generation_version") != generation_version or row.get("generation_policy") != generation_policy):
+            raise ValueError("Pair per-world solvability version differs from its actual source")
+    elif (solvability_policy is not None or row.get("solvability_version") is not None
+          or row.get("solvability_policy") is not None or generation_version is not None
+          or generation_policy is not None or row.get("generation_version") is not None or row.get("generation_policy") is not None):
+        raise ValueError("Historical source cannot silently assert the new Look solvability rule")
     directory = Path(pair_path).resolve().parent
     if row.get("status") != "passed" or row.get("kind") not in KINDS or row.get("discard_reasons") != []:
         raise ValueError("Pair was not recorded as an unqualified completed pass")
@@ -798,6 +884,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                 raise ValueError("Requested pivot is not the recorded pre-settle native placement result")
     if constructions[1]["before_objects"] != worlds[0]["objects"] or constructions[1]["edited_names"] != [anchor]:
         raise ValueError("w1 was not constructed from w0 with only its anchor edited")
+    role = None
+    if generation_version is not None:
+        from src.envs.pair_v2_role_policy import verify_proposal_role
+        role = verify_proposal_role(row, {obj["name"]: obj["position"] for obj in common_objects})
     single = single_edit_check(worlds[0]["poses"], constructions[1]["requested_poses"], anchor)
     look = row["kind"].startswith("look")
     shared0 = shared1 = None
@@ -833,6 +923,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     evidence_views = after if look else prefix
     evidence = (look_evidence(*evidence_views, anchor) if look and evidence_version == "anchor_union_look_v1"
                 else compare_view(*evidence_views, [*candidates, anchor]))
+    solvability = None
+    if look and solvability_version is not None:
+        solvability = verify_portable_solvability(row, worlds, after, portable, directory, root=root, raw_root=raw_root)
+        evidence["look_solvability"] = solvability["report"]
     anchor_pixels = [int(obs["masks_by_name"].get(anchor, np.zeros((255, 255), dtype=bool)).sum()) for obs in evidence_views]
     restoration = [restore_state_check(w["objects"], r["objects"], w["agent"], r["agent"])
                    for w, r in zip(worlds, restored)]
@@ -892,6 +986,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     return {"validity": verdict, "prefix": pre, "evidence": evidence, "physical": physical,
             "scene_preflight": preflight, "restoration": restoration,
             "clone_verification": clone,
+            "look_solvability_verification": solvability,
+            "proposal_role_verification": role,
+            "verification_scope": "construction-stage and applicable supplement 4(a); P-table/BFS/no-leak/cache checks not run",
+            "full_metrics_spec_compliance": None,
             "witnesses": [{"passed": w["passed"], "target_name": w["target_name"]} for w in witnesses],
             "portable_file_count": len(portable), "review_image": review,
             "proposal_identity": identity}
@@ -925,7 +1023,38 @@ def durations(values):
             "total_observed_seconds": sum(measured) if measured else None}
 
 
+def target_balance(rows, scenes):
+    """Measured target distribution at rho=.5; no inferred balance certificate."""
+    result = []
+    for scene in sorted(set(scenes), key=scene_number):
+        for kind in KINDS:
+            selected = [entry.get("pair", entry) for entry in rows
+                        if entry.get("pair", entry).get("scene") == scene and entry.get("pair", entry).get("kind") == kind]
+            w0, w1, stay_a, stay_b = 0, 0, 0, 0
+            for row in selected:
+                names = row["identities"]["candidate_names"]
+                if len(names) != 2 or names != sorted(set(names)) or any(row.get(key) not in names for key in ("target_w0", "target_w1")):
+                    raise ValueError("Target-balance summary requires actual verified stable A/B targets")
+                w0 += int(row["target_w0"] == names[0])
+                w1 += int(row["target_w1"] == names[0])
+                if kind.endswith("stay"):
+                    if row["target_w0"] != row["target_w1"]:
+                        raise ValueError("A verified Stay pair cannot have different actual targets")
+                    stay_a += int(row["target_w0"] == names[0])
+                    stay_b += int(row["target_w0"] == names[1])
+            count = len(selected)
+            result.append({"scene": scene, "kind": kind, "pair_denominator": count,
+                "w0_target_a_count": w0 if count else None, "w1_target_a_count": w1 if count else None,
+                "correct_target_a_probability_at_rho_half": (0.5 * w0 + 0.5 * w1) / count if count else None,
+                "stay_target_a_count": stay_a if count and kind.endswith("stay") else None,
+                "stay_target_b_count": stay_b if count and kind.endswith("stay") else None})
+    return {"rho": 0.5, "per_pair_formula": "0.5*I(target_w0==candidate_a)+0.5*I(target_w1==candidate_a)",
+            "candidate_a_definition": "first unchanged lexicographically sorted stable candidate name; not mark label",
+            "rows": result, "balance_certified": None, "pool_balancing": "not_run_T02_pending"}
+
+
 def main(argv=None):
+    from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", default="pilot_pairs_v2", choices=("pilot_pairs_v2",))
     parser.add_argument("--source", nargs="+", action="extend", required=True)
@@ -937,13 +1066,23 @@ def main(argv=None):
         raise FileExistsError("Existing pilot/result/review evidence is preserved; no overwrite")
     metrics = {"kind": "pair_v2_merged_pilot", "status": "failed", "acceptance_passed": False,
         "passed_by_class": {k: 0 for k in KINDS}, "source_runs": [], "rejection_counts": {},
-        "source_errors": [], "pair_errors": [], "scenes_excluded": [], "review_files": []}
+        "source_errors": [], "pair_errors": [], "scenes_excluded": [], "review_files": [],
+        "legacy_insufficient_solvability": []}
+    metrics.update(acceptance_scope="T01v2 construction-stage and supplement 4(a) qualification only",
+        full_metrics_spec_compliance=None,
+        t02_pending_checks={key: "not_run_T02_pending" for key in
+            ("P_table", "BFS_budget_D", "navigation_graph", "no_leak", "cache_at_least_200")})
     config = {"name": args.name, "requested_sources": args.source, "selection_per_class": PER_CLASS,
         "review_per_class": REVIEWS_PER_CLASS, "order": "numeric scene, journal row, source filename",
         "partial_source_policy": "formally ended failed source may supply independently complete pairs only with known clean cleanup and verified provenance",
         "ledger_policy": "audited ended noncontributing failures remain in the ledger; missing journal/counts are unknown; provenance contradictions block publication",
         "evidence_retention": "native action/snapshot references and immutable shard configs still require the original scratch files; no scratch-independent archival claim",
         "metrics_spec_sha256": sha_file(ROOT / "docs/METRICS_SPEC.md"),
+        "final_requirements": {"look_solvability_version": SOLVABILITY_VERSION,
+            "historical_look_without_all_action_proof": "preserved in legacy ledger; excluded from final accepted 80",
+            "historical_direct": "eligible only after all unchanged independent checks and provenance"},
+        "acceptance_scope": "construction-stage plus supplement 4(a); D1=P and remaining T02 checks are not certified here",
+        "construction_compatible_spec_references": list(CONSTRUCTION_SPEC_REFERENCES),
         "dataset": str(output.relative_to(ROOT)), "review_directory": str(review_dir.relative_to(ROOT))}
     sources, qualified, attempts, reasons = [], [], [], Counter()
     code = 1
@@ -1020,6 +1159,17 @@ def main(argv=None):
                         reasons["source_ineligible_completed_pair_not_admitted"] += 1
                         continue
                     pair = read_reference(by_path[pair_path], within=pair_path.parent)
+                    if not final_pair_eligible(pair.get("kind"), cfg.get("solvability_version")):
+                        if pair.get("kind") not in KINDS:
+                            raise ValueError("Unrecognized passed pair class")
+                        if any(pair.get(key) != compact.get(key) for key in ("pair_id", "scene", "kind", "status", "discard_reasons")):
+                            raise ValueError("Legacy pair differs from its authenticated journal identity")
+                        metrics["legacy_insufficient_solvability"].append({"source": reference["file"],
+                            "pair_id": pair["pair_id"], "kind": pair["kind"], "pair_reference": by_path[pair_path],
+                            "original_status": pair["status"], "reasons": ["legacy_insufficient_solvability"],
+                            "counted_in_final_pilot": False, "solvability": None,
+                            "pending_check": "separate authenticated posthoc positive proof or future measurement; absence is not failure"})
+                        continue
                     source_preflight = measured["scene_preflight_reference"]
                     reference_path(source_preflight, within=cfg["raw_evidence_dir"])
                     if pair["scene_preflight_reference"]["sha256"] != source_preflight["sha256"]:
@@ -1032,7 +1182,11 @@ def main(argv=None):
                                              preflight_version=cfg.get("preflight_version"),
                                              evidence_version=cfg.get("evidence_version"),
                                              search_version=cfg.get("search_version"), search_policy=cfg.get("search_policy"),
-                                             search_clone_source=source.get("search_ledger_verification", {}).get("successful_source_name"))
+                                             search_clone_source=source.get("search_ledger_verification", {}).get("successful_source_name"),
+                                             solvability_version=cfg.get("solvability_version"),
+                                             solvability_policy=cfg.get("solvability_policy"),
+                                             generation_version=cfg.get("generation_version"),
+                                             generation_policy=cfg.get("generation_policy"))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],
@@ -1059,6 +1213,9 @@ def main(argv=None):
         acceptance = publication_eligible(counts, sources, metrics["source_errors"], metrics["pair_errors"])
         def compact(item):
             return {k: v for k, v in item.items() if k not in ("pair", "independent_verification")}
+        declared_scenes = [source["scene"] for source in metrics["source_runs"]]
+        metrics["target_balance_selected"] = target_balance(selected, declared_scenes)
+        metrics["target_balance_unique_qualified"] = target_balance(selected + surplus, declared_scenes)
         metrics.update(passed_by_class=counts, qualified_by_class={k: sum(r["kind"] == k for r in qualified) for k in KINDS},
             selected_pairs=[compact(r) for r in selected], qualified_not_selected=[compact(r) for r in surplus],
             duplicate_completed_pairs=[compact(r) for r in duplicates], look_flip_stay_ratio=ratio,
