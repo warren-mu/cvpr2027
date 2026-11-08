@@ -23,7 +23,7 @@
 - T01 新判据实现、合法放置与落定检查已提交。7 项策略测试、11 项严格合并测试通过；CPU fixture 不能替代实际试点。`t01_approved_dispatch_preflight_retry1` 确认 A/B 尚在 Q 后，提交 `9241b08` 将两者共享启动入口切换为批准判据版本。运行中的旧 `706410` 保持旧路径，其 collect-only 记录不被新合并器自动接纳。
 - 旧 `706410` 最终 exit 1（程序 35 分钟时限），31 次尝试中仅收集 1 条直接 Stay、2 条 Look→Stay 候选，批准标准通过数为 0。两个已比较 Look 前缀严格相同，但未测得的新物理判据不能补写；不将这个小样本比例外推为新试点通过率。实际 PBS 运行 35:04、排队 4591 秒、计费 0.5844444444444444 GPU·小时，证据为 `results/pilot_pairs_collect2.json` 与 `results/t00b_phase_watch_05_accounting.json`。失败、原始 journals 与审查图均已推送。释放的小档名额按优先级用于批准判据下的旧六场景重新采集；2 卡 C 的代码与提交前预算检查准备中，尚未提交，不与 A/B 场景重叠。
 - T02 后端无关接口 24 项 CPU 测试通过（`results/t02_interface_cpu_checks.json`）；T05 配对信用、S1/S2 记录接口及 torch 梯度检查共 21 项 CPU 测试通过（`results/t05_credit_backward_cpu_checks.json`）。这不是训练集成或 GPU 验收完成；S2 以完整 PPO rollout-batch 更新计数，每 20 次在固定训练场景留出集评估。
-- R01 官方 CVPR 2027 author kit 已安装；27 个 cite key 已生成，保护的 verify_bib 校验为 25 通过、2 not_found，异常保留。描述核对重跑已完整保存来源，三项表述问题交 Claude；正文未修改。首次 TeX 安装成功、首次编译缺 grfext.sty 失败，补充依赖的新锁已提交并正在 scratch 新目录安装。数字导出因跨运行同名指标冲突 exit 1，生成文件和错误均保留；未改保护脚本。正式报告在编译检查完成后提交。
+- R01 本轮执行已交审并停止，见 `tasks/R01.report.md`：官方 CVPR 2027 kit 安装完成，最终编译 5 页 PDF、记录 errors/warnings 均为空，全部页只读外观检查未见明显裁切/重叠。独立 `paper/latexmkrc` 补入官方颜色定义，`r01_manuscript_preservation` 证明 main/sections 相对本轮开始未变。27 个 cite key 的保护校验为 25 通过、2 not_found，另保留 GAE 正式会议元数据未取得、三项正文描述建议和数字导出冲突；不由 PDF 成功宣称这些问题已通过。`r01_final_audit` 为 156 files / 0 FAIL，R01 使用 0 GPU·小时。
 - 等待 GPU 时并行推进 R01 文献/模板、T05 配对信用及 S1/S2 原始记录接口、T02 后端无关框架与 CPU 单测。T02 实时/预渲染选择等 D1；T04 批量训练池等 Claude 审完 T01 试点，当前不生成。T00b、T01、R01 分别报告、推送后停等审查。
 
 ## 旧任务板（v3.1，已由 tasks/ 取代）
