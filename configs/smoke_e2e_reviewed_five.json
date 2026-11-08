@@ -1,0 +1,29 @@
+{
+  "version": "smoke_e2e_reviewed_five_v1",
+  "checkpoint": "results/t01v2_checkpoint_single_02.json",
+  "scene_source": "results/pilot_pairs_v2_living_201_204_a00_r32d46927_r7b375c62_j707341_hopper_m_02_g0_floorplan203.json",
+  "approval": {
+    "status": "human_explicitly_approved",
+    "scope": "Corresponding five review images reviewed by Claude with no blocking issue; E2E smoke only.",
+    "does_not_certify": ["full_T01", "full_T02", "Look", "pre_evidence_credit", "paired_generation_dedup", "paper_results"]
+  },
+  "pairs": [
+    {"pair_id": "floorplan203_00038", "kind": "direct_flip", "review_image": "logs/review/t01v2_checkpoint_single_02/00000_direct_flip.png"},
+    {"pair_id": "floorplan203_00039", "kind": "direct_flip", "review_image": "logs/review/t01v2_checkpoint_single_02/00001_direct_flip.png"},
+    {"pair_id": "floorplan203_00041", "kind": "direct_flip", "review_image": "logs/review/t01v2_checkpoint_single_02/00002_direct_flip.png"},
+    {"pair_id": "floorplan203_00080", "kind": "direct_stay", "review_image": "logs/review/t01v2_checkpoint_single_02/00003_direct_stay.png"},
+    {"pair_id": "floorplan203_00081", "kind": "direct_stay", "review_image": "logs/review/t01v2_checkpoint_single_02/00004_direct_stay.png"}
+  ],
+  "planning": {
+    "gpus_per_PBS_job": 1,
+    "total_E2E_charged_GPU_hours_limit": 4,
+    "depth": 4,
+    "max_steps": 5,
+    "max_model_calls": 5,
+    "cache_distinct_pair_states": 20,
+    "formal_T02_cache_minimum": 200,
+    "PBS_submission_and_cumulative_budget_guard": "root_owned_required_before_submission",
+    "walltime_seconds": null,
+    "step_3_to_5": "blocked_until_actual_steps_1_and_2_pass; not implemented here"
+  }
+}

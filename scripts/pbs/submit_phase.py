@@ -37,7 +37,7 @@ def budget_group(task, name, command, declared=None):
                    for arg in (command or []))
     e2e = isinstance(name, str) and name.startswith("smoke_e2e_")
     e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
-        or arg == "src.tools.e2e_export") for arg in (command or []))
+        or arg in ("src.tools.e2e_export", "src.tools.smoke_e2e_views")) for arg in (command or []))
     if e2e or e2e_launch or declared == "E2E":
         if task != "T01" or not e2e or named or launched or declared not in (None, "E2E"):
             raise ValueError("E2E requires task T01 and a unique smoke_e2e name")
