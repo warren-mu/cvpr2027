@@ -1,0 +1,199 @@
+diff --git a/src/tools/phase_watch.py b/src/tools/phase_watch.py
+index 1771c2d..8bed7bd 100644
+--- a/src/tools/phase_watch.py
++++ b/src/tools/phase_watch.py
+@@ -111,6 +111,72 @@ def load_logged(repo, path, auditor):
+                   "log_path": str(log.relative_to(repo)), "log_sha256": digest(log)}
+ 
+ 
++def final_observations(repo, final, auditor):
++    """Recover exact terminal fields from the already verified accounting file.
++
++    These are historical terminal observations, never presented as live qstat.
++    A missing/duplicate job row cannot silently fall back to a live query.
++    """
++    sources, observed = {}, {}
++    for job_id, record in sorted(final.items()):
++        path = (repo / record["accounting_result"]).resolve()
++        if path not in sources:
++            data, reference = load_logged(repo, path, auditor)
++            command = data.get("_meta", {}).get("command", [])
++            if (data.get("_meta", {}).get("exit_code") != 0 or len(command) < 2
++                    or (repo / command[1]).resolve() != repo / "src/tools/pbs_usage.py"
++                    or data.get("metrics", {}).get("complete_allocation_accounting") is not True):
++                raise ValueError("Cached terminal fields require successful official PBS accounting")
++            # Config is outside metrics_sha256; require the exact config printed
++            # by pbs_usage in its audited log, as the budget verifier also does.
++            if json.dumps(data["config"], indent=2) not in (repo / reference["log_path"]).read_text(errors="replace"):
++                raise ValueError("Cached PBS fields differ from their original logged configuration")
++            sources[path] = data, reference
++        data, reference = sources[path]
++        rows = data.get("config", {}).get("jobs", [])
++        matches = [row for row in rows if isinstance(row, dict) and row.get("job_id") == job_id]
++        if (len(matches) != 1 or matches[0].get("qstat_exit") != 0
++                or not isinstance(matches[0].get("fields"), dict)
++                or matches[0]["fields"].get("job_state") != "F"
++                or data.get("metrics", {}).get("allocation_gpu_hours_by_job", {}).get(job_id) != record["gpu_hours"]):
++            raise ValueError("Missing, ambiguous, nonfinal, or inconsistent cached PBS job: " + job_id)
++        observed[job_id] = {"job_id": job_id, "fields": matches[0]["fields"],
++                            "observation_source": "final_accounting", "source": reference}
++    return observed
++
++
++def query_unaccounted(job_ids, cached):
++    """One explicit live query only for IDs without a verified terminal row."""
++    if set(cached) - set(job_ids) or any(row.get("job_id") != job_id or row.get("fields", {}).get("job_state") != "F"
++                                       for job_id, row in cached.items()):
++        raise ValueError("Cached observations do not match this submitted-job inventory")
++    live_ids = sorted(set(job_ids) - set(cached))
++    command = [QSTAT, "-fx", *live_ids] if live_ids else None
++    result = {"command": command, "queried_job_ids": live_ids, "returncode": None,
++              "stdout": "", "stderr": "", "timeout_seconds": 180, "timed_out": False,
++              "skipped_reason": None if live_ids else "all_jobs_have_verified_final_accounting"}
++    if command:
++        try:
++            query = subprocess.run(command, capture_output=True, text=True, timeout=180)
++            result.update(returncode=query.returncode, stdout=query.stdout, stderr=query.stderr)
++        except subprocess.TimeoutExpired as error:
++            text = lambda value: value.decode(errors="replace") if isinstance(value, bytes) else value or ""
++            result.update(timed_out=True, stdout=text(error.stdout), stderr=text(error.stderr))
++    return result
++
++
++def combine_observations(job_ids, cached, raw, source, submit):
++    expected = sorted(set(job_ids) - set(cached))
++    headers = re.findall(r"^Job Id:\s*(\S+)", raw["stdout"], re.M)
++    if (raw.get("queried_job_ids") != expected or sorted(headers) != expected
++            or len(headers) != len(set(headers))):
++        raise ValueError("Live PBS observations are missing, duplicated, or not explicitly requested")
++    live = submit.pbs_blocks(raw["stdout"], "Job Id")
++    return {**cached, **{job_id: {"job_id": job_id, "fields": fields,
++                               "observation_source": "live_qstat", "source": source}
++                        for job_id, fields in live.items()}}
++
++
+ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, child=None, child_record=None):
+     """Pure eligibility check after both result provenance chains are audited."""
+     if fields.get("project") != "CFP04-SF-125" or fields.get("job_state") != "F" or fields.get("Exit_status") != "86":
+@@ -247,22 +313,22 @@ def main():
+         records = submissions(ROOT, submit.BATCH, submit.JOB_ID)
+         by_id = {row["job_id"]: row for row in records if row["job_id"]}
+         already_retried = {row["payload"].get("retry_of") for row in records}
+-        command = [QSTAT, "-fx", *sorted(by_id)]
+-        query = subprocess.run(command, capture_output=True, text=True, timeout=180) if by_id else None
+-        raw = {"command": command, "returncode": query.returncode if query else None,
+-               "stdout": query.stdout if query else "", "stderr": query.stderr if query else ""}
++        final = submit._final_accounting(ROOT, set(by_id))
++        cached = final_observations(ROOT, final, auditor)
++        raw = query_unaccounted(by_id, cached)
+         save_new(directory / "qstat.json", raw)
+-        config.update(submissions=records, raw_qstat={"path": str((directory / "qstat.json").relative_to(ROOT)),
+-                                                     "sha256": digest(directory / "qstat.json")})
+-        if query and query.returncode:
+-            raise RuntimeError("qstat returned nonzero; raw observation retained, no automated action")
+-        fields_by_id = submit.pbs_blocks(raw["stdout"], "Job Id")
+-        for job_id in by_id:
+-            fields = fields_by_id.get(job_id, {})
++        raw_reference = {"path": str((directory / "qstat.json").relative_to(ROOT)), "sha256": digest(directory / "qstat.json")}
++        config.update(submissions=records, raw_qstat=raw_reference,
++                      cached_final_job_ids=sorted(cached), live_queried_job_ids=raw["queried_job_ids"])
++        if raw["timed_out"] or (raw["command"] and raw["returncode"] != 0):
++            raise RuntimeError("Live qstat failed/timed out; partial raw observation retained, no automated action")
++        observations = combine_observations(by_id, cached, raw, raw_reference, submit)
++        fields_by_id = {job_id: row["fields"] for job_id, row in observations.items()}
++        for job_id, row in observations.items():
++            fields = row["fields"]
+             if fields.get("project") != "CFP04-SF-125" or fields.get("Job_Owner", "").split("@")[0] != os.environ.get("USER"):
+                 raise RuntimeError("Missing/unexpected project or owner: " + job_id)
+-            metrics["observations"].append({"job_id": job_id, "fields": fields})
+-        final = submit._final_accounting(ROOT, set(by_id))
++            metrics["observations"].append(row)
+         pending = [job for job, fields in fields_by_id.items() if job in by_id and fields.get("job_state") == "F" and job not in final]
+         if pending:
+             name = args.name + "_accounting"
+diff --git a/tests/test_phase_watch.py b/tests/test_phase_watch.py
+index 79f9193..85e716b 100644
+--- a/tests/test_phase_watch.py
++++ b/tests/test_phase_watch.py
+@@ -5,10 +5,13 @@ import json
+ from pathlib import Path
+ import re
+ import tempfile
++from types import SimpleNamespace
+ import unittest
+ from unittest.mock import patch
+ 
+-from src.tools.phase_watch import child_black_evidence, entrypoint, require_unused_run, submissions, validate_black_retry
++from src.tools.phase_watch import (child_black_evidence, combine_observations, entrypoint,
++                                  final_observations, query_unaccounted, require_unused_run,
++                                  submissions, validate_black_retry)
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ JOB = "123.hopper-m-02"
+@@ -39,6 +42,66 @@ def fixture(kind="scale", gate_black=True):
+ 
+ 
+ class WatchFixtures(unittest.TestCase):
++    def test_live_query_only_contains_jobs_without_verified_final_rows(self):
++        cached = {JOB: {"job_id": JOB, "fields": {"job_state": "F"},
++                        "observation_source": "final_accounting"}}
++        live = "456.hopper-m-02"
++        response = SimpleNamespace(returncode=0, stdout=f"Job Id: {live}\n    job_state = Q\n", stderr="")
++        with patch("src.tools.phase_watch.subprocess.run", return_value=response) as run:
++            raw = query_unaccounted({JOB, live}, cached)
++            self.assertEqual(raw["queried_job_ids"], [live])
++            self.assertEqual(run.call_args.args[0][1:], ["-fx", live])
++            self.assertEqual(run.call_args.kwargs["timeout"], 180)
++            self.assertNotIn(JOB, run.call_args.args[0])
++        with patch("src.tools.phase_watch.subprocess.run") as run:
++            raw = query_unaccounted({JOB}, cached)
++            run.assert_not_called()
++            self.assertIsNone(raw["command"])
++        bad = copy.deepcopy(cached)
++        bad[JOB]["fields"]["job_state"] = "R"
++        with self.assertRaises(ValueError):
++            query_unaccounted({JOB}, bad)
++
++    def test_cached_fields_require_unique_same_job_terminal_accounting(self):
++        with tempfile.TemporaryDirectory() as temp:
++            root = Path(temp).resolve()
++            (root / "logs/runs").mkdir(parents=True)
++            log = root / "logs/runs/accounting.log"
++            fields = {"job_state": "F", "Exit_status": "86", "project": "CFP04-SF-125"}
++            row = {"job_id": JOB, "qstat_exit": 0, "fields": fields}
++            data = {"config": {"jobs": [row]}, "metrics": {"complete_allocation_accounting": True,
++                    "allocation_gpu_hours_by_job": {JOB: 0.5}},
++                    "_meta": {"exit_code": 0, "command": ["python3", "src/tools/pbs_usage.py"]}}
++            ref = {"path": "results/accounting.json", "log_path": "logs/runs/accounting.log", "sha256": "fixture"}
++            final = {JOB: {"gpu_hours": 0.5, "accounting_result": "results/accounting.json"}}
++            log.write_text(json.dumps(data["config"], indent=2))
++            with patch("src.tools.phase_watch.load_logged", return_value=(data, ref)):
++                cached = final_observations(root, final, None)
++                self.assertEqual(cached[JOB]["fields"], fields)
++                self.assertEqual(cached[JOB]["observation_source"], "final_accounting")
++                self.assertEqual(cached[JOB]["source"], ref)
++            bad_rows = [[], [row, copy.deepcopy(row)], [{**row, "job_id": "other.hopper-m-02"}],
++                        [{**row, "fields": {**fields, "job_state": "R"}}], [{**row, "qstat_exit": 1}]]
++            for rows in bad_rows:
++                changed = copy.deepcopy(data)
++                changed["config"]["jobs"] = rows
++                log.write_text(json.dumps(changed["config"], indent=2))
++                with patch("src.tools.phase_watch.load_logged", return_value=(changed, ref)), self.assertRaises(ValueError):
++                    final_observations(root, final, None)
++            log.write_text("different original fields")
++            with patch("src.tools.phase_watch.load_logged", return_value=(data, ref)), self.assertRaises(ValueError):
++                final_observations(root, final, None)
++
++    def test_missing_or_ambiguous_live_response_never_becomes_cached_fields(self):
++        source = {"path": "logs/runs/fixture/qstat.json", "sha256": "fixture"}
++        submit = SimpleNamespace(pbs_blocks=lambda text, heading: {JOB: {"job_state": "Q"}})
++        raw = {"queried_job_ids": [JOB], "stdout": f"Job Id: {JOB}\n    job_state = Q\n"}
++        rows = combine_observations({JOB}, {}, raw, source, submit)
++        self.assertEqual(rows[JOB]["observation_source"], "live_qstat")
++        for text in ("", raw["stdout"] * 2, "Job Id: 999.hopper-m-02\n"):
++            with self.assertRaises(ValueError):
++                combine_observations({JOB}, {}, {**raw, "stdout": text}, source, submit)
++
+     def test_explicit_supported_argv_and_exact_name_only(self):
+         name = "t00b_scale_fixture"
+         command = ["python3", "src/tools/record_command.py", "--name", name, "--",
