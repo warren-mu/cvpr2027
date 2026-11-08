@@ -56,7 +56,14 @@ if [[ ! -x "$CVPR_MINIFORGE/bin/conda" ]]; then
   download_once "$release/$installer" "$installer_dir/$installer"
   download_once "$release/$installer.sha256" "$installer_dir/$installer.sha256"
   (cd "$installer_dir" && sha256sum --check "$installer.sha256")
-  bash "$installer_dir/$installer" -b -p "$CVPR_MINIFORGE"
+  # The constructor's bootstrap uses --no-rc. libmamba rejects an inherited
+  # CONDARC/MAMBARC together with --no-rc, even when the file itself is valid.
+  # Clear those only for the installer; keep scratch cache/env paths and TMPDIR.
+  # Also avoid inheriting an unrelated active conda/mamba environment.
+  env -u CONDARC -u MAMBARC -u CONDA_PREFIX -u CONDA_DEFAULT_ENV \
+    -u CONDA_SHLVL -u CONDA_PROMPT_MODIFIER -u CONDA_EXE -u CONDA_PYTHON_EXE \
+    -u MAMBA_ROOT_PREFIX -u MAMBA_EXE \
+    bash "$installer_dir/$installer" -b -p "$CVPR_MINIFORGE"
 fi
 source "$CVPR_MINIFORGE/etc/profile.d/conda.sh"
 if [[ ! -x "$CVPR_CONDA_PREFIX/bin/python" ]]; then

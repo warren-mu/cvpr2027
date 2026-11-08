@@ -2,7 +2,8 @@
 # Source this file; all large state and caches belong on scratch, never in the repo.
 export CVPR_SCRATCH="${CVPR_SCRATCH:-/scratch/${USER:?USER must be set}/cvpr2027}"
 case "$CVPR_SCRATCH" in /*) ;; *) echo 'CVPR_SCRATCH must be absolute' >&2; return 2 2>/dev/null || exit 2 ;; esac
-export CVPR_MINIFORGE="$CVPR_SCRATCH/miniforge3"
+# Versioned fresh prefix preserves any incomplete earlier miniforge3 installation.
+export CVPR_MINIFORGE="${CVPR_MINIFORGE:-$CVPR_SCRATCH/miniforge3-24.11.3-2}"
 export CVPR_CONDA_PREFIX="$CVPR_SCRATCH/envs/cvpr2027"
 export CONDA_PKGS_DIRS="$CVPR_SCRATCH/conda/pkgs"
 export CONDA_ENVS_PATH="$CVPR_SCRATCH/envs"
