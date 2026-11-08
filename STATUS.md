@@ -206,3 +206,5 @@ T02 P代码CPU验证完成：results/t02_P_table_cpu_01.json的44项查表/导�
 
 
 T05新规格CPU代码子步骤：Q_commit在完整当前公开select标号集合上归一化；证据前无标号或无法解析输出按GAE回退，T3/T4以世界先验加权后双方使用相同优势。配对提示每轮比较完整图像字节与text token，允许精确重合后重新共享，真实生成token/模型调用单独记账。T4仅在自己t>=τ_seen的select生效，Stay要求两边满足；S1按独立episode/pair_instance保留逐步原始信用及加权c_u（paired只除2一次），包括实际0证据前步单元；S2按实际完成更新每20步记录。配置maximum_episode_rounds_from_T04=5、renormalize_over_select_candidates=true；必做T0/T2/T3/T4、T1应做。生产prompt/scorer、T04冻结配置、GPU冒烟仍未完成，training_execution_enabled=false。先提交后正式CPU测试。
+
+T05新规格CPU验证：results/t05_P_credit_cpu_01.json的32项测试全部通过（包括select归一化/no-mark GAE、共享优势、逐轮实际prompt去重、自己的τ_seen边界、S1/S2/实际回合与token会计及torch梯度）。这是信用与记录层的合成CPU验证，不是T04公共配置冻结、真实模型接线或T05 GPU冒烟验收；GPU用量0。随后补窄接口测试验证真实T02合成查表环境输出能被配对回合层消费。
