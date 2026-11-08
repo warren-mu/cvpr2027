@@ -26,7 +26,8 @@ ENTRYPOINTS = {"experiments/t00b_scale_smoke.sh": "scale",
                "experiments/t00b_pack_smoke.sh": "pack",
                "experiments/t00b_gated_diagnostics.sh": "diagnostics",
                "experiments/t01_collision_pack.sh": "probe_pack",
-               "experiments/t01v2_pairs.sh": "t01v2"}
+               "experiments/t01v2_pairs.sh": "t01v2",
+               "experiments/t01v2_clone_pairs.sh": "t01v2_clone"}
 
 
 def load_module(name, path):
@@ -179,7 +180,7 @@ def combine_observations(job_ids, cached, raw, source, submit):
                         for job_id, fields in live.items()}}
 
 
-def authorized_shard_command(command, v2=False):
+def authorized_shard_command(command, v2=False, clone=False):
     """Allow the real unbuffered Python launcher, not a module name in argv data."""
     if (not isinstance(command, list) or len(command) < 3
             or not all(isinstance(part, str) for part in command)
@@ -189,7 +190,9 @@ def authorized_shard_command(command, v2=False):
     if arguments[:1] == ["-u"]:
         arguments = arguments[1:]
     if v2:
-        return arguments[:2] == ["-m", "src.envs.pair_v2_shard"]
+        return arguments[:2] == ["-m", "src.envs.pair_v2_clone_shard" if clone else "src.envs.pair_v2_shard"]
+    if clone:
+        return False
     return arguments[:2] in (["-m", "src.envs.pair_shard"],
                              ["-m", "src.envs.pair_shard_approved"])
 
@@ -206,14 +209,15 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
     if outer_job != job_id:
         raise ValueError("Outer result belongs to another PBS job")
     expected = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                if kind in ("t01", "t01v2") else payload["name"] + "_gate")
+                if kind in ("t01", "t01v2", "t01v2_clone") else payload["name"] + "_gate")
     metrics, gate_config, meta = gate.get("metrics", {}), gate.get("config", {}), gate.get("_meta", {})
     allocation = gate_config.get("allocation") or {}
-    child_failure = kind in ("t01", "t01v2") and child is not None
+    child_failure = kind in ("t01", "t01v2", "t01v2_clone") and child is not None
+    v2 = kind in ("t01v2", "t01v2_clone")
     gate_code = 0 if child_failure else 86
     count = payload["requested_gpu_count"]
     devices = allocation.get("devices", [])
-    if kind == "t01v2" and (payload.get("budget_group") != "T01v2" or payload.get("task_id") != "T01"
+    if v2 and (payload.get("budget_group") != "T01v2" or payload.get("task_id") != "T01"
             or payload.get("requested_host") is not None or metrics.get("cleanup_errors") != []
             or outer.get("metrics", {}).get("cleanup_errors") != []
             or outer.get("metrics", {}).get("kind") != "pair_v2_parallel"
@@ -251,7 +255,7 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
         stop = cm.get("black_frame_stop", {})
         measurement = stop.get("measurement", {})
         if (outer.get("metrics", {}).get("cleanup_errors") or cm.get("cleanup_errors")
-                or cm.get("kind") != ("pair_v2_shard" if kind == "t01v2" else "t01_scene_collect") or meta.get("exit_code") != 86
+                or cm.get("kind") != ("pair_v2_shard" if v2 else "t01_scene_collect") or meta.get("exit_code") != 86
                 or record.get("exit_code") != 86 or record.get("provenance_error")
                 or meta.get("name") != record.get("run_name") or cm.get("black_frame_detected") is not True
                 or not (cm.get("source_black_frame_detected") is True or cm.get("capture_black_frame_detected") is True)
@@ -262,12 +266,13 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                 or record.get("logical_index") != identity.get("logical_index")
                 or record.get("scene") != shard.get("scene") or stop.get("scene") != shard.get("scene")
                 or stop.get("stage") not in ("source", "capture")
-                or measurement.get("shape") != ([255, 255, 3] if kind == "t01v2" else [224, 224, 3]) or measurement.get("dtype") != "uint8"
+                or measurement.get("shape") != ([255, 255, 3] if v2 else [224, 224, 3]) or measurement.get("dtype") != "uint8"
                 or measurement.get("nonzero_values") != 0 or measurement.get("min") != 0 or measurement.get("max") != 0
-                or not authorized_shard_command(meta.get("command"), v2=kind == "t01v2")
-                or (kind == "t01v2" and (cm.get("cleanup_errors") != [] or shard.get("node") != gate_config.get("node")))):
+                or not authorized_shard_command(meta.get("command"), v2=v2, clone=kind == "t01v2_clone")
+                or (kind == "t01v2_clone" and cc.get("enable_candidate_clone") is not True)
+                or (v2 and (cm.get("cleanup_errors") != [] or shard.get("node") != gate_config.get("node")))):
             raise ValueError("T01 child black capture, cleanup, or allocation evidence is inconsistent")
-        return "t01v2_scene_black_capture" if kind == "t01v2" else "t01_scene_black_capture"
+        return "t01v2_clone_scene_black_capture" if kind == "t01v2_clone" else ("t01v2_scene_black_capture" if v2 else "t01_scene_black_capture")
     captures = [capture for row in metrics.get("devices", [])
                 for capture in row.get("observation", {}).get("captures", [])]
     if metrics.get("black_frame_detected") is not True or not any(capture.get("valid_shape") is True and capture.get("black") is True
@@ -385,10 +390,10 @@ def main():
                 kind = entrypoint(payload["command"], payload["name"], ROOT)
                 outer, outer_evidence = load_logged(ROOT, ROOT / "results" / f"{payload['name']}.json", auditor)
                 gate_name = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                             if kind in ("t01", "t01v2") else payload["name"] + "_gate")
+                             if kind in ("t01", "t01v2", "t01v2_clone") else payload["name"] + "_gate")
                 gate, gate_evidence = load_logged(ROOT, ROOT / "results" / f"{gate_name}.json", auditor)
                 child = child_record = child_evidence = None
-                if kind in ("t01", "t01v2") and gate.get("_meta", {}).get("exit_code") == 0:
+                if kind in ("t01", "t01v2", "t01v2_clone") and gate.get("_meta", {}).get("exit_code") == 0:
                     child, child_record, child_evidence = child_black_evidence(ROOT, payload, outer, gate_evidence, auditor)
                 if kind == "probe_pack":
                     from src.tools.probe_pack_retry import validate_probe_pack_retry
