@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import traceback
 
 from src.envs.thor_common import ROOT, interrupted, write_result
@@ -143,6 +144,16 @@ def main():
             if not is_black_frame(evidence["measurement"], 224) or sha_file(evidence["image"]) != evidence["image_sha256"]:
                 raise ValueError("Black-frame stop evidence hash/schema mismatch")
             metrics["black_frame_stop"] = {"file": str(black_record), "sha256": sha_file(black_record), **evidence}
+            portable = ROOT / "logs/runs" / args.name / "black_frame"
+            portable.mkdir(parents=True, exist_ok=False)
+            for key, source in (("portable_file", black_record), ("portable_image", Path(evidence["image"]))):
+                destination = portable / source.name
+                with source.open("rb") as incoming, destination.open("xb") as outgoing:
+                    shutil.copyfileobj(incoming, outgoing)
+                copied_hash = sha_file(destination)
+                if copied_hash != sha_file(source):
+                    raise ValueError("Portable black-frame evidence copy hash mismatch")
+                metrics["black_frame_stop"].update({key: str(destination), key + "_sha256": copied_hash})
             metrics["source_black_frame_detected"] |= evidence.get("stage") == "source"
             metrics["capture_black_frame_detected"] = evidence.get("stage") == "capture"
             black = True
