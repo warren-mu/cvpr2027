@@ -172,3 +172,6 @@ results/t01v2_search_integration_cpu_01.json：222项v2 CPU测试全部通过，
 
 
 人类确认（2026-11-08）：补充4的Look可解性要求已获批准，同时明确“不取消已经排队的作业”。707255/707257保持原PBS作业号，不qdel、不重提；已开始运行也保留。新增独立版本枚举全部现有一步observation_actions，每world至少一个X掩码≥250的动作；公共首观察证据阈值及物理/D1/见证门槛均不变。受保护METRICS_SPEC仍保留上游文字，本条记录人类批准。新代码/测试推送后仅切换后续启动的外层入口；已加载的旧producer保持不变。若任何作业先以旧版启动，其真实结果/用量保留，但缺少补充4证明的旧Look不会计入新的最终合格试点。并发文档已merge，原生产提交历史未重写；results/t01v2_supp4_merge_audit.json审计489文件0FAIL。
+
+
+补充4调度子步骤：32f7bb5准备独立solvable outer及后续明确提交入口；原search Python producer和当前排队shell dispatch保持不变，尚未激活新版采集。外层config与hashed metrics同时记录solvability_version和scene_producer_module，phase_watch只有两者一致并且分片精确module/version匹配才允许新版黑帧重提；8/60 charged预算仍为同一账本。已加载旧outer不变，未来切换仅发生在新outer启动边界。results/t01v2_solvable_infra_cpu_01.json共32项新旧入口/预算/黑帧CPU测试全部通过；本子步骤没有GPU运行。新版全部观察动作证据、独立复核和Look额外审查视角尚在接线，完成且代码/测试推送后才切换现有队列入口，作业707255/707257不取消。
