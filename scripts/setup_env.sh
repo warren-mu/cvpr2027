@@ -147,10 +147,34 @@ safe_link "$vagen_source" "$repo/third_party/VAGEN"
 # Its pyproject builds C++17 bindings with scikit-build-core/pybind11; torch
 # is a runtime dependency, not a build requirement. Let verl resolve it below.
 checkout_pinned https://github.com/mlc-ai/xgrammar.git "$xgrammar_source" "$XGRAMMAR_COMMIT" v0.1.16
-git -C "$xgrammar_source" submodule update --init --recursive
-git -C "$xgrammar_source" submodule status --recursive
-export CMAKE_BUILD_PARALLEL_LEVEL=2
-python -m pip install --no-deps "$xgrammar_source"
+if python - "$xgrammar_source" <<'PY'
+import importlib.metadata
+import json
+from pathlib import Path
+import sys
+
+try:
+    dist = importlib.metadata.distribution("xgrammar")
+    origin = json.loads(dist.read_text("direct_url.json") or "{}")
+    expected = Path(sys.argv[1]).resolve().as_uri()
+    reusable = (
+        dist.version == "0.1.16"
+        and origin.get("url") == expected
+        and isinstance(origin.get("dir_info"), dict)
+        and not origin["dir_info"].get("editable", False)
+    )
+except (importlib.metadata.PackageNotFoundError, ValueError, OSError):
+    reusable = False
+sys.exit(0 if reusable else 1)
+PY
+then
+  echo 'Reusing exact xgrammar 0.1.16 installed from the verified pinned source path.'
+else
+  git -C "$xgrammar_source" submodule update --init --recursive
+  git -C "$xgrammar_source" submodule status --recursive
+  export CMAKE_BUILD_PARALLEL_LEVEL=2
+  python -m pip install --no-deps "$xgrammar_source"
+fi
 python - <<'PY'
 import importlib.metadata
 version = importlib.metadata.version("xgrammar")
@@ -169,6 +193,11 @@ if ! command -v nvcc >/dev/null 2>&1; then
 fi
 command -v nvcc >/dev/null 2>&1 || { echo 'flash-attn may require nvcc; no usable CUDA toolkit. Set CVPR_CUDA_MODULE to an available module and retry.' >&2; exit 1; }
 nvcc --version
+# Observed PBS 706127 failure: the upstream flash-attn command's isolated
+# metadata build could not import torch, although verl installed torch 2.6.0.
+# Install the same pinned version using that environment, then run upstream
+# install.sh unchanged (its identical requirement is already satisfied).
+python -m pip install --no-build-isolation flash-attn==2.7.4.post1
 (cd "$vagen_source" && bash -e scripts/install.sh)
 # Navigation README dependencies are separate from the top-level installation.
 python -m pip install ai2thor==5.0.0 numpy==1.25.1 psutil==6.1.1 nvidia-ml-py==12.560.30
