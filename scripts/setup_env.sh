@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Run only in an allocated PBS job. --render is an intentional partial environment;
-# --full follows the pinned legacy README and its install.sh, then Navigation deps.
+# Run only in an allocated PBS job. --render is an intentional partial environment.
+# --full follows the pinned legacy README and then validates the server/model
+# on the single GPU assigned by PBS; dependency installation alone is not that
+# runtime validation. Use a one-GPU allocation for the complete --full workflow.
 set -euo pipefail
 stage="${1:---full}"
 case "$stage" in --bootstrap|--render|--full) ;; *) echo 'Usage: setup_env.sh [--bootstrap|--render|--full]' >&2; exit 2 ;; esac
