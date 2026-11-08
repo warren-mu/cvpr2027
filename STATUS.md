@@ -148,3 +148,7 @@ T01v2厨房首轮707189完成：12个分片四类均0；FloorPlan1/5/8/9原场�
 
 2026-11-08 19:00 UTC 前的新预检调整：已拉取人类补充3d91bc1，旧规格原始摆放基准不重标。厨房707189首轮原始诊断已正式归档为results/diag_t01v2_kitchen_r1_physics.json；所查FloorPlan7/10首个w0物理拒绝的编辑偏差分别0.0453748958/0.0230046913m，均真实超过2cm，合法点和parent检查均通过，不能用新基准掩盖这类拒绝。旧客厅707191与刚提交但仍Q的旧预检复制作业707216已按最新人类要求取消，三段证据results/t01v2_stable_cancel_{preflight,qdel,postflight}.json确认两者从未启动；results/t01v2_stable_cancel_accounting.json正式计0 GPUh，等待时间未取得而保留null。原始提交回执与所有失败证据保留。后续厨房全部12scene采用落定快照+50步稳定窗口并合并clone，客厅201..212同样新入口；正在运行的作业未修改。新旧替代映射待新回执后补充。
 诊断与旧复制提交使用的原producer c79e6ea因并发上游task更新曾被rebase；已用保留树的合并将原commit纳入main祖先，保证结果_meta.git_commit可从GitHub追溯，没有修改结果或日志。
+
+
+新stable入口子步骤：代码6d078e4及兼容修复9538237实现落定后基准（N50，nativeRest或10次每物体单步<1mm，初始→当前位移上限0.5m）和完整M50窗口（相对落定基准≤1cm）。两world非编辑物体统一对settled/validated-clone共同基准检查，防止逐次累计漂移；X继续用PlaceObjectAtPoint返回位姿作2cm漂移基准。拒绝尝试只存简要JSON与小缩略图，合格pair/每种完整拒绝原因前三例保留raw；黑帧原图和UUID证据完整落盘后才允许86。上游补充2（1f1359e）已同步：Look首次观察只在X掩码并集内计算证据，不再要求两world各可见X；Direct两world的X均≥250像素；v0双方candidate均≤1.5m，原D1/状态恢复/见证门槛保留。METRICS_SPEC §1b仍标为提案，未用于本轮采集。
+正式CPU首次161项中3项因Python3.10的encoding=locale文本view兼容失败，失败记录完整保留；修复后162项v2集成tests全部通过（results/t01v2_stable_integration_cpu_02.json），独立phase_watch回归9项通过。以上为程序验证，没有GPU科学结果。每场景预检、clone准备和物理拒绝分类的source-reported汇总入口已准备，缺失值保留unknown。先审计推代码，再提交厨房全部12scene与客厅201..212。
