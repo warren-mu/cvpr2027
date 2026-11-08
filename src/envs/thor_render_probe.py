@@ -6,6 +6,7 @@ not a replacement benchmark or a change to the exact-zero research criterion.
 Run only inside PBS through run_logged, after committing this file.
 """
 import argparse
+from contextlib import contextmanager
 import copy
 import hashlib
 import importlib
@@ -51,6 +52,29 @@ def write_json(path, value):
     with Path(path).open("w") as stream:
         json.dump(value, stream, indent=2, allow_nan=False)
         stream.write("\n")
+
+
+@contextmanager
+def observe_fifo_receives(server_class, observer):
+    """Wrap one private worker's receive method while preserving class identity.
+
+    AI2-THOR 5.0 _build_server compares classes by equality, so a FifoServer
+    subclass is not accepted. Only this process's in-memory method is changed;
+    no installed file or class reference is replaced, and all exits restore it.
+    """
+    original = server_class.receive
+
+    def receive(server, timeout=None):
+        previous_files = getattr(server, "raw_files", None)
+        event = original(server, timeout=timeout)
+        observer(server, event, previous_files)
+        return event
+
+    server_class.receive = receive
+    try:
+        yield
+    finally:
+        server_class.receive = original
 
 
 def capture_event(event, directory, index, stage, last_action):
@@ -148,21 +172,16 @@ def probe_worker(config, connection):
                                    for name in ("ai2thor", "numpy", "Pillow")}
     publish()
 
-    class ProbeServer(FifoServer):
-        def receive(self, timeout=None):
-            previous_files = getattr(self, "_probe_last_raw_files", None)
-            event = super().receive(timeout=timeout)
-            action = json.loads(self._last_action_message) if self._last_action_message else None
-            observation = capture_event(event, directory, len(metrics["captures"]), stage, action)
-            observation["cached_raw_files_mapping_reused"] = self.raw_files is previous_files
-            observation["rgb_wire_payloads"] = [
-                {"bytes": len(body), "nonzero_bytes_including_any_alpha": len(body) - body.count(b"\0"),
-                 "sha256": hashlib.sha256(body).hexdigest()}
-                for body in self.raw_files.get("image", [])]
-            self._probe_last_raw_files = self.raw_files
-            metrics["captures"].append(observation)
-            publish()
-            return event
+    def record_receive(server, event, previous_files):
+        action = json.loads(server._last_action_message) if server._last_action_message else None
+        observation = capture_event(event, directory, len(metrics["captures"]), stage, action)
+        observation["cached_raw_files_mapping_reused"] = server.raw_files is previous_files
+        observation["rgb_wire_payloads"] = [
+            {"bytes": len(body), "nonzero_bytes_including_any_alpha": len(body) - body.count(b"\0"),
+             "sha256": hashlib.sha256(body).hexdigest()}
+            for body in server.raw_files.get("image", [])]
+        metrics["captures"].append(observation)
+        publish()
 
     class ProbeController(Controller):
         @property
@@ -209,57 +228,59 @@ def probe_worker(config, connection):
 
     ai2thor.build.base_url = ai2thor.build.base_url.replace("http://", "https://", 1)
     controller = ProbeController.__new__(ProbeController)
-    try:
-        controller.__init__(scene="FloorPlan1", platform=CloudRendering,
-            gpu_device=runtime["controller_gpu_device"], width=config["resolution"], height=config["resolution"],
-            agentMode="default", renderDepthImage=False, renderInstanceSegmentation=True,
-            gridSize=0.1, visibilityDistance=10, fieldOfView=100,
-            server_class=ProbeServer, server_timeout=15, server_start_timeout=35)
-        metrics["controller"] = {"quality": controller.quality, "headless": controller.headless,
-            "width": controller.width, "height": controller.height, "gpu_device": controller.gpu_device,
-            "initialization_parameters": copy.deepcopy(controller.initialization_parameters),
-            "unity_build_commit_id": controller._build.commit_id,
-            "executable": controller._build.executable_path,
-            "executable_sha256": file_hash(controller._build.executable_path),
-            "fifo_server_pipe_path": controller.server.server_pipe_path,
-            "fifo_client_pipe_path": controller.server.client_pipe_path}
-        if controller._build.commit_id != BUILD:
-            raise RuntimeError("Unexpected Unity build")
-        metrics["stages"].append({"stage": "initial", "capture_index": len(metrics["captures"]) - 1})
-
-        def act(label, action, **kwargs):
-            nonlocal stage
-            stage = label
-            event = controller.step(action=action, **kwargs)
-            metrics["stages"].append({"stage": label, "action": action, "arguments": copy.deepcopy(kwargs),
-                                      "capture_index": len(metrics["captures"]) - 1})
-            publish()
-            if not event.metadata.get("lastActionSuccess"):
-                raise RuntimeError(f"{action}: {event.metadata.get('errorMessage')}")
-            return event
-
-        act("after_InitialRandomSpawn_seed0", "InitialRandomSpawn", randomSeed=0,
-            forceVisible=False, placeStationary=True, numPlacementAttempts=5)
-        event = act("after_GetReachablePositions", "GetReachablePositions")
-        # Query can reuse cached pixels; its evidence is labeled accordingly.
-        act("after_TeleportFull_same_pose", "TeleportFull", **agent_pose(event))
-        for number in range(1, 6):
-            act(f"after_Pass_{number}", "Pass")
-        metrics.update(status="completed", completed=True)
-    except BaseException as error:
-        metrics.update(status="failed", completed=False, error=f"{type(error).__name__}: {error}")
-        traceback.print_exc()
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, max(0.1, min(8, config["deadline"] - time.time())))
+    with observe_fifo_receives(FifoServer, record_receive):
         try:
-            if getattr(controller, "server", None) is not None:
-                controller.stop()
+            # Keep the exact upstream FifoServer class selected by default.
+            controller.__init__(scene="FloorPlan1", platform=CloudRendering,
+                gpu_device=runtime["controller_gpu_device"], width=config["resolution"], height=config["resolution"],
+                agentMode="default", renderDepthImage=False, renderInstanceSegmentation=True,
+                gridSize=0.1, visibilityDistance=10, fieldOfView=100,
+                server_timeout=15, server_start_timeout=35)
+            metrics["controller"] = {"quality": controller.quality, "headless": controller.headless,
+                "width": controller.width, "height": controller.height, "gpu_device": controller.gpu_device,
+                "initialization_parameters": copy.deepcopy(controller.initialization_parameters),
+                "unity_build_commit_id": controller._build.commit_id,
+                "executable": controller._build.executable_path,
+                "executable_sha256": file_hash(controller._build.executable_path),
+                "fifo_server_pipe_path": controller.server.server_pipe_path,
+                "fifo_client_pipe_path": controller.server.client_pipe_path}
+            if controller._build.commit_id != BUILD:
+                raise RuntimeError("Unexpected Unity build")
+            metrics["stages"].append({"stage": "initial", "capture_index": len(metrics["captures"]) - 1})
+
+            def act(label, action, **kwargs):
+                nonlocal stage
+                stage = label
+                event = controller.step(action=action, **kwargs)
+                metrics["stages"].append({"stage": label, "action": action, "arguments": copy.deepcopy(kwargs),
+                                          "capture_index": len(metrics["captures"]) - 1})
+                publish()
+                if not event.metadata.get("lastActionSuccess"):
+                    raise RuntimeError(f"{action}: {event.metadata.get('errorMessage')}")
+                return event
+
+            act("after_InitialRandomSpawn_seed0", "InitialRandomSpawn", randomSeed=0,
+                forceVisible=False, placeStationary=True, numPlacementAttempts=5)
+            event = act("after_GetReachablePositions", "GetReachablePositions")
+            # Query can reuse cached pixels; its evidence is labeled accordingly.
+            act("after_TeleportFull_same_pose", "TeleportFull", **agent_pose(event))
+            for number in range(1, 6):
+                act(f"after_Pass_{number}", "Pass")
+            metrics.update(status="completed", completed=True)
         except BaseException as error:
-            metrics["cleanup_errors"].append(f"{type(error).__name__}: {error}")
-            metrics.update(status="failed", completed=False)
+            metrics.update(status="failed", completed=False, error=f"{type(error).__name__}: {error}")
+            traceback.print_exc()
         finally:
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            publish()
+            signal.setitimer(signal.ITIMER_REAL, max(0.1, min(8, config["deadline"] - time.time())))
+            try:
+                if getattr(controller, "server", None) is not None:
+                    controller.stop()
+            except BaseException as error:
+                metrics["cleanup_errors"].append(f"{type(error).__name__}: {error}")
+                metrics.update(status="failed", completed=False)
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                publish()
     return metrics
 
 
