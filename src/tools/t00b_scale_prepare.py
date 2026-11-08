@@ -236,6 +236,8 @@ def main():
         "watchdog_seconds": args.timeout, "pbs_jobid": os.environ["PBS_JOBID"],
         "cuda_visible_devices": os.environ["CUDA_VISIBLE_DEVICES"], "allocation": runtime,
         "runtime_json": str(runtime_path), "overlay": str(overlay), "working_directory": str(work),
+        "ray_tmpdir": os.environ["RAY_TMPDIR"],
+        "ray_tmpdir_provenance": json.loads((args.log_dir / "ray_temp.json").read_text()),
         "raw_evidence_directory": str(work),
         "unity_log_directory": str(work / "simulator"),
         "evidence_archive_index": str(args.log_dir / "evidence_index.json"),

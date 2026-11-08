@@ -97,7 +97,10 @@ print(min(float(sys.argv[1]), remaining))
 PY
 )
 export WANDB_MODE=offline WANDB_DIR="$t00b_work/wandb" PYTHONUNBUFFERED=1 HYDRA_FULL_ERROR=1
-export RAY_TMPDIR="$t00b_work/ray"
+t00b_ray_tmp=$(python3 "$t00b_repo/src/tools/ray_scratch.py" --name "$t00b_name" \
+  --work-dir "$t00b_work" --record "$t00b_logs/ray_temp.json")
+export RAY_TMPDIR="$t00b_ray_tmp"
+echo "T00B_RAY_TMPDIR: $RAY_TMPDIR (provenance: $t00b_logs/ray_temp.json)"
 export T00B_FRAME_EVENTS="$t00b_work/frame_events.jsonl" T00B_RUNTIME_JSON="$t00b_work/runtime.json"
 export T00B_SERVER_URL=http://127.0.0.1:5000
 unset T00B_PHASE_TOKEN
