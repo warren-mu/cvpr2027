@@ -79,6 +79,8 @@
 
 - 4卡707054的baseline已完成20次实际更新且run_logged退出0，逐步新RGB计数完整；中位step=259.0075s、gen=176.6365s。原始GPU采样错误1次及Python临时目录EBUSY警告均保留，详见results/t00b_scale4_worker_cache_retry_baseline.json；性能变体和PBS最终会计继续等待。t00b_scale4_baseline_complete_audit为390份、0FAIL。取消前未运行的v1 A/C因PBS没有run_count，旧会计观察失败1已保存，正在补显式Q→qdel成功→F证据链支持，不把缺失用量直接推成0。
 
+- T01v2 首轮实现提交d37b922及后续预检绑定补丁：51项v2 CPU检查通过，取消/监控/提交回归分别5/9/19项通过，受影响的采集mock再测8项通过；这些不是GPU产出。t01v2_prequeue_audit_01为397份0FAIL。v1 A/C的完整Q→qdel成功→F链正式记账为0分配GPUh（results/t01v1_cancel_accounting_01.json），run_count/stime缺失值原样保留，排队等待时间未知。首轮厨房1..12与客厅201..212固定分区并行提交，全部255×255、每卡12CPU、最多1构造+1顺序回放实例、无host；共同受8GPUh子预算/60总预算约束。按人类新增要求，各分片四类任一不足5对，下一轮启用完整列表复制候选，首轮不暗中替换已测规则。
+
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
 | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
