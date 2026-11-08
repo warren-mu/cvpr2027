@@ -16,7 +16,7 @@
 | 706682 | 8 | 训练测速 | largex | Q / 未分配 |
 
 - 已完成计费2.002222222222222 GPUh；未完成保留42.666666666666664，合计44.66888888888889 /60（results/t00b_premium_budget_11.json）。运行中的申请仍保留全额，不将预留称作已消费。
-- 707054 四张H200的出图 gate 已通过，来源 results/t00b_scale4_worker_cache_retry_gate.json。训练仍运行；正式训练性能结果未产生。
+- 707054 四张H200的出图 gate 已通过，来源 results/t00b_scale4_worker_cache_retry_gate.json。训练仍运行；正式训练性能结果未产生。 已有首个PPO完整更新原始行的审计快照 results/t00b_scale4_update1_snapshot.json（step耗时345.462秒、gen243.159秒）；这是中期观察，不是20步验收或完整测速。验证结束附近的multiprocessing临时目录清理EBUSY另记入训练进度报告。
 - R01 本轮执行报告已推送并停等审查；T02/T05 CPU子步骤报告已推送，均不等于完整任务验收。
 - T00b 最终报告等待训练及pack实测；T01 B子报告已推送，A/C及独立碰撞诊断待完成。T04批量池继续等待T01审查，T02后端等D1。
 
