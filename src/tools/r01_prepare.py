@@ -390,7 +390,9 @@ def latex_warnings(logtext):
 def compile_paper(args, evidence, manifest, metrics):
     command = ["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", "-outdir=" + str(evidence.directory), "main.tex"]
     metrics.update(command=command, main_sha256=digest((ROOT / "paper/main.tex").read_bytes()),
-                   source_files={str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in sorted((ROOT / "paper").rglob("*.tex")) if "author-kit-2027" not in p.parts})
+                   source_files={str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in sorted((ROOT / "paper").rglob("*.tex")) if "author-kit-2027" not in p.parts},
+                   build_config_files={str(p.relative_to(ROOT)): digest(p.read_bytes())
+                                       for p in [ROOT / "paper/latexmkrc"] if p.is_file()})
     output = evidence.directory / "latexmk.stdout.txt"
     with output.open("w", encoding="utf-8") as stream:
         try:

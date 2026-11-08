@@ -1,0 +1,22 @@
+# R01 build-only compatibility: keep main.tex and sections/ byte-for-byte intact.
+# The fixed official CVPR 2027 main.tex defines this color immediately before
+# hyperref; our manuscript uses the color but omitted that definition.
+# Source (main.tex, line 19):
+# https://github.com/cvpr-org/author-kit/blob/a2369342011145be8c85e5ad21a9b61f9fa53473/main.tex#L19
+# This injects only the package/official color definition, not manuscript text.
+
+$pre_tex_code = '\RequirePackage{xcolor}\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}';
+
+# Native %P appends \input{SOURCE} and applies latexmk's own shell quoting.
+# Do not hand-quote %S inside a TeX command string. %O preserves caller flags
+# including the output directory, interaction mode, and halt-on-error.
+# Official manual: https://tug.ctan.org/support/latexmk/latexmk.pdf
+$pdflatex = 'pdflatex %O %P';
+
+# Preloading xcolor opens a file before main.tex, so explicitly derive the job
+# name from the original source rather than the first file opened by TeX.
+# Thus latexmk -pdf main.tex still produces main.{aux,log,pdf} in its outdir.
+$jobname = '%A';
+
+# Keep .fls dependency tracking for the real input and included sections.
+$recorder = 1;
