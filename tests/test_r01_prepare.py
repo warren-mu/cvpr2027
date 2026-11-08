@@ -50,6 +50,15 @@ class R01SourceParsingTests(unittest.TestCase):
         self.assertEqual(entry["fields"]["year"], "2026")
         self.assertEqual(entry["fields"]["booktitle"], "Test Proceedings")
 
+    def test_dblp_api_requires_conference_record(self):
+        info = {"title": "A Test: VLM & RL.", "year": "2026", "authors": {"author": [{"text": "Jane Doe"}]},
+                "venue": "ICLR", "url": "https://dblp.org/rec/example", "type": "Conference and Workshop Papers"}
+        source = {"result": {"hits": {"hit": [{"info": info}]}}}
+        self.assertEqual(parse_source("dblp_json", json.dumps(source).encode(), self.row)["type"], "inproceedings")
+        info["type"] = "Informal Publications"
+        with self.assertRaises(ValueError):
+            parse_source("dblp_json", json.dumps(source).encode(), self.row)
+
 
 if __name__ == "__main__":
     unittest.main()

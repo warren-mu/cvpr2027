@@ -15,7 +15,7 @@ import unittest
 
 from src.rl.credit import (ActionScores, CandidateScore, CreditContractError, CreditStep,
     UnsupportedCredit, advantages, consistency_components, episode_plan, flip_hinges,
-    q_commit, reference_gae, symmetric_kl)
+    q_commit, reference_gae, symmetric_kl, torch_flip_hinges, torch_symmetric_kl)
 from src.rl.credit_records import RawTrainingRecorder, TrainingHoldout
 from src.rl.paired_rollout import (EpisodeState, PolicySample, PublicMark, PublicObservation,
                                  Transition, collect_pair)
@@ -183,6 +183,100 @@ class CreditMathTests(unittest.TestCase):
             self.assertEqual(len(plan), 64)
             self.assertEqual(len({row["episode_id"] for row in plan}), 64)
             self.assertEqual(len({row["pair_instance_id"] for row in plan}), draws)
+
+
+class TorchGradientTests(unittest.TestCase):
+    """CPU tensor backward checks; no model, CUDA query, or trainer integration."""
+    @classmethod
+    def setUpClass(cls):
+        # Missing torch is an error, not a skipped backward-validation claim.
+        import torch
+        cls.torch = torch
+
+    def tensor(self, values):
+        return self.torch.tensor(values, dtype=self.torch.float64, device="cpu", requires_grad=True)
+
+    def flip(self, first, second):
+        # Include an observation action in the full softmax. The helper receives
+        # genuine select-event logs, never a softmax conditioned on selecting.
+        logs = {world: logits.log_softmax(dim=0) for world, logits in (("w0", first), ("w1", second))}
+        return torch_flip_hinges({world: {"Cup_A": row[0], "Cup_B": row[1]}
+                                  for world, row in logs.items()},
+                                 {"w0": "Cup_A", "w1": "Cup_B"})
+
+    def test_flip_violated_margin_gradients_favor_each_world_correct_target(self):
+        first, second = self.tensor([-1.0, 1.0, 0.0]), self.tensor([1.0, -1.0, 0.0])
+        terms = self.flip(first, second)
+        self.assertGreater(float(terms["w0"].detach()), 0.0)
+        self.assertGreater(float(terms["w1"].detach()), 0.0)
+        (terms["w0"] + terms["w1"]).backward()
+        # Gradient descent increases correct logits and decreases the competing
+        # target. The common full-action normalization cancels in the log ratio.
+        expected = ((first, [-0.1, 0.1, 0.0]), (second, [0.1, -0.1, 0.0]))
+        for logits, values in expected:
+            self.assertTrue(self.torch.isfinite(logits.grad).all().item())
+            self.torch.testing.assert_close(logits.grad, self.torch.tensor(values, dtype=self.torch.float64),
+                                            rtol=1e-12, atol=1e-12)
+
+    def test_flip_satisfied_margin_has_exact_zero_loss_and_gradient(self):
+        first, second = self.tensor([2.0, 0.0, -1.0]), self.tensor([0.0, 2.0, -1.0])
+        terms = self.flip(first, second)
+        loss = terms["w0"] + terms["w1"]
+        self.assertEqual(float(loss.detach()), 0.0)
+        loss.backward()
+        for logits in (first, second):
+            self.assertEqual(self.torch.count_nonzero(logits.grad).item(), 0)
+
+    def test_stay_normalized_logit_gradients_are_finite_and_symmetric(self):
+        first, second = self.tensor([0.6, -0.6, 0.2]), self.tensor([-0.2, 0.8, -0.1])
+        p, q = first.softmax(dim=0), second.softmax(dim=0)
+        names = ("Cup_A", "Cup_B", "Cup_C")
+        left = dict(zip(names, p))
+        right = {names[index]: q[index] for index in (2, 0, 1)}
+        options = {"distribution_source": "explicit_synthetic_normalized_logit_distribution",
+                   "convention": "half_sum"}
+        loss = torch_symmetric_kl(left, right, **options)
+        reverse = torch_symmetric_kl(right, left, **options)
+        gradients = self.torch.autograd.grad(loss, (first, second), retain_graph=True)
+        reverse_gradients = self.torch.autograd.grad(reverse, (first, second), retain_graph=True)
+        summed = torch_symmetric_kl(left, right, **{**options, "convention": "sum"})
+        summed_gradients = self.torch.autograd.grad(summed, (first, second))
+        scalar = symmetric_kl({name: float(value.detach()) for name, value in left.items()},
+                              {name: float(value.detach()) for name, value in right.items()}, **options)
+        self.assertAlmostEqual(float(loss.detach()), 0.1 * scalar["symmetric"], places=12)
+        self.torch.testing.assert_close(loss, reverse, rtol=1e-12, atol=1e-12)
+        for gradient, reversed_gradient, summed_gradient in zip(gradients, reverse_gradients, summed_gradients):
+            self.assertTrue(self.torch.isfinite(gradient).all().item())
+            self.assertGreater(self.torch.count_nonzero(gradient).item(), 0)
+            self.assertAlmostEqual(float(gradient.sum()), 0.0, places=12)
+            self.torch.testing.assert_close(gradient, reversed_gradient, rtol=1e-12, atol=1e-12)
+            self.torch.testing.assert_close(summed_gradient, 2 * gradient, rtol=1e-12, atol=1e-12)
+
+    def test_stay_equal_distributions_and_zero_support_without_epsilon(self):
+        first, second = self.tensor([0.5, -0.5]), self.tensor([0.5, -0.5])
+        p, q = first.softmax(dim=0), second.softmax(dim=0)
+        options = {"distribution_source": "explicit_synthetic_normalized_distribution", "convention": "half_sum"}
+        loss = torch_symmetric_kl(dict(zip(("Cup_A", "Cup_B"), p)),
+                                  dict(zip(("Cup_A", "Cup_B"), q)), **options)
+        self.assertEqual(float(loss.detach()), 0.0)
+        loss.backward()
+        for logits in (first, second):
+            self.assertEqual(self.torch.count_nonzero(logits.grad).item(), 0)
+
+        # Mathematical zero/zero terms are omitted; no epsilon turns a true
+        # positive-versus-zero support mismatch into a finite surrogate loss.
+        left, right = self.tensor([0.0, 1.0]), self.tensor([0.0, 1.0])
+        as_map = lambda row: {"Cup_A": row[0], "Cup_B": row[1]}
+        zero = torch_symmetric_kl(as_map(left), as_map(right), **options)
+        self.assertEqual(float(zero.detach()), 0.0)
+        zero.backward()
+        for distribution in (left, right):
+            self.assertTrue(self.torch.isfinite(distribution.grad).all().item())
+            self.assertEqual(self.torch.count_nonzero(distribution.grad).item(), 0)
+        with self.assertRaises(UnsupportedCredit):
+            torch_symmetric_kl(as_map(self.tensor([0.0, 1.0])), as_map(self.tensor([0.25, 0.75])), **options)
+        with self.assertRaises(UnsupportedCredit):
+            torch_symmetric_kl(as_map(self.tensor([0.5, 0.5])), {"Cup_A": self.tensor(1.0)}, **options)
 
 
 class PairedRolloutTests(unittest.TestCase):

@@ -7,4 +7,4 @@ source scripts/scratch_env.sh
 : "${PBS_JOBID:?Submit through the authorized PBS allocation}"
 : "${CUDA_VISIBLE_DEVICES:?Keep the original PBS GPU mask}"
 export PYTHONUNBUFFERED=1
-exec python3 -u -m src.tools.t01_parallel_collect "$@"
+exec python3 -u -m src.tools.t01_parallel_approved "$@"

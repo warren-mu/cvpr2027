@@ -17,7 +17,7 @@ import time
 import traceback
 
 from src.envs.thor_common import ROOT, write_result
-from src.tools.t01_partition import (DEFAULT_MANIFEST, audited_result, cpu_shards,
+from src.tools.t01_partition_approved import (DEFAULT_MANIFEST, audited_result, cpu_shards,
                                     ensure_unused, load_manifest, scene_shards, sha_file)
 
 

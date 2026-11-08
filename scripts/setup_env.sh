@@ -5,6 +5,17 @@
 # runtime validation. Use a one-GPU allocation for the complete --full workflow.
 set -euo pipefail
 stage="${1:---full}"
+# R01 explicitly permits lightweight login-node paper setup. This independent
+# branch never activates/mutates conda, links HOME paths, or runs GPU checks.
+# First run r01_tex_install lock through run_logged and commit its exact lock.
+# Then: run_logged --name NAME -- bash scripts/setup_env.sh --paper --name NAME \
+#       --execution-location login --lock configs/r01_tex_lock.json --archive-cache PATH
+if [[ "$stage" == --paper ]]; then
+  shift
+  repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+  cd "$repo"
+  exec python3 -B -m src.tools.r01_tex_install install "$@"
+fi
 case "$stage" in --bootstrap|--render|--full) ;; *) echo 'Usage: setup_env.sh [--bootstrap|--render|--full]' >&2; exit 2 ;; esac
 [[ $# -le 1 ]] || { echo 'Unexpected arguments' >&2; exit 2; }
 : "${PBS_JOBID:?Environment installation must run in an allocated CPU or GPU PBS job, never on a login node}"

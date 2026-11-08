@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "configs/r01_sources.json"
 ALLOWED_HOSTS = {"arxiv.org", "export.arxiv.org", "proceedings.neurips.cc",
                  "proceedings.mlr.press", "openaccess.thecvf.com", "api.crossref.org",
-                 "dblp.org", "cvpr.thecvf.com", "api.github.com", "raw.githubusercontent.com"}
+                 "dblp.org", "dblp.uni-trier.de", "dblp.dagstuhl.de", "cvpr.thecvf.com", "api.github.com", "raw.githubusercontent.com"}
 
 
 def digest(data):
@@ -83,6 +83,25 @@ def latex_text(text):
 
 def parse_source(kind, body, row):
     text = body.decode("utf-8")
+    if kind == "dblp_json":
+        matches = []
+        for hit in json.loads(text).get("result", {}).get("hits", {}).get("hit", []):
+            info = hit["info"]
+            if "Conference" not in info.get("type", "") or not info.get("venue"):
+                continue
+            authors = info.get("authors", {}).get("author", [])
+            if not isinstance(authors, list):
+                authors = [authors]
+            fields = {"title": latex_text(info["title"]), "year": info["year"],
+                      "author": " and ".join(latex_text(a["text"] if isinstance(a, dict) else a) for a in authors),
+                      "booktitle": latex_text(info["venue"]), "url": info["url"]}
+            try:
+                matches.append(validate_entry({"type": "inproceedings", "fields": fields}, row))
+            except ValueError:
+                continue
+        if len(matches) != 1:
+            raise ValueError("DBLP API did not return one matching conference record")
+        return matches[0]
     if kind in {"bibtex", "html_bibtex"}:
         if kind == "html_bibtex":
             page = HTMLMetadata()
@@ -267,6 +286,68 @@ def verify(args, evidence, manifest, metrics):
     return 0 if good else 1
 
 
+def retry_entries(args, evidence, manifest, metrics):
+    if not args.source_results or not args.keys:
+        raise ValueError("retry requires --source-results and an explicit --keys list")
+    source_path = args.source_results.resolve()
+    source = json.loads(source_path.read_text())
+    old = source["metrics"]
+    meta = source.get("_meta", {})
+    if meta.get("producer") != "scripts/run_logged.py" or meta.get("metrics_sha256") != digest(json.dumps(old, sort_keys=True).encode()):
+        raise ValueError("Previous result lacks matching run_logged metric provenance")
+    if source.get("config", {}).get("mode") not in {"generate", "retry"}:
+        raise ValueError("Source is not a bibliography generation result")
+    target = ROOT / "paper/refs.bib"
+    if digest(target.read_bytes()) != old.get("refs_bib_sha256"):
+        raise ValueError("Current refs.bib differs from the declared previous result")
+    rows = json.loads(json.dumps(old["entries"]))
+    by_key = {r["key"]: r for r in rows}
+    if len(by_key) != len(rows) or set(args.keys) - set(by_key) or len(set(args.keys)) != len(args.keys):
+        raise ValueError("Duplicate or undeclared retry keys")
+    definitions = {r["key"]: r for r in manifest["entries"]}
+    if set(by_key) != set(definitions):
+        raise ValueError("Previous result does not cover the exact current task key set")
+    shutil.copy2(source_path, evidence.directory / "source_result.json")
+    shutil.copy2(target, evidence.directory / "refs.before.bib")
+    metrics.update(source_result=str(source_path), source_result_sha256=digest(source_path.read_bytes()),
+                   source_metrics_sha256=meta["metrics_sha256"], retry_keys=args.keys,
+                   previous_status=old.get("status"), entries=rows)
+    changed = []
+    for key in args.keys:
+        row = definitions[key]
+        previous = by_key[key]
+        observation = {"key": key, "attempts": [], "status": "unavailable", "prior_observation": previous}
+        for index, candidate in enumerate(row.get("retry_sources", [])):
+            attempt = dict(candidate)
+            observation["attempts"].append(attempt)
+            try:
+                body = evidence.fetch(candidate["url"], f"retry_{key}_{index}")
+                entry = parse_source(candidate["kind"], body, row)
+                if entry["type"] not in {"inproceedings", "incollection"} or not entry["fields"].get("booktitle"):
+                    raise ValueError("Retry did not establish a conference publication")
+                observation.update(status="generated", selected=candidate, source_sha256=digest(body),
+                                   preferred_source_used=True, entry=entry,
+                                   preferred_source_note="Alternate official conference metadata; original failed fetch retained in prior_observation")
+                changed.append(key)
+                break
+            except Exception as exc:
+                attempt.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+        if observation["status"] != "generated":
+            observation.update({k: previous[k] for k in ("status", "entry", "selected", "source_sha256", "preferred_source_used") if k in previous})
+            observation["retry_failed"] = True
+        rows[rows.index(previous)] = observation
+    if changed:
+        text = "% Generated by src/tools/r01_prepare.py from retained official metadata.\n\n" + "\n".join(bibtex(r["entry"]) for r in rows if r.get("entry"))
+        target.write_text(text, encoding="utf-8")
+        shutil.copy2(target, evidence.directory / "refs.generated.bib")
+    missing = [r["key"] for r in rows if not r.get("entry")]
+    degraded = [r["key"] for r in rows if definitions[r["key"]].get("preferred") and not r.get("preferred_source_used")]
+    metrics.update(status="complete" if not missing and not degraded and set(args.keys) <= set(changed) else "incomplete", changed_keys=changed,
+                   required_keys=list(definitions), missing_keys=missing, conference_source_unavailable_keys=degraded,
+                   generated_entry_count=sum(bool(r.get("entry")) for r in rows), refs_bib_sha256=digest(target.read_bytes()), verification_not_yet_run=True)
+    return int(bool(missing or degraded or set(args.keys) - set(changed)))
+
+
 def template(args, evidence, manifest, metrics):
     settings = manifest["author_kit"]
     evidence.fetch(settings["guidelines_url"], "author_guidelines")
@@ -318,7 +399,8 @@ def compile_paper(args, evidence, manifest, metrics):
     pdf = evidence.directory / "main.pdf"
     metrics["pdf"] = str(pdf.relative_to(ROOT)) if pdf.exists() else None
     metrics["pdf_sha256"] = digest(pdf.read_bytes()) if pdf.exists() else None
-    matches = re.findall(r"Output written on .*?\((\d+) pages?", logtext)
+    # TeX wraps long absolute output paths across log lines on Hopper.
+    matches = re.findall(r"Output written on [\s\S]*?\((\d+) pages?", logtext)
     metrics["pages"] = int(matches[-1]) if matches and pdf.exists() else None
     metrics["status"] = "compiled" if metrics.get("latexmk_exit_code") == 0 and pdf.exists() else "failed"
     return int(metrics["status"] != "compiled")
@@ -326,11 +408,13 @@ def compile_paper(args, evidence, manifest, metrics):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("mode", choices=["generate", "verify", "template", "compile"])
+    ap.add_argument("mode", choices=["generate", "retry", "verify", "template", "compile"])
     ap.add_argument("--name", required=True)
     ap.add_argument("--http-timeout", type=float, default=25)
     ap.add_argument("--process-timeout", type=float, default=900)
     ap.add_argument("--recheck", action="store_true")
+    ap.add_argument("--source-results", type=Path)
+    ap.add_argument("--keys", nargs="+")
     args = ap.parse_args()
     if not re.fullmatch(r"r01_[a-zA-Z0-9_]+", args.name):
         ap.error("Use a unique r01_ name")
@@ -346,7 +430,7 @@ def main():
               "http_timeout_seconds": args.http_timeout, "process_timeout_seconds": args.process_timeout}
     code = 1
     try:
-        code = {"generate": generate, "verify": verify, "template": template, "compile": compile_paper}[args.mode](args, evidence, manifest, metrics)
+        code = {"generate": generate, "retry": retry_entries, "verify": verify, "template": template, "compile": compile_paper}[args.mode](args, evidence, manifest, metrics)
     except Exception as exc:
         metrics.update(status="failed", error=f"{type(exc).__name__}: {exc}")
     finally:

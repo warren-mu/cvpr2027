@@ -9,7 +9,7 @@ import shutil
 import traceback
 
 from src.envs.thor_common import ROOT, interrupted, write_result
-from src.tools.t01_partition import DEFAULT_MANIFEST, audited_result, load_manifest, sha_file
+from src.tools.t01_partition_approved import DEFAULT_MANIFEST, audited_result, load_manifest, sha_file
 
 
 def is_black_frame(measurement, resolution):
