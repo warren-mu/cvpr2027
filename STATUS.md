@@ -34,7 +34,7 @@
 
 - 编译缓存隔离缓解已部署：`t00b_compile_cache_preflight` 正式确认 706354/706682 都为 Q 后，2/4/8 卡的训练子进程各用本 run/variant 的 scratch/work/compile_cache 下 TRITON_CACHE_DIR、TORCHINDUCTOR_CACHE_DIR；旧缓存完整保留，同一 run 内各 rank 仍共享。仅更换两项环境变量，不改模型、TP、eager/编译模式或计时逻辑；路径和继承旧值记入 config/resources.jsonl。新缓存造成的初始化/首步成本照实计入，不能宣称已证实原 ENOENT 根因或缓解已有效。代码提交 1d88fcd 后 4 项纯 CPU fixture 全部通过（results/t00b_compile_cache_cpu_checks.json）；未在登录节点运行编译或 Ray/GPU 服务。T01 B 原样人工重提回执为 `706450 → 706728.hopper-m-02`（run pilot_pairs_parallel_b_02），4 卡 02:00:00、无 host；旧作业自然结束，无 qdel。回执位于 `logs/pbs/pilot_pairs_parallel_b_02-20261108T104109Z-99c43c96/submission.json`。
 
-- 当前六名额正式观察（2026-11-08T10:48:18.269325+00:00，`results/t00b_medium_retry_watch.json`）：706354（2 卡训练）、706448（2 卡 T01 A）、706582（2 卡 T01 C）在 smallx；706732（4 卡训练缓存隔离重试）、706728（4 卡 T01 B 原样重试）在 mediumx；706682（8 卡训练重试）在 largex。六者均 Q，ngpus 资源不足，均无 host 限制。新 4 卡映射 `706436 → 706732.hopper-m-02`，run `t00b_scale4_cache_retry`、03:00:00；回执 `logs/pbs/t00b_scale4_cache_retry-20261108T104642Z-68de14f9/submission.json`。旧作业自然结束，未 qdel；无额外黑帧重提动作。源码只读核对表明固定 VAGEN/VERL 和 Ray runtime_env 逐键合并继承环境，未发现覆盖两项编译缓存路径的代码；这不是新 GPU 运行逐 actor 环境快照，隔离是否有效仍待实测。
+- 当前六名额正式观察（2026-11-08T11:15:28.215932+00:00，`results/t00b_pending_wait_04_p6.json`）：706354（2 卡训练）、706448（2 卡 T01 A）、706582（2 卡 T01 C）在 smallx；706732（4 卡训练缓存隔离重试）、706728（4 卡 T01 B 原样重试）在 mediumx；706682（8 卡训练重试）在 largex。六者均 Q，ngpus 资源不足，均无 host 限制。新 4 卡映射 `706436 → 706732.hopper-m-02`，run `t00b_scale4_cache_retry`、03:00:00；回执 `logs/pbs/t00b_scale4_cache_retry-20261108T104642Z-68de14f9/submission.json`。旧作业自然结束，未 qdel；无额外黑帧重提动作。源码只读核对表明固定 VAGEN/VERL 和 Ray runtime_env 逐键合并继承环境，未发现覆盖两项编译缓存路径的代码；这不是新 GPU 运行逐 actor 环境快照，隔离是否有效仍待实测。
 
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
