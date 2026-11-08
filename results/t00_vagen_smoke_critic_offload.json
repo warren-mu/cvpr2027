@@ -1,0 +1,315 @@
+{
+  "metrics": {
+    "completed_training_steps": 6,
+    "median_step_seconds": 487.4595,
+    "median_rollout_seconds": 204.037,
+    "median_parameter_update_seconds": 182.48399999999998,
+    "median_rollout_fraction_of_step": 0.4095108445057607,
+    "median_update_fraction_of_step": 0.3800785446275543,
+    "median_actor_update_seconds": 91.863,
+    "median_critic_update_seconds": 91.993,
+    "gpu_memory_peak_mib_sampled": 138442.0,
+    "process_tree_cpu_percent_median": 150.38497996135405,
+    "process_tree_cpu_percent_peak": 947.5083599905923,
+    "process_tree_rss_peak_bytes": 321056661504,
+    "resource_sample_count": 340,
+    "training_command_wall_seconds": 3614.4978935549734,
+    "training_command_exit_code": 124,
+    "wrapper_exit_code": 124,
+    "navigation_mean_model_turns_by_step": {
+      "1": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.692,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.413
+      },
+      "2": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.5,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.359
+      },
+      "3": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.4,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.365
+      },
+      "4": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.387,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.409
+      },
+      "5": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.53,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.113
+      },
+      "6": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.217,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.235
+      }
+    },
+    "actual_new_rgb_frames_per_train_step": null,
+    "required_render_fps": null,
+    "official_config_total_training_steps": 300,
+    "estimated_full_training_hours": 40.621625
+  },
+  "config": {
+    "baseline": "official_vagen_base_navigation_not_vagen_full",
+    "vagen_commit": "4e2976d87c0f92c97f9a820803e71908cde5fb71",
+    "official_launcher": "scripts/examples/vagen_base/navigation/run.sh",
+    "official_launcher_sha256": "6465e1ca0ec653dad41471864b59f4d1c2568ebe1c2d121e1fefb20ea1dac3c2",
+    "verl_commit": "3f55021e08b98315213e10d10b709c7f6bbe84f7",
+    "installed_versions": {
+      "torch": "2.6.0",
+      "vllm": "0.8.2",
+      "transformers": "4.49.0",
+      "ai2thor": "5.0.0",
+      "numpy": "1.25.1",
+      "psutil": "6.1.1"
+    },
+    "vllm_cuda_source_sha256": "1d27d2b5d25dbf8c511f39b7031f2d90c30fd3b5c7f052ea17a7c1138bc57c2b",
+    "official_env_config_sha256": "79c4007664f454d8e66ed80340e0d691541fff635244b002d448107a09ab8122",
+    "official_total_training_steps": 300,
+    "configured_total_training_steps": 21,
+    "required_completed_updates": 20,
+    "default_resolution": 255,
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "training_config_changes": {
+      "trainer.n_gpus_per_node=4": "trainer.n_gpus_per_node=1",
+      "actor_rollout_ref.rollout.tensor_model_parallel_size=4": "actor_rollout_ref.rollout.tensor_model_parallel_size=1",
+      "trainer.total_training_steps=300": "trainer.total_training_steps=21",
+      "critic.model.fsdp_config.param_offload=False": "critic.model.fsdp_config.param_offload=True",
+      "critic.model.fsdp_config.optimizer_offload=False": "critic.model.fsdp_config.optimizer_offload=True"
+    },
+    "memory_variant": "critic_offload",
+    "memory_variant_changes_relative_to_official": {
+      "critic.model.fsdp_config.param_offload=False": "critic.model.fsdp_config.param_offload=True",
+      "critic.model.fsdp_config.optimizer_offload=False": "critic.model.fsdp_config.optimizer_offload=True"
+    },
+    "server_gpu_topology_change": {
+      "navigation.devices": [
+        0
+      ]
+    },
+    "server_host": "127.0.0.1",
+    "server_port": 5000,
+    "watchdog_seconds": 3600,
+    "use_state_reward": false,
+    "judge_credentials_required": false,
+    "wandb_mode": "offline",
+    "working_directory": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_critic_offload-706227.hopper-m-02",
+    "generated_launcher": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_critic_offload-706227.hopper-m-02/official/scripts/examples/vagen_base/navigation/run.sh",
+    "pbs_jobid": "706227.hopper-m-02",
+    "cuda_visible_devices": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+    "gpu_uuid": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+    "gpu_name": "NVIDIA H200",
+    "gpu_device_for_ai2thor": 0,
+    "gpu_preflight": {
+      "pbs_jobid": "706227.hopper-m-02",
+      "cuda_visible_devices": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+      "gpu_name": "NVIDIA H200",
+      "vulkan_device_index": 0,
+      "mig_mode": "Disabled",
+      "ai2thor_version": "5.0.0",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_critic_offload",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23
+      ]
+    },
+    "ai2thor_mapping_cache": {
+      "path": "/scratch/e1583364/cvpr2027/ai2thor/cuda-vulkan-mapping.json",
+      "created_exclusively": false,
+      "sha256": "d8fd961c269b8e5da9af2e909c673897cc315d2e062b8a80e5ab735bb74e6f37",
+      "verified_cuda_index": 0,
+      "verified_vulkan_index": 0,
+      "shared_cache": true
+    },
+    "ai2thor_release_prune_guard": {
+      "path": "/scratch/e1583364/cvpr2027/ai2thor/releases",
+      "existing_directories": [
+        "thor-CloudRendering-f0825767cd50d69f666c7f282e54abfe58f1e917"
+      ],
+      "maximum_existing_directories": 2,
+      "reserved_new_build_slots": 1,
+      "upstream_retained_release_count": 3
+    },
+    "notes": [
+      "Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.",
+      "Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.",
+      "Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer hyperparameters are unchanged.",
+      "The optional critic_offload variant changes only critic parameter and optimizer offload from False to True; none preserves the baseline.",
+      "Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.",
+      "At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.",
+      "Official shell is executed with -e and pipefail so tee cannot hide a training failure."
+    ]
+  },
+  "kind": "T00_official_Navigation_feasibility",
+  "acceptance_passed": false,
+  "last_stage": "training",
+  "warnings": [
+    "T00 training acceptance not met: requires exit 0 and at least 20 completed updates"
+  ],
+  "evidence_files": [
+    {
+      "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_critic_offload/train.log",
+      "sha256": "8637eda161f750a4b269fe6e6fba947bcc3225add4af436a643e5a02de2076f2"
+    },
+    {
+      "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_critic_offload/resources.jsonl",
+      "sha256": "c14282d4188f9a608169cde92a3531b677e47cf5c0989b4e5b830ce6a8461718"
+    },
+    {
+      "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_critic_offload/config.json",
+      "sha256": "4eb2eec025b794f6e428940ded11842768421198fec25763cc98d1e6c9464d7c"
+    }
+  ],
+  "completed_step_timings": {
+    "1": {
+      "line": 1137,
+      "timing_s": {
+        "gen": 252.737,
+        "old_log_prob": 37.885,
+        "ref": 70.724,
+        "values": 29.817,
+        "adv": 3.088,
+        "update_critic": 123.054,
+        "update_actor": 128.892,
+        "step": 646.209
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.692,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.413
+      }
+    },
+    "2": {
+      "line": 1196,
+      "timing_s": {
+        "gen": 216.108,
+        "old_log_prob": 27.809,
+        "ref": 41.45,
+        "values": 32.332,
+        "adv": 3.106,
+        "update_critic": 89.563,
+        "update_actor": 92.39,
+        "step": 502.767
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.5,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.359
+      }
+    },
+    "3": {
+      "line": 1255,
+      "timing_s": {
+        "gen": 191.966,
+        "old_log_prob": 28.735,
+        "ref": 38.643,
+        "values": 26.754,
+        "adv": 3.0,
+        "update_critic": 91.679,
+        "update_actor": 91.336,
+        "step": 472.152
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.4,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.365
+      }
+    },
+    "4": {
+      "line": 1314,
+      "timing_s": {
+        "gen": 219.556,
+        "old_log_prob": 29.45,
+        "ref": 41.729,
+        "values": 26.042,
+        "adv": 2.901,
+        "update_critic": 92.307,
+        "update_actor": 96.477,
+        "step": 508.47
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.387,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.409
+      }
+    },
+    "5": {
+      "line": 1373,
+      "timing_s": {
+        "gen": 186.334,
+        "old_log_prob": 35.836,
+        "ref": 37.858,
+        "values": 25.106,
+        "adv": 2.733,
+        "update_critic": 93.311,
+        "update_actor": 86.537,
+        "step": 467.72
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.53,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.113
+      }
+    },
+    "6": {
+      "line": 1432,
+      "timing_s": {
+        "gen": 191.014,
+        "old_log_prob": 27.669,
+        "ref": 36.021,
+        "values": 31.982,
+        "adv": 2.467,
+        "update_critic": 91.074,
+        "update_actor": 82.893,
+        "step": 463.126
+      },
+      "navigation_mean_model_turns": {
+        "train/step/NavigationEnvConfig(eval_set=common_sense,render_mode=vision,max_actions_per_step=5)": 4.217,
+        "train/step/NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)": 4.235
+      }
+    }
+  },
+  "measurement_notes": [
+    "Only console records containing step:<id> and timing_s/step count as completed updates.",
+    "Official console timings are rounded to three decimals; gen includes rollout and remote rendering.",
+    "Navigation train/step scalars are rounded per-configuration mean model turns, retained separately with source lines in completed_step_timings; no weighted global mean is inferred.",
+    "Actual new RGB frames and required render FPS are unmeasured: turns can execute zero to five actions and return a cached frame, reset adds transactions, and transactions do not necessarily produce new images. These counts cannot be recovered from the logged scalar means.",
+    "Update time is update_actor + update_critic for the same step; other forward/reward/validation costs remain separate.",
+    "Resource peaks are sampled, not guaranteed instantaneous peaks. GPU memory covers the sole allocated board.",
+    "CPU 100% means one core; RSS is summed over observed training/server descendants, including shared pages.",
+    "Full-training estimate = official configured steps * observed median step seconds / 3600; excludes setup/startup and extra final validation/save overhead.",
+    "Training command wall time is not PBS charged walltime; account total GPU-hours from scheduler records."
+  ],
+  "_meta": {
+    "name": "t00_vagen_smoke_critic_offload",
+    "command": [
+      "env",
+      "T00_MEMORY_VARIANT=critic_offload",
+      "bash",
+      "experiments/t00_vagen_smoke.sh"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-16",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-08T11:54:17",
+    "log_path": "logs/runs/t00_vagen_smoke_critic_offload.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "60b297b50af91925613b0afcbafa7cd765fc114d",
+    "git_dirty": false,
+    "end": "2026-11-08T12:54:57",
+    "duration_sec": 3639.5,
+    "exit_code": 124,
+    "metrics_sha256": "ed71d9dfb325187126e0adf8c2f4ab479ed429d1e6e2a3c40abccd5eacedcef2"
+  }
+}

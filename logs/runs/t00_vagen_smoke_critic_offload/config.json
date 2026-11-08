@@ -1,0 +1,105 @@
+{
+  "baseline": "official_vagen_base_navigation_not_vagen_full",
+  "vagen_commit": "4e2976d87c0f92c97f9a820803e71908cde5fb71",
+  "official_launcher": "scripts/examples/vagen_base/navigation/run.sh",
+  "official_launcher_sha256": "6465e1ca0ec653dad41471864b59f4d1c2568ebe1c2d121e1fefb20ea1dac3c2",
+  "verl_commit": "3f55021e08b98315213e10d10b709c7f6bbe84f7",
+  "installed_versions": {
+    "torch": "2.6.0",
+    "vllm": "0.8.2",
+    "transformers": "4.49.0",
+    "ai2thor": "5.0.0",
+    "numpy": "1.25.1",
+    "psutil": "6.1.1"
+  },
+  "vllm_cuda_source_sha256": "1d27d2b5d25dbf8c511f39b7031f2d90c30fd3b5c7f052ea17a7c1138bc57c2b",
+  "official_env_config_sha256": "79c4007664f454d8e66ed80340e0d691541fff635244b002d448107a09ab8122",
+  "official_total_training_steps": 300,
+  "configured_total_training_steps": 21,
+  "required_completed_updates": 20,
+  "default_resolution": 255,
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "training_config_changes": {
+    "trainer.n_gpus_per_node=4": "trainer.n_gpus_per_node=1",
+    "actor_rollout_ref.rollout.tensor_model_parallel_size=4": "actor_rollout_ref.rollout.tensor_model_parallel_size=1",
+    "trainer.total_training_steps=300": "trainer.total_training_steps=21",
+    "critic.model.fsdp_config.param_offload=False": "critic.model.fsdp_config.param_offload=True",
+    "critic.model.fsdp_config.optimizer_offload=False": "critic.model.fsdp_config.optimizer_offload=True"
+  },
+  "memory_variant": "critic_offload",
+  "memory_variant_changes_relative_to_official": {
+    "critic.model.fsdp_config.param_offload=False": "critic.model.fsdp_config.param_offload=True",
+    "critic.model.fsdp_config.optimizer_offload=False": "critic.model.fsdp_config.optimizer_offload=True"
+  },
+  "server_gpu_topology_change": {
+    "navigation.devices": [
+      0
+    ]
+  },
+  "server_host": "127.0.0.1",
+  "server_port": 5000,
+  "watchdog_seconds": 3600,
+  "use_state_reward": false,
+  "judge_credentials_required": false,
+  "wandb_mode": "offline",
+  "working_directory": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_critic_offload-706227.hopper-m-02",
+  "generated_launcher": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_critic_offload-706227.hopper-m-02/official/scripts/examples/vagen_base/navigation/run.sh",
+  "pbs_jobid": "706227.hopper-m-02",
+  "cuda_visible_devices": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+  "gpu_uuid": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+  "gpu_name": "NVIDIA H200",
+  "gpu_device_for_ai2thor": 0,
+  "gpu_preflight": {
+    "pbs_jobid": "706227.hopper-m-02",
+    "cuda_visible_devices": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+    "gpu_index": 0,
+    "gpu_uuid": "GPU-6f6c4522-30be-526a-edeb-3d5aa0fd16d5",
+    "gpu_name": "NVIDIA H200",
+    "vulkan_device_index": 0,
+    "mig_mode": "Disabled",
+    "ai2thor_version": "5.0.0",
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_critic_offload",
+    "controller_gpu_device": 0,
+    "cpu_affinity": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23
+    ]
+  },
+  "ai2thor_mapping_cache": {
+    "path": "/scratch/e1583364/cvpr2027/ai2thor/cuda-vulkan-mapping.json",
+    "created_exclusively": false,
+    "sha256": "d8fd961c269b8e5da9af2e909c673897cc315d2e062b8a80e5ab735bb74e6f37",
+    "verified_cuda_index": 0,
+    "verified_vulkan_index": 0,
+    "shared_cache": true
+  },
+  "ai2thor_release_prune_guard": {
+    "path": "/scratch/e1583364/cvpr2027/ai2thor/releases",
+    "existing_directories": [
+      "thor-CloudRendering-f0825767cd50d69f666c7f282e54abfe58f1e917"
+    ],
+    "maximum_existing_directories": 2,
+    "reserved_new_build_slots": 1,
+    "upstream_retained_release_count": 3
+  },
+  "notes": [
+    "Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.",
+    "Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.",
+    "Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer hyperparameters are unchanged.",
+    "The optional critic_offload variant changes only critic parameter and optimizer offload from False to True; none preserves the baseline.",
+    "Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.",
+    "At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.",
+    "Official shell is executed with -e and pipefail so tee cannot hide a training failure."
+  ]
+}
