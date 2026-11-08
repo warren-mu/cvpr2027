@@ -30,7 +30,8 @@ ENTRYPOINTS = {"experiments/t00b_scale_smoke.sh": "scale",
                "experiments/t01v2_clone_pairs.sh": "t01v2_clone",
                "experiments/t01v2_stable_pairs.sh": "t01v2_stable",
                "experiments/t01v2_search_pairs.sh": "t01v2_search",
-               "experiments/t01v2_solvable_pairs.sh": "t01v2_solvable"}
+               "experiments/t01v2_solvable_pairs.sh": "t01v2_solvable",
+               "experiments/t01v2_isolated_pairs.sh": "t01v2_isolated"}
 
 
 def load_module(name, path):
@@ -190,6 +191,15 @@ def effective_kind(kind, outer):
     Already running old outers have neither new key and remain old producers.
     """
     config, metrics = outer.get('config', {}), outer.get('metrics', {})
+    setup_present = any(key in row for row in (config, metrics)
+                        for key in ('attempt_setup_version', 'attempt_setup_policy'))
+    if kind == 't01v2_isolated' or setup_present:
+        from src.tools.t01v2_isolated_parallel import isolated_tags
+        expected = isolated_tags()
+        if kind != 't01v2_isolated' or any(row.get(key) != value for row in (config, metrics)
+                                         for key, value in expected.items()):
+            raise ValueError('Isolated dispatch requires its explicit entry and exact hashed setup policy/version')
+        return kind
     expected = {'solvability_version': 'look_per_world_visible_action_v1',
                 'scene_producer_module': 'src.envs.pair_v2_solvable_shard'}
     present = any(key in row for row in (config, metrics) for key in expected)
@@ -204,7 +214,7 @@ def effective_kind(kind, outer):
     return 't01v2_solvable'
 
 
-def authorized_shard_command(command, v2=False, clone=False, stable=False, search=False, solvable=False):
+def authorized_shard_command(command, v2=False, clone=False, stable=False, search=False, solvable=False, isolated=False):
     """Allow the real unbuffered Python launcher, not a module name in argv data."""
     if (not isinstance(command, list) or len(command) < 3
             or not all(isinstance(part, str) for part in command)
@@ -213,6 +223,8 @@ def authorized_shard_command(command, v2=False, clone=False, stable=False, searc
     arguments = command[1:]
     if arguments[:1] == ["-u"]:
         arguments = arguments[1:]
+    if isolated:
+        return v2 and not (clone or stable or search or solvable) and arguments[:2] == ["-m", "src.envs.pair_v2_isolated_shard"]
     if solvable:
         return v2 and not clone and not stable and not search and arguments[:2] == ["-m", "src.envs.pair_v2_solvable_shard"]
     if search:
@@ -240,11 +252,11 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
     if outer_job != job_id:
         raise ValueError("Outer result belongs to another PBS job")
     expected = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable") else payload["name"] + "_gate")
+                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") else payload["name"] + "_gate")
     metrics, gate_config, meta = gate.get("metrics", {}), gate.get("config", {}), gate.get("_meta", {})
     allocation = gate_config.get("allocation") or {}
-    child_failure = kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable") and child is not None
-    v2 = kind in ("t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable")
+    child_failure = kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and child is not None
+    v2 = kind in ("t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated")
     gate_code = 0 if child_failure else 86
     count = payload["requested_gpu_count"]
     devices = allocation.get("devices", [])
@@ -299,17 +311,23 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                 or stop.get("stage") not in ("source", "capture")
                 or measurement.get("shape") != ([255, 255, 3] if v2 else [224, 224, 3]) or measurement.get("dtype") != "uint8"
                 or measurement.get("nonzero_values") != 0 or measurement.get("min") != 0 or measurement.get("max") != 0
-                or not authorized_shard_command(meta.get("command"), v2=v2, clone=kind == "t01v2_clone", stable=kind == "t01v2_stable", search=kind == "t01v2_search", solvable=kind == "t01v2_solvable")
-                or (kind in ("t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable") and cc.get("enable_candidate_clone") is not True)
-                or (kind in ("t01v2_stable", "t01v2_search", "t01v2_solvable") and cc.get("preflight_version") != "settled_baseline_window_v1")
-                or (kind in ("t01v2_search", "t01v2_solvable") and (cc.get("search_version") != "natural_union_clone_search_v1"
+                or not authorized_shard_command(meta.get("command"), v2=v2, clone=kind == "t01v2_clone", stable=kind == "t01v2_stable", search=kind == "t01v2_search", solvable=kind == "t01v2_solvable", isolated=kind == "t01v2_isolated")
+                or (kind in ("t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and cc.get("enable_candidate_clone") is not True)
+                or (kind in ("t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and cc.get("preflight_version") != "settled_baseline_window_v1")
+                or (kind in ("t01v2_search", "t01v2_solvable", "t01v2_isolated") and (cc.get("search_version") != "natural_union_clone_search_v1"
                     or cc.get("evidence_version") != "anchor_union_look_v1"
                     or any(cm.get(key) != cc.get(key) for key in ("search_version", "preflight_version", "evidence_version"))))
-                or (kind == "t01v2_solvable" and (cc.get("solvability_version") != "look_per_world_visible_action_v1"
+                or (kind in ("t01v2_solvable", "t01v2_isolated") and (cc.get("solvability_version") != "look_per_world_visible_action_v1"
                     or cm.get("solvability_version") != cc.get("solvability_version")))
                 or (v2 and (cm.get("cleanup_errors") != [] or shard.get("node") != gate_config.get("node")))):
             raise ValueError("T01 child black capture, cleanup, or allocation evidence is inconsistent")
-        if kind in ("t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable"):
+        if kind == "t01v2_isolated":
+            from src.tools.t01v2_isolated_parallel import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY, SCENE_MODULE
+            if (cc.get('producer_module') != SCENE_MODULE
+                    or any(row.get('attempt_setup_version') != ATTEMPT_SETUP_VERSION
+                           or row.get('attempt_setup_policy') != ATTEMPT_SETUP_POLICY for row in (cc, cm))):
+                raise ValueError('Isolated child lacks the exact setup version/policy and producer identity')
+        if kind in ("t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated"):
             return kind + "_scene_black_capture"
         return "t01v2_scene_black_capture" if v2 else "t01_scene_black_capture"
     captures = [capture for row in metrics.get("devices", [])
@@ -430,10 +448,10 @@ def main():
                 outer, outer_evidence = load_logged(ROOT, ROOT / "results" / f"{payload['name']}.json", auditor)
                 kind = effective_kind(kind, outer)
                 gate_name = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                             if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable") else payload["name"] + "_gate")
+                             if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") else payload["name"] + "_gate")
                 gate, gate_evidence = load_logged(ROOT, ROOT / "results" / f"{gate_name}.json", auditor)
                 child = child_record = child_evidence = None
-                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable") and gate.get("_meta", {}).get("exit_code") == 0:
+                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and gate.get("_meta", {}).get("exit_code") == 0:
                     child, child_record, child_evidence = child_black_evidence(ROOT, payload, outer, gate_evidence, auditor)
                 if kind == "probe_pack":
                     from src.tools.probe_pack_retry import validate_probe_pack_retry

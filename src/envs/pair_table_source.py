@@ -199,7 +199,8 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
         evidence_version=cfg.get('evidence_version'), search_version=cfg.get('search_version'), search_policy=cfg.get('search_policy'),
         search_clone_source=(ledger or {}).get('successful_source_name'),
         solvability_version=cfg.get('solvability_version'), solvability_policy=cfg.get('solvability_policy'),
-        generation_version=cfg.get('generation_version'), generation_policy=cfg.get('generation_policy'))
+        generation_version=cfg.get('generation_version'), generation_policy=cfg.get('generation_policy'),
+        attempt_setup_version=cfg.get('attempt_setup_version'), attempt_setup_policy=cfg.get('attempt_setup_policy'))
     if checked['proposal_identity'] != entry['proposal_identity']:
         raise ValueError('Published proposal identity differs from independent reconstruction')
     portable = {Path(ref['file']).name: ref for ref in row['portable_files']}

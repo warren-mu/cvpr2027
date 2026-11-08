@@ -21,7 +21,7 @@ from src.tools.t01v2_parallel import submission_identity
 
 MAX_PREFIX_BYTES = 8 * 1024 * 1024
 MODULES = tuple('src.envs.' + name for name in ('pair_v2_shard', 'pair_v2_clone_shard',
-    'pair_v2_stable_shard', 'pair_v2_search_shard', 'pair_v2_solvable_shard'))
+    'pair_v2_stable_shard', 'pair_v2_search_shard', 'pair_v2_solvable_shard', 'pair_v2_isolated_shard'))
 RUN_NAME = re.compile(r'(?P<collection>pilot_pairs_v2_[A-Za-z0-9_]+)_j(?P<number>[0-9]+)_hopper_m_(?P<server>[0-9]+)_g(?P<gpu>[0-9]+)_floorplan(?P<scene>[1-9][0-9]*)')
 
 

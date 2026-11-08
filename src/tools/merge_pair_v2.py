@@ -144,6 +144,14 @@ def shard_producer(command, config):
         raise ValueError("Solvability configuration requires its explicit versioned search producer")
     if config.get("solvability_version") is None and any(config.get(key) is not None for key in ("generation_version", "generation_policy")):
         raise ValueError("Proposal-role metadata requires its explicit new producer")
+    if any(config.get(key) is not None for key in ("attempt_setup_version", "attempt_setup_policy")):
+        from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
+        if (module != "src.envs.pair_v2_solvable_shard"
+                or config.get("attempt_setup_version") != ATTEMPT_SETUP_VERSION
+                or config.get("attempt_setup_policy") != ATTEMPT_SETUP_POLICY
+                or config.get("producer_module") != "src.envs.pair_v2_isolated_shard"):
+            raise ValueError("Unknown attempt setup policy or incompatible source producer")
+        module = "src.envs.pair_v2_isolated_shard"
     return producer_arguments(command, module), enabled is True
 
 
@@ -256,7 +264,8 @@ def load_source(path):
     if data["metrics"].get("evidence_version") != config.get("evidence_version"):
         raise ValueError("Hashed metrics evidence rule differs from source config")
     if any(data["metrics"].get(key) != config.get(key) for key in
-           ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy")):
+           ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy",
+            "attempt_setup_version", "attempt_setup_policy")):
         raise ValueError("Hashed metrics search configuration differs from source config")
     if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
             or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
@@ -722,7 +731,8 @@ def final_pair_eligible(kind, solvability_version):
 
 def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None,
                evidence_version=None, search_version=None, search_policy=None, search_clone_source=None,
-               solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None):
+               solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None,
+               attempt_setup_version=None, attempt_setup_policy=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
@@ -755,6 +765,17 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
           or row.get("solvability_policy") is not None or generation_version is not None
           or generation_policy is not None or row.get("generation_version") is not None or row.get("generation_policy") is not None):
         raise ValueError("Historical source cannot silently assert the new Look solvability rule")
+    if attempt_setup_version is not None:
+        from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
+        if (solvability_version is None or attempt_setup_version != ATTEMPT_SETUP_VERSION
+                or attempt_setup_policy != ATTEMPT_SETUP_POLICY
+                or row.get("attempt_setup_version") != attempt_setup_version
+                or row.get("attempt_setup_policy") != attempt_setup_policy):
+            raise ValueError("Pair attempt setup differs from its explicit versioned source")
+    elif attempt_setup_policy is not None or any(row.get(key) is not None for key in
+            ("attempt_setup_version", "attempt_setup_policy", "attempt_setup", "attempt_setup_reference",
+             "attempt_setup_native_prefix_reference")):
+        raise ValueError("Historical source cannot silently claim isolated attempt setup")
     directory = Path(pair_path).resolve().parent
     if row.get("status") != "passed" or row.get("kind") not in KINDS or row.get("discard_reasons") != []:
         raise ValueError("Pair was not recorded as an unqualified completed pass")
@@ -854,6 +875,11 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                     or read_reference(construction["common_baseline_check_reference"], root=root, within=raw_root) != checked):
                 raise ValueError("Stable-world common-baseline check differs from independently measured positions")
             physical[index] = augment_physical_result(physical[index], construction)
+    attempt_setup = None
+    if attempt_setup_version is not None:
+        from src.envs.pair_v2_isolated_verify import verify_attempt_setup
+        attempt_setup = verify_attempt_setup(row, worlds, constructions, common_objects,
+            lambda ref: read_reference(ref, root=root, within=raw_root))
     for c in constructions:
         if c.get("settling", {}).get("settled") is not True or not c["settling"].get("observations"):
             raise ValueError("Missing actual bounded settling observations")
@@ -988,6 +1014,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             "clone_verification": clone,
             "look_solvability_verification": solvability,
             "proposal_role_verification": role,
+            **({"attempt_setup_verification": attempt_setup} if attempt_setup is not None else {}),
             "verification_scope": "construction-stage and applicable supplement 4(a); P-table/BFS/no-leak/cache checks not run",
             "full_metrics_spec_compliance": None,
             "witnesses": [{"passed": w["passed"], "target_name": w["target_name"]} for w in witnesses],
@@ -1186,7 +1213,9 @@ def main(argv=None):
                                              solvability_version=cfg.get("solvability_version"),
                                              solvability_policy=cfg.get("solvability_policy"),
                                              generation_version=cfg.get("generation_version"),
-                                             generation_policy=cfg.get("generation_policy"))
+                                             generation_policy=cfg.get("generation_policy"),
+                                             attempt_setup_version=cfg.get("attempt_setup_version"),
+                                             attempt_setup_policy=cfg.get("attempt_setup_policy"))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],
