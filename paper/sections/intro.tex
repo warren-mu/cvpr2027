@@ -1,0 +1,38 @@
+\section{Introduction}
+\label{sec:intro}
+
+Consider an embodied agent asked to bring ``the apple in the fridge.''
+In most homes the apple is where it usually is, and an agent that walks to its habitual location will often succeed.
+Sometimes, however, someone has moved it, and the only way to know is to open the fridge and look.
+A competent agent should spend a little effort to check when its current observations cannot settle the question, and it should then act on what it sees: change its goal when the evidence says so, and keep it when the evidence does not.
+
+Vision-language models (VLMs) are increasingly trained as such agents with reinforcement learning (RL) in simulation~\cite{vagen2025,glance2026,seekvln2026}.
+The usual learning signal, however, is computed in the single world that the episode happened to sample.
+If the agent commits without looking and the apple happens to be in its usual place, the episode succeeds and the premature commitment is reinforced; if the apple was moved, the same decision, taken on the same observations, is punished.
+The agent's inputs were identical in both cases, so the difference in credit carries no information the agent could have used.
+Averaged over many episodes the signal is still correct in expectation, but it is noisy exactly where it matters, and it never tells the agent what it should have done with the evidence it did not collect.
+
+We propose to remove this noise at its source.
+Instead of sampling one world per episode, we construct \emph{pairs} of simulated worlds that agree on everything the agent has observed so far but may differ in the hidden fact that determines the goal.
+While the agent cannot tell the two worlds apart, it acts once and receives credit averaged over both; once discriminating evidence enters its input, the two episodes are allowed, and required, to diverge.
+This gives two learning signals.
+First, \emph{information-set credit} for evidence-seeking: the value of looking is compared with the value of committing now, averaged over the worlds consistent with the agent's information.
+Second, \emph{post-evidence consistency} for the goal decision: after looking, the agent should switch targets in pairs whose goals differ (\Flip) and keep its target in pairs whose goals agree (\Stay).
+
+Building such pairs requires care.
+A pair is only useful if the two worlds really are indistinguishable to the agent up to the decision point, if each world has a unique and reachable target, and if the evidence becomes visible after looking.
+We therefore check every pair for deterministic restoration, physical validity, target uniqueness, an executable success witness, and pixel-level equality of the agent's inputs, and we discard pairs that fail any check.
+
+We are careful about what the pairs do and do not buy.
+If worlds are sampled from the same prior, a same-world comparison between looking and committing, as in recent evidence-seeking navigation work~\cite{seekvln2026}, is also unbiased.
+Our claim is narrower: at an equal rollout budget, pairing acts as stratified sampling over the hidden world, removing the between-world component of the variance of the credit, and it lets us balance \Flip\ and \Stay\ cases and control how often the world changes.
+Our experiments are designed to test this claim directly.
+
+\paragraph{Contributions.}
+\begin{itemize}
+\item A formulation of evidence-seeking and goal updating in embodied VLM agents as credit assignment over information sets, with \Look/\Flip/\Stay\ cases defined relative to what the agent has observed (\cref{sec:method}).
+\item A procedure for constructing and validating counterfactual world pairs in AI2-THOR~\cite{ai2thor2017}, including pixel-level checks of information consistency and evidence visibility (\cref{sec:setup}).
+\item Information-set credit and post-evidence consistency objectives that plug into multi-turn PPO for VLM agents~\cite{vagen2025}, with an analysis showing that they keep the expected credit unchanged while removing between-world variance (\cref{sec:method}).
+\item A controlled comparison against outcome-only RL, the same paired data without cross-world terms, same-world look-versus-commit branching, and fixed and heuristic observation policies, at equal rollout budgets and across rates of world change (\cref{sec:results}).
+% TODO(results): add one clause per contribution stating what we found, from agg_* results only, and register each in CLAIMS.md.
+\end{itemize}
