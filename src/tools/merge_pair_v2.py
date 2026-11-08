@@ -79,12 +79,21 @@ def producer_arguments(command, module):
 def shard_producer(command, config):
     """Clone evidence requires its separate, explicitly enabled producer."""
     enabled = config.get("enable_candidate_clone")
-    if enabled is True:
+    version = config.get("preflight_version")
+    if version is not None:
+        from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY
+        if (version != PREFLIGHT_VERSION or enabled is not True or config.get("preflight_policy") != PREFLIGHT_POLICY
+                or config.get("evidence_version") != "anchor_union_look_v1"):
+            raise ValueError("Unknown stable preflight version or missing clone opt-in")
+        module = "src.envs.pair_v2_stable_shard"
+    elif enabled is True:
         module = "src.envs.pair_v2_clone_shard"
     elif enabled is None or enabled is False:
         module = "src.envs.pair_v2_shard"
     else:
         raise ValueError("Clone opt-in must be an explicit boolean")
+    if version is None and config.get("evidence_version") is not None:
+        raise ValueError("New evidence rule requires its explicit stable producer")
     return producer_arguments(command, module), enabled is True
 
 
@@ -192,6 +201,10 @@ def load_source(path):
     if (clone_enabled and data["metrics"].get("enable_candidate_clone") is not True
             or not clone_enabled and data["metrics"].get("enable_candidate_clone") is True):
         raise ValueError("Hashed metrics clone opt-in disagrees with the source producer/config")
+    if data["metrics"].get("preflight_version") != config.get("preflight_version"):
+        raise ValueError("Hashed metrics preflight version differs from source config")
+    if data["metrics"].get("evidence_version") != config.get("evidence_version"):
+        raise ValueError("Hashed metrics evidence rule differs from source config")
     if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
             or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
             or config.get("seed") != 0 or config.get("resolution") != 255):
@@ -244,8 +257,93 @@ def proposal_identity(row):
         "points": points, "view": {key: view[key] for key in ("position", "yaw", "horizon")}})
 
 
-def verify_preflight(preflight):
+def verify_stable_preflight(preflight, read):
+    """Recompute both phases from original action metadata and snapshot hashes."""
+    from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY, position_step, exceeded
+    if (preflight.get("preflight_version") != PREFLIGHT_VERSION or preflight.get("policy") != PREFLIGHT_POLICY
+            or preflight.get("passed") is not True or preflight.get("error") is not None
+            or preflight.get("reasons") != []):
+        raise ValueError("Stable preflight does not record a complete approved-protocol pass")
+    physics = preflight["physics"]
+    if physics != {"time_step_seconds": .02, "seconds_per_step": .1}:
+        raise ValueError("Stable preflight changed the existing physics step duration")
+    def snapshot(value):
+        if read(value["reference"]) != {k: v for k, v in value.items() if k != "reference"}:
+            raise ValueError("Stable preflight snapshot differs from its authenticated raw JSON")
+        return value["objects"]
+    def action(ref, name, before, arguments, previous_index=None):
+        value = read(ref)
+        if (value.get("action") != name or value.get("arguments") != arguments or value.get("exception") is not None
+                or value["after_metadata"].get("lastActionSuccess") is not True
+                or value["before_metadata"]["objects"] != before
+                or type(value.get("index")) is not int
+                or previous_index is not None and value["index"] != previous_index + 1):
+            raise ValueError("Stable preflight action/metadata chain is inconsistent")
+        return value
+    diagnostics = preflight["diagnostics"]
+    source = snapshot(diagnostics["source_snapshot"])
+    pause = action(diagnostics["pause_action_reference"], "PausePhysicsAutoSim", source, {})
+    if pause["index"] != 0:
+        raise ValueError("Original-scene stable preflight was not the first backend operation")
+    previous = pause["after_metadata"]["objects"]
+    measured = position_step(source, previous, source)
+    if measured != diagnostics["pause_measurements"] or not measured["inventory_exact"] or exceeded(measured, .5):
+        raise ValueError("Initial pause exceeded the original-scene displacement/inventory bound")
+    initial = diagnostics["initial_settling"]
+    rows = initial["observations"]
+    if not 1 <= len(rows) <= 50 or initial.get("settled") is not True:
+        raise ValueError("Missing/beyond-N initial settling evidence")
+    travelled = {n: v["observed_path_length_m"] for n, v in measured["objects"].items()}
+    maxima = {n: v["baseline_displacement_m"] for n, v in measured["objects"].items()}
+    streak, previous_index, criterion = 0, pause["index"], None
+    args = {"timeStep": .02, "simSeconds": .1, "allowAutoSimulation": False}
+    for index, row in enumerate(rows):
+        value = action(row["action_reference"], "AdvancePhysicsStep", previous, args, previous_index)
+        current = value["after_metadata"]["objects"]
+        measured = position_step(previous, current, source, travelled)
+        streak = streak + 1 if measured["all_steps_below_1mm"] else 0
+        native = value["after_metadata"].get("isSceneAtRest")
+        if (row["index"] != index or row["measurements"] != measured or row["small_step_streak"] != streak
+                or row["native_is_scene_at_rest"] != native or not measured["inventory_exact"] or exceeded(measured, .5)):
+            raise ValueError("Initial settling measurements do not recompute or exceed 0.5m")
+        for name, item in measured["objects"].items(): maxima[name] = max(maxima[name], item["baseline_displacement_m"])
+        previous, previous_index = current, value["index"]
+        travelled = {n: v["observed_path_length_m"] for n, v in measured["objects"].items()}
+        if native is True or streak >= 10:
+            criterion = "native_rest" if native is True else "ten_small_steps"
+            if index != len(rows) - 1: raise ValueError("Initial phase continued after its first settling criterion")
+    baseline = snapshot(preflight["snapshot"])
+    if (criterion is None or initial["criterion"] != criterion or baseline != previous
+            or preflight["snapshot"].get("last_action_reference") != rows[-1]["action_reference"]):
+        raise ValueError("Construction baseline is not the actual first settled snapshot")
+    window = diagnostics["stability_window"]
+    if window.get("completed") is not True or len(window["observations"]) != 50:
+        raise ValueError("Stable window must contain exactly 50 measured steps without native-rest early stopping")
+    travelled, window_maxima = {}, dict.fromkeys(maxima, 0.0)
+    for index, row in enumerate(window["observations"]):
+        value = action(row["action_reference"], "AdvancePhysicsStep", previous, args, previous_index)
+        current = value["after_metadata"]["objects"]
+        measured = position_step(previous, current, baseline, travelled)
+        if (row["index"] != index or row["measurements"] != measured or not measured["inventory_exact"]
+                or row["native_is_scene_at_rest"] != value["after_metadata"].get("isSceneAtRest") or exceeded(measured, .01)):
+            raise ValueError("Stable window differs from raw metadata or exceeds its settled-baseline 1cm bound")
+        for name, item in measured["objects"].items(): window_maxima[name] = max(window_maxima[name], item["baseline_displacement_m"])
+        previous, previous_index = current, value["index"]
+        travelled = {n: v["observed_path_length_m"] for n, v in measured["objects"].items()}
+    if (snapshot(preflight["window_end_snapshot"]) != previous
+            or preflight["window_end_snapshot"].get("last_action_reference") != window["observations"][-1]["action_reference"]):
+        raise ValueError("Stable-window final snapshot is not the measured final state")
+    return {"passed": True, "preflight_version": PREFLIGHT_VERSION, "initial_steps": len(rows),
+            "settled_criterion": criterion, "window_steps": 50, "initial_max_displacement_m_by_name": maxima,
+            "window_max_displacement_m_by_name": window_maxima, "baseline": "snapshot at initial settling; window_end kept separately"}
+
+
+def verify_preflight(preflight, read=None):
     """Compare the original scene with its final rest; no extra transient bound."""
+    if preflight.get("preflight_version") is not None:
+        if read is None:
+            raise ValueError("Versioned preflight requires authenticated native action evidence")
+        return verify_stable_preflight(preflight, read)
     before = preflight["diagnostics"]["source_snapshot"]["objects"]
     after = preflight["snapshot"]["objects"]
     old, new = {o["name"]: o for o in before}, {o["name"]: o for o in after}
@@ -456,12 +554,18 @@ def load_observation(record, portable, directory, *, root=ROOT):
     return result
 
 
-def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False):
+def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None, evidence_version=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
         mark_observation, physical_check, prefix_check, public_copy, public_exact,
         restore_state_check, single_edit_check, witness_check)
+    if preflight_version == "settled_baseline_window_v1":
+        from src.envs.pair_v2_stable_policy import EVIDENCE_VERSION, look_evidence, classify_pair
+        if evidence_version != EVIDENCE_VERSION:
+            raise ValueError("Stable source lacks its explicit approved anchor-union evidence version")
+    elif evidence_version is not None:
+        raise ValueError("Historical sources cannot silently use the new evidence rule")
     directory = Path(pair_path).resolve().parent
     if row.get("status") != "passed" or row.get("kind") not in KINDS or row.get("discard_reasons") != []:
         raise ValueError("Pair was not recorded as an unqualified completed pass")
@@ -487,7 +591,9 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False)
     if portable.get(preflight_path) != preflight_reference["sha256"]:
         raise ValueError("Original-scene preflight is absent from the portable manifest")
     raw_preflight = json.loads(preflight_path.read_text())
-    preflight = verify_preflight(raw_preflight)
+    if raw_preflight.get("preflight_version") != preflight_version:
+        raise ValueError("Pair preflight version differs from its explicit source producer")
+    preflight = verify_preflight(raw_preflight, lambda ref: read_reference(ref, root=root, within=raw_root))
     clone = None
     if (any(world.get("clone_context") is not None for world in worlds)
             or any(row.get(key) is not None for key in ("clone_evidence", "clone_pair_check", "clone_evidence_files"))):
@@ -537,6 +643,21 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False)
     physical = [physical_check(c["before_objects"], c["requested_poses"], c["realized_objects"],
         c["edited_names"], native_is_scene_at_rest=c["native_is_scene_at_rest"],
         placement_evidence_by_name=c["placement_evidence_by_name"]) for c in constructions]
+    if preflight_version == "settled_baseline_window_v1":
+        from src.envs.pair_v2_stable import common_baseline_check, augment_physical_result
+        common_objects = raw_preflight["snapshot"]["objects"]
+        common_reference = raw_preflight["snapshot"]["reference"]
+        if clone is not None:
+            common_reference = worlds[0]["clone_context"]["baseline_validation_reference"]
+            common_objects = reader(common_reference)["construction_physical"]["realized_objects"]
+        for index, construction in enumerate(constructions):
+            if construction["edited_names"] != [anchor]:
+                raise ValueError("Stable worlds must intentionally edit only the distinct anchor")
+            checked = common_baseline_check(common_objects, construction["realized_objects"], [anchor], common_reference)
+            if (construction.get("common_baseline_check") != checked
+                    or read_reference(construction["common_baseline_check_reference"], root=root, within=raw_root) != checked):
+                raise ValueError("Stable-world common-baseline check differs from independently measured positions")
+            physical[index] = augment_physical_result(physical[index], construction)
     for c in constructions:
         if c.get("settling", {}).get("settled") is not True or not c["settling"].get("observations"):
             raise ValueError("Missing actual bounded settling observations")
@@ -600,7 +721,8 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False)
         agent_unchanged=worlds[0]["agent"] == worlds[1]["agent"],
         shared_prefix_w0=shared0, shared_prefix_w1=shared1)
     evidence_views = after if look else prefix
-    evidence = compare_view(*evidence_views, [*candidates, anchor])
+    evidence = (look_evidence(*evidence_views, anchor) if look and evidence_version == "anchor_union_look_v1"
+                else compare_view(*evidence_views, [*candidates, anchor]))
     anchor_pixels = [int(obs["masks_by_name"].get(anchor, np.zeros((255, 255), dtype=bool)).sum()) for obs in evidence_views]
     restoration = [restore_state_check(w["objects"], r["objects"], w["agent"], r["agent"])
                    for w, r in zip(worlds, restored)]
@@ -787,7 +909,9 @@ def main(argv=None):
                         raise ValueError("Portable pair disagrees with journal identity/outcome")
                     try:
                         checked = check_pair(pair, pair_path, raw_root=cfg["raw_evidence_dir"],
-                                             clone_enabled=cfg.get("enable_candidate_clone") is True)
+                                             clone_enabled=cfg.get("enable_candidate_clone") is True,
+                                             preflight_version=cfg.get("preflight_version"),
+                                             evidence_version=cfg.get("evidence_version"))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],
