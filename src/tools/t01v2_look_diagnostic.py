@@ -98,7 +98,7 @@ def read_attempt(reference, raw_root):
         return None  # Missing retained bytes are not an observed zero.
     if path.stat().st_size > MAX_ATTEMPT_BYTES:
         raise ValueError('Attempt JSON exceeds the diagnostic read cap')
-    return json.loads(merge.reference_path(reference, within=raw_root).read_text())
+    return json.loads(merge.reference_path(reference, root=merge.ROOT, within=raw_root).read_text())
 
 
 def journal_rows(data):
@@ -106,7 +106,7 @@ def journal_rows(data):
     reference = merge.journal_reference(data, merge.source_eligibility(data))
     if reference is None:
         return reference, None
-    path = merge.reference_path(reference, within=merge.ROOT / 'data/world_pairs/v2')
+    path = merge.reference_path(reference, root=merge.ROOT, within=merge.ROOT / 'data/world_pairs/v2')
     rows, seen = [], set()
     for line in path.read_text().splitlines():
         if not line.strip():
