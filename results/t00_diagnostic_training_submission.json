@@ -1,0 +1,71 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 40.176940317993285
+  },
+  "config": {
+    "command": [
+      "python3",
+      "scripts/pbs/submit.py",
+      "--name",
+      "t00_vagen_retry1_job",
+      "--walltime",
+      "02:00:00",
+      "--",
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t00_vagen_retry1_job",
+      "--",
+      "bash",
+      "experiments/t00_setup_then_train.sh",
+      "t00_setup_pkg_resources",
+      "t00_vagen_smoke_retry1",
+      "t00_restore"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t00_diagnostic_training_submission",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t00_diagnostic_training_submission",
+      "--",
+      "python3",
+      "scripts/pbs/submit.py",
+      "--name",
+      "t00_vagen_retry1_job",
+      "--walltime",
+      "02:00:00",
+      "--",
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t00_vagen_retry1_job",
+      "--",
+      "bash",
+      "experiments/t00_setup_then_train.sh",
+      "t00_setup_pkg_resources",
+      "t00_vagen_smoke_retry1",
+      "t00_restore"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-08T11:13:23",
+    "log_path": "logs/runs/t00_diagnostic_training_submission.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8eaecd1693022de58e46c544220936bc94a2f975",
+    "git_dirty": false,
+    "end": "2026-11-08T11:14:03",
+    "duration_sec": 40.2,
+    "exit_code": 0,
+    "metrics_sha256": "fce9c01844367ed188a22da1621dfc93b54a3531c71f8cc9774e07700a1a1a11"
+  }
+}
