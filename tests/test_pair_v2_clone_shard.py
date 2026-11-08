@@ -217,7 +217,8 @@ class CloneShardTests(unittest.TestCase):
 
     def test_parent_opt_in_preserves_shard_and_restores_original_bindings(self):
         original_manifest = {'scene': 'FloorPlan1', 'gpu_identity': {'gpu_uuid': 'GPU-synthetic'}}
-        config = {'shard': copy.deepcopy(original_manifest)}
+        config = {'shard': copy.deepcopy(original_manifest), 'max_raw_bytes': 512 * 1024 * 1024,
+                  'resolution': 255, 'seed': 0}
         original_worker, original_writer = shard.base.Worker, shard.base.write_result
         captured = {}
 
@@ -235,7 +236,12 @@ class CloneShardTests(unittest.TestCase):
             self.assertIs(shard.base.Worker, saved_worker)
             self.assertIs(shard.base.write_result, saved_writer)
             self.assertTrue(saved_writer.call_args.args[2]['enable_candidate_clone'])
+            self.assertEqual(saved_writer.call_args.args[2]['max_raw_bytes'], 2 * 1024 * 1024 * 1024)
         self.assertEqual(config['shard'], original_manifest)
+        self.assertEqual(captured['config']['max_raw_bytes'], 2 * 1024 * 1024 * 1024)
+        self.assertEqual(config['clone_raw_storage_limit']['max_stored_payload_bytes_per_simulator'], config['max_raw_bytes'])
+        self.assertEqual(config['clone_portable_archive']['max_run_bytes'], 128 * 1024 * 1024)
+        self.assertEqual((config['resolution'], config['seed']), (255, 0))
         self.assertIs(captured['target'], shard.generator_worker)
         self.assertIs(shard.base.Worker, original_worker)
         self.assertIs(shard.base.write_result, original_writer)

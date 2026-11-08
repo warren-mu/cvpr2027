@@ -35,6 +35,14 @@ _REPLAY_CLEANUP = None
 def enable_config(config):
     """Add the opt-in at top level without altering the audited shard manifest."""
     config['enable_candidate_clone'] = True
+    config['max_raw_bytes'] = 2 * 1024 * 1024 * 1024
+    config['clone_raw_storage_limit'] = {
+        'max_stored_payload_bytes_per_simulator': config['max_raw_bytes'],
+        'first_round_limit_bytes': 512 * 1024 * 1024,
+        'scope': 'each scratch EvidenceStore (construction or fresh replay); incremental index overhead is additional',
+        'purpose': 'hard storage guard, not a scientific acceptance threshold',
+        'on_limit': 'fail and retain completed evidence; no deletion or acceptance override',
+    }
     config['clone_rule'] = copy.deepcopy(CLONE_RULE)
     config['clone_adapter_source'] = {'file': __file__, 'sha256': base.sha(__file__)}
     config['clone_portable_archive'] = {
