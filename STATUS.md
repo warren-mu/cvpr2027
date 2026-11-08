@@ -241,3 +241,6 @@ E2E仅在至少2类各1合格且人类转达Claude图审无问题后触发（全
 
 自动重提映射分别是pilot_pairs_v2_living_201_204_a00_r32d46927、pilot_pairs_v2_living_205_208_a00_r292586e2、pilot_pairs_v2_living_209_212_a00_r1ba34adc；三项均保持1GPU/2600秒/原场景/无host，通过同一8/60预算守卫。21:19:55 UTC的results/t01v2_single_watch_02.json观察厨房707255及707329/330/331均Q，errors=[]。results/t01v2_single_after_retry_budget.json记录已结束实际11.8661111111、未结束完整预留4.1666666667、合计16.0327777778/60；T01v2实际+预留4.3494444444/8，费率1，仍为PBS调度扣费而非独立账单核销。
 早期图审checkpoint和T02→T05接线子步骤完成：10项checkpoint CPU tests及3项实际TableEnvironment→T02EpisodePort→collect_pair接口tests全部通过（results/t01v2_review_checkpoint_cpu_01.json、results/t02_t05_table_integration_cpu_01.json）。独立checkpoint复用完整来源/whole-journal/native验真、补4/5政策与去重；少量合格可以发布真实图和清单，不占用最终80/40固定输出路径，真正证据矛盾禁止发布。人类图审和正式T02验收仍unknown，数据数量门槛不自动等于批准。接口tests验证标号距离过滤、公开输入共享、分叉再返回共享时τ保留/独立τ_seen及五轮限制。GPU生成器与最终merger未改。
+
+
+T01v2周期进度（21:29 UTC观察）：results/t00b_monitor22_p2.json中707255、707329、707330、707331均Q，无分配节点，errors=[]。results/t01v2_single_progress_02.json（21:25:56 UTC）覆盖当前厨房12与三个客厅后继12，共24scene均not_yet_observed，attempt/合格/拒绝计数保留null，不报0。仍无两个已结束场景可触发零合格告警，也无图审产物；后台有界观察继续，旧失败记录不删除。排队空档继续补齐原T02 CPU范围的离线导出producer与原生snapshot/clone来源适配，GPU导出/训练仍未触发。
