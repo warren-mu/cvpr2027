@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from src.envs import pair_v2_isolated_shard as isolated
+from src.envs import pair_v2_solvable_shard as solvable
 from src.tools import merge_pair_v2 as merge
 from src.tools.t01v2_live_progress import MODULES
 
@@ -27,9 +28,9 @@ class IsolatedRegistrationTests(unittest.TestCase):
         old = ['python3', '-m', 'src.envs.pair_v2_solvable_shard']
         with self.assertRaises(ValueError):
             merge.shard_producer(old, config)
-        for key in ('attempt_setup_version', 'attempt_setup_policy'):
-            config.pop(key)
-        config['producer_module'] = 'src.envs.pair_v2_solvable_shard'
+        # Construct the actual historical policy; stripping only setup tags
+        # from a future policy could leave unrelated new producer claims.
+        config = solvable.enable_config({'name': 'fixture', 'scene': 'FloorPlan1', 'seed': 0})
         self.assertEqual(merge.shard_producer(old, config), ([], True))
         with self.assertRaises(ValueError):
             merge.shard_producer(['python3', '-m', 'src.envs.pair_v2_isolated_shard'], config)
