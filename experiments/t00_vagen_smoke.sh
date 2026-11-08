@@ -71,10 +71,14 @@ export HYDRA_FULL_ERROR=1
 mkdir -p "$WANDB_DIR"
 export T00_VAGEN_SOURCE=$t00_vagen T00_WORK_DIR=$t00_work T00_MANIFEST=$t00_manifest T00_RUN_NAME=$t00_name
 export T00_TOTAL_STEPS=${T00_TOTAL_STEPS:-21}
+export T00_MEMORY_VARIANT=${T00_MEMORY_VARIANT:-none}
 t00_stage=prepare_official_launcher
 python3 - <<'PY'
 import hashlib, importlib.metadata, importlib.util, json, os, pathlib, shutil, socket, subprocess
 from src.envs.thor_common import prepare_runtime
+memory_variant = os.environ['T00_MEMORY_VARIANT']
+if memory_variant not in ('none', 'critic_offload'):
+    raise RuntimeError('T00_MEMORY_VARIANT must be none or critic_offload')
 source = pathlib.Path(os.environ['T00_VAGEN_SOURCE']).resolve()
 work = pathlib.Path(os.environ['T00_WORK_DIR']).resolve()
 commit = '4e2976d87c0f92c97f9a820803e71908cde5fb71'
@@ -171,6 +175,15 @@ changes = {
     'actor_rollout_ref.rollout.tensor_model_parallel_size=4': 'actor_rollout_ref.rollout.tensor_model_parallel_size=1',
     'trainer.total_training_steps=300': f'trainer.total_training_steps={steps}',
 }
+# Separately named opt-in repair after the observed baseline OOM. These are
+# existing official launcher options; keep every other setting unchanged.
+memory_changes = {}
+if memory_variant == 'critic_offload':
+    memory_changes = {
+        'critic.model.fsdp_config.param_offload=False': 'critic.model.fsdp_config.param_offload=True',
+        'critic.model.fsdp_config.optimizer_offload=False': 'critic.model.fsdp_config.optimizer_offload=True',
+    }
+changes.update(memory_changes)
 for old, new in changes.items():
     if text.count(old) != 1:
         raise RuntimeError(f'Expected exactly one {old}')
@@ -199,6 +212,8 @@ config = {
     'official_total_training_steps': 300, 'configured_total_training_steps': steps,
     'required_completed_updates': 20, 'default_resolution': 255,
     'model': 'Qwen/Qwen2.5-VL-3B-Instruct', 'training_config_changes': changes,
+    'memory_variant': memory_variant,
+    'memory_variant_changes_relative_to_official': memory_changes,
     'server_gpu_topology_change': {'navigation.devices': [device]},
     'server_host': '127.0.0.1', 'server_port': 5000, 'watchdog_seconds': 3600,
     'use_state_reward': False, 'judge_credentials_required': False,
@@ -210,7 +225,8 @@ config = {
     'ai2thor_release_prune_guard': release_guard,
     'notes': ['Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.',
               'Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.',
-              'Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer settings are unchanged.',
+              'Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer hyperparameters are unchanged.',
+              'The optional critic_offload variant changes only critic parameter and optimizer offload from False to True; none preserves the baseline.',
               'Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.',
               'At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.',
               'Official shell is executed with -e and pipefail so tee cannot hide a training failure.'],
