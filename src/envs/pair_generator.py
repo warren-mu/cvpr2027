@@ -24,7 +24,7 @@ from .pair_core import (RelationalTask, ViewState, make_scene_split,
 from .pair_simulator import (BUILD, PairSimulator, compare_inputs, digest,
                              point, pose_changes, save_observation)
 from .thor_common import (ROOT, Worker, controller_session, deadline_after,
-                         install_signals, prepare_runtime, write_result)
+                         install_signals, prepare_runtime, valid_frame, write_result)
 
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
 REQUIRED_CHECKS = ("restore_deterministic", "valid_physical", "unique_targets", "witness_replay", "evidence_available", "targets_separable")
@@ -414,6 +414,7 @@ def generator_worker(config, connection):
             if len(rows) >= config["max_attempts"] or time.time() >= config["deadline"]:
                 break
             scene_config = {**config, "scene": scene}
+            source_evidence = None
             try:
                 with controller_session(scene_config, f"scene_{scene}", segmentation=True, connection=connection) as controller:
                     build = getattr(getattr(controller, "_build", None), "commit_id", None)
@@ -428,9 +429,34 @@ def generator_worker(config, connection):
                     scene_config["scene_world"] = scene_world
                     config_for_pair = {**config, "scene_world": scene_world}
                     scene_dir = Path(config["raw_evidence_dir"]) / scene
-                    write_json(scene_dir / "source.json", {"world": scene_world, "random_seed": config["seed"]})
+                    import numpy as np
                     from PIL import Image
-                    Image.fromarray(controller.last_event.frame).save(scene_dir / "source_rgb.png")
+                    frame = controller.last_event.frame
+                    source_rgb = {"shape": list(frame.shape) if frame is not None else None,
+                                  "dtype": str(frame.dtype) if frame is not None else None,
+                                  "min": int(frame.min()) if frame is not None and frame.size else None,
+                                  "max": int(frame.max()) if frame is not None and frame.size else None,
+                                  "nonzero_values": int(np.count_nonzero(frame)) if frame is not None else None,
+                                  "nonzero_pixels": int(np.count_nonzero(np.any(frame != 0, axis=2)))
+                                      if frame is not None and frame.ndim == 3 else None}
+                    scene_dir.mkdir(parents=True, exist_ok=True)
+                    image_path = scene_dir / "source_rgb.png"
+                    try:
+                        Image.fromarray(frame).save(image_path)
+                        source_rgb.update(image_path=str(image_path),
+                                          image_sha256=hashlib.sha256(image_path.read_bytes()).hexdigest())
+                    except Exception as error:
+                        source_rgb["image_save_error"] = f"{type(error).__name__}: {error}"
+                    source_path = scene_dir / "source.json"
+                    write_json(source_path, {"world": scene_world, "random_seed": config["seed"], "source_rgb": source_rgb})
+                    source_evidence = {"source_json": str(source_path),
+                                       "source_json_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                                       "source_rgb": source_rgb}
+                    # Retain the unmodified source first; invalid scenes never enter
+                    # graph construction, task selection, or the candidate loop.
+                    valid_frame(controller.last_event, config["resolution"])
+                    if "image_save_error" in source_rgb:
+                        raise RuntimeError(source_rgb["image_save_error"])
                     node_evidence = sim.sample_nodes(config["seed"])
                     write_json(scene_dir / "navigation_sample.json", node_evidence)
                     tasks = task_candidates(scene_world["objects"])
@@ -526,7 +552,8 @@ def generator_worker(config, connection):
                 raise
             except Exception as error:
                 scene_failures.append({"scene": scene, "error": f"{type(error).__name__}: {error}",
-                                       "evidence_directory": str(Path(config["raw_evidence_dir"]) / scene)})
+                                       "evidence_directory": str(Path(config["raw_evidence_dir"]) / scene),
+                                       "source_evidence": source_evidence})
                 publish()
         return publish("completed_search")
     finally:
