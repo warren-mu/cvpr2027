@@ -210,8 +210,13 @@ python -m pip install ai2thor==5.0.0 numpy==1.25.1 psutil==6.1.1 nvidia-ml-py==1
 python -m pip check
 # Metadata consistency alone missed gym_sokoban's legacy pkg_resources import.
 # Validate the actual server and training imports inside this PBS allocation.
+python "$repo/src/tools/patch_vllm_uuid.py"
 python - <<'PY'
+import ctypes
 import importlib
+import json
+import os
+import uuid
 from vagen.env import REGISTERED_ENV
 if "navigation" not in REGISTERED_ENV:
     # The registry suppresses optional ImportError; expose its original cause.
@@ -219,7 +224,33 @@ if "navigation" not in REGISTERED_ENV:
     raise RuntimeError("Navigation was not registered")
 for name in ("vagen.server.server", "torch", "flash_attn", "vllm"):
     importlib.import_module(name)
+from vllm.platforms.cuda import device_id_to_physical_device_id
+from vllm.model_executor.models import ModelRegistry
+import torch
+visible = os.environ["CUDA_VISIBLE_DEVICES"]
+if not visible.startswith("GPU-") or "," in visible:
+    raise RuntimeError("This T00 validation requires the single complete PBS GPU UUID")
+cuda = ctypes.CDLL("libcuda.so.1")
+def checked(name, *args):
+    code = getattr(cuda, name)(*args)
+    if code:
+        raise RuntimeError(f"{name} returned CUDA error {code}")
+checked("cuInit", 0)
+device = ctypes.c_int()
+checked("cuDeviceGet", ctypes.byref(device), 0)
+raw_uuid = (ctypes.c_ubyte * 16)()
+checked("cuDeviceGetUuid_v2", ctypes.byref(raw_uuid), device)
+actual_uuid = "GPU-" + str(uuid.UUID(bytes=bytes(raw_uuid)))
+if actual_uuid != visible or torch.cuda.device_count() != 1:
+    raise RuntimeError("CUDA driver device 0 differs from the single PBS UUID")
+physical_index = device_id_to_physical_device_id(0)
+info, architecture = ModelRegistry.inspect_model_cls(["Qwen2_5_VLForConditionalGeneration"])
+if architecture != "Qwen2_5_VLForConditionalGeneration" or info is None:
+    raise RuntimeError("Qwen2.5-VL model inspection did not complete")
 print("SETUP_IMPORT_CHECK: Navigation registered; server, torch, flash_attn, vllm imported")
+print("SETUP_GPU_IDENTITY_CHECK: " + json.dumps({"pbs_uuid": visible,
+    "cuda_device_0_uuid": actual_uuid, "nvml_physical_index": physical_index,
+    "qwen_architecture_inspected": architecture, "cuda_visible_devices_unchanged": True}))
 PY
 python -m pip freeze
 conda list --explicit

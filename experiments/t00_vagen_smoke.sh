@@ -193,6 +193,8 @@ config = {
     'verl_commit': verl_commit,
     'installed_versions': {name: importlib.metadata.version(name) for name in
                            ('torch', 'vllm', 'transformers', 'ai2thor', 'numpy', 'psutil')},
+    'vllm_cuda_source_sha256': hashlib.sha256(pathlib.Path(
+        importlib.metadata.distribution('vllm').locate_file('vllm/platforms/cuda.py')).read_bytes()).hexdigest(),
     'official_env_config_sha256': hashlib.sha256(env_bytes).hexdigest(),
     'official_total_training_steps': 300, 'configured_total_training_steps': steps,
     'required_completed_updates': 20, 'default_resolution': 255,
@@ -213,6 +215,8 @@ config = {
               'At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.',
               'Official shell is executed with -e and pipefail so tee cannot hide a training failure.'],
 }
+if config['vllm_cuda_source_sha256'] != '1d27d2b5d25dbf8c511f39b7031f2d90c30fd3b5c7f052ea17a7c1138bc57c2b':
+    raise RuntimeError('Expected the exact logged vLLM 0.8.2 UUID compatibility repair')
 pathlib.Path(os.environ['T00_MANIFEST']).write_text(json.dumps(config, indent=2) + '\n')
 print('T00_CONFIG_JSON: ' + json.dumps(config, sort_keys=True), flush=True)
 PY
