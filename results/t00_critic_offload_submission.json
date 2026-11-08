@@ -1,0 +1,59 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 60.20776700699935
+  },
+  "config": {
+    "command": [
+      "python3",
+      "scripts/pbs/submit.py",
+      "--name",
+      "t00_vagen_smoke_critic_offload",
+      "--walltime",
+      "01:10:00",
+      "--",
+      "env",
+      "T00_MEMORY_VARIANT=critic_offload",
+      "bash",
+      "experiments/t00_vagen_smoke.sh"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t00_critic_offload_submission",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t00_critic_offload_submission",
+      "--",
+      "python3",
+      "scripts/pbs/submit.py",
+      "--name",
+      "t00_vagen_smoke_critic_offload",
+      "--walltime",
+      "01:10:00",
+      "--",
+      "env",
+      "T00_MEMORY_VARIANT=critic_offload",
+      "bash",
+      "experiments/t00_vagen_smoke.sh"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-08T11:52:35",
+    "log_path": "logs/runs/t00_critic_offload_submission.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d86a2dc3d403c99cda18553642a9b7c5500575ed",
+    "git_dirty": false,
+    "end": "2026-11-08T11:53:36",
+    "duration_sec": 60.3,
+    "exit_code": 0,
+    "metrics_sha256": "7c8acafdde9b73687f827beff32095fa1508de8c0793a137468673645be62530"
+  }
+}
