@@ -1,0 +1,16 @@
+diff --git a/STATUS.md b/STATUS.md
+index 2e14f2d..4f7d728 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -302,3 +302,11 @@ t01v2_single_progress_07（22:10:06 UTC）记录厨房12场景均结束且四类
+ 代码和CPU审计均先推送至e2f7e23，再由 t01v2_submit_isolated_kitchen_001_004_a00 提交707366（1GPU、厨房1–4、43:20、无host、Express/autox、CFP04-SF-125）；提交器已在同一锁内检查T01v2 8 GPU小时与整体60上限，排队按完整walltime预留。新旧生产者/作业证据独立保留，尚无修复效果结论。
+ 
+ 补充5偏差：首批独立检查点 direct_flip 的3对，在rho=0.5时正确目标A概率0.5；direct_stay的2对均在A侧，B侧0，正确目标A概率1.0。Look两类无样本，比例为null；未做T02池平衡，不能宣称平衡通过。707350最终实际用量0.10888888888888888 GPU小时、排队161秒，见 t00b_monitor25_p1_accounting。
++
++### 2026-11-08 22:37 UTC — single-GPU closure and bounded isolated check
++
++All original kitchen/living allocations have ended. The latest full-input early checkpoint (`t01v2_checkpoint_single_03`) independently verifies the same 3 direct_flip and 2 direct_stay pairs, with zero Look pairs, but its whole-input status is invalid_evidence: old kitchen FloorPlan7 and FloorPlan10 have terminal journal rows beyond the final reported attempt counters. Their unchanged original files and failed checkpoint are retained; this is not a reason to waive source checks. The previously published five-image checkpoint `t01v2_checkpoint_single_02` remains independently valid and awaits the human relay of Claude's image review. E2E and G01 are not authorized by a data threshold alone.
++
++`t01v2_single_stable_summary_02` records every old-round scene's preflight, clone attempts, and source-reported rejection distributions (missing measurements remain unknown, not zero); it does not independently accept pairs. The 22:37 progress snapshot `t01v2_single_progress_10` observes 20 completed attempts in the new FloorPlan1 run, all rejected, with 20 measured w0 physical passes across the recorded anchors. This partial scene is not a completed zero-pair result. The other three new scenes were not yet observed.
++
++New isolated job 707366 is running on hopper-21; its per-card real-render gate passed. It retains the original restoration and acceptance thresholds. The logged budget `t01v2_single_budget_02` records 13.437777777777777 scheduler-charged GPU hours completed plus 0.7222222222222222 reserved, total 14.16 / 60; the T01v2 subbudget is 2.4766666666666666 / 8 including the reservation. These use PBS's recorded charge rate and allocation time, not an independently reconciled project credit bill. No additional GPU job has been submitted.
