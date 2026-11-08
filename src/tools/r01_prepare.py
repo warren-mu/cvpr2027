@@ -379,6 +379,14 @@ def template(args, evidence, manifest, metrics):
     return 0
 
 
+def latex_warnings(logtext):
+    # silence.sty defines counters named WarningCount/WarningNumber; those and
+    # LaTeX Info messages are not warnings. Preserve full lines for real notices,
+    # including notices after a same-line parenthesized file-open marker.
+    pattern = re.compile(r"\b(?:LaTeX(?: Font)?|Package\s+[A-Za-z0-9_.-]+|(?:Document\s+)?Class\s+[A-Za-z0-9_.-]+)\s+Warning\s*:|\b(?:Overfull|Underfull)\s+\\[hv]box\b")
+    return [line for line in logtext.splitlines() if pattern.search(line)]
+
+
 def compile_paper(args, evidence, manifest, metrics):
     command = ["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", "-outdir=" + str(evidence.directory), "main.tex"]
     metrics.update(command=command, main_sha256=digest((ROOT / "paper/main.tex").read_bytes()),
@@ -394,7 +402,7 @@ def compile_paper(args, evidence, manifest, metrics):
     print(text, flush=True)
     log = evidence.directory / "main.log"
     logtext = log.read_text(errors="replace") if log.exists() else text
-    metrics["warnings"] = [line for line in logtext.splitlines() if "Warning" in line or "Overfull" in line or "Underfull" in line]
+    metrics["warnings"] = latex_warnings(logtext)
     metrics["errors"] = [line for line in logtext.splitlines() if line.startswith("!") or "LaTeX Error" in line]
     pdf = evidence.directory / "main.pdf"
     metrics["pdf"] = str(pdf.relative_to(ROOT)) if pdf.exists() else None

@@ -9,7 +9,8 @@ stage="${1:---full}"
 # branch never activates/mutates conda, links HOME paths, or runs GPU checks.
 # First run r01_tex_install lock through run_logged and commit its exact lock.
 # Then: run_logged --name NAME -- bash scripts/setup_env.sh --paper --name NAME \
-#       --execution-location login --lock configs/r01_tex_lock.json --archive-cache PATH
+#       --execution-location login --lock configs/r01_tex_lock_v2.json --archive-cache PATH
+# A new lock/cache/prefix preserves the original missing-grfext compile evidence.
 if [[ "$stage" == --paper ]]; then
   shift
   repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"

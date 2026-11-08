@@ -28,11 +28,11 @@ BASE_URL = "https://github.com/rstudio/tinytex-releases/releases/download/v2026.
 BASE_SHA256 = "5b75befa848deae702ae6fa12ff0eef3f110d7e4e2a979ae99f101eba3c9c70d"
 BASE_SHA_SOURCE = "https://github.com/rstudio/tinytex-releases/releases/expanded_assets/v2026.11"
 REPOSITORY = "https://mirror.ctan.org/systems/texlive/tlnet"
-EXTRA_PACKAGES = ("caption", "cleveref", "enumitem", "lineno", "multirow", "silence")
+EXTRA_PACKAGES = ("caption", "cleveref", "enumitem", "grfext", "lineno", "multirow", "silence")
 REQUIRED_FILES = ("article.cls", "times.sty", "xspace.sty", "xcolor.sty", "graphicx.sty",
                   "amsmath.sty", "amssymb.sty", "booktabs.sty", "natbib.sty", "silence.sty",
                   "etoolbox.sty", "caption.sty", "subcaption.sty", "url.sty", "lineno.sty",
-                  "cleveref.sty", "enumitem.sty", "multirow.sty", "hyperref.sty", "phvb.tfm", "ptmb.tfm")
+                  "cleveref.sty", "enumitem.sty", "multirow.sty", "hyperref.sty", "grfext.sty", "phvb.tfm", "ptmb.tfm")
 
 
 def file_hash(path, algorithm="sha256"):
@@ -91,6 +91,43 @@ def download(url, path, expected=None, algorithm="sha256", timeout=45):
     return {"url": url, "final_url": final_url, "file": str(path), "sha256": file_hash(path), "bytes": path.stat().st_size}
 
 
+def acquire_archive(url, path, expected, algorithm="sha256", reuse_cache=None):
+    """Copy only content matching the new lock's source checksum; never edit old cache.
+
+    A cached package may legitimately differ after a TeX Live revision update.
+    In that case retain its hash in evidence and fetch the new pinned container.
+    The repository database itself is always freshly downloaded by lock_tools.
+    """
+    observation = None
+    if reuse_cache is not None:
+        source = reuse_cache / path.name
+        if source.is_symlink():
+            raise ValueError(f"Refusing archive-cache symlink: {source}")
+        if source.exists():
+            if not source.is_file():
+                raise ValueError(f"Archive-cache entry is not a regular file: {source}")
+            actual = file_hash(source, algorithm)
+            observation = {"file": str(source), "algorithm": algorithm,
+                           "expected": expected, "observed": actual}
+            if actual == expected:
+                if path.exists():
+                    raise ValueError(f"Refusing to replace destination archive: {path}")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                partial = path.with_suffix(path.suffix + ".partial")
+                with source.open("rb") as reader, partial.open("xb") as writer:
+                    shutil.copyfileobj(reader, writer, 1024 * 1024)
+                if file_hash(partial, algorithm) != expected:
+                    raise ValueError(f"Copied archive checksum mismatch; partial retained: {partial}")
+                partial.rename(path)
+                return {"url": url, "file": str(path), "sha256": file_hash(path),
+                        "bytes": path.stat().st_size, "reused_verified": True,
+                        "reuse_source": observation}
+    result = download(url, path, expected, algorithm)
+    if observation is not None:
+        result["not_reused_checksum_mismatch"] = observation
+    return result
+
+
 def safe_members(archive):
     members = archive.getmembers()
     links = {PurePosixPath(m.name) for m in members if m.issym() or m.islnk()}
@@ -146,9 +183,14 @@ def lock_tools(args, scratch, evidence, metrics):
         raise ValueError("Refusing to replace existing lock; use a new lock path")
     cache = scratch / "installers/r01_tex" / args.name
     cache.mkdir(parents=True, exist_ok=False)
+    reuse_cache = args.archive_cache.resolve() if args.archive_cache else None
+    if reuse_cache is not None:
+        reuse_cache.relative_to(scratch)
+        if not reuse_cache.is_dir() or reuse_cache == cache.resolve():
+            raise ValueError("Archive reuse requires an existing separate scratch cache")
     base = cache / "TinyTeX-1-linux-x86_64-v2026.11.tar.xz"
     records = metrics.setdefault("downloads", [])
-    records.append(download(BASE_URL, base, BASE_SHA256))
+    records.append(acquire_archive(BASE_URL, base, BASE_SHA256, reuse_cache=reuse_cache))
     top, base_text, base_records = read_base_database(base)
     (evidence / "base_texlive.tlpdb").write_text(base_text)
     database = cache / "texlive.tlpdb.xz"
@@ -170,7 +212,7 @@ def lock_tools(args, scratch, evidence, metrics):
         revision = row["revision"][0]
         path = cache / (name + ".tar.xz")
         url = REPOSITORY + "/archive/" + name + ".tar.xz"
-        records.append(download(url, path, checksum, "sha512"))
+        records.append(acquire_archive(url, path, checksum, "sha512", reuse_cache))
         check_package(path, name, revision)
         packages.append({"name": name, "revision": revision, "url": url,
                          "sha256": file_hash(path), "sha512": checksum, "dependencies": dependencies})
@@ -285,8 +327,9 @@ def main():
     ap.add_argument("mode", choices=("lock", "install"))
     ap.add_argument("--name", required=True)
     ap.add_argument("--execution-location", required=True, choices=("login", "pbs"))
-    ap.add_argument("--lock", type=Path, default=ROOT / "configs/r01_tex_lock.json")
-    ap.add_argument("--archive-cache", type=Path)
+    ap.add_argument("--lock", type=Path, default=ROOT / "configs/r01_tex_lock_v2.json")
+    ap.add_argument("--archive-cache", type=Path,
+                    help="lock: read-only previous scratch cache to copy verified archives; install: exact lock's archive cache")
     ap.add_argument("--prefix", type=Path)
     args = ap.parse_args()
     if not re.fullmatch(r"r01_[A-Za-z0-9_]+", args.name):
@@ -300,6 +343,7 @@ def main():
     evidence.mkdir(parents=True, exist_ok=False)
     metrics = {"status": "failed"}
     config = {"mode": args.mode, "execution_location": args.execution_location, "lock": str(args.lock),
+              "archive_cache": str(args.archive_cache) if args.archive_cache else None,
               "tinytex_version": VERSION, "extra_packages": list(EXTRA_PACKAGES), "base_url": BASE_URL,
               "base_sha256": BASE_SHA256, "base_checksum_source": BASE_SHA_SOURCE,
               "scope": "R01 CPU-only downloads, unpacking, and TeX tools; no GPU or training environment installation"}

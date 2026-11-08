@@ -2,10 +2,25 @@
 import json
 import unittest
 
-from src.tools.r01_prepare import bibtex, parse_source, protected_parser
+from src.tools.r01_prepare import bibtex, latex_warnings, parse_source, protected_parser
 
 
 class R01SourceParsingTests(unittest.TestCase):
+    def test_warning_counters_and_info_are_not_latex_warnings(self):
+        text = "\n".join([r"\sl@WarningCount=\count305", r"\sl@BankOfWarnings=\toks28",
+                          r"LaTeX Info: Redefining \GenericWarning on input line 433."])
+        self.assertEqual(latex_warnings(text), [])
+
+    def test_real_warnings_and_boxes_preserve_original_lines(self):
+        lines = ["LaTeX Warning: Citation `missing' undefined.",
+                 "LaTeX Font Warning: Font shape unavailable.",
+                 "(./local.sty Package hyperref Warning: Token not allowed in a PDF string.",
+                 "Document Class cvpr Warning: Synthetic fixture.",
+                 "Class article Warning: Synthetic fixture.",
+                 r"Overfull \hbox (1.0pt too wide) in paragraph at lines 1--2",
+                 r"Underfull \vbox (badness 100) has occurred while output is active"]
+        self.assertEqual(latex_warnings("\n".join(lines)), lines)
+
     def setUp(self):
         self.row = {"key": "fixed2026", "title": "A Test: VLM & RL", "arxiv": "2601.00001"}
 
