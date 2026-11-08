@@ -1,0 +1,229 @@
+"""CPU wiring fixtures only; no Controller, GPU, PBS or numerical experiment."""
+from contextlib import contextmanager
+import copy
+import hashlib
+import io
+import json
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+from src.tools import t02_export as export
+
+
+UUID = "GPU-11111111-2222-3333-4444-555555555555"
+
+
+def package(kind="look_flip"):
+    world = {"scene": "FloorPlan1", "agent_setup_command": {"position": {"x": 0, "y": 1, "z": 0}},
+             "clone_context": None}
+    return {"pair_id": "p", "scene": "FloorPlan1", "kind": kind, "instruction": "Select target",
+            "anchor_name": "X", "candidate_names": ["A", "B"], "target_names": ["A", "B"],
+            "initial_position": {"x": 0, "y": 1, "z": 0}, "initial_heading": 0,
+            "worlds": [copy.deepcopy(world), copy.deepcopy(world)], "clone_context": None,
+            "reachable_positions": [{"x": .25, "y": 1, "z": 0}, {"x": -.25, "y": 1, "z": 0}],
+            "reachable_reference": {"file": "/original/query.json", "sha256": "a" * 64},
+            "reachable_scope": "original", "source_provenance": {}, "t01": {"pair_id": "p"},
+            "evidence_roots": ["/original"]}
+
+
+class FakeSim:
+    def __init__(self, *args):
+        self.restored, self.frame_count, self.action_count = [], 0, 0
+    def restore_snapshot(self, world):
+        self.restored.append(world)
+        return None, {"restore_deterministic": True}
+    def reachable_positions(self):
+        return {"positions": [{"x": 0, "y": 1, "z": .25}],
+                "query_reference": {"file": "/fresh/query.json", "sha256": "b" * 64}}
+    def finish(self):
+        return {"file": "/fixture/raw/index.json", "sha256": "c" * 64}
+
+
+class ExportTests(unittest.TestCase):
+    def test_requires_one_real_pbs_uuid_scratch_and_twelve_cpus(self):
+        env = {"PBS_JOBID": "707001.hopper-m-02", "CUDA_VISIBLE_DEVICES": UUID, "CVPR_SCRATCH": "/scratch/fixture"}
+        self.assertEqual(export.execution_environment(env, range(16))["cpu_affinity"], list(range(12)))
+        for key, value in (("PBS_JOBID", ""), ("CUDA_VISIBLE_DEVICES", "0"),
+                           ("CUDA_VISIBLE_DEVICES", UUID + "," + UUID), ("CVPR_SCRATCH", "relative")):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                export.execution_environment({**env, key: value}, range(12))
+        with self.assertRaises(ValueError):
+            export.execution_environment(env, range(11))
+
+    def gate(self):
+        identity = {"pbs_jobid": "707001.hopper-m-02", "cuda_visible_devices": UUID,
+                    "scratch": "/scratch/fixture", "cpu_affinity": list(range(12))}
+        device = {"logical_index": 0, "gpu_index": 5, "gpu_uuid": UUID, "vulkan_device_index": 3}
+        observation = {"gpu_identity": device, "valid": True, "captures": [
+            {"valid": True, "action_success": True, "segmentation": {"valid": True}} for _ in range(2)]}
+        data = {"_meta": {"exit_code": 0}, "config": {"node": "hopper-1", "resolution": 255,
+            "segmentation": True, "allocation": {**identity, "devices": [device], "cuda_driver_uuids": [UUID],
+                                                 "ai2thor_version": "5.0.0"}},
+            "metrics": {"passed": True, "cleanup_errors": [], "errors": [], "expected_gpu_count": 1,
+                        "completed_gpu_count": 1, "devices": [{"observation": observation, "worker_error": None}]}}
+        return data, identity
+
+    def test_gate_uses_actual_physical_and_vulkan_mapping_without_mask_change(self):
+        data, identity = self.gate()
+        runtime = export.gate_runtime(data, identity, "hopper-1", Path("/scratch/logs"))
+        self.assertEqual(runtime["controller_gpu_device"], 5)
+        self.assertEqual(runtime["vulkan_device_index"], 3)
+        self.assertEqual(runtime["cuda_visible_devices"], UUID)
+        for mutate in (
+            lambda d: d["config"].update(node="other"),
+            lambda d: d["config"]["allocation"].update(cuda_driver_uuids=[]),
+            lambda d: d["metrics"]["devices"][0].update(worker_error={"type": "crash"}),
+            lambda d: d["metrics"]["devices"][0]["observation"]["captures"][1]["segmentation"].update(valid=False),
+            lambda d: d["metrics"].update(cleanup_errors=["unknown"]),
+        ):
+            changed = copy.deepcopy(data)
+            mutate(changed)
+            with self.assertRaises(ValueError):
+                export.gate_runtime(changed, identity, "hopper-1", Path("/scratch/logs"))
+
+    def export_mocks(self, package_value, *, native_pass=True):
+        sim, order = FakeSim(), []
+        original = SimpleNamespace(export_measurements={"fixture": True})
+        loaded = SimpleNamespace(export_verified=False, cache_verified=False, synthetic=False)
+        manifest = {"file": "/scratch/table/table.json", "sha256": "d" * 64}
+        def native(table, *, evidence_roots):
+            self.assertIs(table, loaded)
+            self.assertFalse(table.export_verified)
+            order.append("native_reload_check")
+            table.export_verified = native_pass
+            return {"passed": native_pass}
+        with patch.object(export, "SimulatorTableRenderer") as renderer, \
+             patch.object(export, "build_table", return_value=original), \
+             patch.object(export, "save_table", return_value=manifest), \
+             patch.object(export, "load_table", return_value=loaded) as load, \
+             patch.object(export, "verify_render_sources", side_effect=native), \
+             patch.object(export, "check_pair", return_value={"passed": True, "reasons": []}) as check:
+            if native_pass:
+                result = export.export_checked(sim, package_value, Path("/scratch/table"), ["/scratch"], 1000)
+                self.assertIs(check.call_args.args[0], loaded)
+                self.assertIsNone(result["cache_matches_live"])
+                self.assertFalse(result["downstream_allowed"])
+                load.assert_called_once_with(manifest["file"], expected_sha256=manifest["sha256"])
+            else:
+                with self.assertRaisesRegex(ValueError, "native_evidence_verification_failed"):
+                    export.export_checked(sim, package_value, Path("/scratch/table"), ["/scratch"], 1000)
+                check.assert_not_called()
+            return sim, renderer.call_args, order
+
+    def test_look_preserves_original_catalog_order_and_checks_loaded_bytes(self):
+        value = package()
+        sim, call, order = self.export_mocks(value)
+        self.assertEqual(sim.restored, value["worlds"])
+        self.assertEqual(call.args[2], value["reachable_positions"])
+        self.assertEqual(call.kwargs["reachable_reference"], value["reachable_reference"])
+        self.assertEqual(order, ["native_reload_check"])
+
+    def test_direct_missing_catalog_requires_actual_query_after_restore(self):
+        value = package("direct_flip")
+        value.update(reachable_positions=None, reachable_reference=None)
+        sim, call, _ = self.export_mocks(value)
+        self.assertEqual(len(sim.restored), 3)
+        self.assertEqual(call.args[2], sim.reachable_positions()["positions"])
+        self.assertEqual(call.kwargs["reachable_reference"], sim.reachable_positions()["query_reference"])
+
+    def test_missing_look_or_mixed_clone_context_does_not_invent_domain(self):
+        for mutate in (lambda p: p.update(reachable_positions=None, reachable_reference=None),
+                       lambda p: p["worlds"][1].update(clone_context={"unrelated": True})):
+            value = package()
+            mutate(value)
+            with patch.object(export, "build_table") as build, self.assertRaises(ValueError):
+                export.export_checked(FakeSim(), value, Path("/scratch/table"), [], 1000)
+            build.assert_not_called()
+
+    def test_failed_native_verification_never_becomes_usable_table(self):
+        self.export_mocks(package(), native_pass=False)
+
+    def test_restore_failure_is_not_a_partial_complete_table(self):
+        sim = FakeSim()
+        sim.restore_snapshot = lambda _: (None, {"restore_deterministic": False})
+        with patch.object(export, "build_table") as build, self.assertRaisesRegex(ValueError, "source_world_restore_failed"):
+            export.export_checked(sim, package(), Path("/scratch/table"), [], 1000)
+        build.assert_not_called()
+
+    def worker_failure(self, failure, *, cleanup=False, clone=False):
+        # Load the real subclass definition before mocking its base binding;
+        # importing these modules does not initialize a Controller/GPU.
+        from src.envs import pair_v2_simulator, pair_v2_clone
+        @contextmanager
+        def session(*args, **kwargs):
+            yield object()
+            if cleanup:
+                raise RuntimeError("stop failed")
+        with tempfile.TemporaryDirectory() as directory:
+            value = package()
+            value["clone_context"] = {} if clone else None
+            config = {"package": value, "runtime": {"cpu_affinity": [0]}, "directory": directory,
+                      "max_table_bytes": 1000}
+            with patch.object(export.os, "sched_setaffinity", create=True), \
+                 patch.object(export, "controller_session", session), \
+                 patch.object(pair_v2_simulator, "V2Simulator", side_effect=FakeSim) as native, \
+                 patch.object(pair_v2_clone, "V2CloneSimulator", side_effect=FakeSim) as cloned, \
+                 patch.object(export, "export_checked", side_effect=failure):
+                report = export.pair_worker(config, None)
+                self.assertEqual(cloned.call_count, int(clone))
+                self.assertEqual(native.call_count, int(not clone))
+                saved = json.loads(Path(report["report_reference"]["file"]).read_text())
+                self.assertEqual(saved["status"], report["status"])
+                self.assertFalse(report["table_complete"])
+                return report
+
+    def test_known_pair_rejection_and_unexpected_error_remain_distinct(self):
+        rejected = self.worker_failure(ValueError("graph_mismatch"))
+        self.assertEqual(rejected["status"], "rejected")
+        self.assertEqual(rejected["rejection_reasons"], ["graph_mismatch"])
+        error = self.worker_failure(ValueError("missing source metadata"), clone=True)
+        self.assertEqual(error["status"], "error")
+        self.assertEqual(error["rejection_reasons"], [])
+
+    def test_cleanup_uncertainty_overrides_a_scientific_rejection(self):
+        report = self.worker_failure(ValueError("non_anchor_divergent"), cleanup=True)
+        self.assertEqual(report["status"], "error")
+        self.assertTrue(report["cleanup_errors"])
+
+    def test_black_with_finalization_or_cleanup_error_is_not_retry_exit86(self):
+        from src.envs.pair_v2_simulator import BlackFrame
+        black = self.worker_failure(BlackFrame({"file": "/raw/black", "sha256": "a" * 64}))
+        self.assertTrue(export.black_only_failure(black))
+        for mutation in ({"raw_index_error": "full disk", "status": "error"},
+                         {"error": {"type": "ValueError", "message": "missing proof"}},
+                         {"cleanup_errors": ["unknown"]}, {"cleanup_errors": None}):
+            self.assertFalse(export.black_only_failure({**black, **mutation}))
+
+    def test_portable_black_proof_decodes_png_and_rejects_changed_bytes(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = root / "pair/raw"
+            raw.mkdir(parents=True)
+            image = io.BytesIO()
+            Image.new("RGB", (255, 255)).save(image, format="PNG")
+            body = image.getvalue()
+            (raw / "frame.png").write_bytes(body)
+            image_ref = {"file": str(raw / "frame.png"), "sha256": hashlib.sha256(body).hexdigest()}
+            meta_ref = export.save_json(raw / "metadata.json", {"sceneName": "FloorPlan1_physics"})
+            failure = export.save_json(raw / "failure.json", {"black": True, "valid": True,
+                "rgb_shape": [255, 255, 3], "rgb_sha256": hashlib.sha256(bytes(255 * 255 * 3)).hexdigest(),
+                "files": {"rgb": image_ref, "metadata": meta_ref}})
+            with patch.object(export, "ROOT", root):
+                copied = export.preserve_black(failure, root / "pair", {"pbs_jobid": "j", "gpu_uuid": UUID},
+                                               "FloorPlan1", root / "portable")
+                self.assertTrue(copied["black"])
+                for reference in copied["files"]:
+                    self.assertEqual(export.sha_file(root / reference["file"]), reference["sha256"])
+                (raw / "frame.png").write_bytes(body + b"changed")
+                with self.assertRaises(ValueError):
+                    export.preserve_black(failure, root / "pair", {"pbs_jobid": "j", "gpu_uuid": UUID},
+                                          "FloorPlan1", root / "must_not_exist")
+                self.assertFalse((root / "must_not_exist").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

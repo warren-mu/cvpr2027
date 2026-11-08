@@ -248,3 +248,9 @@ T01v2周期进度（21:29 UTC观察）：results/t00b_monitor22_p2.json中707255
 
 T02来源适配CPU子步骤（dc59f73）：从已审计的最终pilot或独立checkpoint重查原scene、完整journal、preflight/hash及原有check_pair；保留完整world/clone快照和原始canonical agent命令（不拿readback浮点horizon重新当输入）；见证move按原生TeleportFull目标和前置GetShortestPathToPoint证明换算，不复用旧move编号。Look原完整catalog/固定reachable保持不变，Direct缺catalog明确None，必须由owned导出器发真实native query。缺runtime原图/元数据/掩码失败关闭；函数不推断人类图审或T02通过。results/t02_P_source_cpu_01.json中11项CPU测试全部通过；本子步骤GPU用量0，正式producer接线仍在静态复核。
 周期计数：results/t01v2_single_progress_03.json（21:39:38 UTC）当前24scene仍not_yet_observed，错误为空，合格/拒绝/尝试均unknown。results/t00b_monitor22_p4.json（21:37:07 UTC）707255及707329/330/331均Q、无分配。尚未有两已结束scene可作零合格判定，审查图/人工审阅/E2E与G01数据触发均未发生。
+
+### 2026-11-08 21:50 UTC — 单卡重试与 T02 导出入口
+
+监控 t00b_monitor22_p5 记录 707329/707330/707331 在 hopper-25 黑帧 exit86，已通过原始图像、UUID、PBS 与清理证据校验后自动重提为 707341/707342/707343（仍为1卡、2600秒、无host限制）。旧记录保留。707341 的 gate 已在 hopper-27 通过。t01v2_single_progress_04 在 21:50:48 UTC 也已观察到厨房 707255 的四卡 gate 通过、场景子进程开始；该作业已启动，继续保留，不执行排队拆分条件。逐场景计数见该脚本结果，未完成场景不能解释为最终零对。
+
+T02 CPU 准备新增 src/tools/t02_export.py：绑定真实单卡 PBS gate，独占 Controller 恢复原始/复制快照，导出后从保存字节重新加载并核验原生证据，区分科学拒绝、黑帧和清理/运行错误。独立静态审查已通过；现在先提交代码，再通过 run_logged 跑 CPU 入口测试。正式缓存≥200状态仍未执行，task_acceptance 为 null，训练未解锁；没有提交 T02 GPU 作业。
