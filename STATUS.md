@@ -38,6 +38,8 @@
 
 - T00b 最终测速汇总 producer 已补齐：`src/tools/t00b_training_summary.py` 与测试均为新增文件，既有 parser/校验统计脚本未改。提交 6748818 后 15 个纯 CPU synthetic fixtures 通过（`results/t00b_training_summary_cpu_checks.json`），覆盖来源/缺失/失败、同作业变体关联、速度比公式、整作业会计去重及分配卡数交叉核对。尚未进行真实训练汇总；程序成功与六槽训练资格及最终任务验收是不同字段，不将夹具当作GPU实测。
 
+- 等待期间资源复核（2026-11-08T13:14:24.665158+00:00，`results/t00b_capacity_wait_13utc.json`）仍确认 Express 三档运行上限 3/2/1、倍率均为 1；`own_jobs.txt` 中六个本阶段作业及无关的 706017 均为 Q，没有本账号运行作业。`node_summary.txt` 中 hopper-04 显示 8/8 空闲，但节点 JSON 将其 gpu_model 标为 H100；不能把这个快照当作可立即使用的 H200。现有 thor_allocation/thor_common 卡型校验要求实际 H200，没有为追逐空闲节点改硬件、节点限制或队列；其他项目/资源池未操作。当前等待原因仍以逐作业 PBS comment 的 ngpus 不足为准，未声称已得到可预测的开始时间。
+
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
 | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
