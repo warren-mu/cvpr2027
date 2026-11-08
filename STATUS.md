@@ -191,3 +191,7 @@ results/t01v2_search_integration_cpu_01.json：222项v2 CPU测试全部通过，
 补充4+5核心代码1594e41完成：新solvable入口分别从两world恢复状态，调用既有observation_actions得到各自原生合法域，测量确定性并集中的全部本world合法动作；两个world的可见集合可不同，缺测unknown，不把不可达动作填成0像素。公共首步仍按原X-mask并集通道差>10且≥250验收，新进程见证/物理/D1门槛不变；所有新Look导出包含全动作原生证据与两world可见X审查视角，独立合并器从真实掩码/元数据/动作复算。补充5使用candidate_roles_sha256_view_round_robin_v1：固定seed0+scene+实际attempt编号SHA256决定Flip方向，Stay在展开视角后的实际候选尝试间交替两侧；不伪造缺失侧，也不把proposal顺序平衡当作合格数据已平衡。
 results/t01v2_solvable_integration_cpu_01.json：275项v2 CPU集成测试全部通过（包括新旧生成/证据/角色/导出/历史规范/调度回归）。历史规范只允许明确已知的构造兼容版本并核验来源commit内真实文档hash；旧结果不改写。最终试点的验收范围显式为T01构造+补充4(a)，T02的P后端完整检查仍not_run，full_METRICS_compliance=null。旧Look的正向事后证书将由单独程序从真实已存首步见证帧验证，未测全动作不声称complete_catalog；一侧未看到保持unknown。
 results/t01v2_search_watch_02.json已恢复正式调度观察：2026-11-08 20:26:30 UTC，707255/707257/706354/706682均Q、无分配节点，errors=[]，无自动重提。旧有界monitor20在SSH连接中断后只有已完成观察记录可用，未补造其最终结果。新代码先审计推送，再切换后续外层入口；现有作业不取消。
+
+
+补充4+5入口已在2026-11-08 20:34:21.969904 UTC原子切换（107e677）：精确代码先推至GitHub，再替换现有search shell的后续outer入口；PBS作业没有取消、重提、hold或修改。已加载旧Python producer仍保持原样。程序生成logs/pbs/dispatch_activation_107e677b34a8.json记录发布先于替换及文件hash。20:35:35 UTC的results/t01v2_search_progress_02.json中24个scene均not_yet_observed，计数为null，不能写成0对。当前没有新增已观察到的GPU实测结果，T01v2已结束实际仍0.1666666667 GPUh。
+已加入只读事后可解性工具：对旧Look来源先独立复核原构造证据，再从真实已存新进程首步见证中验证两world看到X的正向存在证明；无完整动作目录、不可见或域不明均保留unknown。新版全动作来源不重复降级为旧式未知。此工具不启动仿真器、不改旧结果；CPU验证随后运行。
