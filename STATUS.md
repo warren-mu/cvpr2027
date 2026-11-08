@@ -162,3 +162,8 @@ T01v2厨房首轮707189完成：12个分片四类均0；FloorPlan1/5/8/9原场�
 
 补充3代码与CPU验证（2026-11-08 19:42 UTC）：b40ac6d新增版本化search入口；规定滚动/切片/碎裂类别仅从锚点与clone源排除，天然不移动候选保留；固定首次预检的最多6源，各fresh Controller，首成功即停止，保留天然∪clone组及必要fresh natural fallback。各组合轮换，连续10次实际物理拒绝退组。所有Controller共用scene绝对deadline；每个组合首次查询原生放置点前先恢复共同基线，仍只使用已批准的状态恢复门槛，不要求旧像素零差。raw满后停止保存raw但继续测量与compact记录，证据不全不能入选；原始文件不删除，memory-only引用显式materialized=false；真实黑帧的完整小证明和清理仍须满足严格门槛才可86重提。
 results/t01v2_search_integration_cpu_01.json：222项v2 CPU测试全部通过，覆盖补充3第1–5点及旧入口回归；results/t01v2_search_watch_cpu_01.json：9项phase_watch回归全部通过。results/t01v2_search_code_audit.json审计477文件、0 FAIL。均为CPU程序验证，无新增GPU科学结果；T01v2已结束实际仍0.1666666667GPUh。先推送本代码/测试检查点，再经最新8/60预算guard提交无节点限制的厨房与客厅独立分片；新旧作业映射在实际回执后记录。
+
+
+补充3新作业已入队（2026-11-08 19:49 UTC）：旧707229→新707255.hopper-m-02（pilot_pairs_v2_search_kitchen_r4，4卡30min，FloorPlan1–12），旧707230→新707257.hopper-m-02（pilot_pairs_v2_search_living_r3，2卡60min，FloorPlan201–212）。旧两项已验证启动前取消0GPUh；新两项的代码8504b05在qsub前已推送。两项均Express/autox、rate=1、无host限制，逐卡255px分割出图gate、12CPU/GPU；每scene单一500秒绝对预算覆盖所有fresh Controller，物理/图像/见证阈值未改。实际回执及run_logged提交记录已保留。
+19:47:58 UTC的results/t00b_monitor19_p5.json正式观察：707255/707257及保留的706354/706682均Q，无分配节点；没有取消或修改训练作业。results/t01v2_search_submitted_budget.json：已结束实际11.85，未结束完整预留27.3333333333，合计39.1833333333/60 GPUh；T01v2实际+预留4.1666666667/8，其中已结束实际仍0.1666666667。此处为PBS queue_charge_rate调度扣费账本，不伪称独立项目账单核销。
+运行中只读快照工具b8a5729及6项CPU测试通过（results/t01v2_live_progress_cpu_01.json）；按确切run/scene/PBS/UUID/gate/submit绑定、保存完整journal字节前缀和原始结束时间，缺失unknown，不修改运行中来源也不把source-reported通过数当最终验收。首份results/t01v2_search_progress_01.json尚无场景观察，不能报告0对。后续每10分钟运行中的拒绝计数写本文件并推送；每个job最先完成的两个scene若合格数0则立即通知。报告将给出按锚点类别w0测量通过/尝试和每scene clone尝试结果。
