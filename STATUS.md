@@ -296,3 +296,9 @@ t01v2_single_progress_07（22:10:06 UTC）记录厨房12场景均结束且四类
 代码4d2b736已先推送；t01v2_isolated_cpu_01（206项）、t01v2_isolated_infra_cpu_01（82项）、t01v2_isolated_merge_cpu_01（41项）、t01v2_isolated_watch_cpu_01（9项）全部通过。尚未实测GPU效果。下一步只提交固定厨房1–4的1卡分片，2600秒walltime（4×500秒加30%），原T01v2 8/整体60预算锁；其余在跑分片继续。没有取消或替换任何运行作业，也不将旧结果标为新入口产生。
 
 最新逐场景计数见 t01v2_single_progress_08；物理拒绝、逐场景预检和每场景复制尝试的中期汇总为 t01v2_single_stable_summary_01，明确区分未知与已测0。已复核审查图仍以 t01v2_checkpoint_single_02 为准，E2E 等人类转达图审。
+
+### 2026-11-08 22:26 UTC — isolated 单卡作业707366已入队
+
+代码和CPU审计均先推送至e2f7e23，再由 t01v2_submit_isolated_kitchen_001_004_a00 提交707366（1GPU、厨房1–4、43:20、无host、Express/autox、CFP04-SF-125）；提交器已在同一锁内检查T01v2 8 GPU小时与整体60上限，排队按完整walltime预留。新旧生产者/作业证据独立保留，尚无修复效果结论。
+
+补充5偏差：首批独立检查点 direct_flip 的3对，在rho=0.5时正确目标A概率0.5；direct_stay的2对均在A侧，B侧0，正确目标A概率1.0。Look两类无样本，比例为null；未做T02池平衡，不能宣称平衡通过。707350最终实际用量0.10888888888888888 GPU小时、排队161秒，见 t00b_monitor25_p1_accounting。
