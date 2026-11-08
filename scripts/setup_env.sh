@@ -13,8 +13,10 @@ source "$repo/scripts/scratch_env.sh"
 MINIFORGE_VERSION=24.11.3-2
 VAGEN_COMMIT=4e2976d87c0f92c97f9a820803e71908cde5fb71
 VERL_COMMIT=3f55021e08b98315213e10d10b709c7f6bbe84f7
+XGRAMMAR_COMMIT=989222175c2a30fb7987d8bcce35bec1bf6817f2
 vagen_source="$CVPR_SCRATCH/sources/VAGEN-$VAGEN_COMMIT"
 verl_source="$CVPR_SCRATCH/sources/verl-$VERL_COMMIT"
+xgrammar_source="$CVPR_SCRATCH/sources/xgrammar-$XGRAMMAR_COMMIT"
 export MAX_JOBS=2  # Keep CPU-only builds within an ordinary small allocation.
 export TORCH_CUDA_ARCH_LIST=9.0  # H200; permits explicit architecture during CPU-only builds.
 
@@ -120,10 +122,10 @@ if [[ "$stage" == --render ]]; then
 fi
 
 checkout_pinned() {
-  local url="$1" directory="$2" commit="$3"
+  local url="$1" directory="$2" commit="$3" ref="${4:-vagen-legacy}"
   if [[ ! -d "$directory/.git" ]]; then
     [[ ! -e "$directory" ]] || { echo "Existing non-repository source path: $directory" >&2; return 1; }
-    git clone --filter=blob:none --no-checkout --branch vagen-legacy "$url" "$directory"
+    git clone --filter=blob:none --no-checkout --branch "$ref" "$url" "$directory"
     git -C "$directory" checkout --detach "$commit"
   fi
   [[ "$(git -C "$directory" rev-parse HEAD)" == "$commit" ]] || { echo "Source commit mismatch: $directory" >&2; return 1; }
@@ -135,6 +137,26 @@ mkdir -p "$CVPR_SCRATCH/sources"
 checkout_pinned https://github.com/JamesKrW/verl.git "$verl_source" "$VERL_COMMIT"
 checkout_pinned https://github.com/mll-lab-nu/VAGEN.git "$vagen_source" "$VAGEN_COMMIT"
 safe_link "$vagen_source" "$repo/third_party/VAGEN"
+
+# Observed repair for PBS 706124: vllm==0.8.2 requires xgrammar==0.1.16,
+# whose PyPI release is unavailable. Preserve that exact version from its
+# official tag/commit instead of changing the README's vllm dependency.
+# Release: https://github.com/mlc-ai/xgrammar/releases/tag/v0.1.16
+# Source-build instructions linked by that revision's README:
+# https://github.com/mlc-ai/xgrammar/blob/v0.1.16/docs/start/install.rst
+# Its pyproject builds C++17 bindings with scikit-build-core/pybind11; torch
+# is a runtime dependency, not a build requirement. Let verl resolve it below.
+checkout_pinned https://github.com/mlc-ai/xgrammar.git "$xgrammar_source" "$XGRAMMAR_COMMIT" v0.1.16
+git -C "$xgrammar_source" submodule update --init --recursive
+git -C "$xgrammar_source" submodule status --recursive
+export CMAKE_BUILD_PARALLEL_LEVEL=2
+python -m pip install --no-deps "$xgrammar_source"
+python - <<'PY'
+import importlib.metadata
+version = importlib.metadata.version("xgrammar")
+assert version == "0.1.16", f"Expected exact xgrammar 0.1.16, found {version}"
+print("Pinned source xgrammar metadata version:", version)
+PY
 
 # README: install the pinned legacy verl editable first, then VAGEN install.sh.
 # vllm==0.8.2 in this verl revision resolves torch==2.6.0. CUDA is not README-pinned.
@@ -153,4 +175,4 @@ python -m pip install ai2thor==5.0.0 numpy==1.25.1 psutil==6.1.1 nvidia-ml-py==1
 python -m pip check
 python -m pip freeze
 conda list --explicit
-printf 'SETUP_COMPLETE stage=%s VAGEN=%s VERL=%s\n' "$stage" "$VAGEN_COMMIT" "$VERL_COMMIT"
+printf 'SETUP_COMPLETE stage=%s VAGEN=%s VERL=%s XGRAMMAR=%s\n' "$stage" "$VAGEN_COMMIT" "$VERL_COMMIT" "$XGRAMMAR_COMMIT"
