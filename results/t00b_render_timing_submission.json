@@ -1,0 +1,73 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 60.36168652199558
+  },
+  "config": {
+    "command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--task",
+      "T00b",
+      "--gpus",
+      "1",
+      "--name",
+      "t00b_render_timing_probe",
+      "--walltime",
+      "00:07:00",
+      "--",
+      "python3",
+      "-m",
+      "src.envs.thor_render_timing_probe",
+      "--name",
+      "t00b_render_timing_probe",
+      "--timeout-seconds",
+      "360"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t00b_render_timing_submission",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t00b_render_timing_submission",
+      "--",
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--task",
+      "T00b",
+      "--gpus",
+      "1",
+      "--name",
+      "t00b_render_timing_probe",
+      "--walltime",
+      "00:07:00",
+      "--",
+      "python3",
+      "-m",
+      "src.envs.thor_render_timing_probe",
+      "--name",
+      "t00b_render_timing_probe",
+      "--timeout-seconds",
+      "360"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-08T14:21:36",
+    "log_path": "logs/runs/t00b_render_timing_submission.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "c0ba980c248d7a6f66d00ba980fee18bf1214e62",
+    "git_dirty": false,
+    "end": "2026-11-08T14:22:36",
+    "duration_sec": 60.4,
+    "exit_code": 0,
+    "metrics_sha256": "6863b5b49a3d17efdd2c2a4d6ac7c367213dc318c48c3b135edc294f1668658e"
+  }
+}
