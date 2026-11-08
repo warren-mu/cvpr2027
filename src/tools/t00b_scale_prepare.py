@@ -11,7 +11,7 @@ from pathlib import Path
 import shutil
 import socket
 import subprocess
-from src.tools.t00b_compile_cache import cache_environment
+from src.tools.t00b_compile_cache import cache_environment, freeze_worker_hook
 
 ROOT = Path(__file__).resolve().parents[2]
 VAGEN_COMMIT = "4e2976d87c0f92c97f9a820803e71908cde5fb71"
@@ -49,8 +49,10 @@ def instrument(relative, original):
                             "                logger.log(data=metrics, step=self.global_steps)\n                _t00b_phase('train_end', self.global_steps)")
     elif relative == "vagen/trainer/main_ppo.py":
         text = "from t00b_runtime_hooks import ray_environment as _t00b_ray_environment\n" + text
-        text = replace_once(text, "{'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}",
-                            "{'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', **_t00b_ray_environment()}")
+        text = replace_once(text,
+                            "runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}}",
+                            "runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', **_t00b_ray_environment()}, "
+                            "'worker_process_setup_hook': 't00b_worker_cache.setup_worker_cache'}")
     elif relative == "vagen/server/server.py":
         text = "from t00b_runtime_hooks import install_server as _t00b_install_server\n" + text
         text = replace_once(text, "        self._setup_routes()", "        self._setup_routes()\n        _t00b_install_server(self.app)")
@@ -207,6 +209,8 @@ def main():
     patch_path = args.log_dir / "instrumentation.patch"
     patch_path.write_text("".join(diffs))
     shutil.copyfile(hook, args.log_dir / "t00b_runtime_hooks.py")
+    worker_cache = freeze_worker_hook(work, overlay, args.log_dir, runtime["scratch"],
+                                      os.environ["PBS_JOBID"], args.name)
     launcher_relative = "scripts/examples/vagen_base/navigation/run.sh"
     text, steps, changes = make_launcher(originals[launcher_relative], args.variant, args.gpus)
     runtime_changes = {'rollout_manager.base_url="http://localhost:5000"':
@@ -240,6 +244,7 @@ def main():
         "ray_tmpdir": os.environ["RAY_TMPDIR"],
         "ray_tmpdir_provenance": json.loads((args.log_dir / "ray_temp.json").read_text()),
         "compilation_cache_environment": cache_environment(work),
+        "worker_compilation_cache": worker_cache,
         "raw_evidence_directory": str(work),
         "unity_log_directory": str(work / "simulator"),
         "evidence_archive_index": str(args.log_dir / "evidence_index.json"),

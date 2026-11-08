@@ -12,7 +12,7 @@ import signal
 import subprocess
 import sys
 import time
-from src.tools.t00b_compile_cache import prepare_environment
+from src.tools.t00b_compile_cache import prepare_environment, worker_manifest_evidence
 
 
 def main():
@@ -208,7 +208,24 @@ def main():
                     pass
             if cleanup_remaining and returncode == 0:
                 returncode = 1
-            summary = {"type": "completion", "cleanup_remaining": cleanup_remaining, "elapsed_seconds": time.monotonic() - started,
+            # Capture the original completion clock before post-run evidence I/O.
+            completed_elapsed = time.monotonic() - started
+            worker_evidence_count = 0
+            worker_evidence_error = None
+            try:
+                rows = worker_manifest_evidence(manifest)
+                for row in rows:
+                    emit(row)  # Exact JSON bytes (escaped) + SHA survive resource-log archival.
+                worker_evidence_count = len(rows)
+                if manifest.get("worker_compilation_cache") and not rows and returncode == 0:
+                    raise ValueError("Successful training has no worker cache manifests")
+            except Exception as error:
+                worker_evidence_error = f"{type(error).__name__}: {error}"
+                emit({"type": "worker_compilation_cache_error", "error": worker_evidence_error})
+                if returncode == 0:
+                    returncode = 1
+            summary = {"type": "completion", "cleanup_remaining": cleanup_remaining, "elapsed_seconds": completed_elapsed,
+                       "worker_cache_manifest_count": worker_evidence_count, "worker_cache_evidence_error": worker_evidence_error,
                        "returncode": returncode, "timed_out": timed_out,
                        "interrupted_signal": interrupted["signal"], "sampling_interval_seconds": 2,
                        "allocated_gpu_uuids": gpu_uuids}
