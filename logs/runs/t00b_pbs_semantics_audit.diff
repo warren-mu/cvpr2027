@@ -1,0 +1,25 @@
+diff --git a/tasks/T00b.packing.report.md b/tasks/T00b.packing.report.md
+index 55bff28..ad6c722 100644
+--- a/tasks/T00b.packing.report.md
++++ b/tasks/T00b.packing.report.md
+@@ -57,7 +57,7 @@ pack gate 的 `completed_gpu_count=4`、`passed=true`、`black_frame_detected=fa
+ 
+ 正式会计来源为 `results/t00b_active_watch_04_accounting.json`，该 producer 的 `_meta.exit_code=0`。作业 `707057.hopper-m-02` 的 `resources_used.walltime=00:03:05`（185 秒）、`queue_wait_seconds=1804`，收费倍率为 1，allocation GPU·小时和 charged GPU·小时均为 `0.20555555555555555`。这是碰撞诊断与 packing 共用的整份 PBS 作业账单，只计一次；未拆分或推定 packing 子阶段单独成本，120 秒计算窗口也不作为 PBS 分配时长。
+ 
+-PBS 原始字段 `Exit_status=1`、`Stageout_status=1` 原样保留。已核验的独立 child 日志、结果和 hash 支持本报告的 packing 结论，但不能据此声称全部 PBS stageout 成功。
++PBS 原始字段 `Exit_status=1`、`Stageout_status=1` 原样保留。后者按[PBS Professional Reference Guide 2024.1，RG-343](https://help.altair.com/2024.1.0/PBS%20Professional/PBSReferenceGuide2024.1.pdf#page=355)表示 PBS stageout 成功（0 才表示失败），不是另一个失败退出码。作业整体仍为非零退出；研究证据是否完整仍由独立 child 日志、结果与 hash 核验，不能仅由 stageout 状态推定。
+ 
+ 预算快照 12 记录：已完成 `2.207777777777778` GPU·小时，预留 `41.33333333333333` GPU·小时，总计 `43.541111111111114 / 60` GPU·小时。这里直接引用正式预算字段，未重复加入本作业费用。
+ 
+diff --git a/tasks/T01.collision.report.md b/tasks/T01.collision.report.md
+index 2a65ae1..a9a24ef 100644
+--- a/tasks/T01.collision.report.md
++++ b/tasks/T01.collision.report.md
+@@ -96,7 +96,7 @@ FloorPlan205 没有进入对象碰撞比较。[source_world.json](../logs/runs/t
+ 
+ 节点 hopper-11，project CFP04-SF-125，提交 Express/autox，路由 mediumx。等待为最终 `run_count=1` 的 recorded queue entry/eligible time 到 start，时区 Asia/Singapore +08:00：qtime/etime `2026-11-08T23:54:51+08:00`，stime `2026-11-09T00:24:55+08:00`。不将其解释为一般队列等待分布。
+ 
+-**此费用覆盖入口 gate、probe 和后续独立 pack 的整个联合 PBS 作业，只计一次。** 不按子命令耗时分摊、不另为 pack 重复记账。PBS `Stageout_status=1` 明确保留；已验证本报告引用的日志/portable 证据，不等于全部 PBS stage-out 成功。最新整体预算依据 [budget_12](../results/t00b_premium_budget_12.json)，未来提交仍通过原预算 guard；本报告未新申请 GPU。
++**此费用覆盖入口 gate、probe 和后续独立 pack 的整个联合 PBS 作业，只计一次。** 不按子命令耗时分摊、不另为 pack 重复记账。PBS `Stageout_status=1` 明确保留；按[PBS Professional Reference Guide 2024.1，RG-343](https://help.altair.com/2024.1.0/PBS%20Professional/PBSReferenceGuide2024.1.pdf#page=355)，1 表示 PBS stageout 成功，0 才表示失败。它与整体 `Exit_status=1` 的非零退出含义不同，也不能替代本报告对日志/portable 研究证据的完整性核验。最新整体预算依据 [budget_12](../results/t00b_premium_budget_12.json)，未来提交仍通过原预算 guard；本报告未新申请 GPU。
+ 
+ ## 需 Claude / 人类决定的判定边界
