@@ -114,6 +114,7 @@ def main():
                 'physical_check_unavailable_rejections': (metrics.get('evidence_retention') or {}).get('physical_check_unavailable_rejections'),
                 'preflight': None, 'clone_preparation': None,
                 'search_version': metrics.get('search_version'),
+                'solvability_version': metrics.get('solvability_version'),
                 'w0_by_anchor': copy.deepcopy(metrics.get('w0_by_anchor')),
                 'clone_attempts': copy.deepcopy(metrics.get('clone_attempts')),
                 'controller_visits': copy.deepcopy(metrics.get('controller_visits')),

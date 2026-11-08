@@ -21,7 +21,7 @@ from src.tools.t01v2_parallel import submission_identity
 
 MAX_PREFIX_BYTES = 8 * 1024 * 1024
 MODULES = tuple('src.envs.' + name for name in ('pair_v2_shard', 'pair_v2_clone_shard',
-    'pair_v2_stable_shard', 'pair_v2_search_shard'))
+    'pair_v2_stable_shard', 'pair_v2_search_shard', 'pair_v2_solvable_shard'))
 RUN_NAME = re.compile(r'(?P<collection>pilot_pairs_v2_[A-Za-z0-9_]+)_j(?P<number>[0-9]+)_hopper_m_(?P<server>[0-9]+)_g(?P<gpu>[0-9]+)_floorplan(?P<scene>[1-9][0-9]*)')
 
 
@@ -186,7 +186,7 @@ def main():
                 measured = data['metrics']
                 rows.append({**expected, 'source_file': value, 'partial': False, 'finally_audited': True,
                     'status': measured.get('status'), 'exit_code': data['_meta']['exit_code'],
-                    'ended_at_utc': data['_meta']['end'],
+                    'ended_at_utc': data['_meta']['end'], 'solvability_version': measured.get('solvability_version'),
                     'source_reported_attempts': measured.get('attempts'),
                     'source_reported_passed_by_class': measured.get('passed_by_class'),
                     'discard_reason_counts': measured.get('discard_reason_counts'),
