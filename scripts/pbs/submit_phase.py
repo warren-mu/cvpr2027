@@ -26,6 +26,27 @@ TOTAL_LIMIT = 12.0
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 
 
+def validate_host(value):
+    if value is not None and (not isinstance(value, str) or not re.fullmatch(r"hopper-[0-9]+", value)):
+        raise ValueError("host must be a Hopper compute hostname of the form hopper-<digits>")
+    return value
+
+
+def render_job_script(template, gpus, payload_path, host=None):
+    """Add only the optional compute-host constraint to the normal select."""
+    validate_host(host)
+    if type(gpus) is not int or gpus not in (1, 2):
+        raise ValueError("Select requires one or two GPUs")
+    anchor = "#PBS -l select=1:ngpus=1"
+    if (template.count("@@CVPR_PAYLOAD@@") != 1 or template.count(anchor) != 1
+            or template.splitlines().count(anchor) != 1):
+        raise ValueError("Unexpected PBS template")
+    resource = f"#PBS -l select=1:ngpus={gpus}"
+    if host is not None:
+        resource += f":host={host}"
+    return template.replace(anchor, resource).replace("@@CVPR_PAYLOAD@@", shlex.quote(str(payload_path)))
+
+
 def wall_seconds(value):
     match = re.fullmatch(r"(\d{2}):([0-5]\d):([0-5]\d)", value)
     if not match:
@@ -159,6 +180,7 @@ def main():
     parser.add_argument("--task", required=True, choices=sorted(LIMITS))
     parser.add_argument("--gpus", type=int, required=True, choices=(1, 2))
     parser.add_argument("--walltime", required=True)
+    parser.add_argument("--host", type=validate_host, help="Optional compute host, e.g. hopper-29")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--scratch", default=os.environ.get("CVPR_SCRATCH", f"/scratch/{os.environ.get('USER', '')}/cvpr2027"))
     parser.add_argument("--dry-run", action="store_true")
@@ -197,17 +219,18 @@ def main():
             environment[key] = os.environ[key]
     payload = {"repo": str(repo), "name": args.name, "command": command, "environment": environment,
                "task_id": args.task, "budget_batch": BATCH, "requested_gpu_count": args.gpus,
-               "requested_wall_seconds": seconds, "dry_run": args.dry_run}
+               "requested_wall_seconds": seconds, "requested_host": args.host, "dry_run": args.dry_run}
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")
     payload_path.chmod(0o444)
     (directory / "budget_before_submission.json").write_text(json.dumps(state, indent=2) + "\n")
     template = (repo / "scripts/pbs/job_1gpu.pbs").read_text()
-    if template.count("@@CVPR_PAYLOAD@@") != 1 or template.count("#PBS -l select=1:ngpus=1") != 1:
-        parser.error("Unexpected PBS template")
-    template = template.replace("#PBS -l select=1:ngpus=1", f"#PBS -l select=1:ngpus={args.gpus}")
+    try:
+        rendered = render_job_script(template, args.gpus, payload_path, args.host)
+    except ValueError as error:
+        parser.error(str(error))
     script = directory / "job.pbs"
-    script.write_text(template.replace("@@CVPR_PAYLOAD@@", shlex.quote(str(payload_path))))
+    script.write_text(rendered)
     script.chmod(0o444)
     qsub = ["qsub", "-N", "cvpr27_" + token[-8:], "-l", f"walltime={args.walltime}",
             "-o", str(directory / "pbs.out"), str(script)]

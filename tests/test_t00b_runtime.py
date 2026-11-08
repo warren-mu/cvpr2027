@@ -131,5 +131,33 @@ class BudgetTests(unittest.TestCase):
             submit.recorded_final_hours(fields, 1.0, "fixture")
 
 
+class HostConstraintTests(unittest.TestCase):
+    def test_optional_host_accepts_only_compute_hostname(self):
+        self.assertIsNone(submit.validate_host(None))
+        self.assertEqual(submit.validate_host("hopper-29"), "hopper-29")
+        for invalid in ("", "hopper29", "hopper-m-02", "hopper-29.example", " hopper-29",
+                        "hopper-29:ngpus=8", "hopper-29;echo bad", "hopper-29\n#PBS -P other", 29):
+            with self.subTest(host=invalid), self.assertRaises(ValueError):
+                submit.validate_host(invalid)
+
+    def test_render_changes_only_select_host_and_keeps_gpu_count(self):
+        template = (ROOT / "scripts/pbs/job_1gpu.pbs").read_text()
+        payload = Path("/scratch/fixture/payload with spaces.json")
+        for gpus in (1, 2):
+            default = submit.render_job_script(template, gpus, payload)
+            constrained = submit.render_job_script(template, gpus, payload, "hopper-29")
+            self.assertEqual(constrained.replace(":host=hopper-29", ""), default)
+            self.assertIn(f"#PBS -l select=1:ngpus={gpus}:host=hopper-29\n", constrained)
+            self.assertIn("#PBS -P CFP04-SF-125\n", constrained)
+            self.assertIn("#PBS -q autox\n", constrained)
+            self.assertNotIn(":ncpus=", constrained)
+            self.assertNotIn(":mem=", constrained)
+            self.assertIn("'/scratch/fixture/payload with spaces.json'", constrained)
+        with self.assertRaises(ValueError):
+            submit.render_job_script(template, 2, payload, "hopper-29:ngpus=8")
+        with self.assertRaises(ValueError):
+            submit.render_job_script(template.replace("select=1:ngpus=1", "select=1:ngpus=10"), 2, payload)
+
+
 if __name__ == "__main__":
     unittest.main()
