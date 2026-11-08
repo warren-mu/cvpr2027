@@ -12,6 +12,7 @@ import math
 import os
 from pathlib import Path
 import random
+import re
 import time
 import traceback
 
@@ -31,6 +32,32 @@ except ImportError:
 NAMES = {mode: "t00b_" + mode for mode in
          ("no_reset_identity", "no_reset_edit_undo", "no_reset_revisit", "cross_process")}
 BUILD = "f0825767cd50d69f666c7f282e54abfe58f1e917"
+
+
+def names_for_prefix(prefix):
+    if not re.fullmatch(r"t00b(?:_[A-Za-z0-9_]+)?", prefix):
+        raise ValueError("Diagnostic prefix must be t00b or t00b_<unique_suffix>")
+    return {mode: f"{prefix}_{mode}" for mode in NAMES}
+
+
+def validate_run_name(mode, name):
+    suffix = "_" + mode
+    if mode not in NAMES or not name.endswith(suffix):
+        raise ValueError("Diagnostic run name must end with its mode")
+    prefix = name[:-len(suffix)]
+    if names_for_prefix(prefix)[mode] != name:
+        raise ValueError("Invalid diagnostic run name")
+    return name
+
+
+def assert_unused_evidence(root, names):
+    """Preflight ALL child outputs before starting any mode; never archive raw evidence."""
+    for name in names:
+        paths = [root / "results" / f"{name}.json", root / "logs" / "runs" / name]
+        paths += [root / "logs" / "runs" / f"{name}{suffix}" for suffix in (".log", ".meta.json", ".diff")]
+        for path in paths:
+            if path.exists() or path.is_symlink():
+                raise FileExistsError(f"Refusing to overwrite diagnostic evidence: {path}; use a new prefix")
 
 
 def artifact(path):
@@ -412,8 +439,13 @@ def main():
     parser.add_argument("--timeout-seconds", type=float, default=300)
     args = parser.parse_args()
     name = args.name or NAMES[args.mode]
-    if name != NAMES[args.mode]:
-        parser.error("Each mode must use its corresponding t00b_<mode> run name")
+    try:
+        validate_run_name(args.mode, name)
+        # run_logged already owns this invocation's .log/.meta files. Reserve
+        # only the raw evidence directory here, atomically, before runtime I/O.
+        (ROOT / "logs" / "runs" / name).mkdir(parents=True, exist_ok=False)
+    except (ValueError, FileExistsError) as error:
+        parser.error(str(error))
     config = {"name": name, "mode": args.mode, "scene": "FloorPlan1", "seed": 0,
               "cases": 20, "resolution": 224, "timeout_seconds": args.timeout_seconds,
               "grid_size": 0.1, "visibility_distance": 10, "field_of_view": 100,

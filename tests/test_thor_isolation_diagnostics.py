@@ -1,13 +1,43 @@
 """Pure synthetic T00b planning/validation checks; never import AI2-THOR."""
 import copy
 import unittest
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from src.envs.thor_isolation_diagnostics import action_plan, collect, navigation_destination, path_endpoints_match, refresh
+from src.envs.thor_isolation_diagnostics import (action_plan, assert_unused_evidence, collect,
+    names_for_prefix, navigation_destination, path_endpoints_match, refresh, validate_run_name)
 
 
 class IsolationPlanningTests(unittest.TestCase):
+    def test_unique_prefix_preserves_mode_and_rejects_invalid_names(self):
+        for prefix in ("t00b", "t00b_retry1"):
+            for mode, name in names_for_prefix(prefix).items():
+                self.assertEqual(validate_run_name(mode, name), name)
+        for prefix in ("t01", "t00b/escape", "t00b_"):
+            with self.subTest(prefix=prefix), self.assertRaises(ValueError):
+                names_for_prefix(prefix)
+        with self.assertRaises(ValueError):
+            validate_run_name("cross_process", "t00b_retry1_no_reset_identity")
+
+    def test_all_modes_preflight_rejects_any_existing_evidence_kind(self):
+        names = names_for_prefix("t00b_retry1")
+        name = names["cross_process"]  # Existing last mode must block the first mode too.
+        for relative in (f"results/{name}.json", f"logs/runs/{name}.log",
+                         f"logs/runs/{name}.meta.json", f"logs/runs/{name}.diff", f"logs/runs/{name}"):
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                assert_unused_evidence(root, names.values())
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if relative == f"logs/runs/{name}":
+                    path.mkdir()
+                else:
+                    path.write_text("existing fixture")
+                with self.assertRaises(FileExistsError):
+                    assert_unused_evidence(root, names.values())
+
     def setUp(self):
         self.poses = [
             {"objectName": "z", "position": {"x": 2., "y": 1., "z": 3.}, "rotation": {"x": 0, "y": 0, "z": 0}},
