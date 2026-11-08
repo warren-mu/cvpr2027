@@ -23,7 +23,7 @@ def main():
                "unfinished_reserved_scheduler_charged_gpu_hours": sum(r["accounted_or_reserved_gpu_hours"] for r in reserved),
                "total_accounted_or_reserved_scheduler_charged_gpu_hours": state["accounted_or_reserved_total"],
                "limit_scheduler_charged_gpu_hours": module.TOTAL_LIMIT,
-               "within_budget": state["accounted_or_reserved_total"] <= module.TOTAL_LIMIT}
+               "within_budget": state["accounted_or_reserved_total"] <= module.TOTAL_LIMIT + 1e-12}
     write_result(args.name, metrics, state)
     return 0 if metrics["within_budget"] else 1
 

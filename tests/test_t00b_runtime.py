@@ -154,6 +154,37 @@ class BudgetTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             submit.recorded_final_hours(fields, 1.0, "fixture")
 
+    def test_final_accounting_applies_the_recorded_nonunit_charge_rate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            item = root / "logs/pbs/final"
+            item.mkdir(parents=True)
+            payload = {"budget_batch": submit.BATCH, "task_id": "T00b", "name": "t00b_final",
+                       "requested_gpu_count": 4, "requested_wall_seconds": 10800, "dry_run": False}
+            (item / "payload.json").write_text(json.dumps(payload))
+            (item / "submission.json").write_text(json.dumps({"returncode": 0, "stdout": "123.hopper-m-02\n"}))
+            final = {"123.hopper-m-02": {"gpu_hours": 3.0, "queue_charge_rate": 2.0,
+                                        "accounting_result": "results/fixture.json"}}
+            with patch.object(submit, "_final_accounting", return_value=final):
+                result = submit.budget_state(root, policy=self.state()["charge_policy"], live_rates={})
+            self.assertEqual(result["accounted_or_reserved_total"], 6.0)
+            self.assertEqual(result["submissions"][0]["accounted_or_reserved_allocation_gpu_hours"], 3.0)
+
+    def test_unknown_receipt_reserves_greater_recorded_or_current_rate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            item = root / "logs/pbs/uncertain"
+            item.mkdir(parents=True)
+            payload = {"budget_batch": submit.BATCH, "task_id": "T00b", "name": "t00b_uncertain",
+                       "requested_gpu_count": 2, "requested_wall_seconds": 3600, "dry_run": False,
+                       "requested_queue_charge_rate": 3.0}
+            (item / "payload.json").write_text(json.dumps(payload))
+            policy = self.state()["charge_policy"]
+            for rate, cost in ((1.0, 6.0), (4.0, 8.0)):
+                policy["rates"]["smallx"] = rate
+                result = submit.budget_state(root, policy=policy, live_rates={})
+                self.assertEqual(result["accounted_or_reserved_total"], cost)
+
 
 class HostConstraintTests(unittest.TestCase):
     def test_optional_host_accepts_only_compute_hostname(self):

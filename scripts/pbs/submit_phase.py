@@ -269,12 +269,15 @@ def main():
     parser.add_argument("--gpus", type=int, required=True, choices=(1, 2, 3, 4, 8))
     parser.add_argument("--walltime", required=True)
     parser.add_argument("--host", type=validate_host, help="Optional compute host, e.g. hopper-29")
+    parser.add_argument("--retry-of", help="Original explicit PBS job ID; provenance metadata only")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--scratch", default=os.environ.get("CVPR_SCRATCH", f"/scratch/{os.environ.get('USER', '')}/cvpr2027"))
     parser.add_argument("--dry-run", action="store_true")
     argv = sys.argv[1:]
     split = argv.index("--") if "--" in argv else len(argv)
     args = parser.parse_args(argv[:split])
+    if args.retry_of is not None and not re.fullmatch(r"\d+\.hopper-m-\d+", args.retry_of):
+        parser.error("--retry-of requires an explicit Hopper PBS job ID")
     command = argv[split + 1:]
     if not command:
         parser.error("Supply an explicit command after --")
@@ -309,6 +312,7 @@ def main():
                "task_id": args.task, "budget_batch": BATCH, "requested_gpu_count": args.gpus,
                "requested_wall_seconds": seconds, "requested_host": args.host, "dry_run": args.dry_run,
                "budget_revision": BUDGET_REVISION, "queue": "autox",
+               "retry_of": args.retry_of,
                "requested_queue_charge_rate": state["charge_policy"]["rates"][queue_for_gpus(args.gpus)]}
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")
