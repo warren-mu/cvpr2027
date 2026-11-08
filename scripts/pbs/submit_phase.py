@@ -24,7 +24,22 @@ BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 60.0}
 TOTAL_LIMIT = 60.0
 BUDGET_REVISION = "20261108_premium_charged_60"
+SUBBUDGET_LIMITS = {"T01v2": 8.0}
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
+
+
+def budget_group(task, name, command, declared=None):
+    """v2 is a subset of T01/60, never an alternative ledger or a new allowance."""
+    named = isinstance(name, str) and (name == "pilot_pairs_v2" or name.startswith("pilot_pairs_v2_"))
+    launched = any(isinstance(arg, str) and
+                   (arg.endswith("/t01v2_pairs.sh") or arg == "src.tools.t01v2_parallel")
+                   for arg in (command or []))
+    if declared not in (None, "T01v2"):
+        raise ValueError("Unknown phase subbudget")
+    group = "T01v2" if named or launched or declared == "T01v2" else None
+    if group and (task != "T01" or not named):
+        raise ValueError("T01v2 requires task T01 and a unique pilot_pairs_v2 name")
+    return group
 
 
 def validate_host(value):
@@ -169,10 +184,24 @@ def _final_accounting(repo, wanted):
         expected_hash = hashlib.sha256(json.dumps(metrics, sort_keys=True).encode()).hexdigest()
         if meta.get("metrics_sha256") != expected_hash:
             raise RuntimeError(f"Accounting metrics hash mismatch: {path}")
+        cancelled = {}
+        declared_cancelled = metrics.get("verified_never_started_cancelled_jobs", [])
+        if declared_cancelled:
+            sys.path.insert(0, str(repo))
+            from src.tools.pbs_cancel_evidence import match_terminal, verify_evidence
+            cancelled, references = verify_evidence(repo, data["config"].get("cancelled_evidence") or [], auditor)
+            if (not isinstance(declared_cancelled, list) or len(set(declared_cancelled)) != len(declared_cancelled)
+                    or not set(declared_cancelled) <= set(cancelled) or data.get("sources") != references):
+                raise RuntimeError("Cancellation zero-cost claim differs from its authenticated source chain")
         for job in relevant:
             fields = job["fields"]
             hours = metrics.get("allocation_gpu_hours_by_job", {}).get(job["job_id"])
-            hours = recorded_final_hours(fields, hours, job["job_id"])
+            if job["job_id"] in declared_cancelled:
+                if isinstance(hours, bool) or hours != 0.0:
+                    raise RuntimeError("Verified never-started cancellation must have exactly zero allocation GPU-hours")
+                match_terminal(fields, cancelled[job["job_id"]]["postflight_fields"])
+            else:
+                hours = recorded_final_hours(fields, hours, job["job_id"])
             if hours is None:
                 continue
             if job["job_id"] in records and records[job["job_id"]]["gpu_hours"] != hours:
@@ -207,13 +236,15 @@ def budget_state(repo, policy=None, live_rates=None):
         if task not in LIMITS:
             raise RuntimeError(f"Unknown task in this budget batch: {task}")
         requested = payload["requested_gpu_count"] * payload["requested_wall_seconds"] / 3600
-        submissions.append({"task": task, "name": payload["name"], "job_id": job_id, "payload": str(path.relative_to(repo)),
+        group = budget_group(task, payload["name"], payload.get("command"), payload.get("budget_group"))
+        submissions.append({"task": task, "budget_group": group, "name": payload["name"], "job_id": job_id, "payload": str(path.relative_to(repo)),
                             "requested_gpu_hours": requested, "gpus": payload["requested_gpu_count"],
                             "recorded_reservation_rate": payload.get("requested_queue_charge_rate"),
                             "submission_returncode": receipt.get("returncode")})
     final = _final_accounting(repo, seen)
     live_rates = live_rates if live_rates is not None else live_job_rates(seen - set(final))
     used = {task: 0.0 for task in LIMITS}
+    subgroup_costs = {group: [] for group in SUBBUDGET_LIMITS}
     for row in submissions:
         observed = final.get(row["job_id"])
         # A nonzero qsub return can also mean a lost acknowledgement. It does
@@ -235,12 +266,16 @@ def budget_state(repo, policy=None, live_rates=None):
         if observed:
             row["accounting_result"] = observed["accounting_result"]
         used[row["task"]] += cost
+        if row["budget_group"]:
+            subgroup_costs[row["budget_group"]].append(cost)
     return {"batch": BATCH, "charge_policy": policy, "units": "scheduler_charged_gpu_hours", "limits_gpu_hours": LIMITS, "total_limit_gpu_hours": TOTAL_LIMIT,
             "accounted_or_reserved_by_task": used, "accounted_or_reserved_total": math.fsum(used.values()),
+            "subbudget_limits_gpu_hours": SUBBUDGET_LIMITS,
+            "accounted_or_reserved_by_subbudget": {group: math.fsum(costs) for group, costs in subgroup_costs.items()},
             "submissions": submissions}
 
 
-def validate_request(task, gpus, seconds, name, state):
+def validate_request(task, gpus, seconds, name, state, group=None):
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
@@ -260,6 +295,13 @@ def validate_request(task, gpus, seconds, name, state):
         raise ValueError("Request would exceed the task's measured-plus-reserved GPU budget")
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 60 GPU-hour budget")
+    group = budget_group(task, name, [], group)
+    if group:
+        recorded = state.get("accounted_or_reserved_by_subbudget", {}).get(group)
+        if isinstance(recorded, bool) or not isinstance(recorded, (int, float)) or not math.isfinite(recorded) or recorded < 0:
+            raise ValueError("Missing or invalid T01v2 measured-plus-reserved subbudget")
+        if recorded + proposed > SUBBUDGET_LIMITS[group] + 1e-12:
+            raise ValueError("Request would exceed the T01v2 8 charged GPU-hour pilot subbudget")
 
 
 def main():
@@ -270,6 +312,7 @@ def main():
     parser.add_argument("--walltime", required=True)
     parser.add_argument("--host", type=validate_host, help="Optional compute host, e.g. hopper-29")
     parser.add_argument("--retry-of", help="Original explicit PBS job ID; provenance metadata only")
+    parser.add_argument("--budget-group", choices=sorted(SUBBUDGET_LIMITS), help="Additional limit within the existing phase budget")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--scratch", default=os.environ.get("CVPR_SCRATCH", f"/scratch/{os.environ.get('USER', '')}/cvpr2027"))
     parser.add_argument("--dry-run", action="store_true")
@@ -293,8 +336,11 @@ def main():
         parser.error("Another submission is reserving this budget; retry after it finishes")
     try:
         seconds = wall_seconds(args.walltime)
+        group = budget_group(args.task, args.name, command, args.budget_group)
+        if group and args.host is not None:
+            raise ValueError("T01v2 uses unpinned Express allocations with the per-card render gate")
         state = budget_state(repo)
-        validate_request(args.task, args.gpus, seconds, args.name, state)
+        validate_request(args.task, args.gpus, seconds, args.name, state, group)
     except (ValueError, RuntimeError) as error:
         parser.error(str(error))
     for suffix in (repo / "results" / f"{args.name}.json", repo / "logs/runs" / f"{args.name}.log",
@@ -312,7 +358,7 @@ def main():
                "task_id": args.task, "budget_batch": BATCH, "requested_gpu_count": args.gpus,
                "requested_wall_seconds": seconds, "requested_host": args.host, "dry_run": args.dry_run,
                "budget_revision": BUDGET_REVISION, "queue": "autox",
-               "retry_of": args.retry_of,
+               "retry_of": args.retry_of, "budget_group": group,
                "requested_queue_charge_rate": state["charge_policy"]["rates"][queue_for_gpus(args.gpus)]}
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")

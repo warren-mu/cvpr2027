@@ -67,6 +67,8 @@ def queue_wait_record(fields):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", default="t00_pbs_usage")
+    parser.add_argument("--cancelled-evidence", nargs=3, metavar=("PREFLIGHT", "QDEL", "POSTFLIGHT"),
+                        help="Explicit logged proof for cancelled jobs with no recorded run_count or usage")
     parser.add_argument("jobs", nargs="+")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -74,6 +76,14 @@ def main():
     hours = {}
     queue_waits, eligible_waits = {}, {}
     errors = []
+    cancellations, cancellation_sources, verified_cancelled = {}, [], []
+    if args.cancelled_evidence:
+        sys.path.insert(0, str(root))
+        from src.tools.pbs_cancel_evidence import match_terminal, verify_evidence
+        try:
+            cancellations, cancellation_sources = verify_evidence(root, args.cancelled_evidence)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            errors.append("Cancellation proof rejected: " + str(error))
     for job in args.jobs:
         if not re.fullmatch(r"\d+\.hopper-m-\d+", job):
             parser.error("Only explicit Hopper job IDs are accepted")
@@ -105,12 +115,21 @@ def main():
             hours[job] = int(ngpus) * (h * 3600 + m * 60 + s) / 3600
         elif fields.get("run_count") == "0" and not fields.get("exec_host"):
             hours[job] = 0.0
+        elif job in cancellations:
+            try:
+                match_terminal(fields, cancellations[job]["postflight_fields"])
+                hours[job] = 0.0
+                verified_cancelled.append(job)
+                row["allocation_accounting_basis"] = "verified_logged_queued_cancellation"
+            except ValueError as error:
+                errors.append(job + ": " + str(error))
         else:
             errors.append(job + ": missing measured allocation duration; not inferred")
     metrics = {"allocation_gpu_hours_by_job": hours,
                "complete_allocation_accounting": not errors,
                "queue_wait_seconds_by_job": queue_waits,
-               "eligible_wait_seconds_by_job": eligible_waits}
+               "eligible_wait_seconds_by_job": eligible_waits,
+               "verified_never_started_cancelled_jobs": verified_cancelled}
     if not errors:
         metrics["total_allocation_gpu_hours"] = sum(hours.values())
     result = {"metrics": metrics, "config": {
@@ -120,7 +139,11 @@ def main():
         "timestamp_timezone": "Asia/Singapore (+08:00)",
         "queue_wait_scope": "Recorded intervals only; transfers/requeues may hide earlier waiting. Missing, invalid, or multi-run history remains null.",
         "scope": "PBS allocation GPU-hours, not an independently reconciled project credit charge",
-        "jobs": observations, "errors": errors}}
+        "jobs": observations, "errors": errors,
+        "cancelled_evidence": args.cancelled_evidence,
+        "cancellation_basis": "Only a verified logged Q/no-allocation -> qdel exit0 -> F/no-allocation chain may supply zero when run_count is absent; raw fields remain unchanged"}}
+    if args.cancelled_evidence:
+        result["sources"] = cancellation_sources
     out = root / "results" / (args.name + ".json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=2) + "\n")
