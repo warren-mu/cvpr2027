@@ -120,6 +120,15 @@ def artifact_paths(name, results=None):
             *[ROOT / "logs" / "runs" / f"{name}{suffix}" for suffix in (".log", ".meta.json", ".diff", ".worker.out")]]
 
 
+def child_environment(job, used, parent):
+    """Isolate names as well as GPUs; launchers may consume these conventions."""
+    result_path = ROOT / (job.get("results") or f"results/{job['name']}.json")
+    return dict(parent, CUDA_VISIBLE_DEVICES=",".join(used),
+                CVPR_QUEUE_PARENT_MASK=parent.get("CUDA_VISIBLE_DEVICES", ""),
+                CVPR_QUEUE_ROOT=str(JOBS), CVPR_QUEUE_JOB=job["name"],
+                CVPR_RUN_NAME=job["name"], CVPR_RESULTS_PATH=str(result_path))
+
+
 def require_unused(name, results=None):
     if find(name) is not None or any(path.exists() for path in artifact_paths(name, results)):
         raise FileExistsError(f"Preserved queue/result/log evidence exists for {name}; use a new name")
@@ -236,9 +245,7 @@ def cmd_worker(args):
                         used = free[:job["gpus"]]
                         transition(job["name"], "queue", "running", gpu_ids=used, pbs_jobid=os.environ.get("PBS_JOBID"),
                                    started=now(), host=socket.gethostname())
-                        environment = dict(os.environ, CUDA_VISIBLE_DEVICES=",".join(used),
-                                           CVPR_QUEUE_PARENT_MASK=os.environ.get("CUDA_VISIBLE_DEVICES", ""),
-                                           CVPR_QUEUE_ROOT=str(JOBS), CVPR_QUEUE_JOB=job["name"])
+                        environment = child_environment(job, used, os.environ)
                         wrapped = [sys.executable, str(ROOT / "scripts/run_logged.py"), "--name", job["name"]]
                         if job.get("results"):
                             wrapped += ["--results", job["results"]]

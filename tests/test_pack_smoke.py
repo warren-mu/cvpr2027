@@ -17,6 +17,21 @@ GPUS = [f"GPU-{index:08x}-1111-2222-3333-444444444444" for index in range(4)]
 
 
 class MaskTests(unittest.TestCase):
+    def test_child_overrides_parent_result_conventions_without_mutating_parent(self):
+        parent = {"CUDA_VISIBLE_DEVICES": ",".join(GPUS), "CVPR_RUN_NAME": "parent",
+                  "CVPR_RESULTS_PATH": "/preserved/parent.json", "UNCHANGED_SETTING": "retained"}
+        before = dict(parent)
+        for custom in (None, "results/custom_child.json", "/scratch/isolated/child.json"):
+            with self.subTest(custom=custom):
+                job = {"name": "child", "results": custom}
+                child = queue.child_environment(job, GPUS[:2], parent)
+                self.assertEqual(child["CUDA_VISIBLE_DEVICES"], ",".join(GPUS[:2]))
+                self.assertEqual(child["CVPR_QUEUE_PARENT_MASK"], parent["CUDA_VISIBLE_DEVICES"])
+                self.assertEqual(child["CVPR_RUN_NAME"], "child")
+                self.assertEqual(child["CVPR_RESULTS_PATH"], str(queue.ROOT / (custom or "results/child.json")))
+                self.assertEqual(child["UNCHANGED_SETTING"], "retained")
+                self.assertEqual(parent, before)
+
     def test_all_is_original_pbs_uuid_subset_without_mutation(self):
         environment = {"PBS_JOBID": "fixture.server", "CUDA_VISIBLE_DEVICES": ",".join(GPUS)}
         before = dict(environment)
