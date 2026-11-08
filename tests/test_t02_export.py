@@ -43,6 +43,17 @@ class FakeSim:
 
 
 class ExportTests(unittest.TestCase):
+    def test_sequential_pairs_cannot_overwrite_each_others_unity_log(self):
+        original = {"gpu_uuid": UUID, "cuda_visible_devices": UUID, "gpu_index": 5,
+                    "log_dir": "/scratch/run/unity_logs"}
+        first = export.pair_runtime(original, Path("/scratch/run/pair_0000"))
+        second = export.pair_runtime(original, Path("/scratch/run/pair_0001"))
+        self.assertNotEqual(Path(first["log_dir"]) / "controller/Player.log",
+                            Path(second["log_dir"]) / "controller/Player.log")
+        self.assertEqual(original["log_dir"], "/scratch/run/unity_logs")
+        self.assertEqual(first["cuda_visible_devices"], original["cuda_visible_devices"])
+        self.assertEqual(second["gpu_index"], original["gpu_index"])
+
     def test_requires_one_real_pbs_uuid_scratch_and_twelve_cpus(self):
         env = {"PBS_JOBID": "707001.hopper-m-02", "CUDA_VISIBLE_DEVICES": UUID, "CVPR_SCRATCH": "/scratch/fixture"}
         self.assertEqual(export.execution_environment(env, range(16))["cpu_affinity"], list(range(12)))

@@ -39,6 +39,11 @@ def save_json(path, value):
     return {"file": str(path.resolve()), "sha256": hashlib.sha256(body).hexdigest(), "bytes": len(body)}
 
 
+def pair_runtime(runtime, directory):
+    """Keep each sequential Controller's Player.log instead of reusing it."""
+    return {**runtime, "log_dir": str(Path(directory) / "unity_logs")}
+
+
 def execution_environment(environment, affinity):
     """Reject login execution, expanded masks, and insufficient allocated CPUs."""
     job, mask, scratch = (environment.get(k, "") for k in ("PBS_JOBID", "CUDA_VISIBLE_DEVICES", "CVPR_SCRATCH"))
@@ -327,8 +332,8 @@ def main():
                 pair_dir = directory / f"pair_{index:04d}"
                 pair_dir.mkdir(exist_ok=False)
                 source_ref = save_json(pair_dir / "authenticated_source.json", package)
-                child = {"name": args.name, "scene": package["scene"], "resolution": 255,
-                    "runtime": runtime, "package": package, "directory": str(pair_dir),
+                child = {"name": f"{args.name}_p{index:04d}", "scene": package["scene"], "resolution": 255,
+                    "runtime": pair_runtime(runtime, pair_dir), "package": package, "directory": str(pair_dir),
                     "deadline": min(deadline - 15, time.time() + args.pair_timeout_seconds),
                     "max_raw_bytes": args.max_raw_mib * 1024 * 1024, "max_table_bytes": args.max_table_mib * 1024 * 1024}
                 for key in ("grid_size", "visibility_distance", "field_of_view"):
