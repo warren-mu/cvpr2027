@@ -195,3 +195,5 @@ results/t01v2_search_watch_02.json已恢复正式调度观察：2026-11-08 20:26
 
 补充4+5入口已在2026-11-08 20:34:21.969904 UTC原子切换（107e677）：精确代码先推至GitHub，再替换现有search shell的后续outer入口；PBS作业没有取消、重提、hold或修改。已加载旧Python producer仍保持原样。程序生成logs/pbs/dispatch_activation_107e677b34a8.json记录发布先于替换及文件hash。20:35:35 UTC的results/t01v2_search_progress_02.json中24个scene均not_yet_observed，计数为null，不能写成0对。当前没有新增已观察到的GPU实测结果，T01v2已结束实际仍0.1666666667 GPUh。
 已加入只读事后可解性工具：对旧Look来源先独立复核原构造证据，再从真实已存新进程首步见证中验证两world看到X的正向存在证明；无完整动作目录、不可见或域不明均保留unknown。新版全动作来源不重复降级为旧式未知。此工具不启动仿真器、不改旧结果；CPU验证随后运行。
+
+事后检查CPU子步骤：results/t01v2_posthoc_cpu_01.json中7项测试全部通过，包括250像素边界、真实world/action绑定、缺掩码与旧move域不明确的unknown处理、归档hash和权限边界。仅验证程序，无新增GPU运行；正向旧证书尚未接入最终merger，若有旧来源合格候选再接入，不把诊断报告当最终试点验收。
