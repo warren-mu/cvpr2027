@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "manifest_id": "t01_parallel_v1",
+  "seed": 0,
+  "collect_only": true,
+  "legacy_logical_source": "legacy_six",
+  "legacy_original_job_number": "706410",
+  "split_policy": "last six kitchens and last six living rooms are whole-scene holdout; 12 of 60",
+  "test_scenes": ["FloorPlan25", "FloorPlan26", "FloorPlan27", "FloorPlan28", "FloorPlan29", "FloorPlan30", "FloorPlan225", "FloorPlan226", "FloorPlan227", "FloorPlan228", "FloorPlan229", "FloorPlan230"],
+  "partitions": {
+    "legacy": {"gpus": 1, "scenes": ["FloorPlan1", "FloorPlan2", "FloorPlan201", "FloorPlan202", "FloorPlan25", "FloorPlan225"]},
+    "a": {"gpus": 2, "scenes": ["FloorPlan3", "FloorPlan4", "FloorPlan5", "FloorPlan6", "FloorPlan7", "FloorPlan8", "FloorPlan9", "FloorPlan10", "FloorPlan11", "FloorPlan12", "FloorPlan13", "FloorPlan14", "FloorPlan15", "FloorPlan16", "FloorPlan17", "FloorPlan18", "FloorPlan19", "FloorPlan20", "FloorPlan21", "FloorPlan22", "FloorPlan23", "FloorPlan24", "FloorPlan26", "FloorPlan27", "FloorPlan28", "FloorPlan29", "FloorPlan30"]},
+    "b": {"gpus": 4, "scenes": ["FloorPlan203", "FloorPlan204", "FloorPlan205", "FloorPlan206", "FloorPlan207", "FloorPlan208", "FloorPlan209", "FloorPlan210", "FloorPlan211", "FloorPlan212", "FloorPlan213", "FloorPlan214", "FloorPlan215", "FloorPlan216", "FloorPlan217", "FloorPlan218", "FloorPlan219", "FloorPlan220", "FloorPlan221", "FloorPlan222", "FloorPlan223", "FloorPlan224", "FloorPlan226", "FloorPlan227", "FloorPlan228", "FloorPlan229", "FloorPlan230"]}
+  },
+  "gpu_assignment": "fixed round robin within each declared ordered partition",
+  "simultaneous_thor_instances_per_gpu": 1,
+  "cpu_cores_per_gpu": 12,
+  "maximum_attempts_per_scene": 40,
+  "notes": [
+    "Legacy six scenes are reserved for the queued original job and explicitly identified retries; neither A nor B may run them.",
+    "Partition membership and order are fixed before results; no scene replacement on failure.",
+    "One Unity instance per GPU uses twelve disjoint affinity CPUs and avoids unmeasured multi-instance contention; every allocated GPU receives a nonempty scene shard.",
+    "Scientific displacement/evidence-pixel thresholds are pending. These runs only collect candidates and never count threshold-null rows as accepted."
+  ]
+}
