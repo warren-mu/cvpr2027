@@ -209,15 +209,35 @@ class AttemptIsolationTests(unittest.TestCase):
     def test_hooks_and_old_policies_restored_after_worker_exception(self):
         config = isolated.enable_config({'name': 'fixture', 'scene': 'FloorPlan1', 'seed': 0})
         old = isolated.base.build_pair, isolated.stable.compact_attempt, isolated.search.summary, isolated.base.export_pair
+        original_factory = isolated.previous.roles.view_expanded_proposals
         def worker(cfg, connection):
             self.assertEqual(cfg['solvability_version'], isolated.previous.policy.SOLVABILITY_VERSION)
             self.assertEqual(cfg['generation_version'], isolated.previous.roles.ROLE_VERSION)
             self.assertIsNot(isolated.base.build_pair, old[0])
+            self.assertIs(isolated.previous.roles.view_expanded_proposals,
+                          isolated.coverage.coverage_view_expanded_proposals)
             raise RuntimeError('synthetic downstream failure')
         with patch.object(isolated, '_GENERATOR', worker), self.assertRaisesRegex(RuntimeError, 'downstream'):
             isolated.generator_worker(config, None)
         self.assertEqual(old, (isolated.base.build_pair, isolated.stable.compact_attempt, isolated.search.summary,
                               isolated.base.export_pair))
+        self.assertIs(isolated.previous.roles.view_expanded_proposals, original_factory)
+
+    def test_coverage_config_summary_and_result_are_explicit_only_inside_worker(self):
+        config = isolated.enable_config({'name': 'fixture', 'scene': 'FloorPlan1', 'seed': 0})
+        self.assertEqual(config['proposal_order_policy'], isolated.coverage.ORDER_POLICY)
+        original_factory = isolated.previous.roles.view_expanded_proposals
+        def worker(cfg, channel):
+            self.assertIs(isolated.previous.roles.view_expanded_proposals,
+                          isolated.coverage.coverage_view_expanded_proposals)
+            result = isolated.search.summary({}, cfg)
+            self.assertEqual(result['proposal_order_version'], isolated.coverage.ORDER_VERSION)
+            return {}
+        with patch.object(isolated.search, 'summary', lambda state, cfg: {}), \
+                patch.object(isolated, '_GENERATOR', worker):
+            result = isolated.generator_worker(config, None)
+        self.assertEqual(result['proposal_order_policy'], config['proposal_order_policy'])
+        self.assertIs(isolated.previous.roles.view_expanded_proposals, original_factory)
 
     def test_native_prefix_saved_before_original_export_and_only_once(self):
         with tempfile.TemporaryDirectory() as directory:

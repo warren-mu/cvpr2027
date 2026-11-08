@@ -10,6 +10,8 @@ from pathlib import Path
 
 from . import pair_v2_solvable_shard as previous
 from . import pair_v2_simulator as engine
+from . import pair_v2_coverage_order as coverage
+from . import pair_v2_terminal as terminal
 
 base, stable, search = previous.base, previous.stable, previous.search
 ATTEMPT_SETUP_VERSION = 'common_baseline_before_each_attempt_v1'
@@ -30,6 +32,7 @@ _GENERATOR = previous.generator_worker
 
 def enable_config(config):
     _ENABLE(config)
+    coverage.enable_config(config)
     config.update(attempt_setup_version=ATTEMPT_SETUP_VERSION,
                   attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY),
                   producer_module='src.envs.pair_v2_isolated_shard')
@@ -166,7 +169,9 @@ def isolated_build(original, sim, config, baseline, identities, proposal, view,
 
 def generator_worker(config, connection):
     if (config.get('attempt_setup_version') != ATTEMPT_SETUP_VERSION
-            or config.get('attempt_setup_policy') != ATTEMPT_SETUP_POLICY):
+            or config.get('attempt_setup_policy') != ATTEMPT_SETUP_POLICY
+            or config.get('proposal_order_version') != coverage.ORDER_VERSION
+            or config.get('proposal_order_policy') != coverage.ORDER_POLICY):
         raise ValueError('Isolated worker requires its explicit setup version and exact policy')
     old = base.build_pair, stable.compact_attempt, search.summary, base.export_pair
 
@@ -199,33 +204,52 @@ def generator_worker(config, connection):
     def summary(state, child_config):
         result = old[2](state, child_config)
         result.update(attempt_setup_version=ATTEMPT_SETUP_VERSION,
-                      attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY))
+                      attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY),
+                      proposal_order_version=coverage.ORDER_VERSION,
+                      proposal_order_policy=copy.deepcopy(coverage.ORDER_POLICY))
         return result
 
     try:
         base.build_pair, stable.compact_attempt, search.summary, base.export_pair = build, compact, summary, export
-        result = _GENERATOR(config, connection)
+        with coverage.install_coverage_order():
+            result = _GENERATOR(config, connection)
         result.update(attempt_setup_version=ATTEMPT_SETUP_VERSION,
-                      attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY))
+                      attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY),
+                      proposal_order_version=coverage.ORDER_VERSION,
+                      proposal_order_policy=copy.deepcopy(coverage.ORDER_POLICY))
         return result
     finally:
         base.build_pair, stable.compact_attempt, search.summary, base.export_pair = old
 
 
 def main():
-    old = previous.generator_worker, previous.enable_config, base.write_result
+    old = previous.generator_worker, previous.enable_config, base.write_result, base.Worker
+    active, publication = [], {'verified': False}
+
+    def worker(target, config):
+        instance = terminal.TerminalWorker(target, config)
+        active.append(instance)
+        return instance
 
     def writer(name, metrics, config):
         enable_config(config)
         metrics.update(attempt_setup_version=ATTEMPT_SETUP_VERSION,
-                       attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY))
-        return old[2](name, metrics, config)
+                       attempt_setup_policy=copy.deepcopy(ATTEMPT_SETUP_POLICY),
+                       proposal_order_version=coverage.ORDER_VERSION,
+                       proposal_order_policy=copy.deepcopy(coverage.ORDER_POLICY))
+        final, verified = terminal.final_metrics(metrics, config, active[0] if len(active) == 1 else None)
+        publication['verified'] = verified
+        return old[2](name, final, config)
 
     try:
         previous.generator_worker, previous.enable_config, base.write_result = generator_worker, enable_config, writer
-        return previous.main()
+        base.Worker = worker
+        code = previous.main()
+        # Frozen base.main computes its exit code before invoking its writer.
+        # A post-cleanup seal mismatch must never leak an earlier 0 or 86.
+        return code if publication['verified'] else 1
     finally:
-        previous.generator_worker, previous.enable_config, base.write_result = old
+        previous.generator_worker, previous.enable_config, base.write_result, base.Worker = old
 
 
 if __name__ == '__main__':

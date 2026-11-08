@@ -152,6 +152,12 @@ def shard_producer(command, config):
                 or config.get("producer_module") != "src.envs.pair_v2_isolated_shard"):
             raise ValueError("Unknown attempt setup policy or incompatible source producer")
         module = "src.envs.pair_v2_isolated_shard"
+    if any(key in config for key in ("proposal_order_version", "proposal_order_policy")):
+        from src.envs.pair_v2_coverage_order import ORDER_VERSION, ORDER_POLICY
+        if (module != "src.envs.pair_v2_isolated_shard"
+                or config.get("proposal_order_version") != ORDER_VERSION
+                or config.get("proposal_order_policy") != ORDER_POLICY):
+            raise ValueError("Unknown coverage order or incompatible source producer")
     return producer_arguments(command, module), enabled is True
 
 
@@ -267,6 +273,11 @@ def load_source(path):
            ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy",
             "attempt_setup_version", "attempt_setup_policy")):
         raise ValueError("Hashed metrics search configuration differs from source config")
+    order_keys = ("proposal_order_version", "proposal_order_policy")
+    if any(key in config or key in data["metrics"] for key in order_keys):
+        if any(key not in config or key not in data["metrics"] or data["metrics"][key] != config[key]
+               for key in order_keys):
+            raise ValueError("Hashed metrics coverage order differs from source config")
     if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
             or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
             or config.get("seed") != 0 or config.get("resolution") != 255):
