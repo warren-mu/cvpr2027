@@ -1,0 +1,68 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Setting}
+An episode takes place in a world $w$ drawn from a set of simulated scenes.
+At step $t$ the agent's input $h_t$ consists of the instruction, all frames observed so far, and the textual description of the available actions.
+The instruction refers to a target object through a relation (\eg ``the mug next to the kettle''), resolved in the current state of $w$, which yields a unique correct target $g(w)$.
+The agent can take \emph{observation actions} (move to a neighboring viewpoint, turn, open a container), each costing $\lambda$, or end the episode with \commit$(c)$ for a marked candidate $c$, which yields reward $\mathbb{1}[c = g(w)]$.
+
+\paragraph{World pairs and cases.}
+A world pair $(w_0, w_1)$ shares the scene and differs by a single edit to one object, made with a complete pose list so that no other object moves.
+Let $\tau$ be the first step at which the agent's inputs in the two worlds differ, \ie $h_t(w_0) = h_t(w_1)$ pixel for pixel for all $t < \tau$.
+Two binary properties define four cases:
+whether the evidence is already in the input at the start ($\tau = 0$, \emph{direct}) or must be acquired by observation ($\tau > 0$, \Look), and whether the correct target changes ($g(w_0) \neq g(w_1)$, \Flip) or not (\Stay).
+\Look$\to$\Stay\ pairs are as frequent as \Look$\to$\Flip\ pairs, so that ``looking means switching'' is not a valid shortcut.
+
+\paragraph{The constraint.}
+Our objectives obey one rule: \emph{whenever the agent's inputs in the two worlds are identical, the two worlds receive identical credit for the action taken.}
+Behavioral divergence is required only after discriminating evidence has entered the input.
+We enforce this with \emph{lockstep} rollouts: for $t < \tau$ the policy samples one action from $h_t$ and executes it in both worlds; from $\tau$ on, the two episodes continue independently.
+
+\subsection{Information-set credit}
+Let $\rho$ be the prior probability of the edited world, $p(w_1) = \rho$ and $p(w_0) = 1 - \rho$.
+Let $G_t(w)$ be the return from step $t$ in world $w$, including the cost of later observation actions and the final reward, and let
+\begin{equation}
+Q_{\mathrm{c}}(w, t) = \sum_{c} \pi_\theta(\commit(c) \mid h_t)\, \mathbb{1}[c = g(w)]
+\end{equation}
+be the expected reward of committing immediately in world $w$, computed by scoring every candidate action without any additional rollout.
+For a step $t < \tau$, a same-world comparison of looking against committing~\cite{seekvln2026} uses only the realized world $w^\ast$,
+\begin{equation}
+A^{\mathrm{same}}_t = G_t(w^\ast) - Q_{\mathrm{c}}(w^\ast, t),
+\end{equation}
+which rewards a premature \commit\ whenever the guess happens to match $g(w^\ast)$.
+Information-set credit averages over the worlds the agent cannot yet distinguish:
+\begin{equation}
+A^{\mathrm{IS}}_t = \sum_{w \in \{w_0, w_1\}} p(w) \big[ G_t(w) - Q_{\mathrm{c}}(w, t) \big].
+\label{eq:is}
+\end{equation}
+For a \commit\ action taken at $t < \tau$, $G_t(w)$ is the immediate reward in each world.
+After $\tau$, and for direct pairs, we use standard multi-turn GAE~\cite{gae2016,vagen2025}.
+By construction, $A^{\mathrm{IS}}_t$ is identical in both worlds for every $t < \tau$, so the constraint above holds.
+
+\paragraph{What pairing changes.}
+Write $X_w = G_t(w) - Q_{\mathrm{c}}(w, t)$ for a continuation sampled in world $w$.
+If worlds are sampled from the same prior, $A^{\mathrm{same}}_t$ and $A^{\mathrm{IS}}_t$ have the same expectation.
+At an equal budget of two continuations and $\rho = \tfrac12$, the mean of two same-world estimates has variance $\tfrac12\big(\mathbb{E}_w[\mathrm{Var}\,X_w] + \mathrm{Var}_w(\mathbb{E}\,X_w)\big)$, whereas the paired estimate has variance $\tfrac12\,\mathbb{E}_w[\mathrm{Var}\,X_w]$.
+Pairing is stratified sampling over the hidden world: it removes the between-world term $\mathrm{Var}_w(\mathbb{E}\,X_w)$, which is large precisely when committing early pays off in one world and fails in the other.
+For $\rho \neq \tfrac12$ one rollout per world is no longer a proportional allocation and this guarantee does not hold; we report the effect of $\rho$ empirically (\cref{sec:results}).
+We do not claim that same-world credit is biased.
+
+\subsection{Post-evidence consistency}
+Once $t \ge \tau$, the inputs differ and the correct behavior depends on the case.
+Let $\pi^{\mathrm{sel}}_w$ denote the policy's distribution over candidates at the step where it selects in world $w$, with candidates aligned across worlds by object identity.
+For \Flip\ pairs we add a twin-margin term in each world,
+\begin{equation}
+\mathcal{L}_{\Flip} = \sum_{w} \max\!\big(0,\; m - \log \pi^{\mathrm{sel}}_w(g(w)) + \log \pi^{\mathrm{sel}}_w(g(\bar w))\big),
+\end{equation}
+where $\bar w$ is the other world of the pair; for \Stay\ pairs we penalize disagreement between the two target distributions,
+\begin{equation}
+\mathcal{L}_{\Stay} = \tfrac12\Big[\mathrm{KL}\big(\pi^{\mathrm{sel}}_{w_0} \,\|\, \pi^{\mathrm{sel}}_{w_1}\big) + \mathrm{KL}\big(\pi^{\mathrm{sel}}_{w_1} \,\|\, \pi^{\mathrm{sel}}_{w_0}\big)\Big].
+\end{equation}
+Neither term constrains the route, which may legitimately differ between worlds.
+The full objective is the PPO loss with the advantages above plus $\beta(\mathcal{L}_{\Flip} + \mathcal{L}_{\Stay})$.
+
+\subsection{Training}
+We train with the multi-turn PPO~\cite{ppo2017} of VAGEN~\cite{vagen2025} on a VLM policy.
+Each training step uses the same number of rollouts for every method: outcome-only PPO and same-world credit sample 64 single-world episodes; paired methods sample 32 pairs, \ie 64 episodes.
+All methods share the reward, observation cost $\lambda$, optimizer, number of steps, and evaluation protocol; they differ only in how advantages are computed and in the consistency term.

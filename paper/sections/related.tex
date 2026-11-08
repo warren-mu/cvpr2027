@@ -1,0 +1,25 @@
+\section{Related Work}
+\label{sec:related}
+% Every \cite key below must exist in refs.bib and pass scripts/verify_bib.py before submission (see tasks/R01.md).
+
+\paragraph{RL for VLM agents and evidence seeking.}
+VAGEN~\cite{vagen2025} trains VLM agents with multi-turn RL and world-model reasoning rewards, and mitigates templated reasoning with structured ground-truth evaluation and repetition penalties; we build on its trainer and include it as a baseline.
+GLANCE~\cite{glance2026} rewards the discrepancy between predicted and observed frames as visual curiosity in the same environments.
+Closest to us, SeekVLN~\cite{seekvln2026} observes that VLM navigation agents act confidently when key evidence is missing, and branches from the same state into evidence seeking and direct navigation to credit the seeking decision by the subsequent navigation return.
+Its credit is computed in the realized world; our pairs average credit over the worlds consistent with the agent's information and additionally supervise whether the goal should change after looking.
+Asking for help~\cite{askforhelp2025} and compare-before-commit navigation~\cite{c2nav2026} address related decisions about when to act on uncertain information.
+
+\paragraph{Counterfactual data and supervision.}
+Counterfactual VLN~\cite{counterfactualvln2020} trains navigation agents to behave consistently across original and counterfactual environments.
+Grounding on Request~\cite{groundingonrequest2026} evaluates \Flip/\Stay\ behavior under image--text conflicts and uses a counterfactual twin-margin objective on static data; our consistency terms are related but act only after evidence has been acquired through interaction.
+DEER-3D~\cite{deer3d2025} edits 3D scenes to produce counterfactual question--answer pairs for grounding, and DUEL~\cite{duel2026} perturbs textual statements in a self-play loop; both are static and do not involve acquiring evidence.
+Several works study how much static VLM reasoning depends on the image~\cite{thinkingdeltas2026,morethinking2025}.
+For embodied policies, language interventions show that vision-language-action models often execute the original goal~\cite{encodednotcontrol2026}.
+
+\paragraph{Environment design and robustness.}
+Unsupervised environment design~\cite{paired2020,accel2022}, LLM-driven environment designers~\cite{spade2026,simworldstudio2026}, quality-diversity red-teaming of VLA policies~\cite{qdeg2026,redvla2026}, and perturbation benchmarks~\cite{liberoplus2026} generate or search for environments that challenge an agent.
+We do not search for hard worlds; we construct pairs whose relation to the agent's information is known and verified, and use that relation in the learning signal.
+
+\paragraph{Partial observability and counterfactual credit.}
+Learning counterfactual world models under partial observability~\cite{clwm2026} studies when action sequences have distinguishable consequences.
+Our information-set credit is a stratified estimator over hidden world states, related to classical variance reduction~\cite{gae2016} but applied to evidence-seeking decisions with verified counterfactual worlds.

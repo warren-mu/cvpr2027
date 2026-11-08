@@ -5,4 +5,7 @@ writer 登记（状态写 `pending`），只有 auditor 能改成 `verified` / `
 
 | ID | 论文中的说法（位置） | 证据（results / 图 / 文献） | 备注 | 状态 |
 |---|---|---|---|---|
-| C1 | 例：在 ADE20K 上 mIoU 比最强 baseline 高 \res{gain_miou_ade20k}（abstract, §4.2 Tab.1） | results/exp01_main.json | 3 seeds | pending |
+| C1 | 同世界信用与信息集信用期望相同；ρ=½、每个世界一条续写时，配对去掉世界间方差项（§3.2「What pairing changes」） | 推导（附录待写）；T05 单元测试 | 只是方差论证，不声称同世界有偏 | pending |
+| C2 | 每个世界对都通过 6 项有效性检查，报告丢弃率（§4 setup） | T01/T03 的 results 与审查图 | 数值待填 | pending |
+| C3 | 方法与对照在相同 rollout 预算下比较（§3.4, §4） | T05 预算对齐单元测试；训练日志每步回合数 | — | pending |
+| C4 | 主结果（摘要、引言贡献、§5.2）——待 G2 后填写 | agg_main_* | 只用多种子汇总 | pending |
