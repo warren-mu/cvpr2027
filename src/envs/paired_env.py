@@ -1,9 +1,9 @@
-"""T02 interface framework, independent of the undecided L/P observation backend.
+"""T02 public interface, with the approved P backend available by lazy factory.
 
 No simulator, training framework, image library, or GPU is imported. Only an
-explicit backend supplies observations; this module never reuses one world's
-pixels as another world's observation. Mock captures cannot certify a real
-prefix or backend consistency. Production backend verification is a D1/T02 task.
+explicit backend supplies observations. Only authenticated P shared states may
+give w0 pixels/text to both worlds after same-process paired-render checks.
+Mock captures cannot certify a real prefix or backend consistency.
 """
 from dataclasses import dataclass
 import copy
@@ -424,10 +424,29 @@ class PairEnvironment:
 
 
 def compare_prefix(left: PairEnvironment, right: PairEnvironment):
-    """Compare actual returned inputs; never repair differences or share pixels."""
+    """Compare actual inputs; validated P shared-state aliases are explicit."""
     a, b = left.frame, right.frame
     if a is None or b is None:
         raise ValueError("Both backends must have independently returned an observation")
+    from .pair_table import TableEnvironment
+    if isinstance(left, TableEnvironment) or isinstance(right, TableEnvironment):
+        if not isinstance(left, TableEnvironment) or not isinstance(right, TableEnvironment):
+            raise ValueError('Cannot compare live and table observation contracts')
+        first, second = left.backend.table, right.backend.table
+        equal = public_observation(a) == public_observation(b)
+        same_state = (first.pair_id == second.pair_id and a.capture.state_id == b.capture.state_id
+            and {left.world_id, right.world_id} == set(WORLDS)
+            and left.backend.world_order == right.backend.world_order)
+        shared = same_state and first.states[a.capture.state_id].shared and second.states[b.capture.state_id].shared
+        verified = bool(shared and equal and first.export_verified and second.export_verified
+            and first.manifest_reference == second.manifest_reference
+            and left.backend.verify_capture(a) and right.backend.verify_capture(b))
+        return {'same_policy_input': equal, 'raw_rgb_exact': a.raw_rgb == b.raw_rgb,
+            'same_input_at_t_strict': equal and a.raw_rgb == b.raw_rgb,
+            'prefix_verified_identical': verified, 'synthetic_only': first.synthetic or second.synthetic,
+            'independent_capture_ids': a.capture.capture_id != b.capture.capture_id,
+            'shared_public_source': shared, 'capture_ids': [a.capture.capture_id, b.capture.capture_id],
+            'note': 'P shared alias uses prior paired-render proof; current equality is not fresh simulator evidence.'}
     independent = (a.capture.pair_id == b.capture.pair_id and {a.capture.world_id, b.capture.world_id} == set(WORLDS)
                    and a.capture.capture_id != b.capture.capture_id and a.capture.source_id != b.capture.source_id)
     equal = public_observation(a) == public_observation(b)
@@ -440,3 +459,10 @@ def compare_prefix(left: PairEnvironment, right: PairEnvironment):
             "synthetic_only": a.capture.synthetic or b.capture.synthetic,
             "capture_ids": [a.capture.capture_id, b.capture.capture_id],
             "note": "Equality in a CPU mock is not real-backend prefix verification; full history comparison belongs to the paired rollout controller."}
+
+
+def table_environment(tables, *, allow_synthetic=False, max_response_tokens=256, world_orders=None):
+    """Explicit P backend; real use remains blocked until T02 checks are passed."""
+    from .pair_table import TableEnvironment, TableObservationBackend
+    return TableEnvironment(TableObservationBackend(tables, allow_synthetic=allow_synthetic, world_orders=world_orders),
+                            max_response_tokens=max_response_tokens)

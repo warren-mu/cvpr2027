@@ -186,7 +186,11 @@ def main():
                 measured = data['metrics']
                 rows.append({**expected, 'source_file': value, 'partial': False, 'finally_audited': True,
                     'status': measured.get('status'), 'exit_code': data['_meta']['exit_code'],
-                    'ended_at_utc': data['_meta']['end'], 'solvability_version': measured.get('solvability_version'),
+                    # run_logged stores a naive local timestamp. Preserve it;
+                    # do not silently relabel the source clock as UTC.
+                    'ended_at_source_time': data['_meta']['end'],
+                    'source_time_zone': 'not_recorded_by_run_logged',
+                    'solvability_version': measured.get('solvability_version'),
                     'source_reported_attempts': measured.get('attempts'),
                     'source_reported_passed_by_class': measured.get('passed_by_class'),
                     'discard_reason_counts': measured.get('discard_reason_counts'),

@@ -197,3 +197,7 @@ results/t01v2_search_watch_02.json已恢复正式调度观察：2026-11-08 20:26
 已加入只读事后可解性工具：对旧Look来源先独立复核原构造证据，再从真实已存新进程首步见证中验证两world看到X的正向存在证明；无完整动作目录、不可见或域不明均保留unknown。新版全动作来源不重复降级为旧式未知。此工具不启动仿真器、不改旧结果；CPU验证随后运行。
 
 事后检查CPU子步骤：results/t01v2_posthoc_cpu_01.json中7项测试全部通过，包括250像素边界、真实world/action绑定、缺掩码与旧move域不明确的unknown处理、归档hash和权限边界。仅验证程序，无新增GPU运行；正向旧证书尚未接入最终merger，若有旧来源合格候选再接入，不把诊断报告当最终试点验收。
+
+
+T02 P后端CPU代码子步骤：新增D4视角表/五轮查表环境、同进程逐状态w0→w1导出适配器、共享/分叉/非锚点泄漏分类、基于success_eligible的标号、τ与本worldτ_seen、D预算共同前缀BFS和按目标位置回放见证。§5原生world/camera/domain/掩码证据绑定、≥200 distinct(pair,state)双world fresh缓存检查及全体阻断，§7固定pair_id Flip标签交换/逐scene Stay下采样/实际A与左半边比例已实现。配置max_steps=max_model_calls=D+1=5；合成表不会解锁真实训练。GPU导出、真实缓存验收、吞吐20倍与实测成本仍未运行，等待T01v2试点审查。提交代码后再运行CPU测试。
+20:45:45 UTC的results/t01v2_search_progress_04.json仍为24scene not_yet_observed/errors=[]；上一03命令误用文件入口导致src导入失败，原失败log/meta完整保留，没有结果文件也不补写。已修正为模块入口。最新PBS现有观察两采集仍Q，原因为ngpus不足，无节点限制，作业未修改。进度工具将来源run_logged无时区结束时间明确标成source_time，不再误称UTC；原记录不改。
