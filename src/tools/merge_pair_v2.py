@@ -63,6 +63,108 @@ def source_eligibility(data):
             "error": copy.deepcopy(metrics.get("error")), "cleanup_errors": copy.deepcopy(metrics.get("cleanup_errors"))}
 
 
+def producer_arguments(command, module):
+    """Match the executable position, never a module name buried in arguments."""
+    if (not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command)
+            or re.fullmatch(r"python(?:[0-9]+(?:\.[0-9]+)*)?", Path(command[0]).name) is None):
+        raise ValueError("Expected an explicit Python producer")
+    position = 2 if len(command) > 1 and command[1] == "-u" else 1
+    if command[position:position + 2] != ["-m", module]:
+        raise ValueError("Logged command is not the required module producer")
+    return command[position + 2:]
+
+
+def option(arguments, name):
+    if arguments.count(name) != 1 or arguments.index(name) + 1 >= len(arguments):
+        raise ValueError("Require one explicit argument " + name)
+    return arguments[arguments.index(name) + 1]
+
+
+def logged_configuration(text, prefix):
+    rows = re.findall(r"^" + re.escape(prefix) + r":\s*(.+?)\s*$", text, re.M)
+    if len(rows) != 1:
+        raise ValueError("Expected one original " + prefix + " log record")
+    return json.loads(rows[0])
+
+
+def verify_source_identity(data, gate, *, logged_runtime=None, logged_allocation=None):
+    """Bind the recorded shard to its actual runtime and audited gate allocation."""
+    from src.tools.render_gate import gate_exit_code
+    config, meta = data["config"], data["_meta"]
+    shard, runtime = config["shard"], config.get("runtime")
+    allocation = gate["config"]["allocation"]
+    device = shard["gpu_identity"]
+    logical = shard["logical_index"]
+    devices = allocation["devices"]
+    if type(logical) is not int or not 0 <= logical < len(devices):
+        raise ValueError("Shard GPU logical index is outside the audited allocation")
+    if (any(shard.get(key) != config.get(key) for key in ("name", "scene", "seed", "resolution"))
+            or shard["name"] != meta["name"] or config.get("raw_evidence_dir") != shard.get("raw_evidence_dir")
+            or shard.get("allocation") != allocation or logged_allocation != allocation
+            or device != devices[logical] or device.get("logical_index") != logical
+            or shard.get("pbs_jobid") != allocation.get("pbs_jobid")
+            or gate["config"].get("pbs_jobid") != allocation.get("pbs_jobid")
+            or shard.get("parent_cuda_visible_devices") != allocation.get("cuda_visible_devices")
+            or shard.get("child_cuda_visible_devices") != device.get("gpu_uuid")
+            or shard.get("node") != gate["config"].get("node")):
+        raise ValueError("Shard identity/GPU/PBS allocation differs from its logged gate")
+    cpus = shard.get("cpu_affinity")
+    if (not isinstance(cpus, list) or len(cpus) != 12 or len(set(cpus)) != 12
+            or any(type(cpu) is not int or cpu < 0 for cpu in cpus)
+            or not set(cpus) <= set(allocation.get("cpu_affinity") or [])):
+        raise ValueError("Shard must use twelve CPUs from the audited allocation affinity")
+    if runtime is not None:
+        if (runtime != logged_runtime or runtime.get("pbs_jobid") != shard["pbs_jobid"]
+                or runtime.get("cuda_visible_devices") != device["gpu_uuid"]
+                or runtime.get("cpu_affinity") != sorted(cpus)
+                or any(runtime.get(key) != device.get(key) for key in
+                       ("gpu_uuid", "gpu_index", "vulkan_device_index", "gpu_name", "mig_mode"))):
+            raise ValueError("Shard runtime/log/GPU/CPU identity mismatch")
+    elif logged_runtime is not None or source_eligibility(data)["eligible"]:
+        raise ValueError("Contributing shard lacks its actual recorded runtime")
+    gm, gc = gate["metrics"], gate["config"]
+    rows = gm.get("devices") or []
+    if (gate["_meta"].get("exit_code") != 0 or not gate["_meta"].get("end")
+            or gm.get("passed") is not True or gm.get("cleanup_errors") != []
+            or gm.get("errors") != [] or gate_exit_code(rows, len(devices), gm["errors"]) != 0
+            or gc.get("resolution") != 255 or gc.get("segmentation") is not True
+            or gm.get("expected_gpu_count") != len(devices) or gm.get("completed_gpu_count") != len(devices)):
+        raise ValueError("Source gate is not a completed clean 255px segmentation gate")
+    for index, row in enumerate(rows):
+        observation = row["observation"]
+        captures = observation.get("captures") or []
+        if (observation.get("logical_index") != index or observation.get("gpu_identity") != devices[index]
+                or observation.get("node") != shard["node"] or len(captures) != 2
+                or any(c.get("segmentation", {}).get("valid") is not True
+                       or c.get("shape") != [255, 255, 3] for c in captures)):
+            raise ValueError("Gate rows do not verify each declared device and capture")
+
+
+def journal_reference(data, eligibility):
+    """Unavailable failed-source observations remain unknown, never zero."""
+    metrics, config = data["metrics"], data["config"]
+    declared = metrics.get("attempt_journal")
+    if declared is not None and declared != config.get("attempt_journal"):
+        raise ValueError("Source config/metrics journal disagreement")
+    digest = metrics.get("attempt_journal_sha256")
+    filename = declared or config.get("attempt_journal")
+    if filename and digest:
+        return {"file": filename, "sha256": digest}
+    claims = metrics.get("passed_pair_files") or []
+    counts = metrics.get("passed_by_class") or {}
+    if (eligibility["eligible"] or claims or any(value not in (None, 0) for value in counts.values())
+            or metrics.get("attempts") not in (None, 0)):
+        raise ValueError("Source claims measured attempts/pairs without an authenticated journal")
+    return None
+
+
+def publication_eligible(counts, sources, source_errors, pair_errors):
+    """Verified ledger-only failures do not veto other independently valid pairs."""
+    ratio = counts["look_flip"] / counts["look_stay"] if counts["look_stay"] else None
+    return (bool(sources) and not source_errors and not pair_errors
+            and all(counts[k] >= PER_CLASS for k in KINDS) and ratio is not None and 0.8 <= ratio <= 1.25)
+
+
 def load_source(path):
     data, ref = audited_result(path)  # P1-P8, plus mandatory exact FINAL/P6.
     meta, config = data["_meta"], data["config"]
@@ -71,18 +173,38 @@ def load_source(path):
         raise ValueError("Source filename/meta/config name mismatch")
     if any("could not run git" in warning for warning in ref["audit"].get("warn", [])):
         raise ValueError("Source commit existence could not be established")
-    command = meta.get("command")
-    if (not isinstance(command, list) or "--name" not in command or "--scene" not in command
-            or command[command.index("--name") + 1] != expected_name
-            or command[command.index("--scene") + 1] != config.get("scene")
-            or not any(value in ("src.envs.pair_v2_shard", "src/envs/pair_v2_shard.py") for value in command)):
+    arguments = producer_arguments(meta.get("command"), "src.envs.pair_v2_shard")
+    if (option(arguments, "--name") != expected_name or option(arguments, "--scene") != config.get("scene")
+            or data["metrics"].get("kind") != "pair_v2_shard" or not meta.get("end")
+            or config.get("seed") != 0 or config.get("resolution") != 255):
         raise ValueError("Logged producer/name/scene does not identify a v2 shard")
     if config.get("metrics_spec_sha256") != sha_file(ROOT / "docs/METRICS_SPEC.md"):
         raise ValueError("Shard measured a different metrics specification")
     log = ROOT / meta.get("log_path", f"logs/runs/{expected_name}.log")
     side = ROOT / "logs/runs" / f"{expected_name}.meta.json"
+    shard_file = (ROOT / option(arguments, "--shard-config")).resolve()
+    if json.loads(shard_file.read_text()) != config["shard"]:
+        raise ValueError("Immutable shard configuration differs from the recorded source config")
+    gate, gate_ref = audited_result(config["shard"]["gate_result"])
+    recorded_gate = config["shard"]["gate_source"]
+    if any(recorded_gate.get(key) != gate_ref[key] for key in ("file", "sha256", "metrics_sha256", "exit_code", "git_commit")):
+        raise ValueError("Shard's source gate hash/identity changed")
+    gate_meta, gate_cfg = gate["_meta"], gate["config"]
+    gate_args = producer_arguments(gate_meta.get("command"), "src.tools.render_gate")
+    if (option(gate_args, "--name") != gate_cfg["name"] or gate_meta.get("name") != gate_cfg["name"]
+            or Path(gate_ref["file"]).stem != gate_cfg["name"]
+            or any("could not run git" in warning for warning in gate_ref["audit"].get("warn", []))):
+        raise ValueError("Gate producer/name/commit identity mismatch")
+    gate_log = ROOT / (gate_meta.get("log_path") or f"logs/runs/{gate_meta['name']}.log")
+    log_text = log.read_text(errors="replace")
+    runtime = logged_configuration(log_text, "RUNTIME_CONFIG") if config.get("runtime") is not None else None
+    if runtime is None and re.search(r"^RUNTIME_CONFIG:", log_text, re.M):
+        raise ValueError("Source config dropped its actual logged runtime")
+    verify_source_identity(data, gate, logged_runtime=runtime,
+                           logged_allocation=logged_configuration(gate_log.read_text(errors="replace"), "ALLOCATION_CONFIG"))
     ref.update(log_file=str(log.relative_to(ROOT)), log_sha256=sha_file(log),
-               meta_file=str(side.relative_to(ROOT)), meta_sha256=sha_file(side))
+               meta_file=str(side.relative_to(ROOT)), meta_sha256=sha_file(side), gate_source=gate_ref,
+               shard_config_file=str(shard_file), shard_config_sha256=sha_file(shard_file))
     return data, ref
 
 
@@ -387,6 +509,8 @@ def main(argv=None):
     config = {"name": args.name, "requested_sources": args.source, "selection_per_class": PER_CLASS,
         "review_per_class": REVIEWS_PER_CLASS, "order": "numeric scene, journal row, source filename",
         "partial_source_policy": "formally ended failed source may supply independently complete pairs only with known clean cleanup and verified provenance",
+        "ledger_policy": "audited ended noncontributing failures remain in the ledger; missing journal/counts are unknown; provenance contradictions block publication",
+        "evidence_retention": "native action/snapshot references and immutable shard configs still require the original scratch files; no scratch-independent archival claim",
         "metrics_spec_sha256": sha_file(ROOT / "docs/METRICS_SPEC.md"),
         "dataset": str(output.relative_to(ROOT)), "review_directory": str(review_dir.relative_to(ROOT))}
     sources, qualified, attempts, reasons = [], [], [], Counter()
@@ -402,15 +526,24 @@ def main(argv=None):
                 measured, cfg = data["metrics"], data["config"]
                 eligible = source_eligibility(data)
                 source = {"source": reference, **eligible, "scene": cfg["scene"],
-                          "pbs_jobid": cfg.get("runtime", {}).get("pbs_jobid"), "recorded_attempts": measured.get("attempts")}
+                          "pbs_jobid": cfg["shard"]["pbs_jobid"], "recorded_attempts": measured.get("attempts"),
+                          "recorded_passed_by_class": measured.get("passed_by_class"),
+                          "recorded_rejection_counts": measured.get("discard_reason_counts"),
+                          "ledger_only": not eligible["eligible"], "verified_attempts": None,
+                          "attempt_journal_status": "unknown"}
                 metrics["source_runs"].append(source)
                 scene_number(cfg["scene"])
-                journal_ref = {"file": measured["attempt_journal"], "sha256": measured["attempt_journal_sha256"]}
+                if measured.get("scene_excluded") is not None:
+                    metrics["scenes_excluded"].append({"source": reference["file"], **measured["scene_excluded"]})
+                journal_ref = journal_reference(data, eligible)
+                if journal_ref is None:
+                    source["attempt_journal"] = None
+                    continue
                 journal = reference_path(journal_ref, within=ROOT / "data/world_pairs/v2")
-                if measured["attempt_journal"] != cfg["attempt_journal"]:
-                    raise ValueError("Source config/metrics journal disagreement")
                 source["attempt_journal"] = journal_ref
-                passed_refs = measured["passed_pair_files"]
+                passed_refs = measured.get("passed_pair_files")
+                if passed_refs is None and not eligible["eligible"]:
+                    passed_refs = []  # Validated against the journal below; not an inferred source metric.
                 if not isinstance(passed_refs, list):
                     raise ValueError("Missing recorded passed-pair references")
                 by_path = {}
@@ -464,27 +597,30 @@ def main(argv=None):
                     except Exception as error:
                         metrics["pair_errors"].append({"source": reference["file"], "pair_id": compact["pair_id"], "error": str(error)})
                         reasons["independent_pair_verification_failed"] += 1
-                if len(rows) != measured.get("attempts") or matched != set(by_path):
+                if ((measured.get("attempts") is not None and len(rows) != measured["attempts"])
+                        or (eligible["eligible"] and measured.get("attempts") is None) or matched != set(by_path)):
                     raise ValueError("Journal count or passed-pair references disagree with logged metrics")
                 counted = {kind: sum(r.get("kind") == kind and r.get("status") == "passed" for r in rows) for kind in KINDS}
-                if counted != measured.get("passed_by_class"):
+                if ((measured.get("passed_by_class") is not None and counted != measured["passed_by_class"])
+                        or (eligible["eligible"] and measured.get("passed_by_class") is None)):
                     raise ValueError("Logged per-class counts disagree with the journal")
-                if measured.get("scene_excluded") is not None:
-                    metrics["scenes_excluded"].append({"source": reference["file"], **measured["scene_excluded"]})
+                source.update(verified_attempts=len(rows), attempt_journal_status="verified")
             except Exception as error:
                 metrics["source_errors"].append({"file": str(path), "error": f"{type(error).__name__}: {error}"})
         selected, surplus, duplicates = balanced_selection(qualified)
         counts = {kind: sum(item["kind"] == kind for item in selected) for kind in KINDS}
         ratio = counts["look_flip"] / counts["look_stay"] if counts["look_stay"] else None
-        eligible_complete = all(row["eligible"] for row in metrics["source_runs"])
-        acceptance = (bool(sources) and eligible_complete and not metrics["source_errors"] and not metrics["pair_errors"]
-                      and all(counts[k] >= PER_CLASS for k in KINDS) and ratio is not None and 0.8 <= ratio <= 1.25)
+        acceptance = publication_eligible(counts, sources, metrics["source_errors"], metrics["pair_errors"])
         def compact(item):
             return {k: v for k, v in item.items() if k not in ("pair", "independent_verification")}
         metrics.update(passed_by_class=counts, qualified_by_class={k: sum(r["kind"] == k for r in qualified) for k in KINDS},
             selected_pairs=[compact(r) for r in selected], qualified_not_selected=[compact(r) for r in surplus],
             duplicate_completed_pairs=[compact(r) for r in duplicates], look_flip_stay_ratio=ratio,
-            attempts=len(attempts), rejection_counts=dict(reasons), scene_exclusion_count=len(metrics["scenes_excluded"]),
+            attempts=(len(attempts) if not metrics["source_errors"] and all(
+                r["verified_attempts"] is not None for r in metrics["source_runs"]) else None),
+            observed_attempts=len(attempts), unknown_attempt_source_count=sum(
+                r["verified_attempts"] is None for r in metrics["source_runs"]),
+            rejection_counts=dict(reasons), scene_exclusion_count=len(metrics["scenes_excluded"]),
             attempt_generation_time=durations([r.get("generation_seconds") for r in attempts]),
             accepted_generation_time=durations([r.get("generation_seconds") for r in selected]),
             timing_scope="recorded construction durations only; no PBS wait/allocation or unmeasured setup attributed",

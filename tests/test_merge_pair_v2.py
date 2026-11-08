@@ -7,7 +7,9 @@ import tempfile
 import unittest
 
 from src.tools.merge_pair_v2 import (KINDS, balanced_selection, durations,
-    load_observation, proposal_identity, reference_path, scene_number, source_eligibility, verify_preflight)
+    journal_reference, load_observation, producer_arguments, proposal_identity,
+    publication_eligible, reference_path, scene_number, source_eligibility,
+    verify_preflight, verify_source_identity)
 
 
 def source(exit_code=0, status="completed_search", cleanup=None):
@@ -30,7 +32,75 @@ def proposal():
             "view": {"position": point(2), "yaw": 45, "horizon": 30}}
 
 
+def identity_fixture():
+    device = {"logical_index": 0, "gpu_index": 2, "gpu_uuid": "GPU-synthetic",
+              "gpu_name": "NVIDIA H200", "vulkan_device_index": 3, "mig_mode": "Disabled"}
+    allocation = {"pbs_jobid": "synthetic.hopper", "devices": [device],
+                  "cuda_visible_devices": "GPU-synthetic", "cpu_affinity": list(range(12))}
+    runtime = {key: value for key, value in device.items() if key != "logical_index"}
+    runtime.update(pbs_jobid="synthetic.hopper", cuda_visible_devices="GPU-synthetic", cpu_affinity=list(range(12)))
+    data = source()
+    data["_meta"]["name"] = "synthetic"
+    data["config"].update(name="synthetic", scene="FloorPlan1", raw_evidence_dir="/synthetic/raw", runtime=runtime)
+    data["config"]["shard"] = {"name": "synthetic", "scene": "FloorPlan1", "seed": 0, "resolution": 255,
+        "gpu_identity": device, "logical_index": 0, "allocation": allocation, "pbs_jobid": "synthetic.hopper",
+        "parent_cuda_visible_devices": "GPU-synthetic", "child_cuda_visible_devices": "GPU-synthetic",
+        "node": "synthetic-node", "cpu_affinity": list(range(12)), "raw_evidence_dir": "/synthetic/raw"}
+    capture = {"valid_shape": True, "action_success": True, "black": False,
+               "shape": [255, 255, 3], "segmentation": {"valid": True}}
+    gate = {"_meta": {"exit_code": 0, "end": "synthetic-finished"},
+        "config": {"allocation": allocation, "pbs_jobid": "synthetic.hopper", "node": "synthetic-node",
+                   "resolution": 255, "segmentation": True},
+        "metrics": {"passed": True, "cleanup_errors": [], "errors": [], "expected_gpu_count": 1,
+                    "completed_gpu_count": 1, "devices": [{"worker_error": None,
+                        "observation": {"logical_index": 0, "gpu_identity": device, "node": "synthetic-node",
+                                        "valid": True, "captures": [copy.deepcopy(capture), copy.deepcopy(capture)]}}]}}
+    return copy.deepcopy((data, gate, runtime, allocation))
+
+
 class MergePairV2Tests(unittest.TestCase):
+    def test_exact_python_module_producer_with_optional_unbuffered_flag(self):
+        for flag in ([], ["-u"]):
+            command = ["/synthetic/bin/python3.11", *flag, "-m", "src.envs.pair_v2_shard", "--name", "synthetic"]
+            self.assertEqual(producer_arguments(command, "src.envs.pair_v2_shard"), ["--name", "synthetic"])
+        for command in (["python", "-m", "other", "src.envs.pair_v2_shard"],
+                        ["sh", "-m", "src.envs.pair_v2_shard"],
+                        ["python", "-c", "pass", "-m", "src.envs.pair_v2_shard"]):
+            with self.assertRaises(ValueError):
+                producer_arguments(command, "src.envs.pair_v2_shard")
+
+    def test_source_identity_matches_actual_runtime_and_gate(self):
+        data, gate, runtime, allocation = identity_fixture()
+        verify_source_identity(data, gate, logged_runtime=runtime, logged_allocation=allocation)
+
+    def test_wrong_job_uuid_cpu_or_changed_runtime_log_is_rejected(self):
+        for field, value in (("pbs_jobid", "other.hopper"), ("gpu_uuid", "GPU-other"),
+                             ("cpu_affinity", list(range(1, 13)))):
+            data, gate, runtime, allocation = identity_fixture()
+            data["config"]["runtime"][field] = value
+            with self.assertRaises(ValueError):
+                verify_source_identity(data, gate, logged_runtime=runtime, logged_allocation=allocation)
+        data, gate, runtime, allocation = identity_fixture()
+        data["config"]["shard"]["pbs_jobid"] = "other.hopper"
+        with self.assertRaises(ValueError):
+            verify_source_identity(data, gate, logged_runtime=runtime, logged_allocation=allocation)
+
+    def test_failed_before_generation_keeps_missing_attempts_unknown(self):
+        data = source(1, "failed_before_generation")
+        data["config"]["attempt_journal"] = "data/world_pairs/v2/synthetic.jsonl"
+        self.assertIsNone(journal_reference(data, source_eligibility(data)))
+        self.assertNotIn("attempts", data["metrics"])
+        data["metrics"]["attempts"] = 1
+        with self.assertRaises(ValueError):
+            journal_reference(data, source_eligibility(data))
+
+    def test_ledger_only_failure_does_not_veto_other_complete_pairs(self):
+        failed = source_eligibility(source(1, "worker_failed"))
+        self.assertFalse(failed["eligible"])
+        counts = {kind: 20 for kind in KINDS}
+        self.assertTrue(publication_eligible(counts, [{"source": "successful"}, failed], [], []))
+        self.assertFalse(publication_eligible(counts, [{"source": "successful"}, failed], ["SHA mismatch"], []))
+
     def test_ended_failed_source_is_explicit_partial_and_can_contribute(self):
         result = source_eligibility(source(1, "incomplete"))
         self.assertTrue(result["eligible"])
