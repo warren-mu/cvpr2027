@@ -1,0 +1,16 @@
+diff --git a/STATUS.md b/STATUS.md
+index ab842ce..2644519 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -254,3 +254,11 @@ T02来源适配CPU子步骤（dc59f73）：从已审计的最终pilot或独立ch
+ 监控 t00b_monitor22_p5 记录 707329/707330/707331 在 hopper-25 黑帧 exit86，已通过原始图像、UUID、PBS 与清理证据校验后自动重提为 707341/707342/707343（仍为1卡、2600秒、无host限制）。旧记录保留。707341 的 gate 已在 hopper-27 通过。t01v2_single_progress_04 在 21:50:48 UTC 也已观察到厨房 707255 的四卡 gate 通过、场景子进程开始；该作业已启动，继续保留，不执行排队拆分条件。逐场景计数见该脚本结果，未完成场景不能解释为最终零对。
+ 
+ T02 CPU 准备新增 src/tools/t02_export.py：绑定真实单卡 PBS gate，独占 Controller 恢复原始/复制快照，导出后从保存字节重新加载并核验原生证据，区分科学拒绝、黑帧和清理/运行错误。独立静态审查已通过；现在先提交代码，再通过 run_logged 跑 CPU 入口测试。正式缓存≥200状态仍未执行，task_acceptance 为 null，训练未解锁；没有提交 T02 GPU 作业。
++
++### 2026-11-08 21:55 UTC — 首两个客厅场景零合格告警
++
++已立即通知人类：707341 的 FloorPlan201、202 均完成并报告四类0对；201为160次尝试，202为0次（无天然/复制候选并集）。201的原生 PlaceObjectAtPoint 放置阻挡占主要拒绝原因，另有 target_uniqueness_or_ratio=10、w0_physical=9；完整各原因计数保存在已结束场景结果与 t01v2_single_progress_05。该快照无错误：厨房1/7/10以及客厅203仍在运行，报告的部分尝试数分别13/11/7/9，均尚无通过；这不是最终计数。厨房3/4失败原因为 Common baseline state restoration failed before native proposal queries，保留失败记录；其他预检/候选排除原因逐场景保留。所有运行中作业未动。
++
++独立静态复核发现后续同一组合yield后的尝试没有再次恢复共同基线，而 native PlaceObjectAtPoint 发生在完整 SetObjectPoses 之前，可能读取前次尝试遗留的世界。这是状态隔离缺口，但不能据此认定本次所有放置阻挡的原因。正在准备独立新版本修复及 CPU 回归；旧生产者及正在运行的源码保持不变，阈值不变。
++
++T02导出入口11项CPU测试通过（t02_P_export_cpu_01）；审计 t01v2_single_audit_07 为583文件、0 FAIL。最新 PBS 记账预算 t01v2_single_after_retry2_budget：已结束实际扣费11.883333333333333 GPU小时，未结束按完整walltime预留4.166666666666666，合计16.05/60；仍运行作业尚未做最终结算。新增第二批三次黑帧实际0.017222222222222222 GPU小时，等候秒数1505/1456/1344，见 t00b_monitor22_p5_accounting。E2E/G01 尚未满足数据与审查双重触发条件。

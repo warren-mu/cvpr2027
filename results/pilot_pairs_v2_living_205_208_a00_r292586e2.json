@@ -1,0 +1,157 @@
+{
+  "metrics": {
+    "kind": "pair_v2_parallel",
+    "status": "blocked_by_render_gate",
+    "acceptance_passed": false,
+    "gate": {
+      "run_name": "pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate",
+      "exit_code": 86,
+      "wall_seconds_observed": 17.420653736102395,
+      "result_path": "results/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.json",
+      "launcher_log": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_living_205_208_a00_r292586e2/707330_hopper_m_02/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.launcher.log",
+      "launcher_log_sha256": "ef47e10132aa7d60563a1235be93f2408cb81bc2fd18f8b0b4f111cbad58f07f",
+      "source": {
+        "file": "results/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.json",
+        "sha256": "bda16ea188d4b9459d60854a5d1e1ab92274cdbbed870d05f465fd0b57f1ffc5",
+        "metrics_sha256": "f50ad207f46d2f5a54acc075802009041e728ac9bdc29542f24aafddce02322a",
+        "exit_code": 86,
+        "git_commit": "c2da5d16f18ee6b713b454dfb4018a77d703f7a3",
+        "audit": {
+          "file": "results/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 86); keep it, do not cite it"
+          ]
+        }
+      },
+      "source_status": null
+    },
+    "scene_runs": [],
+    "started_shards": [],
+    "cleanup_errors": [],
+    "black_frame_detected": true,
+    "unstarted_scenes": [
+      "FloorPlan205",
+      "FloorPlan206",
+      "FloorPlan207",
+      "FloorPlan208"
+    ],
+    "unfinished_scenes": [],
+    "stop_reasons": [],
+    "all_planned_scenes_finished": false,
+    "exit_code": 86,
+    "solvability_version": "look_per_world_visible_action_v1",
+    "scene_producer_module": "src.envs.pair_v2_solvable_shard"
+  },
+  "config": {
+    "name": "pilot_pairs_v2_living_205_208_a00_r292586e2",
+    "pbs_jobid": "707330.hopper-m-02",
+    "node": "hopper-25",
+    "budget_group": "T01v2",
+    "budget_limit_charged_gpu_hours": 8,
+    "phase_limit_charged_gpu_hours": 60,
+    "resolution": 255,
+    "seed": 0,
+    "pilot_scenes": [
+      "FloorPlan205",
+      "FloorPlan206",
+      "FloorPlan207",
+      "FloorPlan208"
+    ],
+    "scene_shards": [
+      [
+        "FloorPlan205",
+        "FloorPlan206",
+        "FloorPlan207",
+        "FloorPlan208"
+      ]
+    ],
+    "gpus": 1,
+    "cpu_cores_per_gpu": 12,
+    "scene_shard_processes_per_gpu": 1,
+    "instances_per_gpu": 2,
+    "instance_scope": "one construction controller plus one sequential independent replay; never two replay workers concurrently",
+    "timeout_seconds": 2570.0,
+    "scene_timeout_seconds": 500.0,
+    "gate_timeout_seconds": 180.0,
+    "submission": {
+      "file": "logs/pbs/pilot_pairs_v2_living_205_208_a00_r292586e2-20261108T211424Z-d870218f/payload.json",
+      "sha256": "f816bc3c139f409a8570b70aa8fe6cc358e3aa55a72753614f51aa61d58e99fa",
+      "requested_wall_seconds": 2600,
+      "budget_group": "T01v2"
+    },
+    "parent_cuda_visible_devices": "GPU-2c0239b0-dff3-bf6f-0cc1-3097d771dcc8",
+    "cpu_shards": [
+      [
+        48,
+        50,
+        52,
+        54,
+        56,
+        58,
+        60,
+        62,
+        64,
+        66,
+        68,
+        70
+      ]
+    ],
+    "solvability_version": "look_per_world_visible_action_v1",
+    "scene_producer_module": "src.envs.pair_v2_solvable_shard"
+  },
+  "sources": [
+    {
+      "file": "results/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.json",
+      "sha256": "bda16ea188d4b9459d60854a5d1e1ab92274cdbbed870d05f465fd0b57f1ffc5",
+      "metrics_sha256": "f50ad207f46d2f5a54acc075802009041e728ac9bdc29542f24aafddce02322a",
+      "exit_code": 86,
+      "git_commit": "c2da5d16f18ee6b713b454dfb4018a77d703f7a3",
+      "audit": {
+        "file": "results/pilot_pairs_v2_living_205_208_a00_r292586e2_j707330_hopper_m_02_gate.json",
+        "fail": [],
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      }
+    }
+  ],
+  "_meta": {
+    "name": "pilot_pairs_v2_living_205_208_a00_r292586e2",
+    "command": [
+      "bash",
+      "experiments/t01v2_solvable_pairs.sh",
+      "--name",
+      "pilot_pairs_v2_living_205_208_a00_r292586e2",
+      "--gpus",
+      "1",
+      "--scenes",
+      "FloorPlan205",
+      "FloorPlan206",
+      "FloorPlan207",
+      "FloorPlan208",
+      "--timeout-seconds",
+      "2570",
+      "--scene-timeout-seconds",
+      "500",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-25",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T05:39:22",
+    "log_path": "logs/runs/pilot_pairs_v2_living_205_208_a00_r292586e2.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "c2da5d16f18ee6b713b454dfb4018a77d703f7a3",
+    "git_dirty": false,
+    "end": "2026-11-09T05:39:40",
+    "duration_sec": 17.6,
+    "exit_code": 86,
+    "metrics_sha256": "35930bfc3f358b2cc665d6fd3ca0fbd010836e0c87b27ebc77720e9f9a1ef7f9"
+  }
+}
