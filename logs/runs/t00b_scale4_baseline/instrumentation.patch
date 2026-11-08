@@ -1,0 +1,101 @@
+--- original/vagen/trainer/ppo/ray_trainer.py
++++ overlay/vagen/trainer/ppo/ray_trainer.py
+@@ -1,3 +1,4 @@
++from t00b_runtime_hooks import phase as _t00b_phase, validation_phase as _t00b_validation
+ # Copyright 2024 Bytedance Ltd. and/or its affiliates
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+@@ -755,6 +756,7 @@
+         wandb.log({"val/generations": new_table}, step=self.global_steps)
+         self.validation_table = new_table
+     
++    @_t00b_validation
+     def _validate(self):
+         print(f"[DEBUG] validation at global step {self.global_steps} begins")
+         # Lists to collect samples for the table
+@@ -1094,6 +1096,7 @@
+ 
+         for epoch in range(self.config.trainer.total_epochs):
+             for batch_dict in self.train_dataloader:
++                _t00b_phase('train_begin', self.global_steps)
+                 print(f'global_steps: {self.global_steps}')
+                 metrics = {}
+                 timing_raw = {}
+@@ -1225,6 +1228,7 @@
+ 
+                 # TODO: make a canonical logger that supports various backend
+                 logger.log(data=metrics, step=self.global_steps)
++                _t00b_phase('train_end', self.global_steps)
+ 
+                 self.global_steps += 1
+ 
+--- original/vagen/trainer/main_ppo.py
++++ overlay/vagen/trainer/main_ppo.py
+@@ -1,3 +1,4 @@
++from t00b_runtime_hooks import ray_environment as _t00b_ray_environment
+ # Copyright 2024 Bytedance Ltd. and/or its affiliates
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+@@ -29,7 +30,7 @@
+ def run_ppo(config, compute_score=None):
+     if not ray.is_initialized():
+         # this is for local ray cluster
+-        ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}})
++        ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', **_t00b_ray_environment()}})
+ 
+     ray.get(main_task.remote(config, compute_score))
+ 
+--- original/vagen/server/server.py
++++ overlay/vagen/server/server.py
+@@ -1,3 +1,4 @@
++from t00b_runtime_hooks import install_server as _t00b_install_server
+ from flask import Flask, request, jsonify
+ import threading
+ import time
+@@ -41,6 +42,7 @@
+         # Create Flask app
+         self.app = Flask(__name__)
+         self._setup_routes()
++        _t00b_install_server(self.app)
+         
+         # Server state
+         self.is_running = False
+--- original/vagen/env/navigation/env.py
++++ overlay/vagen/env/navigation/env.py
+@@ -1,3 +1,4 @@
++from t00b_runtime_hooks import navigation_controller as _t00b_controller
+ from vagen.env.base.base_env import BaseEnv
+ import ai2thor.controller
+ import numpy as np
+@@ -70,7 +71,7 @@
+         }
+         
+         # Initialize AI2-THOR controller
+-        self.env = ai2thor.controller.Controller(**self.thor_config)
++        self.env = _t00b_controller(**self.thor_config)
+         
+         # Load dataset
+         assert config.eval_set in self.ValidEvalSets
+--- original/ai2thor/fifo_server.py
++++ overlay/ai2thor/fifo_server.py
+@@ -1,3 +1,4 @@
++from t00b_runtime_hooks import fifo_packet as _t00b_fifo_packet
+ # Copyright Allen Institute for Artificial Intelligence 2017
+ """
+ ai2thor.server
+@@ -186,6 +187,7 @@
+                 # print(body)
+                 metadata = msgpack.loads(body, raw=False, strict_map_key=False)
+             elif field_type is FieldType.METADATA_PATCH:
++                _t00b_fifo_packet(self, field_type.name, body)
+                 metadata_patch = msgpack.loads(body, raw=False, strict_map_key=False)
+                 agents = self.raw_metadata["agents"]
+                 metadata = dict(
+@@ -200,6 +202,7 @@
+                 metadata["agents"][metadata_patch["agentId"]].update(metadata_patch)
+                 files = self.raw_files
+             elif field_type in self.image_fields:
++                _t00b_fifo_packet(self, field_type.name, body, metadata)
+                 files[self.form_field_map[field_type]].append(body)
+             else:
+                 raise ValueError("Invalid field type: %s" % field_type)
