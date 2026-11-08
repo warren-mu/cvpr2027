@@ -1,0 +1,37 @@
+diff --git a/STATUS.md b/STATUS.md
+index 5aef2fb..dc4544b 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -75,6 +75,8 @@
+ 
+ - 4卡训练707054的第三份正式中期快照results/t00b_scale4_midrun_snapshot_03.json保存了第13/14次更新原始计时，分别237.855/248.816秒，之后进入第15步；这不是完整基线或性能变体验收。原2卡/8卡训练、T01 A/C仍排队，已有运行未修改或取消。当前最终已完成会计为2.207777777777778 GPUh，未完成申请上限预留41.33333333333333，合计43.541111111111114/60（results/t00b_premium_budget_12.json）；该会计数不包含尚在运行的707054最终用量，后者仍按整笔12 GPUh预留。独立碰撞报告已推送等待判定方案审查，未改生产物理标准。
+ 
++- 已按人类最新授权停止 T01 v1：正式 preflight 记录 A706448/C706582 均Q、无stime/usage，qdel退出0，postflight均F且仍无stime/usage；B706728此前已自然结束，未再次操作。证据 results/t01v1_cancel_preflight.json、t01v1_cancel_ac.json、t01v1_cancel_postflight.json；v1全部记录保留。T01v2为当前最高优先级，试点子预算8 GPUh且仍纳入阶段总60；物理判定改按已批准落定反应，R01按PASS只补两条refs人工官方核验注释，不重跑。2/4/8卡训练继续，8卡706682已包含短Ray路径修复。
++
+ ## 旧任务板（v3.1，已由 tasks/ 取代）
+ 
+ | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
+diff --git a/paper/refs.bib b/paper/refs.bib
+index bcf6678..03c71c5 100644
+--- a/paper/refs.bib
++++ b/paper/refs.bib
+@@ -55,6 +55,9 @@
+   url = {https://arxiv.org/abs/2609.15142},
+ }
+ 
++% Manually verified against the official NeurIPS 2020 paper metadata; accepted in reviews/R01.md.
++% https://proceedings.neurips.cc/paper/2020/hash/39016cfe079db1bfb359ca72fcba3fd8-Abstract.html
++% Automated verification matched an unrelated paper; its not_found record is retained.
+ @inproceedings{counterfactualvln2020,
+   author = {Parvaneh, Amin and Abbasnejad, Ehsan and Teney, Damien and Shi, Javen Qinfeng and van den Hengel, Anton},
+   booktitle = {Advances in Neural Information Processing Systems},
+@@ -186,6 +189,9 @@
+   url = {https://arxiv.org/abs/2604.22591},
+ }
+ 
++% Manually verified against the official CVPR 2026 proceedings and arXiv 2510.13626; accepted in reviews/R01.md.
++% https://openaccess.thecvf.com/content/CVPR2026/html/Fei_LIBERO-Plus_A_Progressive_Robustness_Benchmark_for_Visual-Language-Action_Models_CVPR_2026_paper.html
++% The preprint has a different title; the automated LIBERO-X mismatch is retained in the audit trail.
+ @inproceedings{liberoplus2026,
+   author = {Fei, Senyu and Wang, Siyin and Shi, Junhao and Dai, Zihao and Cai, Jikun and Qian, Pengfang and Ji, Li and He, Xinzhe and Zhang, Shiduo and Fei, Zhaoye and Fu, Jinlan and Gong, Jingjing and Qiu, Xipeng},
+   title = {{LIBERO-Plus: A Progressive Robustness Benchmark for Visual-Language-Action Models}},

@@ -77,6 +77,8 @@
 
 - 已按人类最新授权停止 T01 v1：正式 preflight 记录 A706448/C706582 均Q、无stime/usage，qdel退出0，postflight均F且仍无stime/usage；B706728此前已自然结束，未再次操作。证据 results/t01v1_cancel_preflight.json、t01v1_cancel_ac.json、t01v1_cancel_postflight.json；v1全部记录保留。T01v2为当前最高优先级，试点子预算8 GPUh且仍纳入阶段总60；物理判定改按已批准落定反应，R01按PASS只补两条refs人工官方核验注释，不重跑。2/4/8卡训练继续，8卡706682已包含短Ray路径修复。
 
+- 4卡707054的baseline已完成20次实际更新且run_logged退出0，逐步新RGB计数完整；中位step=259.0075s、gen=176.6365s。原始GPU采样错误1次及Python临时目录EBUSY警告均保留，详见results/t00b_scale4_worker_cache_retry_baseline.json；性能变体和PBS最终会计继续等待。t00b_scale4_baseline_complete_audit为390份、0FAIL。取消前未运行的v1 A/C因PBS没有run_count，旧会计观察失败1已保存，正在补显式Q→qdel成功→F证据链支持，不把缺失用量直接推成0。
+
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
 | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
