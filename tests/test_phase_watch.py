@@ -5,10 +5,13 @@ import json
 from pathlib import Path
 import re
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from src.tools.phase_watch import child_black_evidence, entrypoint, require_unused_run, submissions, validate_black_retry
+from src.tools.phase_watch import (child_black_evidence, combine_observations, entrypoint,
+                                  final_observations, query_unaccounted, require_unused_run,
+                                  submissions, validate_black_retry)
 
 ROOT = Path(__file__).resolve().parents[1]
 JOB = "123.hopper-m-02"
@@ -39,6 +42,66 @@ def fixture(kind="scale", gate_black=True):
 
 
 class WatchFixtures(unittest.TestCase):
+    def test_live_query_only_contains_jobs_without_verified_final_rows(self):
+        cached = {JOB: {"job_id": JOB, "fields": {"job_state": "F"},
+                        "observation_source": "final_accounting"}}
+        live = "456.hopper-m-02"
+        response = SimpleNamespace(returncode=0, stdout=f"Job Id: {live}\n    job_state = Q\n", stderr="")
+        with patch("src.tools.phase_watch.subprocess.run", return_value=response) as run:
+            raw = query_unaccounted({JOB, live}, cached)
+            self.assertEqual(raw["queried_job_ids"], [live])
+            self.assertEqual(run.call_args.args[0][1:], ["-fx", live])
+            self.assertEqual(run.call_args.kwargs["timeout"], 180)
+            self.assertNotIn(JOB, run.call_args.args[0])
+        with patch("src.tools.phase_watch.subprocess.run") as run:
+            raw = query_unaccounted({JOB}, cached)
+            run.assert_not_called()
+            self.assertIsNone(raw["command"])
+        bad = copy.deepcopy(cached)
+        bad[JOB]["fields"]["job_state"] = "R"
+        with self.assertRaises(ValueError):
+            query_unaccounted({JOB}, bad)
+
+    def test_cached_fields_require_unique_same_job_terminal_accounting(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            (root / "logs/runs").mkdir(parents=True)
+            log = root / "logs/runs/accounting.log"
+            fields = {"job_state": "F", "Exit_status": "86", "project": "CFP04-SF-125"}
+            row = {"job_id": JOB, "qstat_exit": 0, "fields": fields}
+            data = {"config": {"jobs": [row]}, "metrics": {"complete_allocation_accounting": True,
+                    "allocation_gpu_hours_by_job": {JOB: 0.5}},
+                    "_meta": {"exit_code": 0, "command": ["python3", "src/tools/pbs_usage.py"]}}
+            ref = {"path": "results/accounting.json", "log_path": "logs/runs/accounting.log", "sha256": "fixture"}
+            final = {JOB: {"gpu_hours": 0.5, "accounting_result": "results/accounting.json"}}
+            log.write_text(json.dumps(data["config"], indent=2))
+            with patch("src.tools.phase_watch.load_logged", return_value=(data, ref)):
+                cached = final_observations(root, final, None)
+                self.assertEqual(cached[JOB]["fields"], fields)
+                self.assertEqual(cached[JOB]["observation_source"], "final_accounting")
+                self.assertEqual(cached[JOB]["source"], ref)
+            bad_rows = [[], [row, copy.deepcopy(row)], [{**row, "job_id": "other.hopper-m-02"}],
+                        [{**row, "fields": {**fields, "job_state": "R"}}], [{**row, "qstat_exit": 1}]]
+            for rows in bad_rows:
+                changed = copy.deepcopy(data)
+                changed["config"]["jobs"] = rows
+                log.write_text(json.dumps(changed["config"], indent=2))
+                with patch("src.tools.phase_watch.load_logged", return_value=(changed, ref)), self.assertRaises(ValueError):
+                    final_observations(root, final, None)
+            log.write_text("different original fields")
+            with patch("src.tools.phase_watch.load_logged", return_value=(data, ref)), self.assertRaises(ValueError):
+                final_observations(root, final, None)
+
+    def test_missing_or_ambiguous_live_response_never_becomes_cached_fields(self):
+        source = {"path": "logs/runs/fixture/qstat.json", "sha256": "fixture"}
+        submit = SimpleNamespace(pbs_blocks=lambda text, heading: {JOB: {"job_state": "Q"}})
+        raw = {"queried_job_ids": [JOB], "stdout": f"Job Id: {JOB}\n    job_state = Q\n"}
+        rows = combine_observations({JOB}, {}, raw, source, submit)
+        self.assertEqual(rows[JOB]["observation_source"], "live_qstat")
+        for text in ("", raw["stdout"] * 2, "Job Id: 999.hopper-m-02\n"):
+            with self.assertRaises(ValueError):
+                combine_observations({JOB}, {}, {**raw, "stdout": text}, source, submit)
+
     def test_explicit_supported_argv_and_exact_name_only(self):
         name = "t00b_scale_fixture"
         command = ["python3", "src/tools/record_command.py", "--name", name, "--",

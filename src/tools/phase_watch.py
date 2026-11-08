@@ -111,6 +111,72 @@ def load_logged(repo, path, auditor):
                   "log_path": str(log.relative_to(repo)), "log_sha256": digest(log)}
 
 
+def final_observations(repo, final, auditor):
+    """Recover exact terminal fields from the already verified accounting file.
+
+    These are historical terminal observations, never presented as live qstat.
+    A missing/duplicate job row cannot silently fall back to a live query.
+    """
+    sources, observed = {}, {}
+    for job_id, record in sorted(final.items()):
+        path = (repo / record["accounting_result"]).resolve()
+        if path not in sources:
+            data, reference = load_logged(repo, path, auditor)
+            command = data.get("_meta", {}).get("command", [])
+            if (data.get("_meta", {}).get("exit_code") != 0 or len(command) < 2
+                    or (repo / command[1]).resolve() != repo / "src/tools/pbs_usage.py"
+                    or data.get("metrics", {}).get("complete_allocation_accounting") is not True):
+                raise ValueError("Cached terminal fields require successful official PBS accounting")
+            # Config is outside metrics_sha256; require the exact config printed
+            # by pbs_usage in its audited log, as the budget verifier also does.
+            if json.dumps(data["config"], indent=2) not in (repo / reference["log_path"]).read_text(errors="replace"):
+                raise ValueError("Cached PBS fields differ from their original logged configuration")
+            sources[path] = data, reference
+        data, reference = sources[path]
+        rows = data.get("config", {}).get("jobs", [])
+        matches = [row for row in rows if isinstance(row, dict) and row.get("job_id") == job_id]
+        if (len(matches) != 1 or matches[0].get("qstat_exit") != 0
+                or not isinstance(matches[0].get("fields"), dict)
+                or matches[0]["fields"].get("job_state") != "F"
+                or data.get("metrics", {}).get("allocation_gpu_hours_by_job", {}).get(job_id) != record["gpu_hours"]):
+            raise ValueError("Missing, ambiguous, nonfinal, or inconsistent cached PBS job: " + job_id)
+        observed[job_id] = {"job_id": job_id, "fields": matches[0]["fields"],
+                            "observation_source": "final_accounting", "source": reference}
+    return observed
+
+
+def query_unaccounted(job_ids, cached):
+    """One explicit live query only for IDs without a verified terminal row."""
+    if set(cached) - set(job_ids) or any(row.get("job_id") != job_id or row.get("fields", {}).get("job_state") != "F"
+                                       for job_id, row in cached.items()):
+        raise ValueError("Cached observations do not match this submitted-job inventory")
+    live_ids = sorted(set(job_ids) - set(cached))
+    command = [QSTAT, "-fx", *live_ids] if live_ids else None
+    result = {"command": command, "queried_job_ids": live_ids, "returncode": None,
+              "stdout": "", "stderr": "", "timeout_seconds": 180, "timed_out": False,
+              "skipped_reason": None if live_ids else "all_jobs_have_verified_final_accounting"}
+    if command:
+        try:
+            query = subprocess.run(command, capture_output=True, text=True, timeout=180)
+            result.update(returncode=query.returncode, stdout=query.stdout, stderr=query.stderr)
+        except subprocess.TimeoutExpired as error:
+            text = lambda value: value.decode(errors="replace") if isinstance(value, bytes) else value or ""
+            result.update(timed_out=True, stdout=text(error.stdout), stderr=text(error.stderr))
+    return result
+
+
+def combine_observations(job_ids, cached, raw, source, submit):
+    expected = sorted(set(job_ids) - set(cached))
+    headers = re.findall(r"^Job Id:\s*(\S+)", raw["stdout"], re.M)
+    if (raw.get("queried_job_ids") != expected or sorted(headers) != expected
+            or len(headers) != len(set(headers))):
+        raise ValueError("Live PBS observations are missing, duplicated, or not explicitly requested")
+    live = submit.pbs_blocks(raw["stdout"], "Job Id")
+    return {**cached, **{job_id: {"job_id": job_id, "fields": fields,
+                               "observation_source": "live_qstat", "source": source}
+                        for job_id, fields in live.items()}}
+
+
 def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, child=None, child_record=None):
     """Pure eligibility check after both result provenance chains are audited."""
     if fields.get("project") != "CFP04-SF-125" or fields.get("job_state") != "F" or fields.get("Exit_status") != "86":
@@ -247,22 +313,22 @@ def main():
         records = submissions(ROOT, submit.BATCH, submit.JOB_ID)
         by_id = {row["job_id"]: row for row in records if row["job_id"]}
         already_retried = {row["payload"].get("retry_of") for row in records}
-        command = [QSTAT, "-fx", *sorted(by_id)]
-        query = subprocess.run(command, capture_output=True, text=True, timeout=180) if by_id else None
-        raw = {"command": command, "returncode": query.returncode if query else None,
-               "stdout": query.stdout if query else "", "stderr": query.stderr if query else ""}
+        final = submit._final_accounting(ROOT, set(by_id))
+        cached = final_observations(ROOT, final, auditor)
+        raw = query_unaccounted(by_id, cached)
         save_new(directory / "qstat.json", raw)
-        config.update(submissions=records, raw_qstat={"path": str((directory / "qstat.json").relative_to(ROOT)),
-                                                     "sha256": digest(directory / "qstat.json")})
-        if query and query.returncode:
-            raise RuntimeError("qstat returned nonzero; raw observation retained, no automated action")
-        fields_by_id = submit.pbs_blocks(raw["stdout"], "Job Id")
-        for job_id in by_id:
-            fields = fields_by_id.get(job_id, {})
+        raw_reference = {"path": str((directory / "qstat.json").relative_to(ROOT)), "sha256": digest(directory / "qstat.json")}
+        config.update(submissions=records, raw_qstat=raw_reference,
+                      cached_final_job_ids=sorted(cached), live_queried_job_ids=raw["queried_job_ids"])
+        if raw["timed_out"] or (raw["command"] and raw["returncode"] != 0):
+            raise RuntimeError("Live qstat failed/timed out; partial raw observation retained, no automated action")
+        observations = combine_observations(by_id, cached, raw, raw_reference, submit)
+        fields_by_id = {job_id: row["fields"] for job_id, row in observations.items()}
+        for job_id, row in observations.items():
+            fields = row["fields"]
             if fields.get("project") != "CFP04-SF-125" or fields.get("Job_Owner", "").split("@")[0] != os.environ.get("USER"):
                 raise RuntimeError("Missing/unexpected project or owner: " + job_id)
-            metrics["observations"].append({"job_id": job_id, "fields": fields})
-        final = submit._final_accounting(ROOT, set(by_id))
+            metrics["observations"].append(row)
         pending = [job for job, fields in fields_by_id.items() if job in by_id and fields.get("job_state") == "F" and job not in final]
         if pending:
             name = args.name + "_accounting"
