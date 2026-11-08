@@ -244,3 +244,7 @@ E2E仅在至少2类各1合格且人类转达Claude图审无问题后触发（全
 
 
 T01v2周期进度（21:29 UTC观察）：results/t00b_monitor22_p2.json中707255、707329、707330、707331均Q，无分配节点，errors=[]。results/t01v2_single_progress_02.json（21:25:56 UTC）覆盖当前厨房12与三个客厅后继12，共24scene均not_yet_observed，attempt/合格/拒绝计数保留null，不报0。仍无两个已结束场景可触发零合格告警，也无图审产物；后台有界观察继续，旧失败记录不删除。排队空档继续补齐原T02 CPU范围的离线导出producer与原生snapshot/clone来源适配，GPU导出/训练仍未触发。
+
+
+T02来源适配CPU子步骤（dc59f73）：从已审计的最终pilot或独立checkpoint重查原scene、完整journal、preflight/hash及原有check_pair；保留完整world/clone快照和原始canonical agent命令（不拿readback浮点horizon重新当输入）；见证move按原生TeleportFull目标和前置GetShortestPathToPoint证明换算，不复用旧move编号。Look原完整catalog/固定reachable保持不变，Direct缺catalog明确None，必须由owned导出器发真实native query。缺runtime原图/元数据/掩码失败关闭；函数不推断人类图审或T02通过。results/t02_P_source_cpu_01.json中11项CPU测试全部通过；本子步骤GPU用量0，正式producer接线仍在静态复核。
+周期计数：results/t01v2_single_progress_03.json（21:39:38 UTC）当前24scene仍not_yet_observed，错误为空，合格/拒绝/尝试均unknown。results/t00b_monitor22_p4.json（21:37:07 UTC）707255及707329/330/331均Q、无分配。尚未有两已结束scene可作零合格判定，审查图/人工审阅/E2E与G01数据触发均未发生。
