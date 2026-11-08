@@ -46,6 +46,10 @@
 
 - Ray worker 缓存候选已完成 CPU 子步骤：部署前正式记录 t00b_worker_cache_preflight 确认原2/8卡训练均为Q；代码提交515b21d后，t00b_worker_cache_cpu_checks通过68项CPU测试（含9项新worker缓存fixture）。每个Ray worker启动时使用独立的scratch缓存，普通编译子进程继承所属worker路径，driver保留run级路径；只修改两项编译缓存变量。冻结hook/config哈希和worker原始manifest进入归档；新增归档发生在完成计时取值之后。CPU成功不证明GPU编译故障已修复，下一步仅按原参数4卡重试706732，保留所有失败证据。
 
+- 4卡worker缓存验证已提交并确认Q：706732 → 707054.hopper-m-02，run t00b_scale4_worker_cache_retry、03:00:00、无host限制，正式提交记录results/t00b_scale4_worker_cache_retry_submit.json；t00b_pending_wait_11_p6于15:51:12 UTC确认mediumx排队，原四项仍Q。旧作业已自然结束，无取消动作。提交前已完成及预留31.33555555555556，加本次12 GPUh申请上限仍低于60。
+
+- 独立碰撞诊断与打包入口代码2c8b202后，四组CPU测试分别13/8/13/9项通过（results/t01_diag_pack_*_cpu.json）。固定203/204/205/206逐卡比对原查询和暂停物理后的原位数组TeleportObject，保留完整元数据/位图哈希；仅诊断、不输出物理合格标签或接纳世界对。严格状态变化不被忽略，普通诊断失败在已证实清理后允许独立pack继续且整体仍失败；黑帧86或清理不确定立即停。新增重提守卫验证实际probe/pack子链、UUID与原始黑帧PNG，原T01 shard真实Python -u -m argv也有fixture；未放宽黑帧标准。拟在另一中档名额以4卡00:20:00运行诊断后pack，每卡12CPU，无节点限制。
+
 ## 旧任务板（v3.1，已由 tasks/ 取代）
 
 | ID | 标签 | owner | 任务 | 完成标准 | 证据 | 状态 |
