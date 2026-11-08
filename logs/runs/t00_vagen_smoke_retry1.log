@@ -1,0 +1,571 @@
+# run_logged: bash experiments/t00_vagen_smoke.sh
+# start: 2026-11-08T11:18:42
+RUNTIME_CONFIG: {"ai2thor_version": "5.0.0", "controller_gpu_device": 0, "cpu_affinity": [25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47], "cuda_visible_devices": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "gpu_index": 0, "gpu_name": "NVIDIA H200", "gpu_uuid": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_retry1", "mig_mode": "Disabled", "pbs_jobid": "706199.hopper-m-02", "scratch": "/scratch/e1583364/cvpr2027", "vulkan_device_index": 0}
+T00_CONFIG_JSON: {"ai2thor_mapping_cache": {"created_exclusively": false, "path": "/scratch/e1583364/cvpr2027/ai2thor/cuda-vulkan-mapping.json", "sha256": "d8fd961c269b8e5da9af2e909c673897cc315d2e062b8a80e5ab735bb74e6f37", "shared_cache": true, "verified_cuda_index": 0, "verified_vulkan_index": 0}, "ai2thor_release_prune_guard": {"existing_directories": ["thor-CloudRendering-f0825767cd50d69f666c7f282e54abfe58f1e917"], "maximum_existing_directories": 2, "path": "/scratch/e1583364/cvpr2027/ai2thor/releases", "reserved_new_build_slots": 1, "upstream_retained_release_count": 3}, "baseline": "official_vagen_base_navigation_not_vagen_full", "configured_total_training_steps": 21, "cuda_visible_devices": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "default_resolution": 255, "generated_launcher": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation/run.sh", "gpu_device_for_ai2thor": 0, "gpu_name": "NVIDIA H200", "gpu_preflight": {"ai2thor_version": "5.0.0", "controller_gpu_device": 0, "cpu_affinity": [25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47], "cuda_visible_devices": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "gpu_index": 0, "gpu_name": "NVIDIA H200", "gpu_uuid": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t00_vagen_smoke_retry1", "mig_mode": "Disabled", "pbs_jobid": "706199.hopper-m-02", "scratch": "/scratch/e1583364/cvpr2027", "vulkan_device_index": 0}, "gpu_uuid": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398", "installed_versions": {"ai2thor": "5.0.0", "numpy": "1.25.1", "psutil": "6.1.1", "torch": "2.6.0", "transformers": "4.49.0", "vllm": "0.8.2"}, "judge_credentials_required": false, "model": "Qwen/Qwen2.5-VL-3B-Instruct", "notes": ["Trainer count, rollout tensor parallelism, and simulator device list are one-GPU topology adaptations.", "Legacy loop increments before >= stop: configured 21 corresponds to 20 completed updates.", "Batch sizes, model, rewards, validation, checkpoint behavior, and optimizer settings are unchanged.", "Shared AI2-THOR mapping is verified against this allocation before startup; concurrent jobs sharing or rewriting it are unsupported.", "At most two existing release directories are allowed, leaving one build slot below the upstream pruning threshold.", "Official shell is executed with -e and pipefail so tee cannot hide a training failure."], "official_env_config_sha256": "79c4007664f454d8e66ed80340e0d691541fff635244b002d448107a09ab8122", "official_launcher": "scripts/examples/vagen_base/navigation/run.sh", "official_launcher_sha256": "6465e1ca0ec653dad41471864b59f4d1c2568ebe1c2d121e1fefb20ea1dac3c2", "official_total_training_steps": 300, "pbs_jobid": "706199.hopper-m-02", "required_completed_updates": 20, "server_gpu_topology_change": {"navigation.devices": [0]}, "server_host": "127.0.0.1", "server_port": 5000, "training_config_changes": {"actor_rollout_ref.rollout.tensor_model_parallel_size=4": "actor_rollout_ref.rollout.tensor_model_parallel_size=1", "trainer.n_gpus_per_node=4": "trainer.n_gpus_per_node=1", "trainer.total_training_steps=300": "trainer.total_training_steps=21"}, "use_state_reward": false, "vagen_commit": "4e2976d87c0f92c97f9a820803e71908cde5fb71", "verl_commit": "3f55021e08b98315213e10d10b709c7f6bbe84f7", "wandb_mode": "offline", "watchdog_seconds": 3600, "working_directory": "/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02"}
+T00_SERVER_READY: {"active_environments": 0, "active_services": [], "message": "Environment server is running", "registered_envs": ["sokoban", "frozenlake", "navigation", "blackjack"], "status": "ok"}
++ export VLLM_ATTENTION_BACKEND=XFORMERS
++ VLLM_ATTENTION_BACKEND=XFORMERS
++ export PYTHONHASHSEED=0
++ PYTHONHASHSEED=0
++++ dirname /scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation/run.sh
+++ cd /scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation
+++ pwd
++ SCRIPT_DIR=/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation
+++ echo /scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation
+++ rev
+++ cut -d/ -f1-3
+++ rev
+++ tr / -
++ EXPERIMENT_NAME=examples-vagen_base-navigation
++ echo 'Experiment name: examples-vagen_base-navigation'
+Experiment name: examples-vagen_base-navigation
++ python -m vagen.env.create_dataset --yaml_path /scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation/env_config.yaml --train_path data/examples-vagen_base-navigation/train.parquet --test_path data/examples-vagen_base-navigation/test.parquet
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Namespace(yaml_path='/scratch/e1583364/cvpr2027/t00/t00_vagen_smoke_retry1-706199.hopper-m-02/official/scripts/examples/vagen_base/navigation/env_config.yaml', force_gen=False, train_path='data/examples-vagen_base-navigation/train.parquet', test_path='data/examples-vagen_base-navigation/test.parquet', seed=42)
+Using 10000 trian seeds generated by navigation config's generate_seeds method
+Using 64 test seeds generated by navigation config's generate_seeds method
+Using 10000 trian seeds generated by navigation config's generate_seeds method
+Using 64 test seeds generated by navigation config's generate_seeds method
+
+Map:   0%|          | 0/20000 [00:00<?, ? examples/s]
+Map:  20%|██        | 4069/20000 [00:00<00:00, 39703.30 examples/s]
+Map:  41%|████      | 8175/20000 [00:00<00:00, 40489.14 examples/s]
+Map:  65%|██████▌   | 13000/20000 [00:00<00:00, 23781.26 examples/s]
+Map:  85%|████████▌ | 17037/20000 [00:00<00:00, 28086.08 examples/s]
+Map: 100%|██████████| 20000/20000 [00:00<00:00, 29989.26 examples/s]
+
+Creating parquet from Arrow format:   0%|          | 0/1 [00:00<?, ?ba/s]
+Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00, 132.95ba/s]
+Train dataset with 20000 instances saved to data/examples-vagen_base-navigation/train.parquet
+
+Map:   0%|          | 0/128 [00:00<?, ? examples/s]
+Map: 100%|██████████| 128/128 [00:00<00:00, 18743.53 examples/s]
+
+Creating parquet from Arrow format:   0%|          | 0/1 [00:00<?, ?ba/s]
+Creating parquet from Arrow format: 100%|██████████| 1/1 [00:00<00:00, 2190.24ba/s]
+Test dataset with 128 instances saved to data/examples-vagen_base-navigation/test.parquet
+
+Generating train split: 0 examples [00:00, ? examples/s]
+Generating train split: 20000 examples [00:00, 1207584.72 examples/s]
+
+Generating test split: 0 examples [00:00, ? examples/s]
+Generating test split: 128 examples [00:00, 16043.72 examples/s]
+{'data_source': 'navigation', 'prompt': [{'role': 'user', 'content': ''}], 'extra_info': {'split': 'train', 'env_name': 'navigation', 'env_config': {'render_mode': 'vision', 'prompt_format': 'grounding_worldmodeling', 'use_state_reward': False, 'eval_set': 'base'}, 'seed': 27670}}
+NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)
+{'data_source': 'navigation', 'prompt': [{'role': 'user', 'content': ''}], 'extra_info': {'split': 'train', 'env_name': 'navigation', 'env_config': {'render_mode': 'vision', 'prompt_format': 'grounding_worldmodeling', 'use_state_reward': False, 'eval_set': 'base'}, 'seed': 12623}}
+NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)
+{'data_source': 'navigation', 'prompt': [{'role': 'user', 'content': ''}], 'extra_info': {'split': 'train', 'env_name': 'navigation', 'env_config': {'render_mode': 'vision', 'prompt_format': 'grounding_worldmodeling', 'use_state_reward': False, 'eval_set': 'base'}, 'seed': 27670}}
+NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)
+{'data_source': 'navigation', 'prompt': [{'role': 'user', 'content': ''}], 'extra_info': {'split': 'train', 'env_name': 'navigation', 'env_config': {'render_mode': 'vision', 'prompt_format': 'grounding_worldmodeling', 'use_state_reward': False, 'eval_set': 'base'}, 'seed': 12623}}
+NavigationEnvConfig(eval_set=base,render_mode=vision,max_actions_per_step=5)
++ tee examples-vagen_base-navigation.log
++ python3 -m vagen.trainer.main_ppo algorithm.adv_estimator=masked_gae algorithm.high_level_gamma=0.95 data.train_files=data/examples-vagen_base-navigation/train.parquet data.val_files=data/examples-vagen_base-navigation/test.parquet data.train_batch_size=128 data.val_batch_size=8 data.max_prompt_length=1024 data.max_response_length=256 data.max_trajectory_length=5000 data.image_key=images data.truncation=left actor_rollout_ref.model.path=Qwen/Qwen2.5-VL-3B-Instruct actor_rollout_ref.actor.optim.lr=1e-6 actor_rollout_ref.model.use_remove_padding=True actor_rollout_ref.actor.ppo_mini_batch_size=32 actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 actor_rollout_ref.actor.use_kl_loss=False actor_rollout_ref.actor.kl_loss_coef=0.001 actor_rollout_ref.actor.kl_loss_type=mse actor_rollout_ref.model.enable_gradient_checkpointing=True actor_rollout_ref.actor.fsdp_config.param_offload=True actor_rollout_ref.actor.fsdp_config.optimizer_offload=True actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 actor_rollout_ref.rollout.tensor_model_parallel_size=1 actor_rollout_ref.rollout.name=vllm actor_rollout_ref.rollout.gpu_memory_utilization=0.1 actor_rollout_ref.rollout.enable_chunked_prefill=False actor_rollout_ref.rollout.enforce_eager=False actor_rollout_ref.rollout.free_cache_engine=False actor_rollout_ref.rollout.n=1 actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 actor_rollout_ref.ref.fsdp_config.param_offload=True actor_rollout_ref.rollout.top_p=0.95 actor_rollout_ref.rollout.temperature=0.7 critic.optim.lr=1e-5 critic.model.use_remove_padding=True critic.model.path=Qwen/Qwen2.5-VL-3B-Instruct critic.model.enable_gradient_checkpointing=True critic.ppo_micro_batch_size_per_gpu=1 critic.model.fsdp_config.param_offload=False critic.model.fsdp_config.optimizer_offload=False algorithm.kl_ctrl.kl_coef=0.001 trainer.critic_warmup=0 'trainer.logger=[console,wandb]' trainer.project_name=vagen_new trainer.experiment_name=examples-vagen_base-navigation trainer.n_gpus_per_node=1 trainer.nnodes=1 trainer.save_freq=150 trainer.test_freq=20 trainer.total_training_steps=21 rollout_manager.max_turns=5 rollout_manager.window_size=5 rollout_manager.use_multi_turn_reward=False rollout_manager.use_loss_mask=True rollout_manager.use_gae_mask=True trainer.val_before_train=True trainer.val_generations_to_log_to_wandb=8 rollout_manager.n_trajectory=1 rollout_manager.use_service=True rollout_manager.timeout=500 +rollout_manager.mini_batch_size=64 rollout_manager.base_url=http://localhost:5000
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+2026-11-08 11:19:24,298	WARNING authentication_token_setup.py:85 -- Token authentication is enabled for this Ray cluster. Set RAY_AUTH_MODE=disabled to opt out. For more information, see https://docs.ray.io/en/latest/ray-security/token-auth.html
+2026-11-08 11:19:24,302	INFO authentication_token_setup.py:50 -- Generated new authentication token and saved to /home/svu/e1583364/.ray/auth_token
+2026-11-08 11:19:29,270	INFO worker.py:2038 -- Started a local Ray instance.
+[36m(pid=3066195)[0m Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+[36m(pid=3066195)[0m Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+[36m(pid=3066195)[0m Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+[36m(pid=3066195)[0m See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+[36m(pid=3066195)[0m /scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+[36m(pid=3066195)[0m   import pkg_resources
+[36m(main_task pid=3066195)[0m {'actor_rollout_ref': {'actor': {'clip_ratio': 0.2,
+[36m(main_task pid=3066195)[0m                                  'entropy_coeff': 0.001,
+[36m(main_task pid=3066195)[0m                                  'fsdp_config': {'fsdp_size': -1,
+[36m(main_task pid=3066195)[0m                                                  'optimizer_offload': True,
+[36m(main_task pid=3066195)[0m                                                  'param_offload': True,
+[36m(main_task pid=3066195)[0m                                                  'wrap_policy': {'min_num_params': 0}},
+[36m(main_task pid=3066195)[0m                                  'grad_clip': 1.0,
+[36m(main_task pid=3066195)[0m                                  'grad_norm_threshold': 1000,
+[36m(main_task pid=3066195)[0m                                  'kl_loss_coef': 0.001,
+[36m(main_task pid=3066195)[0m                                  'kl_loss_type': 'mse',
+[36m(main_task pid=3066195)[0m                                  'optim': {'lr': 1e-06,
+[36m(main_task pid=3066195)[0m                                            'lr_warmup_steps_ratio': 0.0,
+[36m(main_task pid=3066195)[0m                                            'min_lr_ratio': None,
+[36m(main_task pid=3066195)[0m                                            'total_training_steps': -1,
+[36m(main_task pid=3066195)[0m                                            'warmup_style': 'constant'},
+[36m(main_task pid=3066195)[0m                                  'ppo_epochs': 1,
+[36m(main_task pid=3066195)[0m                                  'ppo_max_token_len_per_gpu': 16384,
+[36m(main_task pid=3066195)[0m                                  'ppo_micro_batch_size': None,
+[36m(main_task pid=3066195)[0m                                  'ppo_micro_batch_size_per_gpu': 1,
+[36m(main_task pid=3066195)[0m                                  'ppo_mini_batch_size': 32,
+[36m(main_task pid=3066195)[0m                                  'shuffle': False,
+[36m(main_task pid=3066195)[0m                                  'strategy': 'fsdp',
+[36m(main_task pid=3066195)[0m                                  'ulysses_sequence_parallel_size': 1,
+[36m(main_task pid=3066195)[0m                                  'use_dynamic_bsz': False,
+[36m(main_task pid=3066195)[0m                                  'use_kl_loss': False},
+[36m(main_task pid=3066195)[0m                        'hybrid_engine': True,
+[36m(main_task pid=3066195)[0m                        'model': {'enable_gradient_checkpointing': True,
+[36m(main_task pid=3066195)[0m                                  'external_lib': None,
+[36m(main_task pid=3066195)[0m                                  'override_config': {},
+[36m(main_task pid=3066195)[0m                                  'path': 'Qwen/Qwen2.5-VL-3B-Instruct',
+[36m(main_task pid=3066195)[0m                                  'use_remove_padding': True},
+[36m(main_task pid=3066195)[0m                        'ref': {'fsdp_config': {'param_offload': True,
+[36m(main_task pid=3066195)[0m                                                'wrap_policy': {'min_num_params': 0}},
+[36m(main_task pid=3066195)[0m                                'log_prob_max_token_len_per_gpu': 16384,
+[36m(main_task pid=3066195)[0m                                'log_prob_micro_batch_size': None,
+[36m(main_task pid=3066195)[0m                                'log_prob_micro_batch_size_per_gpu': 1,
+[36m(main_task pid=3066195)[0m                                'log_prob_use_dynamic_bsz': False,
+[36m(main_task pid=3066195)[0m                                'ulysses_sequence_parallel_size': 1},
+[36m(main_task pid=3066195)[0m                        'rollout': {'disable_log_stats': True,
+[36m(main_task pid=3066195)[0m                                    'do_sample': True,
+[36m(main_task pid=3066195)[0m                                    'dtype': 'bfloat16',
+[36m(main_task pid=3066195)[0m                                    'enable_chunked_prefill': False,
+[36m(main_task pid=3066195)[0m                                    'enforce_eager': False,
+[36m(main_task pid=3066195)[0m                                    'free_cache_engine': False,
+[36m(main_task pid=3066195)[0m                                    'gpu_memory_utilization': 0.1,
+[36m(main_task pid=3066195)[0m                                    'ignore_eos': False,
+[36m(main_task pid=3066195)[0m                                    'limit_mm_per_prompt': 5,
+[36m(main_task pid=3066195)[0m                                    'load_format': 'dummy_dtensor',
+[36m(main_task pid=3066195)[0m                                    'log_prob_max_token_len_per_gpu': 16384,
+[36m(main_task pid=3066195)[0m                                    'log_prob_micro_batch_size': None,
+[36m(main_task pid=3066195)[0m                                    'log_prob_micro_batch_size_per_gpu': 1,
+[36m(main_task pid=3066195)[0m                                    'log_prob_use_dynamic_bsz': False,
+[36m(main_task pid=3066195)[0m                                    'max_model_len': None,
+[36m(main_task pid=3066195)[0m                                    'max_num_batched_tokens': 8192,
+[36m(main_task pid=3066195)[0m                                    'max_num_seqs': 1024,
+[36m(main_task pid=3066195)[0m                                    'max_trajectory_length': 5000,
+[36m(main_task pid=3066195)[0m                                    'n': 1,
+[36m(main_task pid=3066195)[0m                                    'name': 'vllm',
+[36m(main_task pid=3066195)[0m                                    'prompt_length': 1024,
+[36m(main_task pid=3066195)[0m                                    'response_length': 256,
+[36m(main_task pid=3066195)[0m                                    'temperature': 0.7,
+[36m(main_task pid=3066195)[0m                                    'tensor_model_parallel_size': 1,
+[36m(main_task pid=3066195)[0m                                    'top_k': -1,
+[36m(main_task pid=3066195)[0m                                    'top_p': 0.95,
+[36m(main_task pid=3066195)[0m                                    'use_fire_sampling': False}},
+[36m(main_task pid=3066195)[0m  'algorithm': {'adv_estimator': 'masked_gae',
+[36m(main_task pid=3066195)[0m                'gamma': 1.0,
+[36m(main_task pid=3066195)[0m                'high_level_gamma': 0.95,
+[36m(main_task pid=3066195)[0m                'kl_ctrl': {'kl_coef': 0.001, 'type': 'fixed'},
+[36m(main_task pid=3066195)[0m                'kl_penalty': 'kl',
+[36m(main_task pid=3066195)[0m                'lam': 1.0},
+[36m(main_task pid=3066195)[0m  'critic': {'cliprange_value': 0.5,
+[36m(main_task pid=3066195)[0m             'forward_max_token_len_per_gpu': 32768,
+[36m(main_task pid=3066195)[0m             'forward_micro_batch_size': None,
+[36m(main_task pid=3066195)[0m             'forward_micro_batch_size_per_gpu': 1,
+[36m(main_task pid=3066195)[0m             'grad_clip': 1.0,
+[36m(main_task pid=3066195)[0m             'model': {'enable_gradient_checkpointing': True,
+[36m(main_task pid=3066195)[0m                       'external_lib': None,
+[36m(main_task pid=3066195)[0m                       'fsdp_config': {'fsdp_size': -1,
+[36m(main_task pid=3066195)[0m                                       'optimizer_offload': False,
+[36m(main_task pid=3066195)[0m                                       'param_offload': False,
+[36m(main_task pid=3066195)[0m                                       'wrap_policy': {'min_num_params': 0}},
+[36m(main_task pid=3066195)[0m                       'override_config': {},
+[36m(main_task pid=3066195)[0m                       'path': 'Qwen/Qwen2.5-VL-3B-Instruct',
+[36m(main_task pid=3066195)[0m                       'tokenizer_path': 'Qwen/Qwen2.5-VL-3B-Instruct',
+[36m(main_task pid=3066195)[0m                       'use_remove_padding': True},
+[36m(main_task pid=3066195)[0m             'optim': {'lr': 1e-05,
+[36m(main_task pid=3066195)[0m                       'lr_warmup_steps_ratio': 0.0,
+[36m(main_task pid=3066195)[0m                       'min_lr_ratio': None,
+[36m(main_task pid=3066195)[0m                       'total_training_steps': -1,
+[36m(main_task pid=3066195)[0m                       'warmup_style': 'constant'},
+[36m(main_task pid=3066195)[0m             'ppo_epochs': 1,
+[36m(main_task pid=3066195)[0m             'ppo_max_token_len_per_gpu': 32768,
+[36m(main_task pid=3066195)[0m             'ppo_micro_batch_size': None,
+[36m(main_task pid=3066195)[0m             'ppo_micro_batch_size_per_gpu': 1,
+[36m(main_task pid=3066195)[0m             'ppo_mini_batch_size': 32,
+[36m(main_task pid=3066195)[0m             'shuffle': False,
+[36m(main_task pid=3066195)[0m             'strategy': 'fsdp',
+[36m(main_task pid=3066195)[0m             'ulysses_sequence_parallel_size': 1,
+[36m(main_task pid=3066195)[0m             'use_dynamic_bsz': False,
+[36m(main_task pid=3066195)[0m             'use_reward_mask': False},
+[36m(main_task pid=3066195)[0m  'custom_reward_function': {'name': 'compute_score', 'path': None},
+[36m(main_task pid=3066195)[0m  'data': {'filter_overlong_prompts': False,
+[36m(main_task pid=3066195)[0m           'image_key': 'images',
+[36m(main_task pid=3066195)[0m           'max_prompt_length': 1024,
+[36m(main_task pid=3066195)[0m           'max_response_length': 256,
+[36m(main_task pid=3066195)[0m           'max_trajectory_length': 5000,
+[36m(main_task pid=3066195)[0m           'prompt_key': 'prompt',
+[36m(main_task pid=3066195)[0m           'return_raw_chat': False,
+[36m(main_task pid=3066195)[0m           'return_raw_input_ids': False,
+[36m(main_task pid=3066195)[0m           'shuffle': True,
+[36m(main_task pid=3066195)[0m           'tokenizer': None,
+[36m(main_task pid=3066195)[0m           'train_batch_size': 128,
+[36m(main_task pid=3066195)[0m           'train_files': 'data/examples-vagen_base-navigation/train.parquet',
+[36m(main_task pid=3066195)[0m           'truncation': 'left',
+[36m(main_task pid=3066195)[0m           'val_batch_size': 8,
+[36m(main_task pid=3066195)[0m           'val_files': 'data/examples-vagen_base-navigation/test.parquet'},
+[36m(main_task pid=3066195)[0m  'reward_model': {'enable': False,
+[36m(main_task pid=3066195)[0m                   'forward_max_token_len_per_gpu': 32768,
+[36m(main_task pid=3066195)[0m                   'max_length': None,
+[36m(main_task pid=3066195)[0m                   'micro_batch_size': None,
+[36m(main_task pid=3066195)[0m                   'micro_batch_size_per_gpu': None,
+[36m(main_task pid=3066195)[0m                   'model': {'external_lib': None,
+[36m(main_task pid=3066195)[0m                             'fsdp_config': {'fsdp_size': -1,
+[36m(main_task pid=3066195)[0m                                             'param_offload': False,
+[36m(main_task pid=3066195)[0m                                             'wrap_policy': {'min_num_params': 0}},
+[36m(main_task pid=3066195)[0m                             'input_tokenizer': 'Qwen/Qwen2.5-VL-3B-Instruct',
+[36m(main_task pid=3066195)[0m                             'path': '~/models/FsfairX-LLaMA3-RM-v0.1',
+[36m(main_task pid=3066195)[0m                             'use_remove_padding': False},
+[36m(main_task pid=3066195)[0m                   'reward_manager': 'naive',
+[36m(main_task pid=3066195)[0m                   'strategy': 'fsdp',
+[36m(main_task pid=3066195)[0m                   'ulysses_sequence_parallel_size': 1,
+[36m(main_task pid=3066195)[0m                   'use_dynamic_bsz': False},
+[36m(main_task pid=3066195)[0m  'rollout_manager': {'base_url': 'http://localhost:5000',
+[36m(main_task pid=3066195)[0m                      'max_trajectory_length': 5000,
+[36m(main_task pid=3066195)[0m                      'max_turns': 5,
+[36m(main_task pid=3066195)[0m                      'max_workers': 8,
+[36m(main_task pid=3066195)[0m                      'mini_batch_size': 64,
+[36m(main_task pid=3066195)[0m                      'n_gpus_per_node': 1,
+[36m(main_task pid=3066195)[0m                      'n_trajectory': 1,
+[36m(main_task pid=3066195)[0m                      'special_token_for_loss_mask': ['<|box_start|>',
+[36m(main_task pid=3066195)[0m                                                      '<|box_end|>'],
+[36m(main_task pid=3066195)[0m                      'timeout': 500,
+[36m(main_task pid=3066195)[0m                      'truncation': 'left',
+[36m(main_task pid=3066195)[0m                      'use_gae_mask': True,
+[36m(main_task pid=3066195)[0m                      'use_loss_mask': True,
+[36m(main_task pid=3066195)[0m                      'use_multi_turn_reward': False,
+[36m(main_task pid=3066195)[0m                      'use_service': True,
+[36m(main_task pid=3066195)[0m                      'window_size': 5},
+[36m(main_task pid=3066195)[0m  'trainer': {'balance_batch': True,
+[36m(main_task pid=3066195)[0m              'critic_warmup': 0,
+[36m(main_task pid=3066195)[0m              'default_hdfs_dir': None,
+[36m(main_task pid=3066195)[0m              'default_local_dir': 'checkpoints/vagen_new/examples-vagen_base-navigation',
+[36m(main_task pid=3066195)[0m              'del_local_ckpt_after_load': False,
+[36m(main_task pid=3066195)[0m              'experiment_name': 'examples-vagen_base-navigation',
+[36m(main_task pid=3066195)[0m              'logger': ['console', 'wandb'],
+[36m(main_task pid=3066195)[0m              'n_gpus_per_node': 1,
+[36m(main_task pid=3066195)[0m              'nnodes': 1,
+[36m(main_task pid=3066195)[0m              'project_name': 'vagen_new',
+[36m(main_task pid=3066195)[0m              'remove_previous_ckpt_in_save': False,
+[36m(main_task pid=3066195)[0m              'resume_from_path': False,
+[36m(main_task pid=3066195)[0m              'resume_mode': 'auto',
+[36m(main_task pid=3066195)[0m              'save_freq': 150,
+[36m(main_task pid=3066195)[0m              'test_freq': 20,
+[36m(main_task pid=3066195)[0m              'total_epochs': 30,
+[36m(main_task pid=3066195)[0m              'total_training_steps': 21,
+[36m(main_task pid=3066195)[0m              'val_before_train': True,
+[36m(main_task pid=3066195)[0m              'val_generations_to_log_to_wandb': 8,
+[36m(main_task pid=3066195)[0m              'val_only': False}}
+[36m(main_task pid=3066195)[0m INFO 11-08 11:19:56 [__init__.py:239] Automatically detected platform cuda.
+[36m(main_task pid=3066195)[0m [DEBUG] use_ref=True
+[36m(main_task pid=3066195)[0m WARNING: val_batch_size is deprecated. Validation datasets are sent to inference engines as a whole batch, which will schedule the memory themselves.
+[36m(main_task pid=3066195)[0m [validate_config] All configuration checks passed successfully!
+[36m(main_task pid=3066195)[0m dataset len: 20000
+[36m(main_task pid=3066195)[0m dataset len: 128
+[36m(main_task pid=3066195)[0m Size of train dataloader: 156
+[36m(main_task pid=3066195)[0m Size of val dataloader: 16
+[36m(main_task pid=3066195)[0m Total training steps: 21
+[36m(pid=1102977)[0m INFO 11-08 11:20:09 [__init__.py:239] Automatically detected platform cuda.
+[36m(WorkerDict pid=1102977)[0m Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+[36m(WorkerDict pid=1102977)[0m Critic overriding config {'bos_token_id': None, 'eos_token_id': 151645, 'pad_token_id': 151643}
+[36m(WorkerDict pid=1102977)[0m Qwen2vl patch applied!
+[36m(WorkerDict pid=1102977)[0m 
+Downloading shards:   0%|          | 0/2 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1102977)[0m 
+Downloading shards:  50%|█████     | 1/2 [00:10<00:10, 10.92s/it]
+[36m(WorkerDict pid=1102977)[0m 
+Downloading shards: 100%|██████████| 2/2 [00:18<00:00,  9.20s/it]
+Downloading shards: 100%|██████████| 2/2 [00:18<00:00,  9.45s/it]
+[36m(WorkerDict pid=1102977)[0m Flash Attention 2.0 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen2_5_VLForTokenClassification is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `torch_dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", torch_dtype=torch.float16)`
+[36m(WorkerDict pid=1102977)[0m You are attempting to use Flash Attention 2.0 with a model not initialized on GPU. Make sure to move the model to GPU after initializing it on CPU with `model.to('cuda')`.
+[36m(WorkerDict pid=1102977)[0m Flash Attention 2.0 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen2_5_VisionTransformerPretrainedModel is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `torch_dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", torch_dtype=torch.float16)`
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:  50%|█████     | 1/2 [00:03<00:03,  3.18s/it]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards: 100%|██████████| 2/2 [00:05<00:00,  2.79s/it]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:05<00:00,  2.85s/it]
+[36m(WorkerDict pid=1102977)[0m Some weights of Qwen2_5_VLForTokenClassification were not initialized from the model checkpoint at Qwen/Qwen2.5-VL-3B-Instruct and are newly initialized: ['score.bias', 'score.weight']
+[36m(WorkerDict pid=1102977)[0m You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[36m(WorkerDict pid=1102977)[0m Qwen2_5_VLForTokenClassification contains 3.75B parameters
+[36m(WorkerDict pid=1102977)[0m Before critic FSDP, memory allocated (GB): 0.0, memory reserved (GB): 0.0
+[36m(WorkerDict pid=1102977)[0m /scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/torch/distributed/fsdp/_init_utils.py:444: UserWarning: FSDP is switching to use `NO_SHARD` instead of ShardingStrategy.FULL_SHARD since the world size is 1.
+[36m(WorkerDict pid=1102977)[0m   warnings.warn(
+[36m(WorkerDict pid=1102977)[0m NCCL version 2.21.5+cuda12.4
+[36m(WorkerDict pid=1102977)[0m After critic FSDP, memory allocated (GB): 14.013401508331299, memory reserved (GB): 15.6875
+[36m(WorkerDict pid=1102977)[0m Total steps: 21, num_warmup_steps: 0
+[36m(WorkerDict pid=1102977)[0m Critic use_remove_padding=True
+[36m(WorkerDict pid=1102977)[0m Qwen2vl patch applied!
+[36m(WorkerDict pid=1102977)[0m Model config after override: Qwen2_5_VLConfig {
+[36m(WorkerDict pid=1102977)[0m   "_name_or_path": "Qwen/Qwen2.5-VL-3B-Instruct",
+[36m(WorkerDict pid=1102977)[0m   "architectures": [
+[36m(WorkerDict pid=1102977)[0m     "Qwen2_5_VLForConditionalGeneration"
+[36m(WorkerDict pid=1102977)[0m   ],
+[36m(WorkerDict pid=1102977)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1102977)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1102977)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1102977)[0m   "hidden_size": 2048,
+[36m(WorkerDict pid=1102977)[0m   "image_token_id": 151655,
+[36m(WorkerDict pid=1102977)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1102977)[0m   "intermediate_size": 11008,
+[36m(WorkerDict pid=1102977)[0m   "max_position_embeddings": 128000,
+[36m(WorkerDict pid=1102977)[0m   "max_window_layers": 70,
+[36m(WorkerDict pid=1102977)[0m   "model_type": "qwen2_5_vl",
+[36m(WorkerDict pid=1102977)[0m   "num_attention_heads": 16,
+[36m(WorkerDict pid=1102977)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1102977)[0m   "num_key_value_heads": 2,
+[36m(WorkerDict pid=1102977)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1102977)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1102977)[0m   "rope_scaling": {
+[36m(WorkerDict pid=1102977)[0m     "mrope_section": [
+[36m(WorkerDict pid=1102977)[0m       16,
+[36m(WorkerDict pid=1102977)[0m       24,
+[36m(WorkerDict pid=1102977)[0m       24
+[36m(WorkerDict pid=1102977)[0m     ],
+[36m(WorkerDict pid=1102977)[0m     "rope_type": "default",
+[36m(WorkerDict pid=1102977)[0m     "type": "default"
+[36m(WorkerDict pid=1102977)[0m   },
+[36m(WorkerDict pid=1102977)[0m   "rope_theta": 1000000.0,
+[36m(WorkerDict pid=1102977)[0m   "sliding_window": 32768,
+[36m(WorkerDict pid=1102977)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1102977)[0m   "torch_dtype": "bfloat16",
+[36m(WorkerDict pid=1102977)[0m   "transformers_version": "4.49.0",
+[36m(WorkerDict pid=1102977)[0m   "use_cache": true,
+[36m(WorkerDict pid=1102977)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1102977)[0m   "video_token_id": 151656,
+[36m(WorkerDict pid=1102977)[0m   "vision_config": {
+[36m(WorkerDict pid=1102977)[0m     "hidden_size": 1280,
+[36m(WorkerDict pid=1102977)[0m     "in_chans": 3,
+[36m(WorkerDict pid=1102977)[0m     "model_type": "qwen2_5_vl",
+[36m(WorkerDict pid=1102977)[0m     "out_hidden_size": 2048,
+[36m(WorkerDict pid=1102977)[0m     "spatial_patch_size": 14,
+[36m(WorkerDict pid=1102977)[0m     "tokens_per_second": 2
+[36m(WorkerDict pid=1102977)[0m   },
+[36m(WorkerDict pid=1102977)[0m   "vision_end_token_id": 151653,
+[36m(WorkerDict pid=1102977)[0m   "vision_start_token_id": 151652,
+[36m(WorkerDict pid=1102977)[0m   "vision_token_id": 151654,
+[36m(WorkerDict pid=1102977)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1102977)[0m }
+[36m(WorkerDict pid=1102977)[0m 
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  3.04it/s]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  3.52it/s]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  3.44it/s]
+[36m(WorkerDict pid=1102977)[0m Qwen2_5_VLForConditionalGeneration contains 3.75B parameters
+[36m(WorkerDict pid=1102977)[0m wrap_policy: functools.partial(<function _or_policy at 0x152507cf31c0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x152507cf30a0>, transformer_layer_cls={<class 'transformers.models.qwen2_5_vl.modeling_qwen2_5_vl.Qwen2_5_VLVisionBlock'>, <class 'transformers.models.qwen2_5_vl.modeling_qwen2_5_vl.Qwen2_5_VLDecoderLayer'>})])
+[36m(WorkerDict pid=1102977)[0m /scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/torch/distributed/fsdp/_init_utils.py:444: UserWarning: FSDP is switching to use `NO_SHARD` instead of ShardingStrategy.FULL_SHARD since the world size is 1.
+[36m(WorkerDict pid=1102977)[0m   warnings.warn(
+[36m(WorkerDict pid=1102977)[0m Actor use_remove_padding=True
+[36m(WorkerDict pid=1102977)[0m [seed_everything] WARNING: reseeding the same Python process.
+[36m(WorkerDict pid=1102977)[0m Qwen2vl patch applied!
+[36m(WorkerDict pid=1102977)[0m Model config after override: Qwen2_5_VLConfig {
+[36m(WorkerDict pid=1102977)[0m   "_name_or_path": "Qwen/Qwen2.5-VL-3B-Instruct",
+[36m(WorkerDict pid=1102977)[0m   "architectures": [
+[36m(WorkerDict pid=1102977)[0m     "Qwen2_5_VLForConditionalGeneration"
+[36m(WorkerDict pid=1102977)[0m   ],
+[36m(WorkerDict pid=1102977)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1102977)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1102977)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1102977)[0m   "hidden_size": 2048,
+[36m(WorkerDict pid=1102977)[0m   "image_token_id": 151655,
+[36m(WorkerDict pid=1102977)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1102977)[0m   "intermediate_size": 11008,
+[36m(WorkerDict pid=1102977)[0m   "max_position_embeddings": 128000,
+[36m(WorkerDict pid=1102977)[0m   "max_window_layers": 70,
+[36m(WorkerDict pid=1102977)[0m   "model_type": "qwen2_5_vl",
+[36m(WorkerDict pid=1102977)[0m   "num_attention_heads": 16,
+[36m(WorkerDict pid=1102977)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1102977)[0m   "num_key_value_heads": 2,
+[36m(WorkerDict pid=1102977)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1102977)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1102977)[0m   "rope_scaling": {
+[36m(WorkerDict pid=1102977)[0m     "mrope_section": [
+[36m(WorkerDict pid=1102977)[0m       16,
+[36m(WorkerDict pid=1102977)[0m       24,
+[36m(WorkerDict pid=1102977)[0m       24
+[36m(WorkerDict pid=1102977)[0m     ],
+[36m(WorkerDict pid=1102977)[0m     "rope_type": "default",
+[36m(WorkerDict pid=1102977)[0m     "type": "default"
+[36m(WorkerDict pid=1102977)[0m   },
+[36m(WorkerDict pid=1102977)[0m   "rope_theta": 1000000.0,
+[36m(WorkerDict pid=1102977)[0m   "sliding_window": 32768,
+[36m(WorkerDict pid=1102977)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1102977)[0m   "torch_dtype": "bfloat16",
+[36m(WorkerDict pid=1102977)[0m   "transformers_version": "4.49.0",
+[36m(WorkerDict pid=1102977)[0m   "use_cache": true,
+[36m(WorkerDict pid=1102977)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1102977)[0m   "video_token_id": 151656,
+[36m(WorkerDict pid=1102977)[0m   "vision_config": {
+[36m(WorkerDict pid=1102977)[0m     "hidden_size": 1280,
+[36m(WorkerDict pid=1102977)[0m     "in_chans": 3,
+[36m(WorkerDict pid=1102977)[0m     "model_type": "qwen2_5_vl",
+[36m(WorkerDict pid=1102977)[0m     "out_hidden_size": 2048,
+[36m(WorkerDict pid=1102977)[0m     "spatial_patch_size": 14,
+[36m(WorkerDict pid=1102977)[0m     "tokens_per_second": 2
+[36m(WorkerDict pid=1102977)[0m   },
+[36m(WorkerDict pid=1102977)[0m   "vision_end_token_id": 151653,
+[36m(WorkerDict pid=1102977)[0m   "vision_start_token_id": 151652,
+[36m(WorkerDict pid=1102977)[0m   "vision_token_id": 151654,
+[36m(WorkerDict pid=1102977)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1102977)[0m }
+[36m(WorkerDict pid=1102977)[0m 
+[36m(WorkerDict pid=1102977)[0m Flash Attention 2.0 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen2_5_VLForConditionalGeneration is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `torch_dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", torch_dtype=torch.float16)`
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards:  50%|█████     | 1/2 [00:01<00:01,  1.68s/it]
+[36m(WorkerDict pid=1102977)[0m 
+Loading checkpoint shards: 100%|██████████| 2/2 [00:02<00:00,  1.45s/it]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:02<00:00,  1.48s/it]
+[36m(WorkerDict pid=1102977)[0m Qwen2_5_VLForConditionalGeneration contains 3.75B parameters
+[36m(WorkerDict pid=1102977)[0m wrap_policy: functools.partial(<function _or_policy at 0x152507cf31c0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x152507cf30a0>, transformer_layer_cls={<class 'transformers.models.qwen2_5_vl.modeling_qwen2_5_vl.Qwen2_5_VLVisionBlock'>, <class 'transformers.models.qwen2_5_vl.modeling_qwen2_5_vl.Qwen2_5_VLDecoderLayer'>})])
+[36m(WorkerDict pid=1102977)[0m /scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/torch/distributed/fsdp/_init_utils.py:444: UserWarning: FSDP is switching to use `NO_SHARD` instead of ShardingStrategy.FULL_SHARD since the world size is 1.
+[36m(WorkerDict pid=1102977)[0m   warnings.warn(
+[36m(WorkerDict pid=1102977)[0m Total steps: 21, num_warmup_steps: 0
+[36m(WorkerDict pid=1102977)[0m Actor use_remove_padding=True
+[36m(WorkerDict pid=1102977)[0m [seed_everything] WARNING: reseeding the same Python process.
+[36m(WorkerDict pid=1102977)[0m Before building vllm rollout, memory allocated (GB): 35.0682110786438, memory reserved (GB): 36.814453125
+[36m(WorkerDict pid=1102977)[0m [seed_everything] WARNING: reseeding the same Python process.
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] Error in inspecting model architecture 'Qwen2_5_VLForConditionalGeneration'
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] Traceback (most recent call last):
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 557, in _run_in_subprocess
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     returned.check_returncode()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 457, in check_returncode
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     raise CalledProcessError(self.returncode, self.args, self.stdout,
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] subprocess.CalledProcessError: Command '['/scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3', '-m', 'vllm.model_executor.models.registry']' returned non-zero exit status 1.
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] 
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] The above exception was the direct cause of the following exception:
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] 
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] Traceback (most recent call last):
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 330, in _try_inspect_model_cls
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return model.inspect_model_cls()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 301, in inspect_model_cls
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return _run_in_subprocess(
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 560, in _run_in_subprocess
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     raise RuntimeError(f"Error raised in subprocess:\n"
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] RuntimeError: Error raised in subprocess:
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] /scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py:126: RuntimeWarning: 'vllm.model_executor.models.registry' found in sys.modules after import of package 'vllm.model_executor.models', but prior to execution of 'vllm.model_executor.models.registry'; this may result in unpredictable behaviour
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   warn(RuntimeWarning(msg))
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] Traceback (most recent call last):
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return _run_code(code, main_globals, None,
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     exec(code, run_globals)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 581, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     _run()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 574, in _run
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     result = fn()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 302, in <lambda>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     lambda: _ModelInfo.from_model_cls(self.load_model_cls()))
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 305, in load_model_cls
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     mod = importlib.import_module(self.module_name)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/importlib/__init__.py", line 126, in import_module
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return _bootstrap._gcd_import(name[level:], package, level)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/qwen2_5_vl.py", line 51, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     from vllm.model_executor.layers.quantization.gptq_marlin import (
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/gptq_marlin.py", line 7, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     import vllm.model_executor.layers.fused_moe  # noqa
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/fused_moe/__init__.py", line 6, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     from vllm.model_executor.layers.fused_moe.layer import (
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/fused_moe/layer.py", line 27, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     from .fused_moe import fused_experts
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/fused_moe/fused_moe.py", line 15, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     from vllm.model_executor.layers.quantization.utils.fp8_utils import (
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/utils/fp8_utils.py", line 17, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     from vllm.model_executor.layers.quantization.utils.w8a8_utils import (
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/utils/w8a8_utils.py", line 53, in <module>
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     CUTLASS_FP8_SUPPORTED = cutlass_fp8_supported()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/utils/w8a8_utils.py", line 37, in cutlass_fp8_supported
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     capability_tuple = current_platform.get_device_capability()
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/platforms/cuda.py", line 63, in wrapper
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return fn(*args, **kwargs)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/platforms/cuda.py", line 319, in get_device_capability
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     physical_device_id = device_id_to_physical_device_id(device_id)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]   File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/platforms/cuda.py", line 52, in device_id_to_physical_device_id
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332]     return int(physical_device_id)
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] ValueError: invalid literal for int() with base 10: 'GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398'
+[36m(WorkerDict pid=1102977)[0m ERROR 11-08 11:21:18 [registry.py:332] 
+Error executing job with overrides: ['algorithm.adv_estimator=masked_gae', 'algorithm.high_level_gamma=0.95', 'data.train_files=data/examples-vagen_base-navigation/train.parquet', 'data.val_files=data/examples-vagen_base-navigation/test.parquet', 'data.train_batch_size=128', 'data.val_batch_size=8', 'data.max_prompt_length=1024', 'data.max_response_length=256', 'data.max_trajectory_length=5000', 'data.image_key=images', 'data.truncation=left', 'actor_rollout_ref.model.path=Qwen/Qwen2.5-VL-3B-Instruct', 'actor_rollout_ref.actor.optim.lr=1e-6', 'actor_rollout_ref.model.use_remove_padding=True', 'actor_rollout_ref.actor.ppo_mini_batch_size=32', 'actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1', 'actor_rollout_ref.actor.use_kl_loss=False', 'actor_rollout_ref.actor.kl_loss_coef=0.001', 'actor_rollout_ref.actor.kl_loss_type=mse', 'actor_rollout_ref.model.enable_gradient_checkpointing=True', 'actor_rollout_ref.actor.fsdp_config.param_offload=True', 'actor_rollout_ref.actor.fsdp_config.optimizer_offload=True', 'actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1', 'actor_rollout_ref.rollout.tensor_model_parallel_size=1', 'actor_rollout_ref.rollout.name=vllm', 'actor_rollout_ref.rollout.gpu_memory_utilization=0.1', 'actor_rollout_ref.rollout.enable_chunked_prefill=False', 'actor_rollout_ref.rollout.enforce_eager=False', 'actor_rollout_ref.rollout.free_cache_engine=False', 'actor_rollout_ref.rollout.n=1', 'actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1', 'actor_rollout_ref.ref.fsdp_config.param_offload=True', 'actor_rollout_ref.rollout.top_p=0.95', 'actor_rollout_ref.rollout.temperature=0.7', 'critic.optim.lr=1e-5', 'critic.model.use_remove_padding=True', 'critic.model.path=Qwen/Qwen2.5-VL-3B-Instruct', 'critic.model.enable_gradient_checkpointing=True', 'critic.ppo_micro_batch_size_per_gpu=1', 'critic.model.fsdp_config.param_offload=False', 'critic.model.fsdp_config.optimizer_offload=False', 'algorithm.kl_ctrl.kl_coef=0.001', 'trainer.critic_warmup=0', 'trainer.logger=[console,wandb]', 'trainer.project_name=vagen_new', 'trainer.experiment_name=examples-vagen_base-navigation', 'trainer.n_gpus_per_node=1', 'trainer.nnodes=1', 'trainer.save_freq=150', 'trainer.test_freq=20', 'trainer.total_training_steps=21', 'rollout_manager.max_turns=5', 'rollout_manager.window_size=5', 'rollout_manager.use_multi_turn_reward=False', 'rollout_manager.use_loss_mask=True', 'rollout_manager.use_gae_mask=True', 'trainer.val_before_train=True', 'trainer.val_generations_to_log_to_wandb=8', 'rollout_manager.n_trajectory=1', 'rollout_manager.use_service=True', 'rollout_manager.timeout=500', '+rollout_manager.mini_batch_size=64', 'rollout_manager.base_url=http://localhost:5000']
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/trainer/main_ppo.py", line 143, in <module>
+    main()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/main.py", line 94, in decorated_main
+    _run_hydra(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
+    _run_app(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/utils.py", line 457, in _run_app
+    run_and_report(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/utils.py", line 223, in run_and_report
+    raise ex
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
+    return func()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/utils.py", line 458, in <lambda>
+    lambda: hydra.run(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/_internal/hydra.py", line 132, in run
+    _ = ret.return_value
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/core/utils.py", line 263, in return_value
+    raise self._return_value
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/hydra/core/utils.py", line 189, in run_job
+    ret.return_value = task_function(task_cfg)
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/trainer/main_ppo.py", line 26, in main
+    run_ppo(config, compute_score=compute_score)
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/trainer/main_ppo.py", line 34, in run_ppo
+    ray.get(main_task.remote(config, compute_score))
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ray/_private/auto_init_hook.py", line 22, in auto_init_wrapper
+    return fn(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ray/_private/client_mode_hook.py", line 134, in wrapper
+    return func(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ray/_private/worker.py", line 3009, in get
+    values, debugger_breakpoint = worker.get_objects(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ray/_private/worker.py", line 1053, in get_objects
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(ValueError): [36mray::main_task()[39m (pid=3066195, ip=192.168.12.121)
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/trainer/main_ppo.py", line 138, in main_task
+    trainer.init_workers()
+  File "/scratch/e1583364/cvpr2027/sources/VAGEN-4e2976d87c0f92c97f9a820803e71908cde5fb71/vagen/trainer/ppo/ray_trainer.py", line 897, in init_workers
+    self.actor_rollout_wg.init_model()
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/single_controller/ray/base.py", line 42, in func
+    output = ray.get(output)
+ray.exceptions.RayTaskError(ValueError): [36mray::WorkerDict.actor_rollout_init_model()[39m (pid=1102977, ip=192.168.12.121, actor_id=e85b32c10fd6853839aa927301000000, repr=<verl.single_controller.ray.base.WorkerDict object at 0x15229577fc40>)
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/single_controller/ray/base.py", line 419, in func
+    return getattr(self.worker_dict[key], name)(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/single_controller/base/decorator.py", line 404, in inner
+    return func(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/workers/fsdp_workers.py", line 388, in init_model
+    self.rollout, self.rollout_sharding_manager = self._build_rollout()
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/workers/fsdp_workers.py", line 323, in _build_rollout
+    rollout = vLLMRollout(model_path=local_path,
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/workers/rollout/vllm_rollout/vllm_rollout_spmd.py", line 106, in __init__
+    self.inference_engine = LLM(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/utils.py", line 1037, in inner
+    return fn(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 243, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 513, in from_engine_args
+    vllm_config = engine_args.create_engine_config(usage_context)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 1296, in create_engine_config
+    model_config = self.create_model_config()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 1141, in create_model_config
+    return ModelConfig(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/config.py", line 399, in __init__
+    self.multimodal_config = self._init_multimodal_config(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/config.py", line 467, in _init_multimodal_config
+    if self.registry.is_multimodal_model(self.architectures):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 482, in is_multimodal_model
+    model_cls, _ = self.inspect_model_cls(architectures)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 442, in inspect_model_cls
+    return self._raise_for_unsupported(architectures)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/vllm/model_executor/models/registry.py", line 392, in _raise_for_unsupported
+    raise ValueError(
+ValueError: Model architectures ['Qwen2_5_VLForConditionalGeneration'] failed to be inspected. Please check the logs for more details.
+T00_MONITOR_STATUS_JSON: {"type": "completion", "elapsed_seconds": 148.65038054797333, "returncode": 1, "timed_out": false, "interrupted_signal": null, "sampling_interval_seconds": 2}
+T00_PARSE_STATUS: {"acceptance_passed": false, "warnings": ["Not observed: median_step_seconds; no substitute value was generated", "Not observed: median_rollout_seconds; no substitute value was generated", "Not observed: median_parameter_update_seconds; no substitute value was generated", "T00 training acceptance not met: requires exit 0 and at least 20 completed updates"]}
+FINAL_METRICS_JSON: {"actual_new_rgb_frames_per_train_step": null, "completed_training_steps": 0, "estimated_full_training_hours": null, "gpu_memory_peak_mib_sampled": 38537.0, "median_actor_update_seconds": null, "median_critic_update_seconds": null, "median_parameter_update_seconds": null, "median_rollout_fraction_of_step": null, "median_rollout_seconds": null, "median_step_seconds": null, "median_update_fraction_of_step": null, "navigation_mean_model_turns_by_step": {}, "official_config_total_training_steps": 300, "process_tree_cpu_percent_median": 46.80477326895398, "process_tree_cpu_percent_peak": 343.81190243188234, "process_tree_rss_peak_bytes": 29183131648, "required_render_fps": null, "resource_sample_count": 29, "training_command_exit_code": 1, "training_command_wall_seconds": 148.65038054797333, "wrapper_exit_code": 1}
+# exit_code: 1
