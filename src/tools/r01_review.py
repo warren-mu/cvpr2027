@@ -15,6 +15,14 @@ def normalized(text):
     return " ".join(text.replace("\u2019", "'").replace("\u00a0", " ").split())
 
 
+def quote_in_html(quote, body):
+    page = HTMLMetadata()
+    page.feed(body.decode("utf-8"))
+    # Inline element boundaries do not insert visible whitespace. For example,
+    # <span>GLANCE</span>, must remain GLANCE, rather than GLANCE ,.
+    return normalized(quote) in normalized("".join(page.text))
+
+
 def citation_lines(files):
     found = {}
     for filename in files:
@@ -57,10 +65,8 @@ def main():
                 if len(row["quote"].split()) > 25:
                     raise ValueError("Quote exceeds short-excerpt bound")
                 body = evidence.fetch(row["source_url"], row["key"])
-                page = HTMLMetadata()
-                page.feed(body.decode("utf-8"))
                 observed["source_sha256"] = digest(body)
-                observed["quote_found_in_saved_source"] = normalized(row["quote"]) in normalized(" ".join(page.text))
+                observed["quote_found_in_saved_source"] = quote_in_html(row["quote"], body)
                 if not observed["quote_found_in_saved_source"]:
                     observed["evidence_error"] = "Quoted wording not found after whitespace normalization; requires source-version/manual review"
             except Exception as exc:
