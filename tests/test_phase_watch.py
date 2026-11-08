@@ -109,6 +109,8 @@ class WatchFixtures(unittest.TestCase):
         self.assertEqual(entrypoint(command, name, ROOT), "scale")
         self.assertEqual(entrypoint(["bash", "experiments/t00b_gated_diagnostics.sh", "--name", name], name, ROOT),
                          "diagnostics")
+        self.assertEqual(entrypoint(["bash", "experiments/t01_collision_pack.sh", "--name", name], name, ROOT),
+                         "probe_pack")
         for bad in (["bash", "-c", "echo hello", "--name", name],
                     ["bash", "experiments/t00b_vagen_smoke.sh", "--name", name],
                     command + ["--unrelated-value", name], command[:3] + ["different"] + command[4:]):
@@ -147,6 +149,34 @@ class WatchFixtures(unittest.TestCase):
                                  "shape": [224, 224, 3], "dtype": "uint8", "nonzero_values": 0, "min": 0, "max": 0}}}}
         self.assertEqual(validate_black_retry(payload, JOB, fields, outer, gate, gate_name, "t01", child, record),
                          "t01_scene_black_capture")
+        approved = copy.deepcopy(child)
+        approved["_meta"]["command"][2] = "src.envs.pair_shard_approved"
+        self.assertEqual(validate_black_retry(payload, JOB, fields, outer, gate, gate_name, "t01", approved, record),
+                         "t01_scene_black_capture")
+        # Actual approved shard shape uses sys.executable and unbuffered output.
+        approved["_meta"]["command"] = ["/scratch/fixture/env/bin/python3", "-u", "-m",
+                                       "src.envs.pair_shard_approved", "--name", record["run_name"]]
+        self.assertEqual(validate_black_retry(payload, JOB, fields, outer, gate, gate_name, "t01", approved, record),
+                         "t01_scene_black_capture")
+        legacy_unbuffered = copy.deepcopy(approved)
+        legacy_unbuffered["_meta"]["command"][3] = "src.envs.pair_shard"
+        self.assertEqual(validate_black_retry(payload, JOB, fields, outer, gate, gate_name, "t01", legacy_unbuffered, record),
+                         "t01_scene_black_capture")
+        forbidden = [
+            ["python3", "-u", "-m", "src.envs.pair_shard_unreviewed"],
+            ["python3", "-u", "-m", "unrelated.module", "--value", "src.envs.pair_shard_approved"],
+            ["python3", "other.py", "-m", "src.envs.pair_shard_approved"],
+            ["python3", "-c", "print('fixture')", "-m", "src.envs.pair_shard"],
+            ["bash", "-u", "-m", "src.envs.pair_shard_approved"],
+            ["not-python3", "-m", "src.envs.pair_shard"],
+            ["python3", "-u", "-u", "-m", "src.envs.pair_shard"],
+            ["python3", "-m"], None,
+        ]
+        for command in forbidden:
+            unknown = copy.deepcopy(child)
+            unknown["_meta"]["command"] = command
+            with self.subTest(command=command), self.assertRaises(ValueError):
+                validate_black_retry(payload, JOB, fields, outer, gate, gate_name, "t01", unknown, record)
         for key, value in (("cleanup_errors", ["unknown"]), ("capture_black_frame_detected", False)):
             changed = copy.deepcopy(child)
             changed["metrics"][key] = value

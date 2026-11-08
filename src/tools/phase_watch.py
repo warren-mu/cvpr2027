@@ -24,7 +24,8 @@ JOB_ID = re.compile(r"\d+\.hopper-m-\d+\Z")
 ENTRYPOINTS = {"experiments/t00b_scale_smoke.sh": "scale",
                "experiments/t01_parallel_pairs.sh": "t01",
                "experiments/t00b_pack_smoke.sh": "pack",
-               "experiments/t00b_gated_diagnostics.sh": "diagnostics"}
+               "experiments/t00b_gated_diagnostics.sh": "diagnostics",
+               "experiments/t01_collision_pack.sh": "probe_pack"}
 
 
 def load_module(name, path):
@@ -177,6 +178,19 @@ def combine_observations(job_ids, cached, raw, source, submit):
                         for job_id, fields in live.items()}}
 
 
+def authorized_shard_command(command):
+    """Allow the real unbuffered Python launcher, not a module name in argv data."""
+    if (not isinstance(command, list) or len(command) < 3
+            or not all(isinstance(part, str) for part in command)
+            or not re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(command[0]).name)):
+        return False
+    arguments = command[1:]
+    if arguments[:1] == ["-u"]:
+        arguments = arguments[1:]
+    return arguments[:2] in (["-m", "src.envs.pair_shard"],
+                             ["-m", "src.envs.pair_shard_approved"])
+
+
 def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, child=None, child_record=None):
     """Pure eligibility check after both result provenance chains are audited."""
     if fields.get("project") != "CFP04-SF-125" or fields.get("job_state") != "F" or fields.get("Exit_status") != "86":
@@ -241,7 +255,7 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                 or stop.get("stage") not in ("source", "capture")
                 or measurement.get("shape") != [224, 224, 3] or measurement.get("dtype") != "uint8"
                 or measurement.get("nonzero_values") != 0 or measurement.get("min") != 0 or measurement.get("max") != 0
-                or "src.envs.pair_shard" not in meta.get("command", [])):
+                or not authorized_shard_command(meta.get("command"))):
             raise ValueError("T01 child black capture, cleanup, or allocation evidence is inconsistent")
         return "t01_scene_black_capture"
     captures = [capture for row in metrics.get("devices", [])
@@ -360,7 +374,12 @@ def main():
                 child = child_record = child_evidence = None
                 if kind == "t01" and gate.get("_meta", {}).get("exit_code") == 0:
                     child, child_record, child_evidence = child_black_evidence(ROOT, payload, outer, gate_evidence, auditor)
-                reason = validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, child, child_record)
+                if kind == "probe_pack":
+                    from src.tools.probe_pack_retry import validate_probe_pack_retry
+                    reason, child_evidence = validate_probe_pack_retry(
+                        ROOT, payload, job_id, fields, outer, gate, gate_evidence, auditor)
+                else:
+                    reason = validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, child, child_record)
                 if int(fields.get("Resource_List.ngpus", "0")) != payload["requested_gpu_count"] or submit.wall_seconds(fields.get("Resource_List.walltime", "")) != payload["requested_wall_seconds"]:
                     raise ValueError("Scheduler resources differ from original immutable request")
                 environment = payload.get("environment", {})
