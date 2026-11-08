@@ -12,6 +12,7 @@ import signal
 import subprocess
 import sys
 import time
+from src.tools.t00b_compile_cache import prepare_environment
 
 
 def main():
@@ -78,8 +79,11 @@ def main():
             resources.flush()
 
         try:
+            training_environment, cache_record = prepare_environment(manifest, os.environ)
+            emit({"type": "compilation_cache", **cache_record})
+            print("T00B_COMPILATION_CACHE: " + json.dumps(cache_record, sort_keys=True), flush=True)
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       start_new_session=True, bufsize=0)
+                                       start_new_session=True, bufsize=0, env=training_environment)
             selector = selectors.DefaultSelector()
             selector.register(process.stdout, selectors.EVENT_READ)
             next_sample = started

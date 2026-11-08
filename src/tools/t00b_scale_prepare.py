@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import socket
 import subprocess
+from src.tools.t00b_compile_cache import cache_environment
 
 ROOT = Path(__file__).resolve().parents[2]
 VAGEN_COMMIT = "4e2976d87c0f92c97f9a820803e71908cde5fb71"
@@ -238,6 +239,7 @@ def main():
         "runtime_json": str(runtime_path), "overlay": str(overlay), "working_directory": str(work),
         "ray_tmpdir": os.environ["RAY_TMPDIR"],
         "ray_tmpdir_provenance": json.loads((args.log_dir / "ray_temp.json").read_text()),
+        "compilation_cache_environment": cache_environment(work),
         "raw_evidence_directory": str(work),
         "unity_log_directory": str(work / "simulator"),
         "evidence_archive_index": str(args.log_dir / "evidence_index.json"),
