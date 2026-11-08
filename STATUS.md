@@ -140,3 +140,5 @@
 4卡测速707054变体已结束（results/t00b_scale4_worker_cache_retry_vllm04.json）：gpu_memory_utilization=0.4记录5个完成更新，但后续validation阶段达到2100.0秒watchdog，exit124，timed_out=True，acceptance_passed=False，cleanup_remaining非空。外层作业记录也exit124。失败原始训练/server/资源/逐帧证据已完整分片归档，必须保留；完成更新的计时只作失败运行诊断，不当成功测速或主实验成本依据。baseline此前20更新成功不改写。PBS最终占用时间、排队时间及扣费待下一次终态记账；预算仍按该作业原12 GPU·小时上限预留。
 
 复制候选完整接线已提交f0e32dc：第二轮专用生成器先验证原场景、再创建共同候选基线，实际新name/lineage、合法pivot、落定、两次新进程重建均由独立合并器重算。一次clone准备失败即停止该scene并保留证据；无可用singleton结构才允许显式natural fallback。异常回放的真实清理错误不会丢失。每个分片归档仅JSON证明闭包（图像/掩码另存），含索引总计硬上限128MiB，单文件32MiB，达到上限即失败不导出合格对。117项v2 CPU集成fixtures全部通过（results/t01v2_clone_integration_cpu_01.json）；没有新增GPU运行或把fixtures视作试点数据。
+
+4卡测速最终PBS记账：707054.hopper-m-02 F/exit124，分配walltime02:22:08，排队与eligible等待均943秒；实际分配用量9.475555556 GPU·小时，queue_charge_rate=1。results/t00b_monitor16_p4_accounting.json和原始PBS字段保留；Stageout_status=1表示stage-out成功，不能误称失败原因。新预算results/t01v2_after_scale4_budget.json：已结束实际11.683333333，未结束完整预留26.000000000，合计37.683333333/60；T01v2仍预留2.666666667/8。18:34 UTC正式观察厨房707189、客厅707191、2卡706354、8卡706682均Q，原样保留，监控进入下一有界轮次。
