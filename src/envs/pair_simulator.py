@@ -34,6 +34,14 @@ def point(value):
     return Point3(**{axis: value[axis] for axis in ("x", "y", "z")})
 
 
+def object_by_identity(objects, field, value):
+    """Resolve one realized object; names persist when SetObjectPoses rewrites IDs."""
+    matches = [obj for obj in objects if obj.get(field) == value]
+    if len(matches) != 1:
+        raise ValueError(f"Expected one object with {field}={value!r}, found {len(matches)}")
+    return matches[0]
+
+
 def snapshot(event, scene, key):
     objects = []
     for obj in event.metadata["objects"]:
@@ -157,7 +165,7 @@ class PairSimulator:
         return {"key": key, "scene": self.scene, "poses": full_poses(event),
                 "objects": copy.deepcopy(event.metadata["objects"]),
                 "agent": agent_pose(event),
-                "openness": {obj["objectId"]: obj.get("openness", 1.0 if obj.get("isOpen") else 0.0)
+                "openness": {obj["name"]: obj.get("openness", 1.0 if obj.get("isOpen") else 0.0)
                              for obj in event.metadata["objects"] if obj.get("openable")}}
 
     def apply_world(self, world, opened=()):
@@ -167,14 +175,13 @@ class PairSimulator:
         if len(names) != len(set(names)) or set(names) != expected:
             raise ValueError("Incomplete or duplicated SetObjectPoses list")
         self.action("SetObjectPoses", objectPoses=world["poses"], placeStationary=True)
-        current = {o["objectId"]: o for o in self.controller.last_event.metadata["objects"]}
-        for object_id, baseline in sorted(world["openness"].items()):
-            openness = 1.0 if object_id in opened else baseline
-            obj = current.get(object_id)
-            if obj is None:
-                raise RuntimeError("Object disappeared while switching worlds")
+        # f082 SetObjectPoses regenerates objectIds from positions. Both saved
+        # openness and opened-container state therefore use stable unique names.
+        for name, baseline in sorted(world["openness"].items()):
+            openness = 1.0 if name in opened else baseline
+            obj = object_by_identity(self.controller.last_event.metadata["objects"], "name", name)
             if obj.get("openness", 1.0 if obj.get("isOpen") else 0.0) != openness:
-                self.action("OpenObject" if openness > 0 else "CloseObject", objectId=object_id,
+                self.action("OpenObject" if openness > 0 else "CloseObject", objectId=obj["objectId"],
                             forceAction=True, **({"openness": openness} if openness > 0 else {}))
         self.world = world
         return self.controller.last_event
@@ -291,7 +298,9 @@ class PairSimulator:
                 values[(candidate.object_id, anchor.object_id)] = value
         evidence = RelationEvidence(world["key"], task.relation, method, values)
         result = resolve_target(task, snap, evidence, distance_tie_tolerance_m=self.config["distance_tie_tolerance_m"])
-        return result, {"method": method, "values": [{"candidate": c, "anchor": a, "value": v}
+        return result, {"method": method,
+                       "name_by_object_id": {obj.object_id: obj.name for obj in snap.objects},
+                       "values": [{"candidate": c, "anchor": a, "value": v}
                                                     for (c, a), v in sorted(values.items())]}
 
     def physical_check(self, world, baseline, edited_name):
@@ -329,10 +338,11 @@ class PairSimulator:
             "scope": "Native Capsule/Box/Sphere overlap, excluding named BoundingBox, SimObjVisible/Agent layers; not a universal mesh penetration proof",
             "source": SOURCE + "UtilityFunctions.cs#L137"}
 
-    def goal_action(self, observation, target):
+    def goal_action(self, observation, target_name):
         # DistanceToObject is the simulator's measured horizontal collider-bound
         # distance. Keep this explicit; metadata.visible is never consulted.
         import numpy as np
+        target = object_by_identity(self.controller.last_event.metadata["objects"], "name", target_name)["objectId"]
         event = self.action("DistanceToObject", objectId=target)
         distance = event.metadata.get("actionReturn")
         # This upstream query uses actionFinished (not fast metadata emit).
@@ -357,29 +367,33 @@ class PairSimulator:
         # edge. Only one newly opened container is allowed in a pilot witness.
         if len(state.opened_containers) < self.config["max_open_containers"]:
             for mark in observation["mark_objects"]:
-                if "container" not in mark.roles or mark.object_id in state.opened_containers:
+                if "container" not in mark.roles:
+                    continue
+                name = object_by_identity(observation["metadata"]["objects"], "objectId", mark.object_id)["name"]
+                if name in state.opened_containers:
                     continue
                 self.apply_world(world, state.opened_containers)
                 self.teleport(state)
                 try:
-                    event = self.action("OpenObject", objectId=mark.object_id, openness=1.0, forceAction=False)
-                    obj = next(o for o in event.metadata["objects"] if o["objectId"] == mark.object_id)
+                    current_id = object_by_identity(self.controller.last_event.metadata["objects"], "name", name)["objectId"]
+                    event = self.action("OpenObject", objectId=current_id, openness=1.0, forceAction=False)
+                    obj = object_by_identity(event.metadata["objects"], "name", name)
                     if obj.get("isOpen") is not True:
                         continue
                     from .pair_core import Transition
                     result.append(Transition(Action("open", mark.label), ViewState(state.viewpoint_id,
-                        state.heading_index, tuple(sorted((*state.opened_containers, mark.object_id))))))
+                        state.heading_index, tuple(sorted((*state.opened_containers, name))))))
                 except RuntimeError:
                     continue
         return result
 
-    def plan(self, world, start, task, target):
+    def plan(self, world, start, task, target_name):
         queue, seen, expanded = deque([(start, [], [start])]), {start}, 0
         while queue and expanded < self.config["max_search_states"]:
             state, actions, states = queue.popleft()
             expanded += 1
             observation = self.observe(world, state, task)
-            select, distance = self.goal_action(observation, target)
+            select, distance = self.goal_action(observation, target_name)
             if select is not None:
                 return {"found": True, "actions": actions + [select], "states": states,
                         "expanded": expanded, "terminal_distance_m": distance}
@@ -392,7 +406,7 @@ class PairSimulator:
         return {"found": False, "actions": [], "states": [], "expanded": expanded,
                 "reason": "search_limit_or_no_executable_goal_within_12_actions"}
 
-    def replay(self, world, start, task, target, plan, directory, expected_prefix=None, expected_after=None):
+    def replay(self, world, start, task, target_name, plan, directory, expected_prefix=None, expected_after=None):
         if not plan["found"] or not 1 <= len(plan["actions"]) <= 12:
             return {"passed": False, "reason": "no_bounded_plan", "actions": []}
         observation = self.observe(world, start, task)
@@ -413,12 +427,14 @@ class PairSimulator:
                 # poses or closing the container. Initial truth alone is not
                 # evidence of the unique target after an observation action.
                 current_target, current_evidence = self.relation(world, task, apply=False)
-                actual, distance = self.goal_action(observation, target)
+                actual, distance = self.goal_action(observation, target_name)
                 selected = [mark.object_id for mark in observation["mark_objects"] if mark.label == action.argument]
-                passed = (actual == action and current_target.target_id == target
+                resolved_name = current_evidence["name_by_object_id"].get(current_target.target_id)
+                passed = (actual == action and resolved_name == target_name
                           and index == len(plan["actions"]) - 1)
                 records.append({"action": action.text(), "selected_object_id": selected[0] if len(selected) == 1 else None,
-                                "distance_m": distance, "distance_target_id": target, "success": passed,
+                                "target_name": target_name, "resolved_target_name": resolved_name,
+                                "distance_m": distance, "distance_target_id": self.query_log[-1]["arguments"]["objectId"], "success": passed,
                                 "realized_target_resolution": asdict(current_target),
                                 "realized_relation_evidence": current_evidence})
                 return {"passed": passed and same_prefix is not False and first_after_exact is not False,
@@ -428,9 +444,10 @@ class PairSimulator:
                 matches = [m for m in observation["mark_objects"] if m.label == action.argument and "container" in m.roles]
                 if len(matches) != 1:
                     raise RuntimeError("Replay open label no longer refers to one visible container")
+                name = object_by_identity(observation["metadata"]["objects"], "objectId", matches[0].object_id)["name"]
                 self.action("OpenObject", objectId=matches[0].object_id, openness=1.0, forceAction=False)
                 state = ViewState(state.viewpoint_id, state.heading_index,
-                                  tuple(sorted((*state.opened_containers, matches[0].object_id))))
+                                  tuple(sorted((*state.opened_containers, name))))
             else:
                 transitions = navigation_transitions(graph, state, destination_heading=lambda old, _: old.heading_index)
                 following = next(t.next_state for t in transitions if t.action == action)

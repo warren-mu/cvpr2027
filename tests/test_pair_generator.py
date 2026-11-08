@@ -1,14 +1,88 @@
 """Synthetic CPU checks only; no simulator import, no research output files."""
 import copy
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
-from src.envs.pair_core import Point3
-from src.envs.pair_generator import REQUIRED_CHECKS, classify, check_configuration, predefined_split
+from src.envs.pair_core import Mark, Point3, RelationalTask, TargetResolution, ViewState
+from src.envs.pair_generator import REQUIRED_CHECKS, build_attempt, classify, check_configuration, predefined_split
 from src.envs.pair_classify import classify_row
-from src.envs.pair_simulator import path_complete, pose_changes
+from src.envs.pair_simulator import PairSimulator, path_complete, pose_changes
 
 
 class PairValidationTests(unittest.TestCase):
+    def test_flip_stay_uses_realized_name_despite_regenerated_object_ids(self):
+        class PrefixReached(Exception):
+            pass
+
+        task = RelationalTask("Cup", "next to", "Kettle")
+        config = {"seed": 0, "scene_split": {"test_scenes": []}, "scene_world": {},
+                  "collect_only": True, "max_displacement_m": None}
+        for second_name, expected in (("Cup_1", "stay"), ("Cup_2", "flip")):
+            with self.subTest(second_name=second_name):
+                ids = ("Cup|+00.00|+01.00|+00.00", "Cup|+00.50|+01.00|+00.00")
+                sim = Mock(scene="FloorPlan1", nodes=())
+                sim.world_from_event.return_value = {"key": "w0"}
+                sim.relation.side_effect = [
+                    (TargetResolution(key, "anchor", (key,), "unique", "fixture"),
+                     {"name_by_object_id": {key: name}})
+                    for key, name in zip(ids, ("Cup_1", second_name))]
+                row = {}
+                with patch("src.envs.pair_generator.propose_edit", return_value=({"key": "w1"}, {"object_name": "Cup_1"})), \
+                     patch("src.envs.pair_generator.choose_prefix", side_effect=PrefixReached):
+                    with self.assertRaises(PrefixReached):
+                        build_attempt(sim, config, "pair_00000", "direct_stay", task,
+                                      None, Path("unused_no_writes"), row)
+                self.assertEqual(row["actual_target_change"], expected)
+                self.assertEqual(row["kind"], "direct_" + expected)
+                self.assertEqual((row["target_w0"], row["target_w1"]), ids)
+                self.assertEqual(row["target_name_w1"], second_name)
+
+    def test_openness_and_common_container_state_survive_id_regeneration(self):
+        zero = {"x": 0, "y": 0, "z": 0}
+
+        class ControllerFixture:
+            def __init__(self):
+                self.calls = []
+                self.last_event = SimpleNamespace(metadata={"objects": [{
+                    "name": "Box_1", "objectId": "Box|old", "pickupable": True,
+                    "openable": True, "openness": 0.0, "isOpen": False,
+                    "position": dict(zero), "rotation": dict(zero)}],
+                    "agent": {"position": zero, "rotation": zero, "cameraHorizon": 0, "isStanding": True}})
+
+            def step(self, action, **kwargs):
+                self.calls.append((action, kwargs))
+                obj = self.last_event.metadata["objects"][0]
+                if action == "SetObjectPoses":
+                    obj["objectId"] = "Box|regenerated"
+                else:
+                    if kwargs["objectId"] != obj["objectId"]:
+                        raise AssertionError("Native action received stale objectId")
+                    obj.update(openness=kwargs.get("openness", 0), isOpen=action == "OpenObject")
+                self.last_event.metadata.update(lastActionSuccess=True, errorMessage="", actionReturn=None)
+                return self.last_event
+
+        controller = ControllerFixture()
+        sim = PairSimulator(controller, {"scene": "FloorPlan1", "deadline": float("inf"), "max_open_containers": 1})
+        world = sim.world_from_event("w0")
+        self.assertEqual(world["openness"], {"Box_1": 0.0})
+        sim.apply_world(world, ("Box_1",))
+        self.assertEqual(controller.calls[-1][1]["objectId"], "Box|regenerated")
+        self.assertTrue(controller.last_event.metadata["objects"][0]["isOpen"])
+        observation = {"metadata": {"objects": [{"objectId": "Box|old", "name": "Box_1"}]},
+                       "mark_objects": [Mark(1, "Box|old", ("container",), (0, 0, 0, 0), (0, 0), 1)]}
+        with patch.object(sim, "graph", return_value=None), patch.object(sim, "teleport"), \
+             patch("src.envs.pair_simulator.navigation_transitions", return_value=()):
+            transitions = sim.successors(world, ViewState("v0", 0), observation)
+        self.assertEqual(transitions[0].next_state.opened_containers, ("Box_1",))
+        self.assertEqual(controller.calls[-1][1]["objectId"], "Box|regenerated")
+
+    def test_pose_comparison_matches_name_not_position_derived_id(self):
+        obj = {"name": "Cup_1", "objectId": "old", "position": {"x": 0, "y": 1, "z": 0},
+               "rotation": {"x": 0, "y": 0, "z": 0}}
+        self.assertTrue(pose_changes([obj], [{**obj, "objectId": "regenerated"}])["all_object_poses_exact"])
+
     def test_low_difference_does_not_change_strict_fields_or_pass(self):
         flags = dict.fromkeys(REQUIRED_CHECKS, True)
         prefix = {"same_input_at_t_strict": False, "text_exact": True, "prefix_max_abs_diff": 3}
