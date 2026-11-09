@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 79.13148555299267
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib,importlib.util\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.g01_collect_parallel import benchmark_stage,required_timeout\nr=pathlib.Path.cwd(); scenes=['FloorPlan1','FloorPlan7','FloorPlan203','FloorPlan204','FloorPlan301','FloorPlan401'];concurrency=6\nanalysis,analysis_ref=audited_result(r/'results/diag_g01_concurrency_analysis_01.json');assert analysis['_meta']['exit_code']==0\nfor n in ('g01_construction_metadata_cpu_01','g01_construction_metadata_regression_01'):\n test,_=audited_result(r/'results'/f'{n}.json');assert test['_meta']['exit_code']==0 and test['metrics']['command_exit_code']==0\nproof=benchmark_stage(r/'results/gen_train_concurrency_s15_02.json',concurrency)\ntimeout=required_timeout(scenes,concurrency);wall=timeout+30;assert timeout==1600 and wall==1630\nmod=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(mod);mod.loader.exec_module(phase);budget=phase.budget_state(r)\nassert budget['accounted_or_reserved_by_subbudget']['G01']+wall/3600<=20 and budget['accounted_or_reserved_total']+wall/3600<=60\nd={'name':'gen_train_metadata_revalidate_01','purpose':'one bounded metadata-retention and six-lane native-stability revalidation; not a full pool commitment','scenes':scenes,'concurrency':concurrency,'gpus':1,'cpu_cores':12,'maximum_unity_instances':8,'wall_seconds':wall,'timeout_seconds':timeout,'benchmark':proof,'analysis':analysis_ref,'code_fix_commit':'53865bf','budget_before':budget['accounted_or_reserved_by_subbudget'],'requested_ceiling_gpu_hours':wall/3600,'policy':'unchanged thresholds/fixed labels/FOV60/training-only scenes; originals and failed runs preserved; independent acceptance required before qualified counts'}\np=r/'logs/review/diag_g01_metadata_revalidation_plan_01';p.mkdir(exist_ok=False)\nwith (p/'plan.json').open('x') as f:json.dump(d,f,sort_keys=True,indent=2);f.write('\\n')\nnote='\\n### Bounded post-fix G01 revalidation plan\\n\\nSix lanes had the highest measured source-candidate throughput but one native action timeout, so stability is not established. The measured balanced-target extrapolation exceeds the approved20GPUh G01 cap; no full-scale commitment is made. Before expanding, repeat only the same six training scenes after the original-metadata retention fix, with full1200s/scene grants, at most8 Unity processes and oneGPU/12CPU. Requested1630s (0.4527777777777778GPUh), including bounded authentication/render gate/cleanup. This is a limited implementation and stability revalidation within the existing cap; no thresholds or task structure change, and old evidence stays invalid where missing. Source candidates still require independent verification and T02 filtering. Plan: logs/review/diag_g01_metadata_revalidation_plan_01/plan.json.\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('G01_METADATA_REVALIDATION_PLAN: '+json.dumps(d,sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_g01_metadata_revalidation_plan_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_g01_metadata_revalidation_plan_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib,importlib.util\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.g01_collect_parallel import benchmark_stage,required_timeout\nr=pathlib.Path.cwd(); scenes=['FloorPlan1','FloorPlan7','FloorPlan203','FloorPlan204','FloorPlan301','FloorPlan401'];concurrency=6\nanalysis,analysis_ref=audited_result(r/'results/diag_g01_concurrency_analysis_01.json');assert analysis['_meta']['exit_code']==0\nfor n in ('g01_construction_metadata_cpu_01','g01_construction_metadata_regression_01'):\n test,_=audited_result(r/'results'/f'{n}.json');assert test['_meta']['exit_code']==0 and test['metrics']['command_exit_code']==0\nproof=benchmark_stage(r/'results/gen_train_concurrency_s15_02.json',concurrency)\ntimeout=required_timeout(scenes,concurrency);wall=timeout+30;assert timeout==1600 and wall==1630\nmod=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(mod);mod.loader.exec_module(phase);budget=phase.budget_state(r)\nassert budget['accounted_or_reserved_by_subbudget']['G01']+wall/3600<=20 and budget['accounted_or_reserved_total']+wall/3600<=60\nd={'name':'gen_train_metadata_revalidate_01','purpose':'one bounded metadata-retention and six-lane native-stability revalidation; not a full pool commitment','scenes':scenes,'concurrency':concurrency,'gpus':1,'cpu_cores':12,'maximum_unity_instances':8,'wall_seconds':wall,'timeout_seconds':timeout,'benchmark':proof,'analysis':analysis_ref,'code_fix_commit':'53865bf','budget_before':budget['accounted_or_reserved_by_subbudget'],'requested_ceiling_gpu_hours':wall/3600,'policy':'unchanged thresholds/fixed labels/FOV60/training-only scenes; originals and failed runs preserved; independent acceptance required before qualified counts'}\np=r/'logs/review/diag_g01_metadata_revalidation_plan_01';p.mkdir(exist_ok=False)\nwith (p/'plan.json').open('x') as f:json.dump(d,f,sort_keys=True,indent=2);f.write('\\n')\nnote='\\n### Bounded post-fix G01 revalidation plan\\n\\nSix lanes had the highest measured source-candidate throughput but one native action timeout, so stability is not established. The measured balanced-target extrapolation exceeds the approved20GPUh G01 cap; no full-scale commitment is made. Before expanding, repeat only the same six training scenes after the original-metadata retention fix, with full1200s/scene grants, at most8 Unity processes and oneGPU/12CPU. Requested1630s (0.4527777777777778GPUh), including bounded authentication/render gate/cleanup. This is a limited implementation and stability revalidation within the existing cap; no thresholds or task structure change, and old evidence stays invalid where missing. Source candidates still require independent verification and T02 filtering. Plan: logs/review/diag_g01_metadata_revalidation_plan_01/plan.json.\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('G01_METADATA_REVALIDATION_PLAN: '+json.dumps(d,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T16:46:52",
+    "log_path": "logs/runs/diag_g01_metadata_revalidation_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "e4edbdaedad729faabc8d580526f8e970f542e1b",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_g01_metadata_revalidation_plan_01.diff",
+    "end": "2026-11-09T16:48:14",
+    "duration_sec": 79.5,
+    "exit_code": 0,
+    "metrics_sha256": "93c15c7a19eb7c45d06d6555f6ce3cc3bcfc5afd8227ae32dd0a312d3fc2e8b3"
+  }
+}
