@@ -1,0 +1,225 @@
+# run_logged: python3 -u -m src.tools.record_command --name diag_current_pair_inventory_01 -- python3 -c """One-off logged inventory and bounded next-batch plan; no GPU or submission."""
+import copy
+from collections import Counter
+import datetime
+import json
+import os
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path.cwd()))
+from src.tools import merge_pair_v2 as merge
+from src.tools.t01_partition import audited_result, sha_file
+from src.envs import pair_v2_fixed_labels as labels
+from src.tools import g01_collect_parallel as collect
+from src.tools import g01_parallel as launcher
+
+NAME = 'diag_current_pair_inventory_01'
+assert os.environ.get('CVPR_RUN_NAME') == NAME
+ROOT = merge.ROOT
+KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+BASE = {'file': 'logs/review/diag_current_look_inventory_01/current_look_inventory.json',
+        'sha256': '8e2d3b4ac0e15015c0ba14831d904b26baa6bf43afac558bd12ce90423d2e189'}
+NEW = ('results/t01v2_checkpoint_g01_retained_01.json',
+       'results/t01v2_checkpoint_g01_metadata_01.json')
+SCENES = tuple(f'FloorPlan{i}' for i in (8, 9, 10, 205, 206, 207, 302, 303, 304, 402, 403, 404))
+CONCURRENCY = 6
+CACHE = {}
+
+
+def audited(path):
+    if path not in CACHE:
+        data, ref = audited_result(ROOT / path)
+        if not data['_meta'].get('end'):
+            raise ValueError('Unfinished input: ' + path)
+        CACHE[path] = data, ref
+    return CACHE[path]
+
+
+def equal_ref(actual, expected):
+    if any(actual.get(key) != expected[key] for key in ('file', 'sha256', 'metrics_sha256', 'git_commit', 'exit_code')
+           if key in expected):
+        raise ValueError('Changed original reference')
+
+
+def publication(path):
+    data, ref = audited(path)
+    meta, cfg, m = data['_meta'], data['config'], data['metrics']
+    allowed = ('src.tools.t01v2_flip_ranked_review_checkpoint', 'src.tools.t01v2_stay_priority_review_checkpoint',
+               'src.tools.t01v2_g01_review_checkpoint')
+    arguments = None
+    for module in allowed:
+        try:
+            arguments = merge.producer_arguments(meta['command'], module)
+            break
+        except ValueError:
+            pass
+    if (arguments is None or merge.option(arguments, '--name') != meta['name'] or cfg['name'] != meta['name']
+            or meta['exit_code'] != 0 or m.get('errors') != [] or m.get('kind') != 't01v2_review_checkpoint'
+            or m.get('status') != 'checkpoint_ready_for_human_review'
+            or m['published_pair_count'] != len(m['candidate_pairs'])):
+        raise ValueError('Not a complete independently published checkpoint: ' + path)
+    return data, ref
+
+
+def occurrence(checkpoint, checkpoint_ref, entry, cohort):
+    source, source_ref = audited(entry['source_file'])
+    declared = [r for r in checkpoint['sources'] if r.get('file') == source_ref['file']]
+    if len(declared) != 1:
+        raise ValueError('Missing/duplicated original checkpoint source')
+    equal_ref(declared[0], source_ref)
+    if (entry['source_sha256'] != source_ref['sha256']
+            or entry['source_metrics_sha256'] != source_ref['metrics_sha256']):
+        raise ValueError('Published pair source changed')
+    path = merge.reference_path(entry['pair_reference'], within=ROOT / 'data/world_pairs/v2')
+    pair = json.loads(path.read_text())
+    checked = entry['independent_verification']
+    identity = merge.proposal_identity(pair)
+    if (identity != entry['proposal_identity'] or identity != checked['proposal_identity']
+            or checked.get('validity', {}).get('acceptance_passed') is not True
+            or any(pair.get(k) != entry.get(k) for k in ('pair_id', 'scene', 'kind', 'target_w0', 'target_w1'))):
+        raise ValueError('Changed original positive publication identity')
+    if source['config'].get('field_of_view') != 60 or pair['kind'] not in KINDS:
+        raise ValueError('Wrong selected-camera/current class population')
+    expected = labels.pair_fields(pair['pair_id'], pair['identities']['candidate_names'])
+    labels.validate_fields(source['config'])
+    for value in (pair, checked.get('fixed_labels_verified', {})):
+        if any(value.get(k) != v for k, v in expected.items()):
+            raise ValueError('Fixed-label proof differs from the original pair')
+    merge.reference_path(entry['review_image'], within=path.parent)
+    row = {k: copy.deepcopy(entry[k]) for k in ('scene', 'kind', 'pair_id', 'journal_index', 'proposal_identity',
+           'target_w0', 'target_w1', 'pair_reference', 'review_image', 'source_file')}
+    row.update(cohort=cohort, checkpoint=checkpoint_ref, source=source_ref, field_of_view=60,
+        fixed_label_version=labels.VERSION, candidate_label_assignment=expected['candidate_label_assignment'],
+        independent_construction_acceptance=True, full_T02_acceptance=None,
+        full_T02_scope='not established by construction checkpoints; full table/cache/balance acceptance remains separate')
+    return row
+
+
+base = merge.read_reference(BASE)
+if base['current_standard']['unique_count'] != 17 or len(base['current_standard']['pairs']) != 17:
+    raise ValueError('Original fixed17 inventory changed')
+all_rows, publications = [], []
+for original in base['current_standard']['pairs']:
+    data, ref = publication(original['checkpoint']['file'])
+    equal_ref(ref, original['checkpoint'])
+    matching = [r for r in data['metrics']['candidate_pairs'] if r['pair_reference'] == original['pair_reference']]
+    if len(matching) != 1:
+        raise ValueError('Original fixed17 pair absent or ambiguous')
+    item = occurrence(data, ref, matching[0], 'original_fixed17')
+    if item['proposal_identity'] != original['proposal_identity']:
+        raise ValueError('Original fixed17 proposal changed')
+    all_rows.append(item)
+    if ref not in publications:
+        publications.append(ref)
+for name in NEW:
+    data, ref = publication(name)
+    publications.append(ref)
+    for entry in data['metrics']['candidate_pairs']:
+        all_rows.append(occurrence(data, ref, entry, Path(name).stem))
+
+# Original conflict/dedup definition, including original ordered w0/w1 points.
+# Keep selected AND surplus: inventory is not a silently trimmed frozen pool.
+selected, surplus, duplicates = merge.balanced_selection(all_rows)
+unique = sorted(selected + surplus, key=lambda r: (merge.scene_number(r['scene']), r['journal_index'], r['source_file']))
+by_class = {kind: sum(r['kind'] == kind for r in unique) for kind in KINDS}
+by_scene = {scene: {kind: sum(r['scene'] == scene and r['kind'] == kind for r in unique) for kind in KINDS}
+            for scene in sorted({r['scene'] for r in unique}, key=merge.scene_number)}
+over_cap = [{'scene': scene, 'kind': kind, 'inventory_count': count, 'pool_freeze_cap': 8}
+            for scene, values in by_scene.items() for kind, count in values.items() if count > 8]
+inventory = {'observed_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'scope': 'Original fixed17 Look inventory plus retained G01 and metadata G01 independently published construction candidates only',
+    'definition': 'unchanged merge.proposal_identity + balanced_selection conflict checks; selected and surplus both retained',
+    'base_inventory': BASE, 'checkpoints': publications,
+    'cohort_occurrences': dict(Counter(r['cohort'] for r in all_rows)),
+    'unique_count': len(unique), 'by_class': by_class, 'by_scene': by_scene, 'pairs': unique,
+    'all_occurrences': all_rows, 'duplicate_occurrences': duplicates,
+    'construction_acceptance': {'independently_passed_unique': len(unique), 'by_class': by_class},
+    'full_T02_acceptance': {'assessed_by_this_inventory': False, 'confirmed_pass_count': None,
+        'scope': 'Construction publication is not full D4/cache/balancing acceptance. Original17 census remains an unchanged, separate diagnostic cohort.'},
+    'historical_not_current': base['historical_not_current'],
+    'training_pool_frozen': False, 'scene_class_over_cap8_inventory': over_cap,
+    'thresholds_changed': False, 'source_artifacts_modified': False}
+
+benchmark_file = 'results/gen_train_concurrency_s15_02.json'
+benchmark, benchmark_ref = audited(benchmark_file)
+proof = collect.benchmark_stage(Path(benchmark_file), CONCURRENCY)
+equal_ref(proof['source'], benchmark_ref)
+collect.validate_selection(SCENES, CONCURRENCY)
+runner_seconds = collect.runner_timeout(SCENES, CONCURRENCY)
+parent_seconds = collect.required_timeout(SCENES, CONCURRENCY)
+pbs_seconds = parent_seconds + 30
+payload = merge.read_reference(benchmark['config']['submission'], within=ROOT / 'logs/pbs')
+rate = payload['requested_queue_charge_rate']
+if rate != 1 or payload['queue'] != 'autox' or payload['requested_gpu_count'] != 1:
+    raise ValueError('Original premium rate/allocation differs; require an explicit updated budget check')
+walls = [{'concurrency': s['concurrency'], 'wall_seconds_observed': s['wall_seconds_observed'],
+          'completed': s['completed'], 'scope': 'actual fixed-six-scene stage only, excluding gate/parent overhead and not PBS billing'}
+         for s in benchmark['metrics']['stages']]
+name = 'gen_train_next12_60_01'
+command = ['python3', '-u', '-m', 'src.tools.g01_collect_parallel', '--name', name, '--scenes', *SCENES,
+    '--concurrency', str(CONCURRENCY), '--benchmark-source', benchmark_file, '--timeout-seconds', str(parent_seconds)]
+plan = {'scope': 'CPU-prepared bounded next batch only; no GPU submission and no promise to complete1700',
+    'name_suggestion': name, 'command': command, 'scenes': list(SCENES), 'partition': 'fixed80 training only',
+    'gpus': 1, 'cpu_cores_per_gpu': 12, 'queue': 'autox', 'project': 'CFP04-SF-125', 'requested_host': None,
+    'field_of_view': 60, 'resolution': 255, 'seed': 0, 'scene_pairs_per_class': 8,
+    'cloning': False, 'classes': list(KINDS), 'scene_grant_seconds': launcher.SCENE_SECONDS,
+    'concurrency': CONCURRENCY, 'shared_witness_capacity': launcher.capacity(CONCURRENCY),
+    'maximum_simultaneous_Unity_instances': CONCURRENCY + launcher.capacity(CONCURRENCY),
+    'lane_scene_order': [list(SCENES[index::CONCURRENCY]) for index in range(CONCURRENCY)],
+    'runner_timeout_seconds': runner_seconds, 'parent_timeout_seconds': parent_seconds,
+    'minimum_PBS_wall_seconds': pbs_seconds,
+    'PBS_walltime': f'{pbs_seconds//3600:02d}:{pbs_seconds%3600//60:02d}:{pbs_seconds%60:02d}',
+    'queue_charge_rate_from_original_submission': rate,
+    'requested_charged_GPU_hours_upper_bound': pbs_seconds / 3600 * rate,
+    'timing_source': 'existing g01_collect_parallel.required_timeout and runner_timeout; hard execution caps, not measured future yield',
+    'benchmark_reference': benchmark_ref, 'benchmark_stage_proof': proof, 'observed_benchmark_stage_walls': walls,
+    'previous_throughput_analysis': {'file': 'logs/review/diag_g01_concurrency_analysis_01/analysis.json',
+                                   'sha256': sha_file(ROOT / 'logs/review/diag_g01_concurrency_analysis_01/analysis.json')},
+    'metadata_fix_acceptance': publications[-1],
+    'pre_submit_requirements': ['root executes unchanged budget guard with all running/queued reservations',
+        'this expansion round cumulative charged GPU-hours <=20', 'per-GPU render gate; original black retry and cleanup rules',
+        'run_logged for every child; independent checkpoint and provenance audit after ended sources'],
+    'full1700_balanced_goal': 'Prior measured candidate-only extrapolation exceeds20 GPU-hours; already reported. No completion commitment.'}
+
+folder = ROOT / 'logs/review' / NAME
+folder.mkdir(parents=True, exist_ok=False)
+def save(filename, value):
+    path = folder / filename
+    with path.open('x') as stream:
+        json.dump(value, stream, indent=2, sort_keys=True, allow_nan=False)
+        stream.write('\n')
+    return {'file': str(path.relative_to(ROOT)), 'sha256': sha_file(path)}
+inventory_ref = save('current_pair_inventory.json', inventory)
+plan_ref = save('next_g01_12_plan.json', plan)
+lines = ['# Current construction inventory and next bounded batch', '',
+    f'Unique independently constructed pairs: {len(unique)}. Counts: {json.dumps(by_class, sort_keys=True)}.', '',
+    'Original proposal deduplication is unchanged. Historical100-degree Direct and nonfixed-label LookStay are not upgraded. '
+    'Full T02/cache/balancing acceptance is not established here; the original17 census remains separate. No pool is frozen.', '',
+    '| Scene | DirectFlip | DirectStay | LookFlip | LookStay |', '|---|---:|---:|---:|---:|']
+for scene, counts in by_scene.items():
+    lines.append('| ' + scene + ' | ' + ' | '.join(str(counts[k]) for k in KINDS) + ' |')
+lines += ['', 'Inventory entries above8 per scene/class remain visible and require the original pool-freeze balancing step.', '',
+    'Next batch: ' + ', '.join(SCENES) + '.',
+    f'One GPU, concurrency6, each scene a full{launcher.SCENE_SECONDS}s grant; runner{runner_seconds}s, parent{parent_seconds}s, '
+    f'PBS at least{plan["PBS_walltime"]}. Reserved charge upper bound at the original rate: {plan["requested_charged_GPU_hours_upper_bound"]} GPU-hours.',
+    'These are launcher execution caps, not predicted successful-pair throughput. Root must apply the existing live budget guard before submission. '
+    'This expansion round remains capped at20 GPU-hours; no promise to finish1700 pairs.']
+with (folder / 'report.md').open('x') as stream:
+    stream.write('\n'.join(lines) + '\n')
+with (ROOT / 'STATUS.md').open('a') as stream:
+    stream.write(f'\n\nCurrent construction inventory (`{NAME}`): unchanged proposal dedup gives {len(unique)} unique pairs, '
+        + json.dumps(by_class, sort_keys=True) + '. Full T02/cache acceptance remains unestablished here; original17 census is unchanged. '
+        + f'Next12 training scenes are prepared for one GPU/concurrency6, parent{parent_seconds}s, PBS{plan["PBS_walltime"]}; '
+        + f'requested upper bound{plan["requested_charged_GPU_hours_upper_bound"]} charged GPU-hours at rate{rate}, subject to the original live budget guard and round20 ceiling. '
+        + f'[Inventory and plan](logs/review/{NAME}/report.md). No GPU submitted by this diagnostic.\n')
+print('CURRENT_PAIR_INVENTORY_SUMMARY: ' + json.dumps({'inventory': inventory_ref, 'next_batch_plan': plan_ref,
+    'unique_count': len(unique), 'by_class': by_class, 'by_scene': by_scene,
+    'cohort_occurrences': inventory['cohort_occurrences'], 'scene_class_over_cap8_inventory': over_cap,
+    'parent_timeout_seconds': parent_seconds, 'minimum_PBS_wall_seconds': pbs_seconds,
+    'requested_charged_GPU_hours_upper_bound': plan['requested_charged_GPU_hours_upper_bound']}, sort_keys=True, allow_nan=False), flush=True)
+
+# start: 2026-11-09T18:10:52
+CURRENT_PAIR_INVENTORY_SUMMARY: {"by_class": {"direct_flip": 5, "direct_stay": 17, "look_flip": 27, "look_stay": 4}, "by_scene": {"FloorPlan1": {"direct_flip": 2, "direct_stay": 6, "look_flip": 0, "look_stay": 0}, "FloorPlan203": {"direct_flip": 0, "direct_stay": 3, "look_flip": 19, "look_stay": 0}, "FloorPlan204": {"direct_flip": 2, "direct_stay": 3, "look_flip": 1, "look_stay": 0}, "FloorPlan301": {"direct_flip": 0, "direct_stay": 1, "look_flip": 7, "look_stay": 1}, "FloorPlan7": {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}}, "cohort_occurrences": {"original_fixed17": 17, "t01v2_checkpoint_g01_metadata_01": 39, "t01v2_checkpoint_g01_retained_01": 9}, "inventory": {"file": "logs/review/diag_current_pair_inventory_01/current_pair_inventory.json", "sha256": "9cf8be596702ce916b5d7e6c414ce9177fc092084cfdd45367c272ab02f6b7de"}, "minimum_PBS_wall_seconds": 2890, "next_batch_plan": {"file": "logs/review/diag_current_pair_inventory_01/next_g01_12_plan.json", "sha256": "7418072bc282148e4df61671266b05da86274c3fbdbb9d1a417e00bf100e5dea"}, "parent_timeout_seconds": 2860, "requested_charged_GPU_hours_upper_bound": 0.8027777777777778, "scene_class_over_cap8_inventory": [{"inventory_count": 19, "kind": "look_flip", "pool_freeze_cap": 8, "scene": "FloorPlan203"}], "unique_count": 53}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 22.301509290002286}
+# exit_code: 0

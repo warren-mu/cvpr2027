@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.051215198007412255
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib\nr=pathlib.Path.cwd()\nfor n in ('t02_g01_source_cpu_01','diag_look_census_extension_black_guard_01'):\n d=json.loads((r/'results'/f'{n}.json').read_text());assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0\np=r/'STATUS.md'\nwith p.open('a') as f:f.write('\\n### New G01 source adapter and bounded continuation\\n\\nG01-to-T02 source adapter committed5c7ba8b preserves original independent geometry/physical/Controller/index/lease/fixed-label checks and adds the exact G01 checkpoint entry only. Logged t02_g01_source_cpu_01:139 CPU tests passed; this is not GPU/table acceptance. Frozen construction inventory01:53 unique (DF5/DS17/LF27/LS4); original17 Look diagnosis remains distinct and the14 later unique Look inputs will be checked in a separate frozen batch. Next G01 plan logs/review/diag_current_pair_inventory_01/next_g01_12_plan.json covers12 new training scenes, concurrency6, full1200s per scene, parent2860s/PBS2890s, at most0.8027778 GPUh. Existing live budget guard applies before actual submission. Original FP204 extension708196 stopped before pair work at proven black gate on hopper-17 / GPU-2a86a7f5-c15a-8370-668f-62ac65860780; exact native/PBS/PNG cleanup proof in diag_look_census_extension_black_guard_01 permits a same-parameter retry, retaining original failed observation. No scientific rule changed.\\n')\np=r/'tasks/E2E.report.md';t=p.read_text()\nnote=\"\"\"## 当前状态更新（2026-11-09 夜间）\n\n历史 100° Direct 流程已完成步骤 1–5。人类已批准在固定 60° Look 池上补跑 T0/T3，且 T05 §1b 已冻结；当前阻塞是原定五对中的首对在完整视角导出时触发原 Look non_anchor_divergent 规则，尚未得到该固定池的完整表，后续步骤未在新池上运行。不会自行替换样本或改变阈值。\n\n旧 Direct T0/T3 使用奖励端 KL；它们不是新 §1b 的同配置基线。新共同配置为 actor KL loss (low_var_kl, 0.001)，use_kl_in_reward=false，G 只含任务奖励；原 GAE → 证据前替换 → 整批 masked whiten 一次，critic 仍用原回报。t05_frozen_training_cpu_01 已完成 CPU 回归，但不代表新配置 GPU 训练或证据前逻辑已验证。须先在同一合格 Look 池补跑 T0 五步，再跑 T3 五步。原历史费用段落仅代表其当时状态；累计费用以原 canonical PBS 记录和 STATUS 为准。\n\n首对 floorplan203_00002 的失败发生在后续可达位置 v_5c39249b3450164be27f:h0，不是起始共享前缀：原起点 x=-4.5，失败视角 x=-4.25。原帧 000135/000138 中，锚点 Box_8e5b2c6b 在两世界的掩码均为 0；239 个像素的最大通道差 >3，全图最大差 77，集中在右下角 x=241–254、y=235–254 的一块连续地板内部区域，未落在候选物体或分割边界上。45 个非锚点物体的位置和旋转严格相同。差异块在二维投影上邻接/重叠 w1 锚点包围盒的画面边缘，w0 锚点投影则在画面左外；该区域在 w1 整体变暗。现有证据支持局部光照变化的解释，未显示非锚点位姿漂移，但仅凭 RGB、物体掩码和投影不能确定是锚点阴影、反光或具体光路。来源为 results/diag_e2e_look_non_anchor_01.json、results/diag_e2e_look_anchor_projection_01.json，原图在 logs/review/diag_e2e_look_non_anchor_01/original_frames_and_difference.png。这与旧 Direct 对的椅子微位移诊断是不同的失败。\n\n原固定 17 对的完整视角诊断正在收尾；后续 G01 新增独立 Look 另批记录，不将冻结 17 对称为最新全部库存。以下早期阶段记录、失败和耗时保留。\n\n\"\"\"\nhead,sep,tail=t.partition('\\n');p.write_text('# E2E 报告：历史 Direct 流程完成，Look 补跑仍受完整视角规则阻塞\\n\\n'+note+head+'\\n'+tail)\nprint('REPORT_UPDATE: CPU tests passed; original black gate retained; E2E historical/current scope clarified.')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_night_progress_report_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_night_progress_report_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib\nr=pathlib.Path.cwd()\nfor n in ('t02_g01_source_cpu_01','diag_look_census_extension_black_guard_01'):\n d=json.loads((r/'results'/f'{n}.json').read_text());assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0\np=r/'STATUS.md'\nwith p.open('a') as f:f.write('\\n### New G01 source adapter and bounded continuation\\n\\nG01-to-T02 source adapter committed5c7ba8b preserves original independent geometry/physical/Controller/index/lease/fixed-label checks and adds the exact G01 checkpoint entry only. Logged t02_g01_source_cpu_01:139 CPU tests passed; this is not GPU/table acceptance. Frozen construction inventory01:53 unique (DF5/DS17/LF27/LS4); original17 Look diagnosis remains distinct and the14 later unique Look inputs will be checked in a separate frozen batch. Next G01 plan logs/review/diag_current_pair_inventory_01/next_g01_12_plan.json covers12 new training scenes, concurrency6, full1200s per scene, parent2860s/PBS2890s, at most0.8027778 GPUh. Existing live budget guard applies before actual submission. Original FP204 extension708196 stopped before pair work at proven black gate on hopper-17 / GPU-2a86a7f5-c15a-8370-668f-62ac65860780; exact native/PBS/PNG cleanup proof in diag_look_census_extension_black_guard_01 permits a same-parameter retry, retaining original failed observation. No scientific rule changed.\\n')\np=r/'tasks/E2E.report.md';t=p.read_text()\nnote=\"\"\"## 当前状态更新（2026-11-09 夜间）\n\n历史 100° Direct 流程已完成步骤 1–5。人类已批准在固定 60° Look 池上补跑 T0/T3，且 T05 §1b 已冻结；当前阻塞是原定五对中的首对在完整视角导出时触发原 Look non_anchor_divergent 规则，尚未得到该固定池的完整表，后续步骤未在新池上运行。不会自行替换样本或改变阈值。\n\n旧 Direct T0/T3 使用奖励端 KL；它们不是新 §1b 的同配置基线。新共同配置为 actor KL loss (low_var_kl, 0.001)，use_kl_in_reward=false，G 只含任务奖励；原 GAE → 证据前替换 → 整批 masked whiten 一次，critic 仍用原回报。t05_frozen_training_cpu_01 已完成 CPU 回归，但不代表新配置 GPU 训练或证据前逻辑已验证。须先在同一合格 Look 池补跑 T0 五步，再跑 T3 五步。原历史费用段落仅代表其当时状态；累计费用以原 canonical PBS 记录和 STATUS 为准。\n\n首对 floorplan203_00002 的失败发生在后续可达位置 v_5c39249b3450164be27f:h0，不是起始共享前缀：原起点 x=-4.5，失败视角 x=-4.25。原帧 000135/000138 中，锚点 Box_8e5b2c6b 在两世界的掩码均为 0；239 个像素的最大通道差 >3，全图最大差 77，集中在右下角 x=241–254、y=235–254 的一块连续地板内部区域，未落在候选物体或分割边界上。45 个非锚点物体的位置和旋转严格相同。差异块在二维投影上邻接/重叠 w1 锚点包围盒的画面边缘，w0 锚点投影则在画面左外；该区域在 w1 整体变暗。现有证据支持局部光照变化的解释，未显示非锚点位姿漂移，但仅凭 RGB、物体掩码和投影不能确定是锚点阴影、反光或具体光路。来源为 results/diag_e2e_look_non_anchor_01.json、results/diag_e2e_look_anchor_projection_01.json，原图在 logs/review/diag_e2e_look_non_anchor_01/original_frames_and_difference.png。这与旧 Direct 对的椅子微位移诊断是不同的失败。\n\n原固定 17 对的完整视角诊断正在收尾；后续 G01 新增独立 Look 另批记录，不将冻结 17 对称为最新全部库存。以下早期阶段记录、失败和耗时保留。\n\n\"\"\"\nhead,sep,tail=t.partition('\\n');p.write_text('# E2E 报告：历史 Direct 流程完成，Look 补跑仍受完整视角规则阻塞\\n\\n'+note+head+'\\n'+tail)\nprint('REPORT_UPDATE: CPU tests passed; original black gate retained; E2E historical/current scope clarified.')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T18:18:00",
+    "log_path": "logs/runs/diag_night_progress_report_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "5c7ba8bc04a4cf9a407b7b986c0b56edae8a3314",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_night_progress_report_01.diff",
+    "end": "2026-11-09T18:18:01",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "326dfcb1b227fa8bb228500b346a687696819f4bbd774dc0bf08d66f571579d8"
+  }
+}

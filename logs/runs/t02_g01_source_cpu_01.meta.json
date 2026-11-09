@@ -1,0 +1,29 @@
+{
+  "name": "t02_g01_source_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t02_g01_source_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\npatterns=['test_pair_table*.py','test_pair_v2_g01.py','test_g01_geometry_checkpoint.py','test_t01v2_controller_association.py','test_pair_v2_fixed_labels.py','test_g01_parallel.py']\ns=unittest.TestSuite(unittest.defaultTestLoader.discover('tests',pattern=x) for x in patterns)\nr=unittest.TextTestRunner(verbosity=2).run(s)\nraise SystemExit(0 if r.wasSuccessful() else 1)"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T18:15:15",
+  "log_path": "logs/runs/t02_g01_source_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5c7ba8bc04a4cf9a407b7b986c0b56edae8a3314",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/t02_g01_source_cpu_01.diff",
+  "end": "2026-11-09T18:15:53",
+  "duration_sec": 35.8,
+  "exit_code": 0,
+  "metrics_sha256": "4cd76727ed2874981af23261c5f28c3144ae89109f4d1a01f5354a351f59e02a"
+}
