@@ -1,0 +1,144 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794229353.3507578,
+    "cpu_affinity": [
+      48,
+      50,
+      52,
+      54,
+      56,
+      58,
+      60,
+      62,
+      64,
+      66,
+      68,
+      70
+    ],
+    "cuda_visible_devices": "GPU-1c909297-37ab-846e-db01-342162a7544e",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_look_morning_a01",
+    "node": "hopper-21",
+    "pair_file": null,
+    "pair_id": [
+      "floorplan207_00009",
+      "floorplan207_00017",
+      "floorplan207_00063",
+      "floorplan207_00137",
+      "floorplan302_00088"
+    ],
+    "pair_timeout_seconds": 600.0,
+    "pbs_jobid": "708358.hopper-m-02",
+    "resolution": 255,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_look_morning_a01/708358.hopper-m-02",
+    "source": "results/t01v2_checkpoint_g01_next12_01.json",
+    "timeout_seconds": 3240.0,
+    "version": "t02_single_gpu_export_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_morning_a01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t02_look_morning_a01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_morning_a01_gate.json",
+      "git_commit": "8924bcf6250fc11623c1736c79ab9889a03ef1e4",
+      "metrics_sha256": "a0a2e3ca8f08e86c88907902e4ef7aaaefb3d7344d61aaec2b2c02dbd35ec6da",
+      "sha256": "b6325ab8c98602cb29190b2cb4a5f9e3e5c4aa75f84f42ec6f2077acec81ea98"
+    },
+    "kind": "t02_table_export",
+    "pairs": [],
+    "producer_exit_code": 86,
+    "status": "blocked_by_render_gate",
+    "task_acceptance": null,
+    "unstarted_pair_ids": [
+      "floorplan207_00009",
+      "floorplan207_00017",
+      "floorplan207_00063",
+      "floorplan207_00137",
+      "floorplan302_00088"
+    ]
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_morning_a01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t02_look_morning_a01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_morning_a01_gate.json",
+      "git_commit": "8924bcf6250fc11623c1736c79ab9889a03ef1e4",
+      "metrics_sha256": "a0a2e3ca8f08e86c88907902e4ef7aaaefb3d7344d61aaec2b2c02dbd35ec6da",
+      "sha256": "b6325ab8c98602cb29190b2cb4a5f9e3e5c4aa75f84f42ec6f2077acec81ea98"
+    }
+  ],
+  "_meta": {
+    "name": "t02_look_morning_a01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_look_morning_a01",
+      "--source",
+      "results/t01v2_checkpoint_g01_next12_01.json",
+      "--pair-id",
+      "floorplan207_00009",
+      "--pair-id",
+      "floorplan207_00017",
+      "--pair-id",
+      "floorplan207_00063",
+      "--pair-id",
+      "floorplan207_00137",
+      "--pair-id",
+      "floorplan302_00088",
+      "--timeout-seconds",
+      "3240",
+      "--pair-timeout-seconds",
+      "600",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-21",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-09T20:08:32",
+    "log_path": "logs/runs/t02_look_morning_a01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8924bcf6250fc11623c1736c79ab9889a03ef1e4",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/t02_look_morning_a01.diff",
+    "end": "2026-11-09T20:08:53",
+    "duration_sec": 20.1,
+    "exit_code": 86,
+    "metrics_sha256": "a24fdad7453373fe2489827bc9eec2529ecb632eab02f5cfa2c44d1ef4899200"
+  }
+}

@@ -1,0 +1,57 @@
+diff --git a/STATUS.md b/STATUS.md
+index 425400c2..dec8b476 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -914,3 +914,6 @@ E2E remains blocked at original fixed Look pool step1; no replacement of failed
+ 
+ 
+ The two retained FP301 strict distance errors have a separate CPU-only target-predicate diagnosis (diag_t02_fp301_hidden_anchor_predicate_01). Each exact sealed native table has verified D4 coverage of74 states/148 captures; original classify_views triggers non_anchor_divergent zero times, with32/27 hidden-anchor states for00049/00072. Original strict checker errors are reproduced unchanged; original table/export/cache status remains FAIL and combined31 unknown rows are not upgraded. Distance arithmetic diagnostics retain stored/producer equality and a one-ULP verifier difference, not a threshold crossing. No GPU rerender or threshold/checker change.
++
++
++G01 2026-11-09T12:02:28.229650+00:00，作业 708343.hopper-m-02（`diag_g01_next12_02_live_01`）：gen_train_next12_60_02_c6_floorplan2：完整行尝试 94，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_next12_60_02_c6_floorplan13：完整行尝试 29，source-reported {"direct_flip": 0, "direct_stay": 1, "look_flip": 1, "look_stay": 0}；started_complete_journal_prefix；gen_train_next12_60_02_c6_floorplan6：完整行尝试 51，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_next12_60_02_c6_floorplan208：完整行尝试 70，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_next12_60_02_c6_floorplan209：完整行尝试 17，source-reported {"direct_flip": 0, "direct_stay": 3, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_next12_60_02_c6_floorplan210：完整行尝试 62，source-reported {"direct_flip": 0, "direct_stay": 4, "look_flip": 2, "look_stay": 1}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
+diff --git a/tasks/T01v2.report.md b/tasks/T01v2.report.md
+index 665b1fa1..c9d59d26 100644
+--- a/tasks/T01v2.report.md
++++ b/tasks/T01v2.report.md
+@@ -1,3 +1,42 @@
++## 夜间阶段更新（2026-11-09，今晨固定快照）
++
++当前选定 **60°、固定物体标号**，按原 `proposal_identity` 去重后有 **76 对独立构造合格世界对，其中 Look 36 对**。这是构造证据库存，不是已冻结训练池，也不代表完整 T02、缓存或训练验收通过。[库存与场景分布](../logs/review/diag_current_pair_inventory_03/report.md)保留全部代表、重复记录和零产出来源；FloorPlan203 的 LookFlip 19 对超过每场景每类上限8，仍作为库存保留，待原建池流程处理。
++
++| 类别 | 独立构造合格、去重后 |
++|---|---:|
++| DirectFlip | 12 |
++| DirectStay | 28 |
++| LookFlip | 28 |
++| LookStay | 8 |
++
++此快照只包含 inventory03 明确列出的已结束来源。后续 G01 作业 **708343** 产生的世界对不滚入本次76对库存或36对 Look 诊断分母。旧100°直接类以及**旧未固定标号的12对 LookStay**单列历史，不升级或计入当前标准。
++
++视场角依据原同场景小试：100°独立通过 Look 1 对，60°为11对，按预先确定的规则选择60°；配置与判定见 [selected FOV](../configs/t01v2_selected_fov.json)。这批历史对用于选择视场角，不替代后续固定标号验收。补充15的完整包围盒、三维中心距离提议产生了[14对独立通过的 LookFlip及审查图](../logs/review/t01v2_checkpoint_flip_geometry_01/)；人类已转达 Claude 对该批图无阻塞意见，固定标号已确认（记录于 [STATUS.md](../STATUS.md)）。LookFlip至少1对、Look合计至少3对的启动条件已满足，G01按补充14进入有预算上限的扩大采集。
++
++### 完整视角表诊断与阻塞
++
++已完成的[原31对诊断](../logs/review/diag_look_table_census_combined_01/report.md)仍保留固定分母与原失败：
++
++| 结果 | 对数 |
++|---|---:|
++| 触发 `non_anchor_divergent` | 15 |
++| 完整原生校验视角表中未触发该项 | 14 |
++| 严格距离校验失败，仍为未知 | 2 |
++
++“未触发该项”不等于完整 T02或缓存通过。未知项为 FloorPlan301 的 `00049`、`00072`：现有CPU诊断发现距离计算路径的一ULP差异，1.5m判定未改变，但原严格相等检查失败仍保留；没有修改检查器或把谓词单项诊断补作通过。最新 **5 对 Look**（FloorPlan207四对LookStay、FloorPlan302一对LookFlip）均已通过原加载器CPU预检，**完整视角表待补**，见[固定追加计划](../logs/review/diag_morning_look_export_plan_01/report.md)。最终36对汇总只追加这5对，不纳入后续采集。
++
++主要阻塞仍有两类。物理方面，FloorPlan8/9/205按原预检排除；部分新场景在w0落定检查中出现Bed或ToiletPaper位移超过原1cm限制，真实原因与样例见 `results/diag_g01_zero_physical_01.json`，没有更换基准或冻结其他物体来绕过物理验收。渲染方面，固定Look E2E首对在锚点掩码两边均为零时仍出现局部地面变暗；已有记录排除了该次非锚点物体位姿变化，暗区邻近离屏锚点的投影，但不能仅凭RGB区分阴影、反射或证明因果光路，见[原图与差异](../logs/review/diag_e2e_look_non_anchor_01/original_frames_and_difference.png)。**固定五对Look E2E仍停在第1步**，没有换对或放宽隐藏锚点规则；新的Look T0/T3后续GPU步骤及证据前训练尚未运行。
++
++### 偏差记录与费用范围
++
++补充5所需的逐场景、逐类别 `ρ=0.5` 正确目标为a的比例，以及Stay两侧计数，已保存在各批checkpoint的 `metrics.target_balance_unique_qualified`：包括[补充15](../results/t01v2_checkpoint_flip_geometry_01.json)、[Stay小试](../results/t01v2_checkpoint_stay_visible_01.json)、[保留源](../results/t01v2_checkpoint_g01_retained_01.json)、[元数据修复后批次](../results/t01v2_checkpoint_g01_metadata_01.json)和[新12场景批次](../results/t01v2_checkpoint_g01_next12_01.json)。这些是各批次的真实统计，不能跨批直接相加为76对总库的偏差比例；`balance_certified`仍未给出，训练池的角色平衡尚未完成。
++
++本阶段未改变科学阈值、任务结构或固定E2E输入，失败和不完整来源全部保留。此次库存更新与加载预检只用CPU，新增GPU用量为0。最终PBS实际计费及排队时间表由现有canonical记账记录统一补入；申请上限不计作已消费，扩大采集仍受本轮20 GPU·小时及原共享预算约束。
++
++---
++
++以下保留此前阶段的历史报告；其中的计数、标准版本和未完成项均按当时范围解读。
++
+ 
+ ## Supplement12 same-scene Look pilot completed; supplement13 next
