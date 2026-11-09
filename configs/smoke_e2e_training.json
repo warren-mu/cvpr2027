@@ -1,0 +1,29 @@
+{
+  "version": "smoke_e2e_direct_vagen_ppo_v1",
+  "scope": "five_actual_updates_direct_only_E2E_not_T04_common_config_freeze",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "updates": 5,
+  "episodes_per_update": 64,
+  "turns": 5,
+  "response_tokens": 256,
+  "rho": 0.5,
+  "seed": 0,
+  "format_policy": "explicit_human_confirmed_CLI_argument_required",
+  "upstream": "pinned_VAGEN_Base_Navigation_optimizer_GAE_KL_and_sampling",
+  "changes": {
+    "tensor_parallel_size": 1,
+    "gpus": 1,
+    "use_multi_turn_reward": true,
+    "max_trajectory_length": 5000,
+    "truncation": "error",
+    "vllm_gpu_memory_utilization": 0.1,
+    "vllm_enforce_eager": true,
+    "critic_offload": "explicit_CLI_false_first_true_only_separate_recorded_retry",
+    "checkpoint": "only_final_actual_update_in_scratch",
+    "external_logging": false
+  },
+  "T3_scope": "paired_32_world_pairs_exact_prompt_dedup_real_Q_commit_scores_token_GAE_unchanged_post_tau",
+  "pre_evidence_scope": "not_covered_tau0_only_reject_any_pre_evidence_decision",
+  "S1": "actual_per_decision_token_advantages_and_zero_pre_evidence_independent_units_from_update1",
+  "S2": "interval20_no_point_due_in_exactly5updates_no_synthetic_holdout_or_endpoint"
+}
