@@ -119,7 +119,10 @@ class PhysicsDiagnosticTests(unittest.TestCase):
         row={'pair_id':'uncounted','scene':'FloorPlan1','mode':'stay','proposed_pool':'look','counts_as_pair_attempt':False,
             'native_retry_records':{'w0':{'X':{'attempts':[call]}}},'native_retry_failure':{'attempts':[copy.deepcopy(call)]}}
         self.assertEqual(len(diag.native_calls(row)),1)
-        result=diag.diagnose(self.inputs,self.prepare_funnel(uncounted=row))['groups'][0]
+        report=diag.diagnose(self.inputs,self.prepare_funnel(uncounted=row))
+        source=report['source_results'][0]
+        self.assertEqual(source['metrics_sha256'],diag.digest(json.dumps(self.inputs.read(source)['metrics'],sort_keys=True).encode()))
+        result=report['groups'][0]
         self.assertEqual(result['counted_proposals'],0);self.assertEqual(result['uncounted_placement_proposals'],1)
         self.assertEqual(result['native_call_status'],{'failed':1});self.assertEqual(result['physical_failures'],0)
         markdown=diag.markdown_report({'status':'complete','groups':[result]})

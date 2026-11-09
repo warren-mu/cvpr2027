@@ -234,6 +234,7 @@ def diagnose(inputs, funnel_result_sha256):
     assert parent['_meta']['exit_code'] == 0 and parent['_meta'].get('end')
     assert parent['_meta']['name'] == parent['config']['name'] == Path(parent_path).stem
     assert digest(json.dumps(parent['metrics'], sort_keys=True).encode()) == parent['_meta']['metrics_sha256']
+    parent_ref['metrics_sha256'] = parent['_meta']['metrics_sha256']
     # The frozen report is named by the completed producer, not selected from results.
     def find_ref(value):
         if isinstance(value, dict):
