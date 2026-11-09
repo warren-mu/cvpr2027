@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 1.6739568070042878
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.phase_watch import validate_e2e_black_retry\nr=pathlib.Path.cwd();p=json.loads((r/'logs/pbs/smoke_e2e_look_views_01-20261109T065924Z-7d809d31/payload.json').read_text())\na,ar=audited_result(r/'results/smoke_e2e_look_black_accounting_01.json')\no,oref=audited_result(r/'results/smoke_e2e_look_views_01.json');g,gref=audited_result(r/'results/smoke_e2e_look_views_01_gate.json')\nassert a['metrics']['complete_allocation_accounting'] is True\nfields=next(v['fields'] for v in a['config']['jobs'] if v['job_id']=='707867.hopper-m-02')\nreason=validate_e2e_black_retry(r,p,'707867.hopper-m-02',fields,o,g,'smoke_e2e_look_views_01_gate')\nprint('VERIFIED_RETRY: '+json.dumps({'reason':reason,'job':'707867.hopper-m-02','node':g['config']['node'],'allocation':g['config']['allocation'],'actual_accounting':a['metrics'],'references':[ar,oref,gref]},sort_keys=True))\ns=r/'STATUS.md';s.write_text(s.read_text()+'\\n### Look E2E black gate and approved automatic retry\\n\\n707867 ended86 before any export, on hopper-16 / GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d; both original gate and parent cleanup are empty. Original phase_watch.validate_e2e_black_retry independently confirmed '+reason+'. PBS recorded85seconds=0.02361111111111111 allocationGPUh and642seconds queue wait; actual queue multiplier remains1. The retained failed run is followed by the same unpinned oneGPU command under a new run name, with retry_of linking the jobs.\\n')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_e2e_look_retry_guard_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_e2e_look_retry_guard_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.phase_watch import validate_e2e_black_retry\nr=pathlib.Path.cwd();p=json.loads((r/'logs/pbs/smoke_e2e_look_views_01-20261109T065924Z-7d809d31/payload.json').read_text())\na,ar=audited_result(r/'results/smoke_e2e_look_black_accounting_01.json')\no,oref=audited_result(r/'results/smoke_e2e_look_views_01.json');g,gref=audited_result(r/'results/smoke_e2e_look_views_01_gate.json')\nassert a['metrics']['complete_allocation_accounting'] is True\nfields=next(v['fields'] for v in a['config']['jobs'] if v['job_id']=='707867.hopper-m-02')\nreason=validate_e2e_black_retry(r,p,'707867.hopper-m-02',fields,o,g,'smoke_e2e_look_views_01_gate')\nprint('VERIFIED_RETRY: '+json.dumps({'reason':reason,'job':'707867.hopper-m-02','node':g['config']['node'],'allocation':g['config']['allocation'],'actual_accounting':a['metrics'],'references':[ar,oref,gref]},sort_keys=True))\ns=r/'STATUS.md';s.write_text(s.read_text()+'\\n### Look E2E black gate and approved automatic retry\\n\\n707867 ended86 before any export, on hopper-16 / GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d; both original gate and parent cleanup are empty. Original phase_watch.validate_e2e_black_retry independently confirmed '+reason+'. PBS recorded85seconds=0.02361111111111111 allocationGPUh and642seconds queue wait; actual queue multiplier remains1. The retained failed run is followed by the same unpinned oneGPU command under a new run name, with retry_of linking the jobs.\\n')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T15:14:36",
+    "log_path": "logs/runs/diag_e2e_look_retry_guard_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_e2e_look_retry_guard_01.diff",
+    "end": "2026-11-09T15:14:38",
+    "duration_sec": 1.8,
+    "exit_code": 0,
+    "metrics_sha256": "3c1e07f5d55e072ef69d8cb37581f5b3275511602a02781d8b6d4603c4bb0563"
+  }
+}

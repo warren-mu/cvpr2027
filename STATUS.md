@@ -744,3 +744,21 @@ G01 first c2-source independent checkpoint t01v2_checkpoint_g01_c2_01 failed on 
 The optional later G01 collection launcher passed its logged CPU suite (g01_collection_cpu_01); it authenticates workload allocation and cleanup, not scientific acceptance. Bulk submission still waits for actual benchmark throughput/stability and budget planning.
 
 Accounted-or-reserved chargedGPUh: {"E2E": 1.9777777777777779, "G01": 2.1869444444444444, "T01v2": 9.6975}; shared 25.545555555555552/60. These include queued/running walltime ceilings, not solely completed usage.
+
+
+G01 2026-11-09T07:06:56.762569+00:00，作业 707841.hopper-m-02（`diag_g01_live_04`）：gen_train_concurrency_s15_02_c2_floorplan1：完整行尝试 54，source-reported {"direct_flip": 1, "direct_stay": 8, "look_flip": 0, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan7：完整行尝试 43，source-reported {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan203：完整行尝试 35，source-reported {"direct_flip": 0, "direct_stay": 3, "look_flip": 2, "look_stay": 0}；started_complete_journal_prefix；gen_train_concurrency_s15_02_c2_floorplan204：完整行尝试 35，source-reported {"direct_flip": 1, "direct_stay": 2, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
+
+### Look E2E black gate and approved automatic retry
+
+707867 ended86 before any export, on hopper-16 / GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d; both original gate and parent cleanup are empty. Original phase_watch.validate_e2e_black_retry independently confirmed render_gate_black_capture. PBS recorded85seconds=0.02361111111111111 allocationGPUh and642seconds queue wait; actual queue multiplier remains1. The retained failed run is followed by the same unpinned oneGPU command under a new run name, with retry_of linking the jobs.
+
+
+G01 2026-11-09T07:17:26.767601+00:00，作业 707841.hopper-m-02（`diag_g01_live_05`）：gen_train_concurrency_s15_02_c2_floorplan1：完整行尝试 54，source-reported {"direct_flip": 1, "direct_stay": 8, "look_flip": 0, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan7：完整行尝试 43，source-reported {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan203：完整行尝试 67，source-reported {"direct_flip": 0, "direct_stay": 3, "look_flip": 7, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan204：完整行尝试 71，source-reported {"direct_flip": 2, "direct_stay": 3, "look_flip": 0, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan301：完整行尝试 5，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_concurrency_s15_02_c2_floorplan401：完整行尝试 10，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
+
+### Verified black retry and G01 cap diagnosis
+
+E2E707867→707887: same five authenticated Look pairs and unpinned oneGPU37-minute ceiling; original black run and actual accounting retained. New receipt:logs/pbs/smoke_e2e_look_views_01_retry1-20261109T071528Z-3ce74250.
+
+G01 checkpoint diagnostic logs diag_g01_checkpoint_preflight_01/02 confirm missing final construction indexes and last Controller preflight after the raw cap; existing pair Controller preflight bytes match their original SHA. No existing file overwrite/deletion was found by those checks. A future-run-only bounded metadata preservation fix is under review; old missing evidence will not be reconstructed or bypassed. The running benchmark remains unchanged.
+
+Human confirmed all14 independent LookFlip images have no blocking issue and fixed object labels. bb540cf T05 section1b is merged. New Look-pool T0 and T3 five-update runs are authorized under the same frozen task-only return/actor-KL pipeline, after CPU checks and E2E export/replay/evaluation.

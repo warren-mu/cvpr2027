@@ -1,0 +1,236 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794210418.201365,
+    "approved_pair_ids": [
+      "floorplan203_00002",
+      "floorplan203_00004",
+      "floorplan203_00010",
+      "floorplan203_00020",
+      "floorplan203_00024"
+    ],
+    "budget_scope": "root must enforce cumulative 4 charged GPUh across ALL E2E jobs/retries",
+    "cpu_affinity": [
+      49,
+      51,
+      53,
+      55,
+      57,
+      59,
+      61,
+      63,
+      65,
+      67,
+      69,
+      71
+    ],
+    "cuda_visible_devices": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d",
+    "depth": 4,
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "smoke_e2e_look_views_01",
+    "node": "hopper-16",
+    "pair_timeout_seconds": 390.0,
+    "pbs_jobid": "707867.hopper-m-02",
+    "policy": {
+      "depth": 4,
+      "episode_turns": 5,
+      "failure_scope": "all_selected_pairs_and_all_twenty_states_no_filtering",
+      "formal_T02_minimum_distinct_pair_states": 200,
+      "per_state_policy": {
+        "either_positive_requires_iou": true,
+        "failure_scope": "whole_downstream_pipeline",
+        "fresh_pair_render_process": "one_new_process_same_exact_camera_pose",
+        "mask_count_absolute_tolerance_pixels": 10,
+        "mask_count_reference": "cached_count",
+        "mask_count_relative_tolerance": 0.02,
+        "minimum_distinct_pair_states": 200,
+        "minimum_mask_iou": 0.9,
+        "non_anchor_divergence": "Look rejects; Direct forks with own world RGB and records a count (supplement 8)",
+        "resolution": 255,
+        "rgb_difference": "diagnostic_only_except_existing_shared_state_definition"
+      },
+      "sample_size": 20,
+      "scope": "approved_five_pair_E2E_smoke_only_not_paper_or_formal_T02",
+      "seed": 0
+    },
+    "raw_cap_scope": "per owned export/fresh worker; not a whole-job cap",
+    "resolution": 255,
+    "review_images": [
+      {
+        "bytes": 600011,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/t01v2_checkpoint_flip_geometry_01/00000_look_flip.png",
+        "sha256": "125090db6f2340a56e11e342c1aa3d0518f49acbe8c384b1856e2a3570ccd48f"
+      },
+      {
+        "bytes": 600163,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/t01v2_checkpoint_flip_geometry_01/00001_look_flip.png",
+        "sha256": "4755f1ecac1f3cc342d556e24d45e3abee1648eb2f9c6af873036e5df703887e"
+      },
+      {
+        "bytes": 599891,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/t01v2_checkpoint_flip_geometry_01/00002_look_flip.png",
+        "sha256": "5fe0aff8eb55a1e4a0b77287badea7e67daf2c211ad868d562c41327c5d0e723"
+      },
+      {
+        "bytes": 600217,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/t01v2_checkpoint_flip_geometry_01/00003_look_flip.png",
+        "sha256": "4beaeaaf6a8d81d72227f8cf511a47f16074531c05b6761d941231a7e0eb1fae"
+      },
+      {
+        "bytes": 604989,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/t01v2_checkpoint_flip_geometry_01/00004_look_flip.png",
+        "sha256": "98805597025c9365e09d472a4d6f3e92ab2382999446194671816a353eead4c9"
+      }
+    ],
+    "review_plan": "configs/smoke_e2e_look_five.json",
+    "review_plan_reference": {
+      "bytes": 2566,
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/smoke_e2e_look_five.json",
+      "sha256": "6a0793e2f14afbb1212cd4038713a2ed1787b11d3e128718a3a38457c748d9c9"
+    },
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01/707867.hopper-m-02",
+    "timeout_seconds": 2160.0,
+    "version": "smoke_e2e_twenty_paired_states_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cleanup_errors": [],
+    "errors": [],
+    "exports": [],
+    "formal_T02_acceptance": null,
+    "formal_cache_matches_live": null,
+    "fresh_runs": [],
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_look_views_01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/smoke_e2e_look_views_01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_look_views_01_gate.json",
+      "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+      "metrics_sha256": "dff6142bcb0f01a9b3c0056301bdf082db13e5dcfb4d0b0d7a862ee00ece52e9",
+      "sha256": "c89c0a65a3cbdcfde036dd3d6fbdc105a4f95a204d3caaf041d9d2dc3918c7df"
+    },
+    "kind": "smoke_e2e_views",
+    "non_anchor_divergent_states_by_pair": {},
+    "paper_result": false,
+    "producer_exit_code": 86,
+    "status": "blocked_by_render_gate",
+    "step1_passed": false,
+    "steps_3_to_5_started": false
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_flip_geometry_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_flip_geometry_01.json",
+      "git_commit": "a6edf7442cf0dc31231421fc2dd0e4ce85e78601",
+      "metrics_sha256": "ebc796436ade0fba6f783be468463b0a10ab41f3e0eb9c226bff28099b1fe001",
+      "sha256": "ab71d4ee9c742a4a774ef11544893e6724c25188e07340702e410c074813881c"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_gate.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_gate.json",
+        "git_commit": "5ff56555c86d1b56ada746efc044798baf11fff7",
+        "metrics_sha256": "6179a58cb31e8b630363438423eca1c917b2f3a65c0aa8fb5e18e538cc49d151",
+        "sha256": "012c44b89d0e2ac28e672f1d9c555c96f60b8615483778f502c65523c32682e2"
+      },
+      "git_commit": "5ff56555c86d1b56ada746efc044798baf11fff7",
+      "log_file": "logs/runs/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203.log",
+      "log_sha256": "06bf4ac9746c8e85c6e3955275ab3c58c6bcdf73428aa672b5cd65f9f7252f4c",
+      "meta_file": "logs/runs/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203.meta.json",
+      "meta_sha256": "69d1af599c9c517d3a0c7c8f82f23eba245add0525c0eafebc50f648315baa22",
+      "metrics_sha256": "efd01d6f2f6a60ed7fa3610763379c69df01e697b55048e9dfaf497a2dfd4743",
+      "metrics_specification": {
+        "actual_document_sha256": "345149801ebba3a5e6948caf381e46bf9ef8bb9fd1714c961b9f98a3ac1565a3",
+        "compatible_references": [
+          "4e010a3"
+        ],
+        "historical_spec": false,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "5ff56555c86d1b56ada746efc044798baf11fff7"
+      },
+      "sha256": "89107160dc0c02f0bdb9a9738c7d19e5e64b55ed485dc8406c37bd4c9493fdf7",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_flip60_fp203_s15_r01/707737_hopper_m_02/FloorPlan203/shard_config.json",
+      "shard_config_sha256": "50cac8f1ae09ee083b43c6e4d9982395443448630472d728bcd9aafd864c61ac"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_look_views_01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/smoke_e2e_look_views_01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_look_views_01_gate.json",
+      "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+      "metrics_sha256": "dff6142bcb0f01a9b3c0056301bdf082db13e5dcfb4d0b0d7a862ee00ece52e9",
+      "sha256": "c89c0a65a3cbdcfde036dd3d6fbdc105a4f95a204d3caaf041d9d2dc3918c7df"
+    }
+  ],
+  "_meta": {
+    "name": "smoke_e2e_look_views_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.smoke_e2e_views",
+      "--name",
+      "smoke_e2e_look_views_01",
+      "--review-plan",
+      "configs/smoke_e2e_look_five.json",
+      "--timeout-seconds",
+      "2160",
+      "--pair-timeout-seconds",
+      "390",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-16",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T15:10:57",
+    "log_path": "logs/runs/smoke_e2e_look_views_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/smoke_e2e_look_views_01.diff",
+    "end": "2026-11-09T15:12:21",
+    "duration_sec": 83.4,
+    "exit_code": 86,
+    "metrics_sha256": "bd1ca7ba6f903382bd1c7083ceab9219b378f9d529d82ee4e5ef22c8fb40f4e7"
+  }
+}
