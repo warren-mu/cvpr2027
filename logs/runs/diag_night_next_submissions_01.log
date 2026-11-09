@@ -1,0 +1,24 @@
+# run_logged: python3 -m src.tools.record_command --name diag_night_next_submissions_01 -- python3 -c import pathlib,json,re,importlib.util,datetime
+r=pathlib.Path.cwd()
+jobs=[]
+for name,job in [('pilot_pairs_v2_stay60_fp203_visible_r01','707865.hopper-m-02'),('smoke_e2e_look_views_01','707867.hopper-m-02')]:
+ folders=list((r/'logs/pbs').glob(name+'-*'));assert len(folders)==1
+ f=folders[0];p=json.loads((f/'payload.json').read_text());s=json.loads((f/'submission.json').read_text())
+ assert s['returncode']==0 and re.findall(r'\b\d+\.hopper-m-\d+\b',s['stdout'])==[job]
+ assert p['requested_gpu_count']==1 and p['requested_host'] is None and p['queue']=='autox'
+ jobs.append({'job':job,'name':name,'receipt':str(f.relative_to(r)),'requested_wall_seconds':p['requested_wall_seconds'],'budget_group':p['budget_group']})
+m=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(m);m.loader.exec_module(phase);b=phase.budget_state(r)
+cpu=json.loads((r/'results/g01_collection_cpu_01.json').read_text());assert cpu['_meta']['exit_code']==0 and cpu['metrics']['command_exit_code']==0
+cp=json.loads((r/'results/t01v2_checkpoint_g01_c2_01.json').read_text());assert cp['_meta']['exit_code']==1 and cp['metrics']['status']=='invalid_evidence'
+note='\n### Night continuation: Stay trial, Look E2E and G01 evidence blocker\n\n'
+note+='Submitted independent oneGPU jobs '+json.dumps(jobs,sort_keys=True)+'. Code and prior CPU checks were pushed at87c018e before submission. No host pin. Both remain bounded by their original subbudget guards.\n\n'
+note+='G01 first c2-source independent checkpoint t01v2_checkpoint_g01_c2_01 failed on referenced scene_preflight evidence path/SHA validation; no new G01 candidates are promoted to qualified. Original failed result and source deadlines are retained; exact root-cause diagnosis is in progress without editing source evidence or thresholds. New generator-reported LookFlip and LookStay images are explicitly provisional.\n\n'
+note+='The optional later G01 collection launcher passed its logged CPU suite (g01_collection_cpu_01); it authenticates workload allocation and cleanup, not scientific acceptance. Bulk submission still waits for actual benchmark throughput/stability and budget planning.\n\n'
+note+='Accounted-or-reserved chargedGPUh: '+json.dumps(b['accounted_or_reserved_by_subbudget'],sort_keys=True)+'; shared '+str(b['accounted_or_reserved_total'])+'/60. These include queued/running walltime ceilings, not solely completed usage.\n'
+p=r/'STATUS.md';assert '### Night continuation: Stay trial, Look E2E and G01 evidence blocker' not in p.read_text();p.write_text(p.read_text()+note)
+print('NIGHT_SUBMISSIONS: '+json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':jobs,'budget':b['accounted_or_reserved_by_subbudget'],'total_reserved_or_actual':b['accounted_or_reserved_total'],'checkpoint_status':cp['metrics']['status']},sort_keys=True))
+
+# start: 2026-11-09T15:02:25
+NIGHT_SUBMISSIONS: {"budget": {"E2E": 1.9777777777777779, "G01": 2.1869444444444444, "T01v2": 9.6975}, "checkpoint_status": "invalid_evidence", "jobs": [{"budget_group": "T01v2", "job": "707865.hopper-m-02", "name": "pilot_pairs_v2_stay60_fp203_visible_r01", "receipt": "logs/pbs/pilot_pairs_v2_stay60_fp203_visible_r01-20261109T065700Z-800714aa", "requested_wall_seconds": 1380}, {"budget_group": "E2E", "job": "707867.hopper-m-02", "name": "smoke_e2e_look_views_01", "receipt": "logs/pbs/smoke_e2e_look_views_01-20261109T065924Z-7d809d31", "requested_wall_seconds": 2220}], "total_reserved_or_actual": 25.545555555555552, "utc": "2026-11-09T07:03:52.861777+00:00"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 87.23784932499984}
+# exit_code: 0

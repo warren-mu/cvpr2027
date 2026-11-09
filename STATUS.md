@@ -727,3 +727,20 @@ The original start-failure707807 was retained; retry707841.hopper-m-02 (gen_trai
 The new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:[["t01v2_stay_priority_cpu_01", 13], ["t01v2_stay_priority_regressions_01", 613], ["smoke_e2e_look_plan_cpu_01", 39]]. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.
 
 Next GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.
+
+
+G01 2026-11-09T06:58:01.362523+00:00，作业 707841.hopper-m-02（`diag_g01_live_03`）：gen_train_concurrency_s15_02_c2_floorplan1：完整行尝试 54，source-reported {"direct_flip": 1, "direct_stay": 8, "look_flip": 0, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan7：完整行尝试 43，source-reported {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan203：完整行尝试 4，source-reported {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_concurrency_s15_02_c2_floorplan204：完整行尝试 4，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
+
+### G01 first provisional LookFlip images
+
+The running c2 FloorPlan203 source reports LookFlip candidates floorplan203_00012. Existing images were hash-bound to archived live journal prefixes and immutable gate/admission/submission identity, then published in logs/review/g01_provisional_lookflip_01. These remain pending ended-source independent acceptance; they are not counted as qualified pairs yet. Logged evidence:diag_g01_provisional_lookflip_01.
+
+### Night continuation: Stay trial, Look E2E and G01 evidence blocker
+
+Submitted independent oneGPU jobs [{"budget_group": "T01v2", "job": "707865.hopper-m-02", "name": "pilot_pairs_v2_stay60_fp203_visible_r01", "receipt": "logs/pbs/pilot_pairs_v2_stay60_fp203_visible_r01-20261109T065700Z-800714aa", "requested_wall_seconds": 1380}, {"budget_group": "E2E", "job": "707867.hopper-m-02", "name": "smoke_e2e_look_views_01", "receipt": "logs/pbs/smoke_e2e_look_views_01-20261109T065924Z-7d809d31", "requested_wall_seconds": 2220}]. Code and prior CPU checks were pushed at87c018e before submission. No host pin. Both remain bounded by their original subbudget guards.
+
+G01 first c2-source independent checkpoint t01v2_checkpoint_g01_c2_01 failed on referenced scene_preflight evidence path/SHA validation; no new G01 candidates are promoted to qualified. Original failed result and source deadlines are retained; exact root-cause diagnosis is in progress without editing source evidence or thresholds. New generator-reported LookFlip and LookStay images are explicitly provisional.
+
+The optional later G01 collection launcher passed its logged CPU suite (g01_collection_cpu_01); it authenticates workload allocation and cleanup, not scientific acceptance. Bulk submission still waits for actual benchmark throughput/stability and budget planning.
+
+Accounted-or-reserved chargedGPUh: {"E2E": 1.9777777777777779, "G01": 2.1869444444444444, "T01v2": 9.6975}; shared 25.545555555555552/60. These include queued/running walltime ceilings, not solely completed usage.

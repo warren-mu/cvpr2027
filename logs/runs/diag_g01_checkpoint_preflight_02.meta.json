@@ -1,0 +1,29 @@
+{
+  "name": "diag_g01_checkpoint_preflight_02",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_checkpoint_preflight_02",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nroot=Path.cwd()\nout=[]\nfor name in (\"gen_train_concurrency_s15_02_c2_floorplan1\",\"gen_train_concurrency_s15_02_c2_floorplan7\"):\n    data=json.loads((root/\"results\"/(name+\".json\")).read_text()); m=data[\"metrics\"]\n    item={\"source\":name,\"search_raw_storage\":m.get(\"search_raw_storage\"),\"clone_raw_storage_limit\":data[\"config\"].get(\"clone_raw_storage_limit\"),\"controllers\":[]}\n    for visit in m.get(\"controller_visits\",[]):\n        folder=Path(visit[\"preflight_reference\"][\"file\"]).parent\n        indexes=[]\n        for p in sorted(folder.glob(\"*index*\")):\n            raw=p.read_bytes()\n            indexes.append({\"file\":str(p),\"sha256\":hashlib.sha256(raw).hexdigest(),\"bytes\":len(raw)})\n        item[\"controllers\"].append({\"controller_id\":visit[\"controller_id\"],\"index_files\":indexes,\"preflight_exists\":(folder/\"scene_preflight.json\").is_file()})\n    out.append(item)\nprint(json.dumps(out,indent=2,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T15:04:37",
+  "log_path": "logs/runs/diag_g01_checkpoint_preflight_02.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "fd2251f49fa3f293ee911fd6ac373d74aca552df",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_g01_checkpoint_preflight_02.diff",
+  "end": "2026-11-09T15:04:39",
+  "duration_sec": 0.5,
+  "exit_code": 0,
+  "metrics_sha256": "fb68a585bf62bb02970d149668a4e69d760ff53a5e0a2f440abffc37dd0ce19b"
+}

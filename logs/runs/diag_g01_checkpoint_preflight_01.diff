@@ -1,0 +1,15 @@
+diff --git a/STATUS.md b/STATUS.md
+index 82df400..124da6f 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -727,3 +727,10 @@ The original start-failure707807 was retained; retry707841.hopper-m-02 (gen_trai
+ The new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:[["t01v2_stay_priority_cpu_01", 13], ["t01v2_stay_priority_regressions_01", 613], ["smoke_e2e_look_plan_cpu_01", 39]]. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.
+ 
+ Next GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.
++
++
++G01 2026-11-09T06:58:01.362523+00:00，作业 707841.hopper-m-02（`diag_g01_live_03`）：gen_train_concurrency_s15_02_c2_floorplan1：完整行尝试 54，source-reported {"direct_flip": 1, "direct_stay": 8, "look_flip": 0, "look_stay": 0}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan7：完整行尝试 43，source-reported {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}；ended_source_reported / incomplete；gen_train_concurrency_s15_02_c2_floorplan203：完整行尝试 4，source-reported {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_concurrency_s15_02_c2_floorplan204：完整行尝试 4，source-reported {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
++
++### G01 first provisional LookFlip images
++
++The running c2 FloorPlan203 source reports LookFlip candidates floorplan203_00012. Existing images were hash-bound to archived live journal prefixes and immutable gate/admission/submission identity, then published in logs/review/g01_provisional_lookflip_01. These remain pending ended-source independent acceptance; they are not counted as qualified pairs yet. Logged evidence:diag_g01_provisional_lookflip_01.

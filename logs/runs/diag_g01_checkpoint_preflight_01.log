@@ -1,0 +1,451 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_checkpoint_preflight_01 -- python3 -c import hashlib,json
+from pathlib import Path
+root=Path.cwd()
+def state(ref):
+    if not isinstance(ref,dict): return {"reference":ref,"exists":False}
+    p=Path(ref["file"])
+    if not p.is_absolute(): p=root/p
+    value={"file":str(p),"expected_sha256":ref.get("sha256"),"exists":p.exists(),"is_file":p.is_file(),"is_symlink":p.is_symlink()}
+    if p.is_file():
+        raw=p.read_bytes(); value.update(actual_sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),mtime_ns=p.stat().st_mtime_ns)
+        value["hash_matches"]=value["actual_sha256"]==ref.get("sha256")
+    return value
+out=[]
+for name in ("gen_train_concurrency_s15_02_c2_floorplan1","gen_train_concurrency_s15_02_c2_floorplan7"):
+    data=json.loads((root/"results"/(name+".json")).read_text()); m=data["metrics"]
+    item={"source":name,"source_end":data["_meta"].get("end"),"selected_controller_id":m.get("selected_controller_id"),"scene_preflight":state(m.get("scene_preflight_reference")),"controllers":[],"passed_pairs":[]}
+    for visit in m.get("controller_visits",[]):
+        entry={k:visit.get(k) for k in ("controller_id","preflight_passed","cleanup_errors","error","worker_pid","role")}
+        entry["preflight"]=state(visit.get("preflight_reference")); entry["raw_index"]=state(visit.get("raw_index"))
+        ref=visit.get("raw_index")
+        if ref and Path(ref["file"]).is_file():
+            index=json.loads(Path(ref["file"]).read_text())
+            entry["index_preflight_entries"]=[r for r in index.get("files",[]) if Path(r["file"]).name=="scene_preflight.json"]
+        p=Path(entry["preflight"].get("file","/nonexistent"))
+        if p.is_file():
+            pre=json.loads(p.read_text())
+            entry["preflight_status"]={k:pre.get(k) for k in ("passed","error","reasons","scene")}
+        item["controllers"].append(entry)
+    for ref in m.get("passed_pair_files",[]):
+        p=root/ref["file"]; pair=json.loads(p.read_text())
+        item["passed_pairs"].append({"pair_id":pair["pair_id"],"kind":pair["kind"],"controller":pair.get("search_controller_id"),"portable_preflight":state(pair.get("scene_preflight_reference"))})
+    out.append(item)
+print(json.dumps(out,indent=2,sort_keys=True))
+
+# start: 2026-11-09T15:02:24
+[
+  {
+    "controllers": [
+      {
+        "cleanup_errors": [],
+        "controller_id": "marked_controller_000",
+        "error": null,
+        "preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_000/construction/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206180249970000
+        },
+        "preflight_passed": true,
+        "preflight_status": {
+          "error": null,
+          "passed": true,
+          "reasons": [],
+          "scene": null
+        },
+        "raw_index": {
+          "exists": false,
+          "expected_sha256": "8292bb9e391665acab2df9d2ad71affe2019fceddee4e00106d922d11cd0dd4c",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_000/construction/evidence_index.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "role": "natural_marked",
+        "worker_pid": 87638
+      },
+      {
+        "cleanup_errors": [],
+        "controller_id": "marked_controller_001",
+        "error": null,
+        "preflight": {
+          "exists": false,
+          "expected_sha256": "772a0df6ce7aeb2dbbdd3c9d5afa26f35ccd14ce6e360c8760481e871e9d808b",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_001/construction/scene_preflight.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "preflight_passed": true,
+        "raw_index": {
+          "exists": false,
+          "expected_sha256": "c6fecd4a30260a9b59f2625c4588abe309c36e5bd60f1679e894c2ae3257237c",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_001/construction/evidence_index.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "role": "natural_marked",
+        "worker_pid": 87638
+      }
+    ],
+    "passed_pairs": [
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00001",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00001/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206270275352000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00005",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00005/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206380733681000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00012",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00012/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206486212839000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00013",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00013/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206516239803000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_flip",
+        "pair_id": "floorplan1_00016",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00016/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206556016444000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00023",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00023/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206686277214000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00029",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00029/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206767351455000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00034",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00034/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206874672011000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan1_00035",
+        "portable_preflight": {
+          "actual_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "bytes": 2266728,
+          "exists": true,
+          "expected_sha256": "f768fcf333515bbca2a58ecdc26e24f03e98db83647c5eddb83623604cd03094",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan1/floorplan1_00035/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206902689478000
+        }
+      }
+    ],
+    "scene_preflight": {
+      "exists": false,
+      "expected_sha256": "772a0df6ce7aeb2dbbdd3c9d5afa26f35ccd14ce6e360c8760481e871e9d808b",
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_001/construction/scene_preflight.json",
+      "is_file": false,
+      "is_symlink": false
+    },
+    "selected_controller_id": "marked_controller_001",
+    "source": "gen_train_concurrency_s15_02_c2_floorplan1",
+    "source_end": "2026-11-09T14:55:32"
+  },
+  {
+    "controllers": [
+      {
+        "cleanup_errors": [],
+        "controller_id": "marked_controller_000",
+        "error": null,
+        "preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_000/construction/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206180014414000
+        },
+        "preflight_passed": true,
+        "preflight_status": {
+          "error": null,
+          "passed": true,
+          "reasons": [],
+          "scene": null
+        },
+        "raw_index": {
+          "exists": false,
+          "expected_sha256": "888e0bf887090df9f7e671e76e8675d8a6aaf9ae2806411b31eaab82293b598f",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_000/construction/evidence_index.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "role": "natural_marked",
+        "worker_pid": 87684
+      },
+      {
+        "cleanup_errors": [],
+        "controller_id": "marked_controller_001",
+        "error": null,
+        "preflight": {
+          "exists": false,
+          "expected_sha256": "cf9abfbd6e91f66c50c98312675187c800d611cb3aca984dcb7d09edbab15151",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_001/construction/scene_preflight.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "preflight_passed": true,
+        "raw_index": {
+          "exists": false,
+          "expected_sha256": "61d2b9d0b460027e65488643ca1736dbde1bf0168f34aeb93843f607127b3c80",
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_001/construction/evidence_index.json",
+          "is_file": false,
+          "is_symlink": false
+        },
+        "role": "natural_marked",
+        "worker_pid": 87684
+      }
+    ],
+    "passed_pairs": [
+      {
+        "controller": "marked_controller_000",
+        "kind": "look_stay",
+        "pair_id": "floorplan7_00001",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00001/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206297630807000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan7_00002",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00002/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206344289832000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan7_00007",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00007/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206466378192000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "look_stay",
+        "pair_id": "floorplan7_00008",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00008/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206493062645000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan7_00011",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00011/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206562375500000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_flip",
+        "pair_id": "floorplan7_00013",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00013/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206597010029000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "look_stay",
+        "pair_id": "floorplan7_00016",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00016/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206670242240000
+        }
+      },
+      {
+        "controller": "marked_controller_000",
+        "kind": "direct_stay",
+        "pair_id": "floorplan7_00018",
+        "portable_preflight": {
+          "actual_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "bytes": 2195001,
+          "exists": true,
+          "expected_sha256": "04428cb9f0b3007eebd14b6100975976d5c5f72f8db70b9316d20aa34752c797",
+          "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan7/floorplan7_00018/scene_preflight.json",
+          "hash_matches": true,
+          "is_file": true,
+          "is_symlink": false,
+          "mtime_ns": 1794206702750695000
+        }
+      }
+    ],
+    "scene_preflight": {
+      "exists": false,
+      "expected_sha256": "cf9abfbd6e91f66c50c98312675187c800d611cb3aca984dcb7d09edbab15151",
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_001/construction/scene_preflight.json",
+      "is_file": false,
+      "is_symlink": false
+    },
+    "selected_controller_id": "marked_controller_001",
+    "source": "gen_train_concurrency_s15_02_c2_floorplan7",
+    "source_end": "2026-11-09T14:55:32"
+  }
+]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 4.911841491993982}
+# exit_code: 0

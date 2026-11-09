@@ -1,0 +1,138 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_checkpoint_preflight_02 -- python3 -c import hashlib,json
+from pathlib import Path
+root=Path.cwd()
+out=[]
+for name in ("gen_train_concurrency_s15_02_c2_floorplan1","gen_train_concurrency_s15_02_c2_floorplan7"):
+    data=json.loads((root/"results"/(name+".json")).read_text()); m=data["metrics"]
+    item={"source":name,"search_raw_storage":m.get("search_raw_storage"),"clone_raw_storage_limit":data["config"].get("clone_raw_storage_limit"),"controllers":[]}
+    for visit in m.get("controller_visits",[]):
+        folder=Path(visit["preflight_reference"]["file"]).parent
+        indexes=[]
+        for p in sorted(folder.glob("*index*")):
+            raw=p.read_bytes()
+            indexes.append({"file":str(p),"sha256":hashlib.sha256(raw).hexdigest(),"bytes":len(raw)})
+        item["controllers"].append({"controller_id":visit["controller_id"],"index_files":indexes,"preflight_exists":(folder/"scene_preflight.json").is_file()})
+    out.append(item)
+print(json.dumps(out,indent=2,sort_keys=True))
+
+# start: 2026-11-09T15:04:37
+[
+  {
+    "clone_raw_storage_limit": {
+      "first_round_limit_bytes": 536870912,
+      "max_stored_payload_bytes_per_simulator": 2147483648,
+      "on_limit": "stop raw materialization and continue search; no evidence-incomplete pair admission",
+      "purpose": "hard storage guard, not a scientific acceptance threshold",
+      "scope": "disabled cloning; scene-wide raw storage cap retained as infrastructure only"
+    },
+    "controllers": [
+      {
+        "controller_id": "marked_controller_000",
+        "index_files": [
+          {
+            "bytes": 1731781,
+            "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_000/construction/evidence_index.jsonl",
+            "sha256": "2593738f4dd8bc2e555918b59d4f063641de72a04376b3b909d156db8815b162"
+          }
+        ],
+        "preflight_exists": true
+      },
+      {
+        "controller_id": "marked_controller_001",
+        "index_files": [
+          {
+            "bytes": 0,
+            "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan1/marked_controller_001/construction/evidence_index.jsonl",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "preflight_exists": false
+      }
+    ],
+    "search_raw_storage": {
+      "cap_events": [
+        {
+          "can_materialize_complete": false,
+          "payload_limit_bytes": 2139095040,
+          "per_store_capacity_exceeded": [],
+          "raw_saving_already_stopped": false,
+          "remaining_payload_bytes": 29983661,
+          "required_payload_bytes": 53835958,
+          "stored_payload_bytes": 2109111379,
+          "terminal_reserve_requested": false
+        }
+      ],
+      "current_attempt_buffer_bytes": 0,
+      "disk_files_deleted": 0,
+      "external_terminal_packet_bytes": 0,
+      "external_terminal_proofs": [],
+      "raw_budget_bytes": 2147483648,
+      "raw_saving_stopped": true,
+      "resident_common_bytes": 293344134,
+      "scope": "raw payload bytes; compact records and append-only index overhead are outside this cap",
+      "stored_payload_bytes": 2109111379,
+      "terminal_reserve_bytes": 8388608
+    },
+    "source": "gen_train_concurrency_s15_02_c2_floorplan1"
+  },
+  {
+    "clone_raw_storage_limit": {
+      "first_round_limit_bytes": 536870912,
+      "max_stored_payload_bytes_per_simulator": 2147483648,
+      "on_limit": "stop raw materialization and continue search; no evidence-incomplete pair admission",
+      "purpose": "hard storage guard, not a scientific acceptance threshold",
+      "scope": "disabled cloning; scene-wide raw storage cap retained as infrastructure only"
+    },
+    "controllers": [
+      {
+        "controller_id": "marked_controller_000",
+        "index_files": [
+          {
+            "bytes": 1728880,
+            "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_000/construction/evidence_index.jsonl",
+            "sha256": "74c5add485d2e1cbc4d713d5efd11f73c257ea56c6f9213535fbaa7b1f852fb4"
+          }
+        ],
+        "preflight_exists": true
+      },
+      {
+        "controller_id": "marked_controller_001",
+        "index_files": [
+          {
+            "bytes": 0,
+            "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan7/marked_controller_001/construction/evidence_index.jsonl",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "preflight_exists": false
+      }
+    ],
+    "search_raw_storage": {
+      "cap_events": [
+        {
+          "can_materialize_complete": false,
+          "payload_limit_bytes": 2139095040,
+          "per_store_capacity_exceeded": [],
+          "raw_saving_already_stopped": false,
+          "remaining_payload_bytes": 103626086,
+          "required_payload_bytes": 129177898,
+          "stored_payload_bytes": 2035468954,
+          "terminal_reserve_requested": false
+        }
+      ],
+      "current_attempt_buffer_bytes": 0,
+      "disk_files_deleted": 0,
+      "external_terminal_packet_bytes": 0,
+      "external_terminal_proofs": [],
+      "raw_budget_bytes": 2147483648,
+      "raw_saving_stopped": true,
+      "resident_common_bytes": 1280886581,
+      "scope": "raw payload bytes; compact records and append-only index overhead are outside this cap",
+      "stored_payload_bytes": 2035468954,
+      "terminal_reserve_bytes": 8388608
+    },
+    "source": "gen_train_concurrency_s15_02_c2_floorplan7"
+  }
+]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.3745883389492519}
+# exit_code: 0

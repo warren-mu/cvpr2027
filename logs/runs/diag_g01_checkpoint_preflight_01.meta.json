@@ -1,0 +1,29 @@
+{
+  "name": "diag_g01_checkpoint_preflight_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_checkpoint_preflight_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nroot=Path.cwd()\ndef state(ref):\n    if not isinstance(ref,dict): return {\"reference\":ref,\"exists\":False}\n    p=Path(ref[\"file\"])\n    if not p.is_absolute(): p=root/p\n    value={\"file\":str(p),\"expected_sha256\":ref.get(\"sha256\"),\"exists\":p.exists(),\"is_file\":p.is_file(),\"is_symlink\":p.is_symlink()}\n    if p.is_file():\n        raw=p.read_bytes(); value.update(actual_sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),mtime_ns=p.stat().st_mtime_ns)\n        value[\"hash_matches\"]=value[\"actual_sha256\"]==ref.get(\"sha256\")\n    return value\nout=[]\nfor name in (\"gen_train_concurrency_s15_02_c2_floorplan1\",\"gen_train_concurrency_s15_02_c2_floorplan7\"):\n    data=json.loads((root/\"results\"/(name+\".json\")).read_text()); m=data[\"metrics\"]\n    item={\"source\":name,\"source_end\":data[\"_meta\"].get(\"end\"),\"selected_controller_id\":m.get(\"selected_controller_id\"),\"scene_preflight\":state(m.get(\"scene_preflight_reference\")),\"controllers\":[],\"passed_pairs\":[]}\n    for visit in m.get(\"controller_visits\",[]):\n        entry={k:visit.get(k) for k in (\"controller_id\",\"preflight_passed\",\"cleanup_errors\",\"error\",\"worker_pid\",\"role\")}\n        entry[\"preflight\"]=state(visit.get(\"preflight_reference\")); entry[\"raw_index\"]=state(visit.get(\"raw_index\"))\n        ref=visit.get(\"raw_index\")\n        if ref and Path(ref[\"file\"]).is_file():\n            index=json.loads(Path(ref[\"file\"]).read_text())\n            entry[\"index_preflight_entries\"]=[r for r in index.get(\"files\",[]) if Path(r[\"file\"]).name==\"scene_preflight.json\"]\n        p=Path(entry[\"preflight\"].get(\"file\",\"/nonexistent\"))\n        if p.is_file():\n            pre=json.loads(p.read_text())\n            entry[\"preflight_status\"]={k:pre.get(k) for k in (\"passed\",\"error\",\"reasons\",\"scene\")}\n        item[\"controllers\"].append(entry)\n    for ref in m.get(\"passed_pair_files\",[]):\n        p=root/ref[\"file\"]; pair=json.loads(p.read_text())\n        item[\"passed_pairs\"].append({\"pair_id\":pair[\"pair_id\"],\"kind\":pair[\"kind\"],\"controller\":pair.get(\"search_controller_id\"),\"portable_preflight\":state(pair.get(\"scene_preflight_reference\"))})\n    out.append(item)\nprint(json.dumps(out,indent=2,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T15:02:24",
+  "log_path": "logs/runs/diag_g01_checkpoint_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "fd2251f49fa3f293ee911fd6ac373d74aca552df",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_g01_checkpoint_preflight_01.diff",
+  "end": "2026-11-09T15:02:30",
+  "duration_sec": 5.1,
+  "exit_code": 0,
+  "metrics_sha256": "93f5e71ea62b12ee5e4412c540b2e9fbde95bbfb8f620f049f77996d227f9f10"
+}
