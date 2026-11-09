@@ -1,13 +1,15 @@
-"""CPU-only contracts for the five-update, direct-only E2E PPO smoke.
+"""CPU-only contracts for bounded legacy and frozen-section1b E2E smokes.
 
-This does not freeze T04's full-training configuration. In particular it never
-defines a decision-level reduction of token GAE for an unseen Look trajectory.
+The frozen path is explicit; the original Direct-only gate remains unchanged.
+This does not certify the full T04 training configuration.
 """
 import hashlib
 import json
 import random
 
 VERSION = 'smoke_e2e_direct_vagen_ppo_v1'
+FROZEN_VERSION = 'smoke_e2e_t05_section1b_v1'
+FROZEN_PIPELINE = 't05_section1b'
 VAGEN_COMMIT = '4e2976d87c0f92c97f9a820803e71908cde5fb71'
 VERL_COMMIT = '3f55021e08b98315213e10d10b709c7f6bbe84f7'
 
@@ -96,6 +98,22 @@ def require_direct(tables):
     if not tables or any(table.states[table.initial_state].shared or not table.kind.startswith('direct_')
                          for table in tables.values()):
         raise ValueError('This smoke preserves token GAE only for the reviewed tau=0 pairs; Look requires the reviewed pre-evidence adapter')
+
+
+def require_training_pool(tables, pipeline):
+    if pipeline == 'legacy_direct':
+        return require_direct(tables)
+    if pipeline != FROZEN_PIPELINE or not tables:
+        raise ValueError('Explicit frozen T05 pipeline and authenticated nonempty pool required')
+    for table in tables.values():
+        if table.kind not in ('direct_flip', 'direct_stay', 'look_flip', 'look_stay'):
+            raise ValueError('Unknown scientific pair class')
+        if bool(table.states[table.initial_state].shared) != table.kind.startswith('look_'):
+            raise ValueError('Pair class disagrees with authenticated initial shared state')
+
+
+def pre_evidence(decision_index, tau):
+    return tau is None or decision_index < tau
 
 
 def task_reward(base_reward, *, action_valid, format_policy):

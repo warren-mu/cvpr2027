@@ -1,8 +1,9 @@
 """T05 decision-level credit and auxiliary-loss contracts.
 
-Production T0/T1 and post-evidence steps keep the upstream masked-GAE output.
-This module never changes critic targets, normalizes advantages, or decides the
-still-unfrozen token-to-decision adapter policy. Revised T05 explicitly conditions
+This scalar reference never changes critic targets or normalizes advantages.
+The frozen T05 §1b production token pipeline is in ``token_credit``; in particular
+its fallback keeps each token instead of aggregating a decision-level GAE.
+Revised T05 explicitly conditions
 Q_commit on the complete public set of selectable candidate action texts.
 All floats supplied here are detached targets; differentiable auxiliary helpers
 are separate and import torch only when explicitly called.

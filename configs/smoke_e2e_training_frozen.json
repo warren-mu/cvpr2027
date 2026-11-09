@@ -1,0 +1,40 @@
+{
+  "version": "smoke_e2e_t05_section1b_v1",
+  "scope": "five_actual_updates_frozen_T05_section1b_E2E_not_full_T04_acceptance",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "updates": 5,
+  "episodes_per_update": 64,
+  "turns": 5,
+  "response_tokens": 256,
+  "rho": 0.5,
+  "seed": 0,
+  "format_policy": "explicit_task_zero",
+  "upstream": "pinned_VAGEN_PPO_with_frozen_T05_task_G_actor_KL_replace_then_whiten",
+  "changes": {
+    "tensor_parallel_size": 1,
+    "gpus": 1,
+    "use_multi_turn_reward": true,
+    "max_trajectory_length": 5000,
+    "truncation": "error",
+    "vllm_gpu_memory_utilization": 0.1,
+    "vllm_enforce_eager": true,
+    "critic_offload": "explicit_CLI_false_first_true_only_separate_recorded_retry",
+    "checkpoint": "only_final_actual_update_in_scratch",
+    "external_logging": false
+  },
+  "T3_scope": "paired32_exact_prompt_dedup_real_Q_commit_prefix_replacement_token_fallback_original_critic_returns",
+  "pre_evidence_scope": "actual_authenticated_temporal_boundaries_T05_section1b",
+  "S1": "actual_token_credit_from_update1_preserved_for_analyst; no variance endpoint estimated",
+  "S2": "interval20_no_point_due_in_exactly5updates_no_synthetic_holdout_or_endpoint",
+  "human_reward_confirmation": {
+    "scope": "E2E T0 and T3",
+    "correct_select": 1,
+    "wrong_select": 0,
+    "observation": -0.05,
+    "invalid_output": 0,
+    "valid_format_bonus": 0,
+    "source": "explicit human reply in Codex conversation, 2026-11-08 America/New_York"
+  },
+  "common_config": "configs/rl_common.yaml",
+  "human_source": "bb540cf and explicit human approval of same Look pool T0/T3 five-update rerun"
+}

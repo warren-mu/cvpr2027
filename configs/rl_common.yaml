@@ -1,0 +1,13 @@
+# T05 §1b frozen 2026-11-09. Merge over the pinned VAGEN public PPO config.
+# This file fixes the common credit/KL pipeline, not a claim of full T04 completion.
+algorithm:
+  adv_estimator: masked_gae
+  gamma: 1.0
+  lam: 1.0
+  use_kl_in_reward: false
+actor_rollout_ref:
+  actor:
+    use_kl_loss: true
+    kl_loss_type: low_var_kl
+    # Pinned VAGEN 4e2976d87c0f92c97f9a820803e71908cde5fb71 default.
+    kl_loss_coef: 0.001

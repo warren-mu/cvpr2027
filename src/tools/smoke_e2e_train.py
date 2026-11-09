@@ -1,4 +1,4 @@
-"""E2E steps 4/5: five actual pinned VAGEN PPO updates on reviewed direct pairs.
+"""E2E steps 4/5: five actual pinned VAGEN PPO updates on an authenticated replay pool.
 
 Run via run_logged only after step 3 passes. Each invocation owns one PBS GPU.
 The explicit format-policy flag must reflect the human's reward decision.
@@ -23,11 +23,11 @@ from src.tools.t02_export import save_json, execution_environment, logged_gate, 
 from src.tools.smoke_e2e_views import file_ref
 from src.tools.smoke_e2e_eval import load_replay, MODEL, STRATEGIES
 from src.tools.smoke_e2e_replay import python_args
-from src.tools.smoke_e2e_training_contract import VERSION, VAGEN_COMMIT, VERL_COMMIT, digest, require_direct
+from src.tools.smoke_e2e_training_contract import VERSION, FROZEN_VERSION, FROZEN_PIPELINE, VAGEN_COMMIT, VERL_COMMIT, digest, require_training_pool
 from src.tools.ray_scratch import reserve_directory
 
 
-def require_eval(path):
+def require_eval(path, pipeline="legacy_direct"):
     data, ref = audited_result(path)
     m, cfg, meta = data['metrics'], data['config'], data['_meta']
     args = python_args(meta['command'])
@@ -46,7 +46,7 @@ def require_eval(path):
         rows = m.get('strategies', {}).get(strategy, [])
         if len(rows) != len(worlds) or {(row.get('pair_id'), row.get('world_id')) for row in rows} != worlds:
             raise ValueError('Step3 must evaluate every reviewed world with all three policies')
-    require_direct(loaded[0])
+    require_training_pool(loaded[0], pipeline)
     return data, ref, loaded
 
 
@@ -65,7 +65,7 @@ def upstream_roots(scratch):
     return result
 
 
-def build_config(model, checkpoint, *, roots, critic_offload):
+def build_config(model, checkpoint, *, roots, critic_offload, pipeline="legacy_direct"):
     from omegaconf import OmegaConf
     path = Path(roots['VAGEN']['path']) / 'vagen/trainer/config/ppo_trainer.yaml'
     config = OmegaConf.load(path)
@@ -110,14 +110,28 @@ def build_config(model, checkpoint, *, roots, critic_offload):
         'rollout_manager.use_service': False}
     for key, value in values.items():
         OmegaConf.update(config, key, value)
-    return config, {'base_yaml_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+    common_ref = None
+    if pipeline == FROZEN_PIPELINE:
+        common_path = ROOT / 'configs/rl_common.yaml'
+        common = OmegaConf.load(common_path)
+        config = OmegaConf.merge(config, common)
+        if (config.algorithm.use_kl_in_reward is not False
+                or config.actor_rollout_ref.actor.use_kl_loss is not True
+                or config.actor_rollout_ref.actor.kl_loss_type != 'low_var_kl'
+                or config.algorithm.gamma != 1 or config.algorithm.lam != 1):
+            raise ValueError('Frozen T05 reward/actor-KL/GAE definition differs')
+        common_ref = file_ref(common_path, ROOT / 'configs')
+        config.trainer.experiment_name = 'frozen_t05_section1b_ppo'
+    elif pipeline != 'legacy_direct':
+        raise ValueError('Unknown credit pipeline')
+    return config, {'frozen_common_reference': common_ref, 'base_yaml_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
                     'explicit_overrides': values}
 
 
 def train_worker(config, connection):
     os.sched_setaffinity(0, config['identity']['cpu_affinity'])
     os.environ['VLLM_ATTENTION_BACKEND'] = 'XFORMERS'
-    source, eval_ref, loaded = require_eval(ROOT / config['eval'])
+    source, eval_ref, loaded = require_eval(ROOT / config['eval'], config['credit_pipeline'])
     roots = upstream_roots(config['identity']['scratch'])
     model = Path(source['metrics']['model_snapshot_directory']).resolve()
     scratch = Path(config['identity']['scratch']).resolve()
@@ -131,19 +145,19 @@ def train_worker(config, connection):
     from verl.single_controller.ray import RayWorkerGroup
     from vagen.trainer.ppo.ray_trainer import Role, ResourcePoolManager
     from src.tools.smoke_e2e_training_runtime import ObservedActorWorker, ObservedCriticWorker, SmokeTrainer
-    smoke_path = ROOT / 'configs/smoke_e2e_training.json'
+    smoke_path = ROOT / ('configs/smoke_e2e_training_frozen.json' if config['credit_pipeline'] == FROZEN_PIPELINE else 'configs/smoke_e2e_training.json')
     smoke_spec = json.loads(smoke_path.read_text())
     if any(smoke_spec.get(key) != expected for key, expected in {
-            'version': VERSION, 'updates': 5, 'episodes_per_update': 64, 'turns': 5,
+            'version': config['version'], 'updates': 5, 'episodes_per_update': 64, 'turns': 5,
             'response_tokens': 256, 'rho': .5, 'seed': 0, 'model': MODEL}.items()):
         raise ValueError('Published smoke configuration disagrees with the bounded adapter')
     actual, config_proof = build_config(model, config['checkpoint_directory'], roots=roots,
-                                        critic_offload=config['critic_offload'])
+                                        critic_offload=config['critic_offload'], pipeline=config['credit_pipeline'])
     stable = OmegaConf.to_container(actual, resolve=True)
     stable['trainer']['default_local_dir'] = '<run_specific_scratch_final_checkpoint>'
     common = {'upstream': {key: value['commit'] for key, value in roots.items()},
         'config': stable, 'format_policy': config['format_policy'], 'eval_source': eval_ref,
-        'adapter_version': VERSION, 'published_smoke_spec': file_ref(smoke_path, ROOT / 'configs'),
+        'adapter_version': config['version'], 'credit_pipeline': config['credit_pipeline'], 'published_smoke_spec': file_ref(smoke_path, ROOT / 'configs'),
         'vllm_attention_backend': 'XFORMERS'}
     common_hash = digest(common)
     config_file = Path(config['training_directory']).parent / 'resolved_smoke_config.json'
@@ -183,7 +197,7 @@ def train_worker(config, connection):
         loaded_seconds = time.monotonic() - started
         result = trainer.smoke_fit(loaded=loaded, arm=config['arm'], format_policy=config['format_policy'],
             directory=config['training_directory'], checkpoint_directory=config['checkpoint_directory'],
-            config_sha256=common_hash)
+            config_sha256=common_hash, pipeline=config['credit_pipeline'])
         if baseline is not None:
             result['per_update_time_ratio_vs_T0'] = [
                 row['total_seconds'] / prior['total_seconds']
@@ -210,17 +224,19 @@ def main():
     parser.add_argument('--baseline')
     parser.add_argument('--format-policy', choices=('explicit_task_zero', 'vagen_valid_bonus'), required=True)
     parser.add_argument('--critic-offload', action='store_true')
+    parser.add_argument('--credit-pipeline', choices=('legacy_direct', FROZEN_PIPELINE), default='legacy_direct')
     parser.add_argument('--timeout-seconds', type=float, required=True)
     parser.add_argument('--gate-timeout-seconds', type=float, default=180.)
     args = parser.parse_args()
     if (not re.fullmatch(r'smoke_e2e_[A-Za-z0-9_]+', args.name) or not 300 <= args.timeout_seconds <= 10800
             or not 15 <= args.gate_timeout_seconds <= args.timeout_seconds - 60
-            or (args.arm == 'T3') != bool(args.baseline)):
+            or (args.arm == 'T3') != bool(args.baseline)
+            or (args.credit_pipeline == FROZEN_PIPELINE and args.format_policy != 'explicit_task_zero')):
         parser.error('Bounded smoke name/deadline required; T3 additionally requires its audited T0 baseline')
     output = ROOT / 'results' / (args.name + '.json')
     if output.exists():
         raise FileExistsError('Preserve previous result; choose a fresh run name')
-    config = {**vars(args), 'version': VERSION, 'gpus': 1, 'model': MODEL,
+    config = {**vars(args), 'version': FROZEN_VERSION if args.credit_pipeline == FROZEN_PIPELINE else VERSION, 'gpus': 1, 'model': MODEL,
               'node': socket.gethostname(), 'updates': 5, 'episodes_per_update': 64, 'seed': 0}
     metrics = {'kind': 'smoke_e2e_training', 'step4_passed': False, 'step5_passed': False,
                'errors': [], 'cleanup_errors': [], 'black_frame_detected': False,
