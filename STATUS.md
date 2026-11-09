@@ -577,3 +577,7 @@ PBS 707668.hopper-m-02 的 FloorPlan204/60° 单元已结束，原运行状态�
 ### Next overnight Flip iteration: ranked native proposals
 
 Commit137bc6a adds an opt-in producer with the existing discovery cadence, exactly equal complete native tokens, and stable Look-only ordering by predicted whole-anchor visibility. It retains every old candidate point, all thresholds, physical checks, frozen renders, seeded orientation, far-first Stay, fixed labels, and independent witness replay. Reason: sealed FP204 and observed FP203 funnels still reject visible anchors at v0; large native-token work also limits the number of trials. Predicted boxes are proposal priorities only; actual rendered masks remain authoritative. CPU regression result: results/t01v2_flip_ranked_cpu_01.json (557 tests, successful). Next units are60°/FloorPlan203 and204, each full1200seconds,1GPU, premium/autox, budget-guarded before submission.
+
+### Overnight live prefix 2026-11-09T05:10:32.638193+00:00
+
+707691 / FloorPlan203 cadence-only r02 continues. Complete observed journal rows: 56; producer-reported classes: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; rejection counts: {"anchor_visible_at_v0": 18, "one_action_evidence_unavailable": 5, "target_uniqueness_or_ratio": 7, "v0_candidates_visibility": 2, "w0_physical": 20, "w1_physical": 4}. This is an archived live prefix, not a final source or independent acceptance. Source: results/t01v2_flip_progress_05.json.
