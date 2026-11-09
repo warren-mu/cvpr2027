@@ -1,0 +1,117 @@
+{
+  "config": {
+    "episode_log": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_eval_02/episodes.jsonl",
+    "episode_rounds": 5,
+    "gate_timeout_seconds": 180.0,
+    "generation": "greedy_vllm",
+    "gpus": 1,
+    "identity": {
+      "cpu_affinity": [
+        73,
+        75,
+        77,
+        79,
+        81,
+        83,
+        85,
+        87,
+        89,
+        91,
+        93,
+        95
+      ],
+      "cuda_visible_devices": "GPU-9317c80e-33a9-8f2c-b611-9a459bb1818e",
+      "pbs_jobid": "707548.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "max_reply_tokens": 256,
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "name": "smoke_e2e_eval_02",
+    "node": "hopper-18",
+    "prompt_system": "You control an embodied agent. Follow the instruction using the numbered marks in the images. At each turn, reply with exactly one action from Available actions, with no explanation. Use select <number> to finish. Observation actions return another image. All earlier images and actions are part of the same episode.",
+    "replay": "results/smoke_e2e_replay_01.json",
+    "strategies": [
+      "obs_never",
+      "obs_always",
+      "diag_base"
+    ],
+    "timeout_seconds": 1140.0,
+    "version": "smoke_e2e_original_model_eval_v1",
+    "vllm_max_model_len": 8192,
+    "vllm_max_num_seqs": 10,
+    "vllm_memory_utilization": 0.4,
+    "world_weight": 0.5
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cleanup_errors": [],
+    "errors": [],
+    "formal_T03_acceptance": null,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_eval_02_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_eval_02_gate.json",
+      "git_commit": "dbce36b8d428daeb814172a6ee774a5ca8216682",
+      "metrics_sha256": "fc4915a274cc2baf7e7aeb9aa1fd574187683fd2339262c1c4fc014ad435c06e",
+      "sha256": "a36317f585db63b725ac38e9a4bdd865e7c61124111f95919fbe6bdffcf67458"
+    },
+    "kind": "smoke_e2e_eval",
+    "paper_result": false,
+    "producer_exit_code": 86,
+    "step3_passed": false,
+    "steps4_5_started": false
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_eval_02_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_eval_02_gate.json",
+      "git_commit": "dbce36b8d428daeb814172a6ee774a5ca8216682",
+      "metrics_sha256": "fc4915a274cc2baf7e7aeb9aa1fd574187683fd2339262c1c4fc014ad435c06e",
+      "sha256": "a36317f585db63b725ac38e9a4bdd865e7c61124111f95919fbe6bdffcf67458"
+    }
+  ],
+  "_meta": {
+    "name": "smoke_e2e_eval_02",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.smoke_e2e_eval",
+      "--name",
+      "smoke_e2e_eval_02",
+      "--replay",
+      "results/smoke_e2e_replay_01.json",
+      "--timeout-seconds",
+      "1140"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-18",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T10:33:56",
+    "log_path": "logs/runs/smoke_e2e_eval_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "dbce36b8d428daeb814172a6ee774a5ca8216682",
+    "git_dirty": false,
+    "end": "2026-11-09T10:34:15",
+    "duration_sec": 18.8,
+    "exit_code": 86,
+    "metrics_sha256": "eda8fb0be13009ed30e5bdbded880805afffef5918354397e2603c3eacb1e079"
+  }
+}
