@@ -637,3 +637,17 @@ Both receipts confirm premium/autox submission,1GPU/12CPU, no host restriction,2
 | pilot_pairs_v2_flip60_fp204_s15_r01 | 707740.hopper-m-02 | 0.38333333333333336 |
 
 After the second requested reservation, the submission ledger bound is T01v2=9.427777777777777/16 and shared T00b+T01=22.47222222222222/60 charged GPU-hours. These are measured-or-reserved upper bounds, not claims that queued allocations have run. Receipt directories: logs/pbs/pilot_pairs_v2_flip60_fp203_s15_r01-20261109T053733Z-cae9d210, logs/pbs/pilot_pairs_v2_flip60_fp204_s15_r01-20261109T053936Z-a2bd404f.
+
+### Supplement15 first provisional LookFlip images
+
+Published 3 generator-reported Look→Flip candidates from the running FP203/FP204 pilots in logs/review/t01v2_s15_provisional_lookflip_02. Independent acceptance remains pending terminal source records and the strict source adapter; none is counted toward expansion yet. Existing images were copied only after binding their hashes to authenticated complete journal prefixes and immutable gate/submission identity. See diag_t01v2_s15_provisional_lookflip_02.
+
+
+### Supplement 15 live journal snapshot t01v2_flip_s15_progress_01
+
+2026-11-09T05:53:12.741094+00:00：仅统计已归档的完整 journal 行；正在运行的源尚未终态验收，reported pass 不等于独立合格，未观察的后续尝试不补为零。原字节快照和 SHA 见 `results/t01v2_flip_s15_progress_01.json` 及对应日志。
+
+| Scene | Complete observed attempts | Reported LookFlip | Reported LookStay | Stored rejection counts |
+|---|---:|---:|---:|---|
+| FloorPlan203 | 60 | 9 | 0 | anchor_visible_at_v0=10; one_action_evidence_unavailable=5; target_uniqueness_or_ratio=14; w0_physical=20; w1_physical=2 |
+| FloorPlan204 | 55 | 1 | 0 | anchor_hidden_but_prefix_rgb_diff_gt3=2; anchor_visible_at_v0=12; one_action_evidence_unavailable=4; target_uniqueness_or_ratio=1; w0_physical=28; w1_physical=7 |

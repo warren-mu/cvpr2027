@@ -1,0 +1,63 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t01v2_s15_provisional_lookflip_01 -- python3 -c import json,hashlib,shutil,datetime
+from pathlib import Path
+from src.tools import t01v2_live_progress as live
+from src.envs import pair_v2_flip_ranked_policy as policy
+root=live.ROOT
+name='diag_t01v2_s15_provisional_lookflip_01'
+directory=root/'logs/runs'/name/'evidence'
+directory.mkdir(parents=True,exist_ok=False)
+out=root/'logs/review/t01v2_s15_provisional_lookflip_01'
+out.mkdir(parents=True,exist_ok=False)
+live.MODULES=(policy.PRODUCER,)
+selected={
+'pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203':['floorplan203_00002','floorplan203_00004'],
+'pilot_pairs_v2_flip60_fp204_s15_r01_j707740_hopper_m_02_g0_floorplan204':['floorplan204_00038']}
+rows=[]
+bindings=[]
+for source,pids in selected.items():
+ lograw,logextent=live.read_prefix(root/'logs/runs'/(source+'.log'))
+ logref=live.archive(lograw,directory,source+'_log.prefix')
+ binding,gate=live.bind_live(source,lograw.decode(),directory)
+ bindings.append(binding)
+ raw,extent=live.read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))
+ journalref=live.archive(raw,directory,source+'_journal.prefix')
+ attempts=[json.loads(x) for x in raw.decode().splitlines()]
+ for pid in pids:
+  matches=[r for r in attempts if r['pair_id']==pid]
+  assert len(matches)==1
+  row=matches[0]
+  assert row['status']=='passed' and row['kind']=='look_flip' and row['scene']==binding['scene']
+  p=root/row['pair_file']
+  assert p.resolve()==(root/'data/world_pairs/v2'/source/pid/'pair.json').resolve()
+  data=p.read_bytes()
+  assert hashlib.sha256(data).hexdigest()==row['pair_sha256']
+  pair=json.loads(data)
+  assert pair['kind']=='look_flip'
+  ref=pair['review_image']; img=root/ref['file']
+  assert img.resolve().parent==p.resolve().parent
+  imdata=img.read_bytes()
+  assert hashlib.sha256(imdata).hexdigest()==ref['sha256']
+  target=out/(pid+'.png')
+  with target.open('xb') as f:f.write(imdata)
+  pairref=live.archive(data,directory,source+'_'+pid+'_pair.json')
+  rows.append({'source':source,'pair_id':pid,'generator_reported_kind':row['kind'],'pair_snapshot':pairref,'journal_prefix':journalref,'log_prefix':logref,'original_image':ref,'published_image':str(target.relative_to(root)),'independent_acceptance':'pending source terminal and strict checker'})
+report={'created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Provisional review images from authenticated live producer; generator-reported candidates only, not independently accepted and not an expansion gate','bindings':bindings,'images':rows}
+(out/'README.md').write_text('# Provisional Look→Flip review images\n\nThese are generator-reported candidates. Independent acceptance remains pending the source terminal record and strict source-specific checker; these images alone do not authorize expansion. The logged snapshot binds the immutable PBS assignment, audited image gate, complete journal prefix, pair hashes and existing image hashes.\n\n'+'\n'.join('- '+r['pair_id']+': '+r['published_image'] for r in rows)+'\n')
+print('PROVISIONAL_REVIEW_IMAGES: '+json.dumps(report,sort_keys=True),flush=True)
+s=root/'STATUS.md'
+s.write_text(s.read_text()+'\n### Supplement15 first provisional LookFlip images\n\nPublished '+str(len(rows))+' generator-reported Look→Flip candidates from the running FP203/FP204 pilots in logs/review/t01v2_s15_provisional_lookflip_01. Independent acceptance remains pending terminal source records and the strict source adapter; none is counted toward expansion yet. Existing images were copied only after binding their hashes to authenticated complete journal prefixes and immutable gate/submission identity. See '+name+'.\n')
+
+# start: 2026-11-09T13:52:18
+Traceback (most recent call last):
+  File "<string>", line 20, in <module>
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_live_progress.py", line 146, in bind_live
+    verify_source_identity(data, gate, logged_runtime=runtime,
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/merge_pair_v2.py", line 218, in verify_source_identity
+    bind_source_fields(config, shard)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_v2_fov.py", line 53, in bind_source_fields
+    actual, expected = declared_fields(config), declared_fields(shard)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_v2_fov.py", line 45, in declared_fields
+    raise ValueError('Unknown or altered FOV contrast declaration')
+ValueError: Unknown or altered FOV contrast declaration
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.4577566820080392}
+# exit_code: 1
