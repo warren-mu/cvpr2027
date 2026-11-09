@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import signal
 import socket
+import subprocess
 import sys
 import time
 import traceback
@@ -21,7 +22,7 @@ from src.envs import pair_v2_g01_policy as policy
 from src.envs import pair_v2_stay_order as stay
 from src.tools.g01_admission import (AdmissionPool, capacity, child_assignment, create_plan)
 from src.tools.t01_partition import sha_file
-from src.tools.t01_parallel_approved import (finish_logged, launch_logged,
+from src.tools.t01_parallel_approved import (finish_logged,
                                            request_stop_logged, stop_logged)
 from src.tools.t01v2_parallel import shard_configuration, validate_mask, verify_shard_result
 
@@ -33,6 +34,30 @@ GATE_SECONDS = 120
 GATE_WRAPPER_SECONDS = 10
 STAGE_FINALIZATION_SECONDS = 30
 PARENT_CLEANUP_SECONDS = 60
+
+
+def launch_logged(name, command, environment, directory):
+    """Same logged child contract in G01's separate, non-overwriting namespace."""
+    if re.fullmatch(r'gen_train_[A-Za-z0-9_]+', name) is None:
+        raise ValueError('Require an explicit unique gen_train_ child name')
+    paths = [ROOT / 'results' / (name + '.json'), ROOT / 'logs/runs' / name]
+    paths += [ROOT / 'logs/runs' / (name + suffix) for suffix in ('.log', '.meta.json', '.diff')]
+    if any(path.exists() or path.is_symlink() for path in paths):
+        raise FileExistsError('Prior G01 evidence exists; choose a new child name')
+    path = Path(directory) / (name + '.launcher.log')
+    stream = path.open('x')
+    env = dict(environment, CVPR_RUN_NAME=name,
+               CVPR_RESULTS_PATH=str(ROOT / 'results' / (name + '.json')))
+    argv = [sys.executable, '-u', str(ROOT / 'scripts/run_logged.py'),
+            '--name', name, '--seed', '0', '--', *command]
+    try:
+        process = subprocess.Popen(argv, cwd=ROOT, env=env, stdout=stream,
+                                   stderr=subprocess.STDOUT, start_new_session=True)
+    except BaseException:
+        stream.close()
+        raise
+    return {'process': process, 'stream': stream, 'launcher_log': path, 'name': name,
+            'start_monotonic': time.monotonic(), 'command': argv}
 
 
 def required_timeout():

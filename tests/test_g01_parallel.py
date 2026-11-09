@@ -15,6 +15,48 @@ from src.envs import pair_v2_stable_shard as stable
 GPU = 'GPU-11111111-2222-3333-4444-555555555555'
 
 
+class LauncherTests(unittest.TestCase):
+    def test_actual_gate_and_scene_namespace_use_original_logged_child_contract(self):
+        with tempfile.TemporaryDirectory() as text:
+            root = Path(text)
+            process = SimpleNamespace(pid=123)
+            for name, module in (
+                    ('gen_train_fixture_j700000_hopper_m_02_gate', 'src.tools.render_gate'),
+                    ('gen_train_fixture_c2_floorplan203', parent.policy.PRODUCER)):
+                command = ['python3', '-u', '-m', module, '--name', name]
+                with patch.object(parent, 'ROOT', root), patch.object(parent.subprocess, 'Popen', return_value=process) as popen:
+                    running = parent.launch_logged(name, command, {'CUDA_VISIBLE_DEVICES': GPU}, root)
+                args, kwargs = popen.call_args
+                self.assertEqual(args[0], [parent.sys.executable, '-u', str(root / 'scripts/run_logged.py'),
+                                          '--name', name, '--seed', '0', '--', *command])
+                self.assertIs(running['process'], process)
+                self.assertTrue(kwargs['start_new_session'])
+                self.assertEqual(kwargs['cwd'], root)
+                self.assertEqual(kwargs['env']['CVPR_RUN_NAME'], name)
+                self.assertEqual(kwargs['env']['CVPR_RESULTS_PATH'], str(root / 'results' / (name + '.json')))
+                self.assertEqual(kwargs['env']['CUDA_VISIBLE_DEVICES'], GPU)
+                running['stream'].close()
+
+    def test_every_existing_evidence_path_and_invalid_name_blocks_dispatch(self):
+        for suffix in ('result', 'directory', '.log', '.meta.json', '.diff', 'launcher'):
+            with tempfile.TemporaryDirectory() as text:
+                root = Path(text); name = 'gen_train_fixture'
+                (root / 'results').mkdir(); (root / 'logs/runs').mkdir(parents=True)
+                path = (root / 'results' / (name + '.json') if suffix == 'result' else
+                        root / 'logs/runs' / name if suffix == 'directory' else
+                        root / (name + '.launcher.log') if suffix == 'launcher' else
+                        root / 'logs/runs' / (name + suffix))
+                if suffix == 'directory': path.mkdir()
+                else: path.write_text('preserved fixture')
+                with patch.object(parent, 'ROOT', root), patch.object(parent.subprocess, 'Popen') as popen:
+                    with self.assertRaises(FileExistsError): parent.launch_logged(name, ['python3'], {}, root)
+                    popen.assert_not_called()
+        with tempfile.TemporaryDirectory() as text, patch.object(parent.subprocess, 'Popen') as popen:
+            for name in ('pilot_pairs_other', 'gen_train_bad/child', 'gen_train_'):
+                with self.assertRaises(ValueError): parent.launch_logged(name, ['python3'], {}, Path(text))
+            popen.assert_not_called()
+
+
 def identity(pid):
     return {'pid': pid, 'start_ticks': 1000 + pid, 'pgid': pid, 'sid': pid}
 
