@@ -622,3 +622,7 @@ Commit772fa9e implements full native-point input, predicted centre3D role ratios
 |---|---:|---:|---:|---:|
 | 707668.hopper-m-02 | 1 | 11.566666666666666 | 0.32666666666666666 | 1 |
 | 707691.hopper-m-02 | 1 | 1.0833333333333333 | 0.32666666666666666 | 1 |
+
+### Supplement15 actual producer ready for the next bounded pilots
+
+Commit601b3f2 connects the approved complete-tuple geometry before physical construction, after the original seed exchange, and at every actual native retry validator. The original successful w0 fallback becomes w1's fixed counterpart. Same-screen-side roles are allowed; original Stay, physical/pixel/solvability/witness checks and fixed labels remain. Focused actual-native/spawn wiring:11 tests passed (results/t01v2_flip_s15_producer_cpu_01.json); complete generation regression:571 tests passed (results/t01v2_flip_s15_regressions_01.json). The strict read-only v2 independent-checkpoint adapter is being completed in parallel; no new pair is independently counted or used to unlock G01 before it passes. Next: two separate1GPU20-minute60° pilots in FloorPlan203/204, premium/autox, no host pin, original per-card image gate and submission budget guard.
