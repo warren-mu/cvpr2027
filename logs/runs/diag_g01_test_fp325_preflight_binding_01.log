@@ -1,0 +1,64 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_test_fp325_preflight_binding_01 -- python3 -c import hashlib,json,subprocess
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+root=Path.cwd().resolve(); name="diag_g01_test_fp325_preflight_binding_01"
+source,source_ref=audited_result("results/gen_test_fixed40_60_b01_c6_floorplan325.json")
+cfg,metrics=source["config"],source["metrics"]
+raw_root=Path(cfg["raw_evidence_dir"]).resolve()
+def sha(raw):return hashlib.sha256(raw).hexdigest()
+def read(ref,within=None):
+ path=(root/ref["file"]).resolve()
+ if within is not None:path.relative_to(Path(within).resolve())
+ blob=path.read_bytes()
+ if sha(blob)!=ref["sha256"]:raise ValueError("Original reference SHA mismatch: "+str(path))
+ if "bytes" in ref and len(blob)!=ref["bytes"]:raise ValueError("Original reference byte size mismatch")
+ return json.loads(blob),blob,path
+journal_path=(root/cfg["attempt_journal"]).resolve(); journal_bytes=journal_path.read_bytes()
+if sha(journal_bytes)!=metrics["attempt_journal_sha256"]:raise ValueError("Final journal SHA mismatch")
+entries=[json.loads(line) for line in journal_bytes.splitlines() if line.strip()]
+rows=[row for row in entries if row.get("pair_id")=="floorplan325_00002"]
+if len(rows)!=1:raise ValueError("Pair not unique in original journal")
+journal_row=rows[0];pair_ref={"file":journal_row["pair_file"],"sha256":journal_row["pair_sha256"]}
+pair,pair_bytes,pair_path=read(pair_ref,root/"data/world_pairs/v2")
+raw,_,_=read(journal_row["raw_attempt"],raw_root)
+if any(pair.get(k)!=raw.get(k) or pair.get(k)!=journal_row.get(k) for k in ("pair_id","scene","status","kind")):raise ValueError("Pair/raw/journal mismatch")
+if pair["search_controller_id"]!=raw["search_controller_id"]:raise ValueError("Pair/raw Controller mismatch")
+if raw.get("pair_file")!=pair_ref["file"] or raw.get("pair_sha256")!=pair_ref["sha256"]:raise ValueError("Raw/pair binding mismatch")
+visits=[]
+for visit in metrics["controller_visits"]:
+ directory=raw_root/visit["controller_id"]/"construction"
+ index,_,_=read(visit["raw_index"],directory)
+ preflight,preflight_bytes,preflight_path=read(visit["preflight_reference"],directory)
+ if preflight_path!=directory/"scene_preflight.json":raise ValueError("Preflight not in exact Controller directory")
+ members=[ref for ref in index["files"] if (root/ref["file"]).resolve()==preflight_path]
+ if len(members)!=1 or members[0]["sha256"]!=visit["preflight_reference"]["sha256"]:raise ValueError("Original index does not bind original preflight")
+ read(members[0],directory)
+ if preflight["passed"]!=visit["preflight_passed"]:raise ValueError("Visit/preflight verdict mismatch")
+ item={"controller_id":visit["controller_id"],"preflight_passed":preflight["passed"],"preflight_reasons":preflight["reasons"],"preflight_reference":visit["preflight_reference"],"index_reference":visit["raw_index"],"indexed_preflight_sha_verified":True,"cleanup_errors":visit["cleanup_errors"],"worker_pid":visit["worker_pid"],"unity_identity":visit["unity_identity"],"original_visit":visit}
+ if visit["controller_id"]==pair["search_controller_id"]:
+  portable,portable_bytes,_=read(pair["scene_preflight_reference"],pair_path.parent)
+  if portable_bytes!=preflight_bytes:raise ValueError("Portable preflight not byte-identical to pair Controller")
+  item["portable_preflight_byte_identical"]=True
+ visits.append(item)
+final,_,final_path=read(metrics["scene_preflight_reference"],raw_root)
+final_matches=[v for v in visits if (root/v["preflight_reference"]["file"]).resolve()==final_path and v["preflight_reference"]["sha256"]==metrics["scene_preflight_reference"]["sha256"]]
+if len(final_matches)!=1:raise ValueError("Final ref does not bind a unique visit")
+final_visit=final_matches[0]
+if final_visit["controller_id"]!=visits[-1]["controller_id"]:raise ValueError("Final ref not last actual visit")
+if metrics["scene_excluded"]["evidence"]!=metrics["scene_preflight_reference"]:raise ValueError("Scene exclusion does not bind final failed preflight")
+passed=[v["controller_id"] for v in visits if v["preflight_passed"] is True]
+if not passed or metrics["selected_controller_id"]!=passed[-1]:raise ValueError("Selected is not the last preflight-passed Controller")
+if final["passed"] is not False or final_visit["cleanup_errors"]!=[]:raise ValueError("Unexpected final visit outcome")
+log=root/source["_meta"]["log_path"]
+code=subprocess.check_output(["git","show",source["_meta"]["git_commit"]+":src/envs/pair_v2_marked_shard.py"],text=True)
+start=code.index("                        preflight = sim.preflight_scene()")
+end=code.index("                        run_search(",start)
+report={"scope":"Read-only original evidence diagnosis; no source or checker changed and no scientific acceptance granted","source_reference":source_ref,"log_reference":{"file":log.relative_to(root).as_posix(),"sha256":sha(log.read_bytes()),"full_FINAL_metrics_authenticated_by_original_auditor":True},"config_scene_preflight_reference":cfg.get("scene_preflight_reference"),"selected_controller_id":metrics["selected_controller_id"],"source_final_preflight_reference":metrics["scene_preflight_reference"],"final_reference_actual_controller":final_visit["controller_id"],"scene_excluded":metrics["scene_excluded"],"pair_reference":pair_ref,"journal_reference":{"file":str(journal_path.relative_to(root)),"sha256":sha(journal_bytes)},"raw_attempt_reference":journal_row["raw_attempt"],"pair_controller_id":pair["search_controller_id"],"portable_preflight_reference":pair["scene_preflight_reference"],"visits":visits,"producer_commit":source["_meta"]["git_commit"],"original_producer_assignment_order":code[start:end],"conclusion":"Final preflight records the last attempted Controller, while selected_controller_id records the last preflight-passed Controller. The later failed preflight is authentic; the earlier pair's portable preflight is byte-identical to its own original Controller preflight. Current checker assumes the two source fields refer to one visit. No SHA/path corruption observed in the explicitly checked chain. Full checkpoint remains invalid until an authorized fix is tested or the entire problematic source is explicitly quarantined."}
+out=root/"logs/runs"/name/"evidence";out.mkdir(parents=True,exist_ok=False)
+with (out/"preflight_binding.json").open("x") as stream:json.dump(report,stream,indent=2);stream.write("\n")
+print("PREFLIGHT_BINDING_DIAG_JSON: "+json.dumps({k:report[k] for k in ("scope","selected_controller_id","final_reference_actual_controller","pair_controller_id","source_final_preflight_reference","portable_preflight_reference","conclusion")},sort_keys=True),flush=True)
+
+# start: 2026-11-10T01:29:13
+PREFLIGHT_BINDING_DIAG_JSON: {"conclusion": "Final preflight records the last attempted Controller, while selected_controller_id records the last preflight-passed Controller. The later failed preflight is authentic; the earlier pair's portable preflight is byte-identical to its own original Controller preflight. Current checker assumes the two source fields refer to one visit. No SHA/path corruption observed in the explicitly checked chain. Full checkpoint remains invalid until an authorized fix is tested or the entire problematic source is explicitly quarantined.", "final_reference_actual_controller": "marked_controller_001", "pair_controller_id": "marked_controller_000", "portable_preflight_reference": {"file": "data/world_pairs/v2/gen_test_fixed40_60_b01_c6_floorplan325/floorplan325_00002/scene_preflight.json", "sha256": "3c9ec07e739a58de231112b179145df17f2ed214ba47a92897c695cc91a728bb"}, "scope": "Read-only original evidence diagnosis; no source or checker changed and no scientific acceptance granted", "selected_controller_id": "marked_controller_000", "source_final_preflight_reference": {"availability": "retained_raw_file", "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_fixed40_60_b01/708894_hopper_m_02/c6/FloorPlan325/marked_controller_001/construction/scene_preflight.json", "materialized": true, "sha256": "8c25a8367f76229fdd3cfa850bbca5de16a3be061013242ce17e702da5f9c6ea"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 2.1200727990362793}
+# exit_code: 0

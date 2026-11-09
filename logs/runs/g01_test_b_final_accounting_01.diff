@@ -1,0 +1,1742 @@
+diff --git a/STATUS.md b/STATUS.md
+index dfcdc3cd..16e56537 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1095,3 +1095,33 @@ gen_test_fixed40_60_a01_retry1_c6_floorplan222: {"direct_flip": 0, "direct_stay"
+ 708894(B)、708912(A_retry1)已通过gate在运行，保留原作业；它们是旧版本全类别计划，不能追溯宣称有新全局配额能力，剩余最大可能产出先保守预留。708909(D)与708918(C_retry1)再次black/F86，实际账已记录，暂不按旧全类别计划重提；后续按新scene×kind不可转移配额补采。新配额实现隔离准备，不热改运行中共享生成器。无可安全新增的测试配额时，空名额先用于T02首6单卡并行实测。后续成本预测按新训练规模与测试目标，不再按训练400。
+ 
+ 测试Look原始预览8张已由diag_g01_test_live_preview_01从封存前缀逐SHA复制至logs/review/g01_test_live_preview_01；显式provisional，原source仍可能在跑，尚非独立验收。
++
++
++## 2026-11-09 17:39 UTC — 测试生成运行中计数
++
++gen_test_fixed40_60_b01_c6_floorplan24: {"direct_flip": 0, "direct_stay": 0, "look_flip": 4, "look_stay": 0}; observed attempts=145; ended
++gen_test_fixed40_60_b01_c6_floorplan224: {"direct_flip": 0, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=59; ended
++gen_test_fixed40_60_b01_c6_floorplan324: {"direct_flip": 0, "direct_stay": 0, "look_flip": 2, "look_stay": 0}; observed attempts=54; ended
++gen_test_fixed40_60_b01_c6_floorplan424: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=107; ended
++gen_test_fixed40_60_b01_c6_floorplan25: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=46; ended
++gen_test_fixed40_60_b01_c6_floorplan225: {"direct_flip": 0, "direct_stay": 3, "look_flip": 6, "look_stay": 0}; observed attempts=97; ended
++gen_test_fixed40_60_b01_c6_floorplan325: {"direct_flip": 1, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=4; ended
++gen_test_fixed40_60_b01_c6_floorplan425: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=141; ended
++gen_test_fixed40_60_b01_c6_floorplan26: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=0; ended
++gen_test_fixed40_60_b01_c6_floorplan226: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=128; ended
++gen_test_fixed40_60_b01_c6_floorplan326: {"direct_flip": 2, "direct_stay": 5, "look_flip": 0, "look_stay": 0}; observed attempts=107; ended
++gen_test_fixed40_60_b01_c6_floorplan426: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=333; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan21: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=24; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan221: {"direct_flip": 2, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=187; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan321: {"direct_flip": 0, "direct_stay": 0, "look_flip": 1, "look_stay": 1}; observed attempts=280; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan421: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=221; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan22: {"direct_flip": 0, "direct_stay": 6, "look_flip": 0, "look_stay": 0}; observed attempts=193; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan222: {"direct_flip": 2, "direct_stay": 6, "look_flip": 6, "look_stay": 3}; observed attempts=135; ended
++gen_test_fixed40_60_a01_retry1_c6_floorplan322: {"direct_flip": 1, "direct_stay": 2, "look_flip": 4, "look_stay": 1}; observed attempts=85; running snapshot
++gen_test_fixed40_60_a01_retry1_c6_floorplan422: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=123; running snapshot
++gen_test_fixed40_60_a01_retry1_c6_floorplan23: {"direct_flip": 6, "direct_stay": 6, "look_flip": 0, "look_stay": 0}; observed attempts=70; running snapshot
++gen_test_fixed40_60_a01_retry1_c6_floorplan223: {"direct_flip": 0, "direct_stay": 3, "look_flip": 0, "look_stay": 0}; observed attempts=85; running snapshot
++gen_test_fixed40_60_a01_retry1_c6_floorplan323: {"direct_flip": 6, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=169; running snapshot
++gen_test_fixed40_60_a01_retry1_c6_floorplan423: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=164; running snapshot
++
++以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 diag_g01_test_live_03。
+diff --git a/scripts/pbs/submit_phase.py b/scripts/pbs/submit_phase.py
+index 77099628..e2d66f14 100644
+--- a/scripts/pbs/submit_phase.py
++++ b/scripts/pbs/submit_phase.py
+@@ -23,8 +23,8 @@ import uuid
+ BATCH = "t00b_t01_20261108"
+ LIMITS = {"T00b": 60.0, "T01": 120.0}
+ TOTAL_LIMIT = 120.0
+-BUDGET_REVISION = "20261109_premium_charged_120_t01v2_16_e2e_4_g01_40_t02_40"
+-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "G01": 40.0, "T02": 40.0}
++BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40"
++SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 6.0, "G01": 40.0, "T02": 40.0}
+ JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
+ 
+ 
+@@ -36,11 +36,19 @@ def budget_group(task, name, command, declared=None):
+                     or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel", "src.tools.t01v2_search_parallel", "src.tools.t01v2_solvable_parallel", "src.tools.t01v2_isolated_parallel", "src.tools.t01v2_marked_parallel"))
+                    for arg in (command or []))
+     e2e = isinstance(name, str) and name.startswith("smoke_e2e_")
++    e2e_pilot = isinstance(name, str) and name.startswith("smoke_e2e_pilot_")
+     e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
+         or arg in ("src.tools.e2e_export", "src.tools.smoke_e2e_views")) for arg in (command or []))
+     g01 = isinstance(name, str) and name.startswith(("gen_train_", "gen_test_"))
+     t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel", "src.tools.t02_cache_check") for arg in (command or []))
+     t02 = isinstance(name, str) and name.startswith("t02_export_")
++    # Step 6 is a new explicitly declared ledger. Never infer it from a generic
++    # smoke command or move historical steps 1--5 out of their original E2E cap.
++    if e2e_pilot or declared == "E2Epilot":
++        if (task != "T01" or not e2e_pilot or declared != "E2Epilot"
++                or named or launched or e2e_launch or g01 or t02_launch):
++            raise ValueError("E2E pilot requires task T01, explicit E2Epilot budget and its own smoke_e2e_pilot_ name")
++        return "E2Epilot"
+     if t02 or declared == "T02":
+         if task != "T01" or not t02 or declared != "T02" or named or launched or e2e or e2e_launch or g01:
+             raise ValueError("T02 export requires task T01, explicit T02 budget and its own t02_export_ name")
+@@ -319,8 +327,8 @@ def validate_request(task, gpus, seconds, name, state, group=None):
+     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
+         raise ValueError("Request would exceed the combined 120 GPU-hour budget")
+     group = budget_group(task, name, [], group)
+-    if group in ("E2E", "T02") and gpus != 1:
+-        raise ValueError("E2E/T02 use exactly one GPU per job")
++    if group in ("E2E", "E2Epilot", "T02") and gpus != 1:
++        raise ValueError("E2E/E2Epilot/T02 use exactly one GPU per job")
+     if group == "G01" and name.startswith("gen_test_") and gpus != 1:
+         raise ValueError("Evaluation generation retains the frozen single-GPU collection plan")
+     if group == "G01" and gpus == 2:
+diff --git a/src/envs/pair_v2_g01_policy.py b/src/envs/pair_v2_g01_policy.py
+index bee96174..fe3cf850 100644
+--- a/src/envs/pair_v2_g01_policy.py
++++ b/src/envs/pair_v2_g01_policy.py
+@@ -13,6 +13,9 @@ from . import pair_v2_flip_geometry as geometry
+ 
+ VERSION = 'g01_mixed_train80_complete_look_geometry_selected60_v2'
+ TEST_VERSION = 'g01_mixed_test40_frozen_generator_selected60_v1'
++QUOTA_VERSIONS = {'train': 'g01_train_static_tickets_selected60_v1',
++                  'test': 'g01_test_static_tickets_selected60_v1'}
++from src.tools import g01_quota_plan as quota_plan
+ PRODUCER = 'src.envs.pair_v2_g01_shard'
+ TRAIN_SCENES = frozenset(f'FloorPlan{i}' for start in (1, 201, 301, 401) for i in range(start, start + 20))
+ TEST_SCENES = frozenset(f'FloorPlan{i}' for start in (21, 221, 321, 421) for i in range(start, start + 10))
+@@ -47,7 +50,7 @@ def class_cap(partition):
+     return 8 if partition == 'train' else 6
+ 
+ 
+-def fields(partition='train'):
++def fields(partition='train', quota=False):
+     split_scenes(partition)
+     spec = copy.deepcopy(POLICY)
+     if partition == 'test':
+@@ -56,24 +59,34 @@ def fields(partition='train'):
+             partition='evaluation only:21–30/221–230/321–330/421–430',
+             per_scene_class_cap=6,
+             purpose='frozen evaluation collection only; never training, tuning or generator pilots')
++    if quota:
++        spec.update(version=QUOTA_VERSIONS[partition], approval='cef90e80 explicit static scene/class tickets',
++            classes='explicit allowed_kinds in the immutable scene assignment',
++            search=search.QUOTA_VERSION, quota=quota_plan.VERSION,
++            actual_class='unchanged scientific classification; only actual classes with reserved tickets are exported')
+     return {'g01_version': spec['version'], 'g01_policy': spec, 'g01_partition': partition}
+ 
+ 
+-def declared(scene, partition='train'):
++def declared(scene, partition='train', quota_assignment=None):
+     if scene not in split_scenes(partition):
+         raise ValueError('G01 scene is outside its explicitly declared train/test partition')
+-    values = fields(partition)
++    values = fields(partition, quota_assignment is not None)
++    quota_fields = {} if quota_assignment is None else quota_plan.declared_fields(quota_assignment)
+     return {'field_of_view': 60, 'fov_contrast_version': values['g01_version'],
+         'fov_contrast_policy': copy.deepcopy(values['g01_policy']), 'fov_contrast_group': 'g01_selected60',
+         **values,
+-        **search.fields(), **labels.fields(), **cadence.fields(),
++        **quota_fields, **search.fields(quota_assignment is not None), **labels.fields(), **cadence.fields(),
+         **sharing.fields(), **rank.fields(), **geometry.fields()}
+ 
+ 
+ def declared_fields(config):
+-    if config.get('fov_contrast_version') not in (VERSION, TEST_VERSION) and not any(key in config for key in FIELDS):
++    if config.get('fov_contrast_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values()) and not any(key in config for key in FIELDS):
+         return _ORIGINAL_DECLARED(config)
+-    expected = declared(config.get('scene'), config.get('g01_partition'))
++    ticketed = any(key in config for key in quota_plan.FIELDS)
++    expected = declared(config.get('scene'), config.get('g01_partition'),
++                        config.get('g01_quota_assignment') if ticketed else None)
++    if ticketed and config.get('g01_quota_assignment') is None:
++        raise ValueError('Partial quota fields cannot upgrade an old source')
+     if any(config.get(key) != item for key, item in expected.items()):
+         raise ValueError('Missing/altered explicit G01 camera/partition/search policy')
+     return expected
+@@ -81,7 +94,7 @@ def declared_fields(config):
+ 
+ def validate_source(config, metrics=None):
+     expected, shard = declared_fields(config), declared_fields(config['shard'])
+-    if (expected.get('g01_version') not in (VERSION, TEST_VERSION) or expected != shard or config['scene'] != config['shard']['scene']
++    if (expected.get('g01_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values()) or expected != shard or config['scene'] != config['shard']['scene']
+             or config.get('producer_module') != PRODUCER or config['shard'].get('producer_module') != PRODUCER):
+         raise ValueError('G01 source differs from its immutable train/test scene/producer policy')
+     if config.get('enable_candidate_clone') is not False or config.get('scene_pairs_per_class') != class_cap(expected['g01_partition']):
+@@ -90,6 +103,8 @@ def validate_source(config, metrics=None):
+         if (not re.fullmatch(r'gen_test_[A-Za-z0-9_]+', config.get('name', ''))
+                 or config['shard'].get('name') != config['name']):
+             raise ValueError('Evaluation source requires its isolated gen_test_ namespace')
++    if config.get('g01_version') in QUOTA_VERSIONS.values():
++        quota_plan.validate_assignment(config)
+     for value in (config, config['shard']):
+         stay.validate_fields(value); labels.validate_fields(value); search.validate_fields(value)
+         for module in (cadence, sharing, rank, geometry):
+diff --git a/src/envs/pair_v2_g01_search.py b/src/envs/pair_v2_g01_search.py
+index 14c9c134..85f2bf96 100644
+--- a/src/envs/pair_v2_g01_search.py
++++ b/src/envs/pair_v2_g01_search.py
+@@ -13,6 +13,7 @@ from . import pair_v2_spawn_sharing as sharing
+ VERSION = 'g01_mixed_complete_look_geometry_four_class_quota_v2'
+ KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+ PER_CLASS = 8
++QUOTA_VERSION = 'g01_static_ticket_proposal_selection_v1'
+ POLICY = {
+     'version': VERSION, 'task': 'G01; approved supplements13/14/15',
+     'look_flip': 'supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged',
+@@ -28,12 +29,19 @@ POLICY = {
+ FIELDS = ('g01_search_version', 'g01_search_policy')
+ 
+ 
+-def fields():
+-    return {FIELDS[0]: VERSION, FIELDS[1]: copy.deepcopy(POLICY)}
++def fields(quota=False):
++    spec = copy.deepcopy(POLICY)
++    if quota:
++        spec.update(version=QUOTA_VERSION,
++            pool_order='only explicit allowed proposal kinds with remaining scene tickets; preserve available pool order',
++            look_attempt_mix='retain Flip/Stay preference while both are open; never propose a disabled or full class',
++            collection='actual output counts bounded by immutable scene/class tickets; scientific acceptance remains separate',
++            balance_after_cap='no forced Flip after its tickets are full; Stay-only is allowed by the new task')
++    return {FIELDS[0]: spec['version'], FIELDS[1]: spec}
+ 
+ 
+ def validate_fields(value):
+-    if any(value.get(key) != item for key, item in fields().items()):
++    if any(value.get(key) != item for key, item in fields(value.get(FIELDS[0]) == QUOTA_VERSION).items()):
+         raise ValueError('Missing or altered G01 mixed-search policy')
+ 
+ 
+@@ -42,18 +50,35 @@ class CollectionQuotaFull(RuntimeError):
+ 
+ 
+ class SceneQuota:
+-    def __init__(self, per_class=PER_CLASS):
++    def __init__(self, per_class=PER_CLASS, *, actual_output_caps=None, allowed_kinds=None):
+         if type(per_class) is not int or per_class not in (6, 8):
+             raise ValueError('Require the approved train8/test6 scene-class cap')
+         self.per_class = per_class
++        self.ticketed = actual_output_caps is not None or allowed_kinds is not None
++        self.limits = {kind: per_class for kind in KINDS}
++        self.allowed = list(KINDS)
++        if self.ticketed:
++            from src.tools.g01_quota_plan import counts
++            self.limits = counts(actual_output_caps)
++            self.allowed = [kind for kind in KINDS if self.limits[kind] > 0]
++            if (allowed_kinds != self.allowed or not self.allowed
++                    or any(value > per_class for value in self.limits.values())):
++                raise ValueError('Invalid bounded scene tickets or allowed proposal classes')
+         self.passed = {kind: 0 for kind in KINDS}
+         self.attempts = {kind: 0 for kind in KINDS}
+         self.saved = set()
+ 
+     def complete(self):
+-        return all(value == self.per_class for value in self.passed.values())
++        return all(self.passed[kind] == self.limits[kind] for kind in KINDS)
+ 
+     def desired_modes(self, pool, preferred):
++        if self.ticketed:
++            choices = [mode for mode in ('flip', 'stay')
++                       if f'{pool}_{mode}' in self.allowed
++                       and self.passed[f'{pool}_{mode}'] < self.limits[f'{pool}_{mode}']]
++            if pool == 'look' and len(choices) == 2:
++                preferred = 'flip' if self.attempts['look_flip'] <= self.attempts['look_stay'] else 'stay'
++            return sorted(choices, key=lambda mode: mode != preferred)
+         if pool == 'look':
+             if self.passed['look_flip'] == self.passed['look_stay'] == self.per_class:
+                 return []
+@@ -68,7 +93,7 @@ class SceneQuota:
+         kind = row.get('kind')
+         if kind not in self.passed:
+             raise ValueError('Unknown actual output class')
+-        if self.passed[kind] >= self.per_class:
++        if self.passed[kind] >= self.limits[kind]:
+             raise CollectionQuotaFull(kind)
+ 
+     def record(self, path, row):
+@@ -77,7 +102,10 @@ class SceneQuota:
+         key = f"{row.get('proposed_pool')}_{row.get('mode')}"
+         if key not in self.attempts:
+             raise ValueError('Counted G01 attempt lacks its actual proposed pool/mode')
+-        if key == 'look_stay' and self.attempts['look_flip'] <= self.attempts['look_stay']:
++        if self.ticketed and (key not in self.allowed or self.passed[key] >= self.limits[key]):
++            raise ValueError('Counted proposal used a disabled or already-full class')
++        if (not self.ticketed and key == 'look_stay'
++                and self.attempts['look_flip'] <= self.attempts['look_stay']):
+             raise ValueError('LookStay consumed unearned actual LookFlip attempt balance')
+         if row.get('status') == 'passed':
+             self.before_export(row)
+@@ -86,6 +114,12 @@ class SceneQuota:
+         self.saved.add(str(path))
+ 
+     def summary(self):
++        if self.ticketed:
++            return {'version': QUOTA_VERSION, 'accepted_by_actual_class': dict(self.passed),
++                    'counted_by_proposed_pool_mode': dict(self.attempts),
++                    'per_scene_class_cap': self.per_class, 'actual_output_caps': dict(self.limits),
++                    'allowed_kinds': list(self.allowed), 'all_class_caps_reached': self.complete(),
++                    'acceptance_scope': 'producer output counts against reserved tickets; not independent acceptance'}
+         return {'version': VERSION, 'accepted_by_actual_class': dict(self.passed),
+                 'counted_by_proposed_pool_mode': dict(self.attempts),
+                 'per_scene_class_cap': self.per_class, 'all_class_caps_reached': self.complete(),
+@@ -186,6 +220,8 @@ class MixedIterator(pools.PoolProposalIterator):
+         if len(self.records) != 1:
+             raise ValueError('One authenticated view/identity catalog required')
+         validate_fields(self.records[0])
++        if (self.records[0].get(FIELDS[0]) == QUOTA_VERSION) != quota.ticketed:
++            raise ValueError('Proposal pool and scene quota versions differ')
+         record = self.records[0]
+         self.streams = {pool: flip.FlipRoles({**record,
+             'points': {'look': record['points'][pool]}, 'stay_points': record['stay_points_by_pool'][pool]})
+@@ -257,4 +293,4 @@ def verify_flip_role(row, candidate_positions):
+     return {'passed': True, 'intended_candidate_roles': sides, 'actual_candidate_roles': actual,
+         'actual_targets_match_intended': actual == sides, 'assignment_digest': declared['assignment_digest'],
+         'scope': 'proposal geometry only; unchanged actual settled target checks remain mandatory',
+-        'g01_search_version': VERSION}
++        'g01_search_version': row['g01_search_version']}
+diff --git a/src/envs/pair_v2_g01_shard.py b/src/envs/pair_v2_g01_shard.py
+index 078472d3..b03b8f44 100644
+--- a/src/envs/pair_v2_g01_shard.py
++++ b/src/envs/pair_v2_g01_shard.py
+@@ -36,7 +36,10 @@ def enable_config(config):
+ 
+ def tags(config=None):
+     partition = 'train' if config is None else config['g01_partition']
+-    return {**stay.tags(), **policy.fields(partition), **search.fields(), **labels.fields(),
++    quota_assignment = None if config is None else config.get('g01_quota_assignment')
++    extra = {} if quota_assignment is None else policy.quota_plan.declared_fields(quota_assignment)
++    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None),
++            **extra, **search.fields(quota_assignment is not None), **labels.fields(),
+             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
+             'producer_module': policy.PRODUCER}
+ 
+@@ -60,9 +63,7 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
+         except search.CollectionQuotaFull as error:
+             if row.get('validity', {}).get('acceptance_passed') is not True or row.get('kind') != str(error):
+                 raise ValueError('Quota skip lacks an unchanged positive scientific verdict') from error
+-            row['collection_quota_skip'] = {'kind': row['kind'], 'per_scene_class_cap': policy.class_cap(config['g01_partition']),
+-                'acceptance_passed_before_collection': True,
+-                'scope': 'collection capacity only; original scientific validity remains unchanged'}
++            row['collection_quota_skip'] = quota_skip(config, row['kind'])
+             row.update(status='rejected', discard_reasons=['collection_quota_full'])
+             return row
+ 
+@@ -72,7 +73,8 @@ def compact_attempt(row):
+     for key in (*policy.FIELDS, *search.FIELDS, *labels.PAIR_FIELDS,
+                 *cadence.FIELDS, *sharing.FIELDS, *rank.FIELDS, *geometry.FIELDS,
+                 'flip_geometry_initial_tuple', 'flip_geometry_final_tuple', 'flip_geometry_native_guards',
+-                'collection_quota_skip', 'proposed_pool'):
++                'collection_quota_skip', 'proposed_pool') + tuple(
++                    key for key in policy.quota_plan.FIELDS if key in row):
+         result[key] = copy.deepcopy(row.get(key))
+     if row.get('collection_quota_skip') is not None:
+         result['validity'] = copy.deepcopy(row.get('validity'))
+@@ -97,9 +99,28 @@ def replay_worker(config, connection):
+     return result
+ 
+ 
++def make_quota(config):
++    partition = 'train' if config is None else config['g01_partition']
++    options = {}
++    if config is not None and config.get('g01_quota_version') is not None:
++        options = {key: config[key] for key in ('actual_output_caps', 'allowed_kinds')}
++    return search.SceneQuota(policy.class_cap(partition), **options)
++
++
++def quota_skip(config, kind):
++    value = {'kind': kind, 'per_scene_class_cap': policy.class_cap(config['g01_partition']),
++        'acceptance_passed_before_collection': True,
++        'scope': 'collection capacity only; original scientific validity remains unchanged'}
++    if config.get('g01_quota_version') is not None:
++        value.update(quota_version=policy.quota_plan.VERSION,
++                     actual_output_cap=config['actual_output_caps'][kind],
++                     plan_reference=copy.deepcopy(config['g01_quota_assignment']['plan_reference']))
++    return value
++
++
+ @contextmanager
+ def installed(config=None):
+-    quota = search.SceneQuota(policy.class_cap(config['g01_partition']) if config is not None else 8)
++    quota = make_quota(config)
+     check = ranked.deadline_check(config) if config is not None else None
+     with stay.installed(), policy.camera_support(), labels.installed(), sharing.installed():
+         original_write, original_summary = marked._BASE_WRITE, marked.summary
+@@ -107,7 +128,10 @@ def installed(config=None):
+         def full_pool(*args, **kwargs):
+             if check is None:
+                 raise RuntimeError('G01 geometry is only bound inside the spawned generator')
+-            return search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
++            record = search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
++            if quota.ticketed:
++                record.update(search.fields(True))
++            return record
+         def observer(sim, proposal, role, record, row, **kwargs):
+             if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':
+                 return ranked.guarded_observer(original_observer, sim, proposal, role, record, row, **kwargs)
+diff --git a/src/tools/g01_collect_parallel.py b/src/tools/g01_collect_parallel.py
+index 80bc388b..f97a16ae 100644
+--- a/src/tools/g01_collect_parallel.py
++++ b/src/tools/g01_collect_parallel.py
+@@ -16,6 +16,7 @@ import sys
+ import traceback
+ 
+ from src.tools import g01_parallel as parent
++from src.tools import g01_quota_plan as quota_plan
+ from src.tools.g01_admission import child_assignment, load_plan, validate_source_admission
+ from src.tools.t01_partition import audited_result, sha_file
+ from src.envs.thor_common import ROOT, write_result
+@@ -186,7 +187,7 @@ def benchmark_stage(path, concurrency):
+         'scope': 'completed workload and known resource cleanup only; no scientific pair acceptance'}
+ 
+ 
+-def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False):
++def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False, quota_reference=None):
+     expected = ['--name', name, '--scenes', *scenes, '--concurrency', str(concurrency),
+                 '--benchmark-source', str(benchmark), '--timeout-seconds', str(timeout)]
+     validate_selection(scenes, concurrency, partition)
+@@ -196,6 +197,9 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
+         expected += ['--partition', partition]
+     elif partition != 'train':
+         raise ValueError('Evaluation collection requires explicit --partition test')
++    if quota_reference is not None:
++        quota_plan.reference(quota_reference)
++        expected += ['--quota-plan', quota_reference['file'], '--quota-plan-sha256', quota_reference['sha256']]
+     matches = []
+     for path in (repo / 'logs/pbs').glob('*/payload.json'):
+         data = json.loads(path.read_text())
+@@ -218,16 +222,29 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
+ 
+ 
+ @contextmanager
+-def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False):
++def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False, quota=None):
+     """Reuse the original scheduler; every binding is process-local and restored."""
+     scenes = validate_selection(scenes, concurrency, partition)
+     previous = {key: getattr(parent, key) for key in
+-                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged')}
++                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged', 'make_shard')}
++    quota_reference = None if quota is None else quota['reference']
++    if quota is not None:
++        quota_plan.validate_structure(quota['plan'])
++        if (quota['plan']['partition'] != partition
++                or [row['scene'] for row in quota['plan']['assignments']] != list(scenes)):
++            raise ValueError('Collection scene order or partition differs from immutable quota plan')
+     def reservation(repo, name, job, timeout):
+         if timeout != runner_timeout(scenes, concurrency, partition):
+             raise ValueError('Scheduler must retain its complete full-grant deadline')
+         return submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
+-                                   concurrency=concurrency, benchmark=benchmark, partition=partition, explicit_partition=explicit_partition)
++                                   concurrency=concurrency, benchmark=benchmark, partition=partition,
++                                   explicit_partition=explicit_partition, quota_reference=quota_reference)
++    def make_shard(name, scene, *args, **kwargs):
++        shard = previous['make_shard'](name, scene, *args, **kwargs)
++        if quota is not None:
++            assignment = quota_plan.assignment(quota['plan'], quota_reference, scene, name)
++            shard.update(parent.policy.declared(scene, partition, assignment))
++        return shard
+     def finish(running, sources):
+         if proof['source'] not in sources:
+             sources.append(copy.deepcopy(proof['source']))
+@@ -242,9 +259,15 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
+                       timeout_seconds=required_timeout(scenes, concurrency, partition),
+                       required_timeout_seconds=required_timeout(scenes, concurrency, partition),
+                       benchmark_validation_timeout_seconds=BENCHMARK_VALIDATION_SECONDS)
++        if quota is not None:
++            config.update(collection_quota_version=quota_plan.VERSION, quota_plan_reference=quota_reference,
++                          quota_arithmetic=copy.deepcopy(quota['arithmetic']),
++                          quota_count_basis_proof=copy.deepcopy(quota['count_basis_proof']))
++            config['pool_scope'] += '; actual output bounded by explicitly assigned static class tickets'
+         return previous['write_result'](name, metrics, config)
+     parent.SCENES, parent.CONCURRENCIES, parent.PARTITION = scenes, (concurrency,), partition
+     parent.submission_identity, parent.write_result, parent.finish_logged = reservation, write, finish
++    parent.make_shard = make_shard
+     try:
+         yield
+     finally:
+@@ -260,41 +283,54 @@ def main(argv=None):
+     parser.add_argument('--concurrency', type=int, choices=BENCHMARK_CONCURRENCIES, required=True)
+     parser.add_argument('--benchmark-source', type=Path, required=True)
+     parser.add_argument('--timeout-seconds', type=int, required=True)
++    parser.add_argument('--quota-plan', type=Path)
++    parser.add_argument('--quota-plan-sha256')
+     args = parser.parse_args(argv)
+     partition = args.partition or 'train'
+     scenes = validate_selection(args.scenes, args.concurrency, partition)
+     if (not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', args.name)
+-            or args.timeout_seconds != required_timeout(scenes, args.concurrency, partition)):
++            or args.timeout_seconds != required_timeout(scenes, args.concurrency, partition)
++            or (args.quota_plan is None) != (args.quota_plan_sha256 is None)):
+         parser.error('Require the matching train/test name and exact full-scene-grant deadline')
+     output = ROOT / 'results' / f'{args.name}.json'
+     if output.exists() or output.is_symlink():
+         raise FileExistsError('Existing results are preserved; choose a new collection name')
++    quota = None
+     try:
+         if signal.getitimer(signal.ITIMER_REAL) != (0.0, 0.0):
+             raise RuntimeError('Refuse to replace another active process deadline')
+         original_alarm = signal.getsignal(signal.SIGALRM)
+         def expired(*_):
+-            raise TimeoutError('Benchmark source authentication exceeded its declared execution cap')
++            raise TimeoutError('Quota/benchmark source authentication exceeded its declared execution cap')
+         signal.signal(signal.SIGALRM, expired)
+         signal.setitimer(signal.ITIMER_REAL, BENCHMARK_VALIDATION_SECONDS)
+         try:
++            if args.quota_plan is not None:
++                ref = {'file': str(args.quota_plan), 'sha256': args.quota_plan_sha256}
++                plan, arithmetic, count_proof = quota_plan.load_plan(ref)
++                if (plan['parent_run_name'] != args.name or plan['partition'] != partition
++                        or [row['scene'] for row in plan['assignments']] != list(scenes)):
++                    raise ValueError('Submission differs from its immutable quota parent/scenes/partition')
++                quota = {'plan': plan, 'reference': ref, 'arithmetic': arithmetic, 'count_basis_proof': count_proof}
+             proof = benchmark_stage(args.benchmark_source, args.concurrency)
+         finally:
+             signal.setitimer(signal.ITIMER_REAL, 0)
+             signal.signal(signal.SIGALRM, original_alarm)
+     except Exception as error:
+         traceback.print_exc()
+-        metrics = {'kind': 'g01_parallel_collection', 'status': 'benchmark_validation_failed',
++        metrics = {'kind': 'g01_parallel_collection',
++                   'status': 'quota_or_benchmark_validation_failed' if args.quota_plan is not None else 'benchmark_validation_failed',
+                    'acceptance_passed': False, 'exit_code': 1, 'cleanup_errors': [],
+                    'error': f'{type(error).__name__}: {error}', 'scene_runs': [], 'started_shards': []}
+         write_result(args.name, metrics, {**vars(args), 'benchmark_source': str(args.benchmark_source),
++                                         **({'quota_plan': str(args.quota_plan)} if args.quota_plan is not None else {}),
+                                          'collection_version': VERSION, 'pool_scope': SCOPE})
+         return 1
+     original_argv = sys.argv
+     handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+     try:
+         with installed(scenes=scenes, concurrency=args.concurrency, benchmark=args.benchmark_source, proof=proof,
+-                       partition=partition, explicit_partition=args.partition is not None):
++                       partition=partition, explicit_partition=args.partition is not None, quota=quota):
+             sys.argv = [MODULE, '--name', args.name, '--timeout-seconds', str(runner_timeout(scenes, args.concurrency, partition))]
+             code = parent.main()
+     finally:
+diff --git a/src/tools/g01_quota_plan.py b/src/tools/g01_quota_plan.py
+new file mode 100644
+index 00000000..ded85690
+--- /dev/null
++++ b/src/tools/g01_quota_plan.py
+@@ -0,0 +1,255 @@
++"""Immutable, conservative scene/class tickets; no live/global quota service.
++
++Test confirmed counts are reconstructed from successfully published G01
++checkpoints and the unchanged full source loader. Training post-T02 counts and
++nonempty reservation ledgers remain fail-closed until their real adapters exist.
++"""
++import copy
++import hashlib
++import json
++from pathlib import Path
++import re
++
++from src.envs.thor_common import ROOT
++
++VERSION = 'g01_static_scene_kind_tickets_v1'
++KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
++FIELDS = ('g01_quota_version', 'g01_quota_assignment', 'allowed_kinds', 'actual_output_caps')
++_ACTIVE_COUNT_PLANS = set()
++
++STAGES = {'test': 'independent_unique_construction_before_T02_filtering',
++          'train': 'T02_accepted_then_Stay_displacement_and_Look_ratio_0.8_to_1.25'}
++
++
++def counts(value):
++    if (not isinstance(value, dict) or set(value) != set(KINDS)
++            or any(type(number) is not int or number < 0 for number in value.values())):
++        raise ValueError('Require explicit nonnegative integer counts for every actual class')
++    return dict(value)
++
++
++def reference(value):
++    if (not isinstance(value, dict) or set(value) != {'file', 'sha256'}
++            or not isinstance(value['file'], str) or not value['file']
++            or re.fullmatch(r'[0-9a-f]{64}', str(value['sha256'])) is None):
++        raise ValueError('Require an exact immutable file/SHA reference')
++    return dict(value)
++
++
++def scene_allowed(scene, partition):
++    low, high = (1, 20) if partition == 'train' else (21, 30)
++    return scene in {f'FloorPlan{base + i}' for base in (0, 200, 300, 400) for i in range(low, high + 1)}
++
++
++def by_scene(value, partition):
++    if not isinstance(value, dict) or any(not scene_allowed(scene, partition) for scene in value):
++        raise ValueError('Scene counts must stay in the explicit fixed partition')
++    return {scene: counts(row) for scene, row in value.items()}
++
++
++def summed(rows):
++    return {kind: sum(row[kind] for row in rows) for kind in KINDS}
++
++
++def validate_structure(plan):
++    if (not isinstance(plan, dict) or plan.get('version') != VERSION
++            or plan.get('partition') not in STAGES):
++        raise ValueError('Unknown static quota plan/partition')
++    partition = plan['partition']
++    if not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', str(plan.get('parent_run_name'))):
++        raise ValueError('Quota parent name must match the declared partition')
++    target = {kind: (60 if partition == 'test' else 0 if kind.startswith('direct_') else 40) for kind in KINDS}
++    if counts(plan.get('targets')) != target or plan.get('count_stage') != STAGES[partition]:
++        raise ValueError('Quota target or scientific counting stage differs from the approved task')
++    confirmed = counts(plan.get('confirmed_by_kind'))
++    scene_confirmed = by_scene(plan.get('confirmed_by_scene'), partition)
++    if summed(scene_confirmed.values()) != confirmed:
++        raise ValueError('Confirmed per-scene totals do not equal the declared global counts')
++    basis = plan.get('count_basis_sources')
++    if not isinstance(basis, list) or not basis:
++        raise ValueError('Even zero confirmed counts require an explicit authenticated inventory cutoff')
++    for ref in basis:
++        reference(ref)
++    reservations = plan.get('outstanding_reservations')
++    if not isinstance(reservations, list):
++        raise ValueError('Unverified/in-flight output must have an explicit separate reservation ledger')
++    ids, reserved_rows, reserved_scenes = set(), [], {}
++    for item in reservations:
++        identity = item.get('reservation_id')
++        if not isinstance(identity, str) or not identity or identity in ids:
++            raise ValueError('Duplicate or missing outstanding reservation identity')
++        ids.add(identity)
++        reference(item.get('source'))
++        if item.get('scope') not in ('unverified_inventory_upper_bound', 'submitted_job_upper_bound'):
++            raise ValueError('Reservation is an upper bound, never a confirmed scientific pass')
++        per_scene = by_scene(item.get('by_scene'), partition)
++        declared = counts(item.get('by_kind'))
++        if summed(per_scene.values()) != declared:
++            raise ValueError('Reservation per-scene/global upper bounds differ')
++        reserved_rows.append(declared)
++        for scene, row in per_scene.items():
++            accumulated = reserved_scenes.setdefault(scene, {kind: 0 for kind in KINDS})
++            for kind in KINDS:
++                accumulated[kind] += row[kind]
++    reserved = summed(reserved_rows)
++    remaining = {kind: max(0, target[kind] - confirmed[kind] - reserved[kind]) for kind in KINDS}
++    assigned, scenes = [], set()
++    rows = plan.get('assignments')
++    if not isinstance(rows, list) or not rows:
++        raise ValueError('Do not submit a quota plan without any scene tickets')
++    cap = 8 if partition == 'train' else 6
++    for row in rows:
++        scene = row.get('scene')
++        if not scene_allowed(scene, partition) or scene in scenes:
++            raise ValueError('Each quota scene must occur once in the selected partition')
++        scenes.add(scene)
++        limits = counts(row.get('actual_output_caps'))
++        if row.get('allowed_kinds') != [kind for kind in KINDS if limits[kind] > 0] or not any(limits.values()):
++            raise ValueError('Allowed proposal kinds must be exactly the positive scene tickets')
++        if partition == 'train' and any(limits[kind] for kind in KINDS if kind.startswith('direct_')):
++            raise ValueError('New training collection must not propose or export Direct classes')
++        for kind in KINDS:
++            available = max(0, cap - scene_confirmed.get(scene, {}).get(kind, 0)
++                            - reserved_scenes.get(scene, {}).get(kind, 0))
++            if limits[kind] > available:
++                raise ValueError('New scene ticket exceeds the original aggregate scene/class capacity')
++        assigned.append(limits)
++    allocation = summed(assigned)
++    if any(allocation[kind] > remaining[kind] for kind in KINDS):
++        raise ValueError('Scene tickets exceed conservative global remaining capacity')
++    return {'confirmed_by_kind': confirmed, 'reserved_upper_bound_by_kind': reserved,
++            'remaining_before_new_tickets': remaining, 'new_tickets_by_kind': allocation,
++            'count_stage': STAGES[partition], 'count_basis_authenticated': False,
++            'scope': 'structural arithmetic only; reservations are not scientific acceptance'}
++
++
++def authenticate_count_basis(plan):
++    """Recheck every published test pair; raw or failed checkpoint counts never count.
++
++    This grants collection capacity, not image-review or training permission.
++    Training requires a separate actual post-T02/Stay/ratio adapter. Nonempty
++    reservations require authentic submission/inventory upper-bound certificates;
++    trusting caller-supplied integers would not establish global safety.
++    """
++    if plan['partition'] != 'test':
++        raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
++    if plan['outstanding_reservations']:
++        raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
++    from src.envs import pair_table_source as sources
++    identities, publications, duplicates, source_refs = {}, [], [], set()
++    measured = {}
++    for expected in plan['count_basis_sources']:
++        reference(expected)
++        key = (expected['file'], expected['sha256'])
++        if key in source_refs:
++            raise ValueError('Duplicate checkpoint in the explicit quota cutoff')
++        source_refs.add(key)
++        container, actual_ref, entries = sources._container(ROOT / expected['file'])
++        if (any(actual_ref.get(field) != expected[field] for field in ('file', 'sha256'))
++                or sources._checkpoint_module(container['_meta']['command']) != sources.G01_CHECKPOINT_MODULE):
++            raise ValueError('Test quota basis must be the exact successfully published G01 checkpoint')
++        if (container['metrics'].get('published_pair_count') != len(entries)
++                or container['metrics'].get('status') != 'checkpoint_ready_for_human_review'):
++            raise ValueError('Test checkpoint publication is incomplete')
++        local_counts = {kind: 0 for kind in KINDS}
++        for entry in entries:
++            package = sources.load_reviewed_pair(ROOT / expected['file'], entry['pair_id'],
++                                                pair_file=entry['pair_reference']['file'])
++            kind, scene = package['kind'], package['scene']
++            identity = package['independent_verification']['proposal_identity']
++            if (kind not in KINDS or not scene_allowed(scene, 'test')
++                    or package['source_config'].get('g01_partition') != 'test'
++                    or entry.get('proposal_identity') != identity
++                    or entry.get('kind') != kind or entry.get('scene') != scene
++                    or package['source_provenance']['pair'] != entry['pair_reference']):
++                raise ValueError('Published test quota pair differs from its authenticated scene/proposal/class')
++            local_counts[kind] += 1
++            record = {'proposal_identity': identity, 'scene': scene, 'kind': kind,
++                'target_names': copy.deepcopy(package['target_names']),
++                'checkpoint_reference': copy.deepcopy(actual_ref),
++                'pair_reference': copy.deepcopy(package['source_provenance']['pair']),
++                'source_reference': copy.deepcopy(package['source_provenance']['scene'])}
++            # Same proposal across retries consumes one ticket. Conflicting
++            # independently measured outcomes are not resolved by cherry-picking.
++            if identity in identities:
++                previous = identities[identity]
++                if any(previous[field] != record[field] for field in ('scene', 'kind', 'target_names')):
++                    raise ValueError('Duplicate test proposal has conflicting independent outcomes')
++                duplicates.append(record)
++                continue
++            identities[identity] = record
++            row = measured.setdefault(scene, {name: 0 for name in KINDS})
++            row[kind] += 1
++        if container['metrics'].get('published_by_class') != local_counts:
++            raise ValueError('Checkpoint publication counts differ from its complete authenticated entries')
++        publications.append(copy.deepcopy(actual_ref))
++    if measured != plan['confirmed_by_scene'] or summed(measured.values()) != plan['confirmed_by_kind']:
++        raise ValueError('Plan confirmed counts differ from independent unique test construction evidence')
++    return {'count_basis_authenticated': True, 'count_stage': STAGES['test'],
++        'confirmed_by_kind': summed(measured.values()), 'confirmed_by_scene': measured,
++        'checkpoint_references': publications, 'unique_proposals': list(identities.values()),
++        'duplicate_occurrences': duplicates, 'outstanding_reservations': [],
++        'scope': 'independently rechecked test construction; before T02; no human image approval or training permission inferred'}
++
++
++def load_plan(ref, *, authenticate=True):
++    ref = reference(ref)
++    path = (ROOT / ref['file']).resolve()
++    if not path.is_relative_to(ROOT.resolve()):
++        raise ValueError('Quota plan must be an explicit repository artifact')
++    raw = path.read_bytes()
++    if hashlib.sha256(raw).hexdigest() != ref['sha256']:
++        raise ValueError('Immutable quota plan bytes changed')
++    plan = json.loads(raw)
++    arithmetic = validate_structure(plan)
++    proof = None
++    if authenticate:
++        key = (str(path), ref['sha256'])
++        if key in _ACTIVE_COUNT_PLANS:
++            raise ValueError('Cyclic quota count-basis dependency')
++        _ACTIVE_COUNT_PLANS.add(key)
++        try:
++            proof = authenticate_count_basis(plan)
++        finally:
++            _ACTIVE_COUNT_PLANS.remove(key)
++    return plan, arithmetic, proof
++
++
++def assignment(plan, ref, scene, child_run_name):
++    validate_structure(plan)
++    rows = [row for row in plan['assignments'] if row['scene'] == scene]
++    if len(rows) != 1 or not re.fullmatch(re.escape(plan['parent_run_name']) + r'_c[246]_' + re.escape(scene.lower()), child_run_name):
++        raise ValueError('Child must match one explicit parent scene assignment')
++    return {'version': VERSION, 'plan_reference': reference(ref), 'parent_run_name': plan['parent_run_name'],
++            'partition': plan['partition'], 'scene': scene, 'child_run_name': child_run_name,
++            'allowed_kinds': copy.deepcopy(rows[0]['allowed_kinds']),
++            'actual_output_caps': copy.deepcopy(rows[0]['actual_output_caps'])}
++
++
++def declared_fields(value):
++    if not isinstance(value, dict) or value.get('version') != VERSION:
++        raise ValueError('Unknown quota assignment')
++    reference(value.get('plan_reference'))
++    limits = counts(value.get('actual_output_caps'))
++    if value.get('allowed_kinds') != [kind for kind in KINDS if limits[kind] > 0] or not any(limits.values()):
++        raise ValueError('Assignment proposal kinds differ from positive actual output tickets')
++    return {'g01_quota_version': VERSION, 'g01_quota_assignment': copy.deepcopy(value),
++            'allowed_kinds': list(value['allowed_kinds']), 'actual_output_caps': limits}
++
++
++def validate_assignment(config, *, authenticate=False):
++    """Check immutable runtime assignment; authenticate counts at parent/checker.
++
++    A fresh witness process must not rerun the entire historic scientific pool.
++    Parent dispatch and independent verify_collection call the authenticated path;
++    child policy validation checks exact plan bytes/structure/assignment only.
++    """
++    value = config.get('g01_quota_assignment')
++    fields = declared_fields(value)
++    if any(config.get(key) != item for key, item in fields.items()):
++        raise ValueError('Source quota fields differ from the explicit assignment')
++    plan, arithmetic, proof = load_plan(value['plan_reference'], authenticate=authenticate)
++    expected = assignment(plan, value['plan_reference'], config['scene'], config['name'])
++    if value != expected or config.get('g01_partition') != plan['partition']:
++        raise ValueError('Source differs from its immutable quota scene/partition')
++    return fields, arithmetic, proof
+diff --git a/src/tools/t01v2_g01_association.py b/src/tools/t01v2_g01_association.py
+index fa44aeff..c4465984 100644
+--- a/src/tools/t01v2_g01_association.py
++++ b/src/tools/t01v2_g01_association.py
+@@ -27,6 +27,97 @@ def same(first, second):
+     return encode(first) == encode(second)
+ 
+ 
++def verify_final_preflight_binding(config, metrics, visits, *, root, raw_root):
++    """Distinguish a final failed attempt from the last selected success.
++
++    Inputs are from the caller's audited source/log. The original equal-reference
++    path is unchanged. The additional path authenticates every visit's indexed
++    preflight and the exact final exclusion; it never substitutes source fields.
++    """
++    names = [visit['controller_id'] for visit in visits]
++    selected = metrics.get('selected_controller_id')
++    if selected not in names:
++        raise ValueError('Source final selected Controller is absent from its visit ledger')
++    selected_visit = visits[names.index(selected)]
++    passed_names = [visit['controller_id'] for visit in visits if visit.get('preflight_passed') is True]
++    if not passed_names or selected != passed_names[-1]:
++        raise ValueError('Source selected Controller is not the last preflight-passed visit')
++    final_ref = metrics['scene_preflight_reference']
++    final_path = merge.reference_path(final_ref, root=root, within=raw_root)
++    selected_path = merge.reference_path(selected_visit['preflight_reference'], root=root, within=raw_root)
++    if (final_path == selected_path and final_ref['sha256'] == selected_visit['preflight_reference']['sha256']
++            and visits[-1].get('preflight_passed') is not False):
++        return None
++
++    message = 'Original final source preflight does not bind the selected final visit'
++    if (len(visits) < 2 or names != [f'marked_controller_{index:03d}' for index in range(len(visits))]
++            or selected != names[-2] or metrics.get('status') != 'completed_search'
++            or metrics.get('cleanup_errors') != []):
++        raise ValueError(message + '; no authenticated final-failed-visit case')
++    exclusion = metrics.get('scene_excluded')
++    if (not isinstance(exclusion, dict) or exclusion.get('scene') != config['scene']
++            or exclusion.get('reason') != 'settled_baseline_window_preflight_failed'
++            or not same(exclusion.get('evidence'), final_ref)):
++        raise ValueError(message + '; missing exact final preflight exclusion')
++
++    verified = []
++    for index, visit in enumerate(visits):
++        directory = raw_root / visit['controller_id'] / 'construction'
++        expected_passed = index < len(visits) - 1
++        worker, unity = visit.get('worker_pid'), (visit.get('unity_identity') or {}).get('pid')
++        if (visit.get('role') != 'natural_marked' or visit.get('cleanup_errors') != []
++                or visit.get('preflight_passed') is not expected_passed
++                or any(type(pid) is not int or pid <= 0 for pid in (worker, unity))):
++            raise ValueError(message + '; visit order/verdict/ownership/cleanup is not proven')
++        index_ref = visit['raw_index']
++        index_path = merge.reference_path(index_ref, root=root, within=directory)
++        if index_path != directory / 'evidence_index.json':
++            raise ValueError('Final preflight visit index is outside its exact Controller path')
++        files = merge.read_reference(index_ref, root=root, within=directory).get('files')
++        if not isinstance(files, list) or not files:
++            raise ValueError('Final preflight visit lacks its original index entries')
++        indexed = {}
++        for ref in files:
++            if (not isinstance(ref, dict) or not isinstance(ref.get('file'), str)
++                    or re.fullmatch(r'[0-9a-f]{64}', str(ref.get('sha256', ''))) is None):
++                raise ValueError('Malformed final preflight Controller index entry')
++            path = (root / ref['file']).resolve()
++            if not path.is_relative_to(directory) or path in indexed:
++                raise ValueError('Duplicate or foreign final preflight Controller index entry')
++            indexed[path] = ref
++
++        def read_indexed(ref):
++            path = merge.reference_path(ref, root=root, within=directory)
++            member = indexed.get(path)
++            if member is None or member['sha256'] != ref['sha256']:
++                raise ValueError('Final preflight reference lacks original index membership')
++            if 'bytes' in member and (type(member['bytes']) is not int or member['bytes'] != path.stat().st_size):
++                raise ValueError('Final preflight indexed size differs from actual bytes')
++            return json.loads(path.read_text()), path
++
++        ref = visit['preflight_reference']
++        preflight, path = read_indexed(ref)
++        if path != directory / 'scene_preflight.json' or preflight.get('passed') is not expected_passed:
++            raise ValueError('Final preflight native verdict differs from visit declaration')
++        setup = visit['initial_agent_setup_reference']
++        if not same(preflight.get('initial_agent_setup_reference'), setup):
++            raise ValueError('Final preflight canonical setup differs from its original visit')
++        read_indexed(setup)
++        if not expected_passed:
++            if (path != final_path or ref['sha256'] != final_ref['sha256']
++                    or not isinstance(preflight.get('reasons'), list) or not preflight['reasons']
++                    or not same(preflight['reasons'], exclusion.get('reasons'))):
++                raise ValueError('Final failed preflight does not bind the exact original exclusion')
++        verified.append({'controller_id': visit['controller_id'], 'preflight_passed': expected_passed,
++            'preflight_reference': copy.deepcopy(ref), 'controller_index_reference': copy.deepcopy(index_ref)})
++    return {'version': 'g01_final_attempt_vs_selected_preflight_binding_v1',
++        'selected_controller_id': selected, 'last_attempted_controller_id': names[-1],
++        'original_final_preflight_reference': copy.deepcopy(final_ref),
++        'scene_excluded': copy.deepcopy(exclusion), 'authenticated_visit_preflights': verified,
++        'source_record_mutated': False,
++        'scope': 'source final failed preflight provenance only; pair Controller and all scientific checks remain required'}
++
++
+ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=None):
+     root = Path(merge.ROOT if root is None else root).resolve()
+     config, metrics = data['config'], data['metrics']
+@@ -39,8 +130,11 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
+     raw = merge.read_reference(raw_ref, root=root, within=raw_root)
+     for value in (pair, raw):
+         if (value.get('producer_module') != policy.PRODUCER
+-                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition']).items())):
++                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())):
+             raise ValueError('Pair/raw differs from its authenticated G01 source policy')
++        if config.get('g01_quota_version') is not None and any(
++                value.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
++            raise ValueError('Pair/raw differs from its authenticated static quota assignment')
+         search.validate_fields(value)
+     pool = pair.get('proposed_pool')
+     if (pool not in ('look', 'direct') or raw.get('proposed_pool') != pool
+@@ -71,14 +165,8 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
+         raise ValueError('Missing, duplicate or invalid audited Controller identity')
+     visit = visits[names.index(controller)]
+     selected = metrics.get('selected_controller_id')
+-    if selected not in names:
+-        raise ValueError('Source final selected Controller is absent from its visit ledger')
+-    final_visit = visits[names.index(selected)]
+     final_ref = metrics['scene_preflight_reference']
+-    final_path = merge.reference_path(final_ref, root=root, within=raw_root)
+-    selected_path = merge.reference_path(final_visit['preflight_reference'], root=root, within=raw_root)
+-    if final_path != selected_path or final_ref['sha256'] != final_visit['preflight_reference']['sha256']:
+-        raise ValueError('Original final source preflight does not bind the selected final visit')
++    final_binding = verify_final_preflight_binding(config, metrics, visits, root=root, raw_root=raw_root)
+     if visit.get('role') != 'natural_marked' or visit.get('cleanup_errors') != [] or visit.get('preflight_passed') is not True:
+         raise ValueError('Selected pair Controller has unknown role, preflight or cleanup')
+     controller_dir = raw_root / controller / 'construction'
+@@ -191,7 +279,7 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
+             'unity_identity': copy.deepcopy(lease['unity_identity'])})
+     if admission_links[0]['lease_token'] == admission_links[1]['lease_token']:
+         raise ValueError('Independent world witnesses cannot reuse one resource lease')
+-    return {'version': VERSION, 'policy': copy.deepcopy(POLICY),
++    proof = {'version': VERSION, 'policy': copy.deepcopy(POLICY),
+         'source_reference': copy.deepcopy(source_ref), 'controller_id': controller,
+         'source_final_controller_id': selected, 'original_source_final_preflight_reference': copy.deepcopy(final_ref),
+         'pair_preflight_reference': copy.deepcopy(portable_ref), 'controller_preflight_reference': copy.deepcopy(preflight_ref),
+@@ -204,3 +292,9 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
+             'scope': 'proposal domain versus actual rendered class; no new acceptance threshold'},
+         'preflight_validation': verified_preflight, 'source_record_mutated': False,
+         'scope': 'Controller provenance only; unchanged full check_pair is still required'}
++    if final_binding is not None:
++        proof['source_final_preflight_binding'] = final_binding
++        proof['source_last_attempted_controller_id'] = final_binding['last_attempted_controller_id']
++        proof['policy']['source_final_preflight'] = (
++            'preserved as the authenticated last attempted failed visit; selected Controller remains the last success')
++    return proof
+diff --git a/src/tools/t01v2_g01_review_checkpoint.py b/src/tools/t01v2_g01_review_checkpoint.py
+index ed3e20cb..4409f62c 100644
+--- a/src/tools/t01v2_g01_review_checkpoint.py
++++ b/src/tools/t01v2_g01_review_checkpoint.py
+@@ -78,7 +78,10 @@ def verify_collection(data):
+             raise ValueError('G01 collection claim lacks an authenticated attempt journal')
+         return None
+     journal = merge.reference_path(journal_ref, within=merge.ROOT / 'data/world_pairs/v2')
+-    quota = search.SceneQuota(policy.class_cap(config['g01_partition']))
++    from src.envs.pair_v2_g01_shard import make_quota, quota_skip
++    quota = make_quota(config)
++    if quota.ticketed:
++        policy.quota_plan.validate_assignment(config, authenticate=True)
+     for line in journal.read_text().splitlines():
+         if not line.strip():
+             continue
+@@ -88,12 +91,14 @@ def verify_collection(data):
+         if raw.get('counts_as_pair_attempt') is not True or raw.get('proposed_pool') != row.get('proposed_pool'):
+             raise ValueError('G01 journal contains an uncounted or different-pool raw attempt')
+         search.validate_fields(raw)
++        if quota.ticketed and any(raw.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
++            raise ValueError('Raw journal attempt changed its immutable scene tickets')
++        if (raw.get('g01_search_version') == search.QUOTA_VERSION) != quota.ticketed:
++            raise ValueError('Raw journal proposal policy differs from source quota version')
+         if raw.get('collection_quota_skip') is not None:
+             kind = raw.get('kind')
+-            expected = {'kind': kind, 'per_scene_class_cap': quota.per_class,
+-                'acceptance_passed_before_collection': True,
+-                'scope': 'collection capacity only; original scientific validity remains unchanged'}
+-            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != quota.per_class
++            expected = quota_skip(config, kind)
++            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != quota.limits.get(kind)
+                     or raw.get('status') != 'rejected' or raw.get('discard_reasons') != ['collection_quota_full']
+                     or raw.get('validity', {}).get('acceptance_passed') is not True
+                     or raw.get('pair_file') is not None or raw.get('pair_sha256') is not None):
+@@ -156,10 +161,13 @@ def source_support():
+             data, reference = source
+             config = data['config']
+             if (row.get('producer_module') != policy.PRODUCER
+-                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition']).items())
++                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())
+                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
+                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
+                 raise ValueError('Pair differs from its authenticated G01 source policy')
++            if config.get('g01_quota_version') is not None and any(
++                    row.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
++                raise ValueError('Pair differs from its authenticated static quota assignment')
+             search.validate_fields(row)
+             for module in (geometry, sharing, rank, cadence):
+                 module.validate_fields(row)
+@@ -180,7 +188,7 @@ def source_support():
+                 if actual is row and proof is not None:
+                     result = geometry_proof.verify_role(actual, positions, proof)
+                     return {**{key: value for key, value in result.items() if key != 'flip_search_version'},
+-                            'g01_search_version': search.VERSION}
++                            'g01_search_version': row['g01_search_version']}
+                 return active_role(actual, positions)
+             try:
+                 roles.verify_proposal_role = verified_role
+diff --git a/tests/test_e2e_budget.py b/tests/test_e2e_budget.py
+index 465d270d..f0277ee1 100644
+--- a/tests/test_e2e_budget.py
++++ b/tests/test_e2e_budget.py
+@@ -1,18 +1,21 @@
+ """Budget boundary fixtures; no scheduler calls."""
+ import importlib.util
++import json
+ from pathlib import Path
++import tempfile
+ import unittest
++from unittest.mock import patch
+ 
+ spec = importlib.util.spec_from_file_location('e2e_phase_budget', Path(__file__).resolve().parents[1] / 'scripts/pbs/submit_phase.py')
+ submit = importlib.util.module_from_spec(spec)
+ spec.loader.exec_module(submit)
+ 
+ 
+-def state(cost=0, total=0, rate=1, g01=0, t02=0):
++def state(cost=0, total=0, rate=1, g01=0, t02=0, pilot=0):
+     return {'submissions': [], 'charge_policy': {'rates': {'smallx': rate, 'mediumx': rate}},
+             'accounted_or_reserved_by_task': {'T00b': 0, 'T01': 0},
+             'accounted_or_reserved_total': total,
+-            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'G01': g01, 'T02': t02}}
++            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'E2Epilot': pilot, 'G01': g01, 'T02': t02}}
+ 
+ 
+ class E2EBudgetTests(unittest.TestCase):
+@@ -86,6 +89,86 @@ class G01BudgetTests(unittest.TestCase):
+             submit.validate_request('T01', 2, 300, 'gen_train_x', state())
+ 
+ 
++class E2EPilotBudgetTests(unittest.TestCase):
++    def test_six_charged_hour_boundary_and_independent_old_e2e_cap(self):
++        submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0',
++            state(cost=4, pilot=5.5, total=119.5), 'E2Epilot')
++        for observed in (state(pilot=5.501), state(pilot=5.1, rate=2), state(total=119.501)):
++            with self.subTest(state=observed), self.assertRaises(ValueError):
++                submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0', observed, 'E2Epilot')
++        # Neither independent ledger lends unused budget to the other.
++        with self.assertRaises(ValueError):
++            submit.validate_request('T01', 1, 300, 'smoke_e2e_old', state(cost=4, pilot=0), 'E2E')
++        with self.assertRaises(ValueError):
++            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T4_s0', state(cost=0, pilot=6), 'E2Epilot')
++
++    def test_explicit_pilot_namespace_cannot_alias_old_steps_or_other_budgets(self):
++        training = ['python3', '-m', 'src.tools.smoke_e2e_train']
++        self.assertEqual(submit.budget_group('T01', 'smoke_e2e_pilot_T4_s0', training, 'E2Epilot'), 'E2Epilot')
++        for task, name, command, group in (
++            ('T01', 'smoke_e2e_pilot_T0_s0', training, None),
++            ('T01', 'smoke_e2e_pilot_T0_s0', training, 'E2E'),
++            ('T00b', 'smoke_e2e_pilot_T0_s0', training, 'E2Epilot'),
++            ('T01', 'smoke_e2e_old_T0', training, 'E2Epilot'),
++            ('T01', 'smoke_e2e_look_views', [], 'E2Epilot'),
++            ('T01', 'pilot_pairs_v2_old', [], 'E2Epilot'),
++            ('T01', 'gen_train_old', [], 'E2Epilot'),
++            ('T01', 't02_export_old', [], 'E2Epilot'),
++            ('T01', 'smoke_e2e_pilot_T0_s0', ['python3', '-m', 'src.tools.t02_cache_check'], 'E2Epilot'),
++            ('T01', 'smoke_e2e_pilot_T0_s0', ['python3', '-m', 'src.tools.smoke_e2e_views'], 'E2Epilot'),
++            ('T01', 'smoke_e2e_pilot_T0_s0', ['bash', 'experiments/t01v2_marked_pairs.sh'], 'E2Epilot'),
++            ('T01', 'smoke_e2e_pilot_T0_s0', training, 'G01'),
++            ('T01', 'smoke_e2e_pilot_T0_s0', training, 'T02'),
++        ):
++            with self.subTest(task=task, name=name, group=group), self.assertRaises(ValueError):
++                submit.budget_group(task, name, command, group)
++        for group in (None, 'E2E'):
++            self.assertEqual(submit.budget_group('T01', 'smoke_e2e_old_T0', training, group), 'E2E')
++
++    def test_missing_or_nonfinite_pilot_cost_and_multiple_gpus_are_rejected(self):
++        for count in (2, 3, 4):
++            with self.assertRaises(ValueError):
++                submit.validate_request('T01', count, 300, 'smoke_e2e_pilot_T0_s0', state(), 'E2Epilot')
++        for cost in (None, True, float('nan'), float('inf'), -1):
++            with self.assertRaises(ValueError):
++                submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T0_s0', state(pilot=cost), 'E2Epilot')
++        observed = state()
++        del observed['accounted_or_reserved_by_subbudget']['E2Epilot']
++        with self.assertRaises(ValueError):
++            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T0_s0', observed, 'E2Epilot')
++
++    def test_actual_payload_ledger_keeps_old_final_cost_and_new_full_reservation_separate(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            repo = Path(temporary)
++            payloads = [
++                {'name': 'smoke_e2e_old_T0', 'budget_group': None, 'budget_revision': 'historical_e2e_4'},
++                {'name': 'smoke_e2e_pilot_T4_s0', 'budget_group': 'E2Epilot', 'budget_revision': submit.BUDGET_REVISION},
++            ]
++            for number, selected in enumerate(payloads, 1):
++                directory = repo / 'logs/pbs' / str(number)
++                directory.mkdir(parents=True)
++                payload = {**selected, 'task_id': 'T01', 'budget_batch': submit.BATCH,
++                    'command': ['python3', '-m', 'src.tools.smoke_e2e_train'],
++                    'requested_gpu_count': 1, 'requested_wall_seconds': 1800, 'requested_queue_charge_rate': 1}
++                (directory / 'payload.json').write_text(json.dumps(payload))
++                (directory / 'submission.json').write_text(json.dumps({'stdout': f'{number}.hopper-m-02', 'returncode': 0}))
++            final = {'1.hopper-m-02': {'gpu_hours': .25, 'queue_charge_rate': 2,
++                                      'accounting_result': 'results/original_accounting.json'}}
++            policy = {'rates': {'smallx': 1, 'mediumx': 1}}
++            with patch.object(submit, '_final_accounting', return_value=final):
++                actual = submit.budget_state(repo, policy=policy, live_rates={'2.hopper-m-02': 2})
++            self.assertEqual(actual['accounted_or_reserved_by_subbudget']['E2E'], .5)
++            self.assertEqual(actual['accounted_or_reserved_by_subbudget']['E2Epilot'], 1)
++            self.assertEqual(actual['accounted_or_reserved_total'], 1.5)
++            self.assertEqual([r['basis'] for r in actual['submissions']], ['final_accounting', 'full_request_reservation'])
++            # An old generic smoke payload cannot be retroactively routed to pilot.
++            old_path = repo / 'logs/pbs/1/payload.json'
++            changed = json.loads(old_path.read_text()); changed['budget_group'] = 'E2Epilot'
++            old_path.write_text(json.dumps(changed))
++            with patch.object(submit, '_final_accounting', return_value=final), self.assertRaises(ValueError):
++                submit.budget_state(repo, policy=policy, live_rates={'2.hopper-m-02': 2})
++
++
+ class T02BudgetTests(unittest.TestCase):
+     def test_export_subbudget_full_reservation_and_shared_120_ceiling(self):
+         submit.validate_request('T01', 1, 1800, 't02_export_fixture', state(t02=39.5, total=119.5), 'T02')
+@@ -93,7 +176,7 @@ class T02BudgetTests(unittest.TestCase):
+             with self.assertRaises(ValueError):
+                 submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
+         self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
+-        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'G01': 40.0, 'T02': 40.0})
++        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 6.0, 'G01': 40.0, 'T02': 40.0})
+ 
+     def test_fresh_cache_validation_uses_t02_budget_and_exact_cache_namespace(self):
+         command = ['python3', '-m', 'src.tools.t02_cache_check']
+diff --git a/tests/test_g01_final_preflight_binding.py b/tests/test_g01_final_preflight_binding.py
+new file mode 100644
+index 00000000..4392c6fe
+--- /dev/null
++++ b/tests/test_g01_final_preflight_binding.py
+@@ -0,0 +1,189 @@
++"""Synthetic native-file provenance fixtures, not simulator measurements."""
++import copy
++import importlib.util
++from pathlib import Path
++import tempfile
++import unittest
++from unittest.mock import patch
++
++from src.envs import pair_v2_g01_policy as policy
++from src.envs import pair_v2_g01_search as search
++from src.envs import pair_v2_stay_order as stay
++from src.tools import t01v2_g01_association as association
++
++_spec = importlib.util.spec_from_file_location('g01_final_preflight_fixture',
++    Path(__file__).with_name('test_t01v2_controller_association.py'))
++_fixture = importlib.util.module_from_spec(_spec)
++_spec.loader.exec_module(_fixture)
++
++
++def fixture(root):
++    f = _fixture.Fixture(root)
++    fields = {**policy.declared('FloorPlan203'), **stay.fields(), 'producer_module': policy.PRODUCER,
++        'enable_candidate_clone': False, 'scene_pairs_per_class': 8}
++    for value in (f.data['config'], f.data['config']['shard'], f.data['metrics']):
++        for key in tuple(value):
++            if key.startswith('look_unit_'):
++                value.pop(key)
++        value.update(fields)
++    f.pair.update(kind='direct_stay', **policy.fields(), **search.fields(),
++        producer_module=policy.PRODUCER, proposed_pool='direct',
++        proposal={'mode': 'stay', 'projection_pool': {'pool': 'direct'}})
++    owner = {'pid': 11, 'start_ticks': 90, 'pgid': 11, 'sid': 11}
++    leases, portable = [], []
++    for world in (0, 1):
++        portable.append(f.write(f.directory / f'witness_w{world}.json',
++            {'process_id': 100 + world, 'unity_pid': 200 + world}))
++        leases.append({'token': f'lease{world}', 'owner': owner,
++            'worker_identity': {'pid': 100 + world}, 'unity_identity': {'pid': 200 + world},
++            'release_confirmed': True, 'cleanup_errors': [], 'remaining_owned_group': False})
++    f.pair['portable_files'] = portable
++    f.data['metrics']['g01_witness_admission'] = {'owner': owner, 'lease_records': leases}
++    f.refresh_pair()
++    return f
++
++
++def rewrite_preflight(f, index, passed):
++    record, visit = f.records[index], f.visits[index]
++    path = Path(visit['preflight_reference']['file'])
++    record['preflight'].update(passed=passed, error=None,
++        reasons=[] if passed else ['initial_inventory_changed_or_displacement_above_0_5m'])
++    ref = f.write(path, record['preflight'])
++    record['preflight_ref'] = ref
++    record['entries'] = [ref if Path(item['file']) == path else item for item in record['entries']]
++    visit['preflight_reference'] = ref
++    f.refresh_index(index)
++    if index == 0:
++        f.pair['scene_preflight_reference'] = f.write(f.directory / 'scene_preflight.json', record['preflight'])
++        f.refresh_pair()
++
++
++def final_failure(f):
++    rewrite_preflight(f, 0, True)
++    rewrite_preflight(f, 1, False)
++    f.visits[1]['preflight_passed'] = False
++    metrics = f.data['metrics']
++    metrics.update(status='completed_search', selected_controller_id='marked_controller_000',
++        scene_preflight_reference=f.visits[1]['preflight_reference'],
++        scene_excluded={'scene': 'FloorPlan203', 'reason': 'settled_baseline_window_preflight_failed',
++            'reasons': f.records[1]['preflight']['reasons'], 'evidence': f.visits[1]['preflight_reference']})
++
++
++class FinalPreflightBindingTests(unittest.TestCase):
++    def setUp(self):
++        temporary = tempfile.TemporaryDirectory()
++        self.addCleanup(temporary.cleanup)
++        self.f = fixture(Path(temporary.name))
++        self.checker = patch.object(association.merge, 'verify_preflight',
++            side_effect=_fixture.original_preflight_fixture)
++        self.native = self.checker.start()
++        self.addCleanup(self.checker.stop)
++
++    def verify(self):
++        f = self.f
++        return association.verify_pair_controller(f.data, f.source_ref, f.journal, f.pair, f.pair_path, root=f.root)
++
++    def test_original_normal_path_keeps_original_proof_schema(self):
++        proof = self.verify()
++        self.assertEqual(proof['source_final_controller_id'], 'marked_controller_001')
++        self.assertNotIn('source_final_preflight_binding', proof)
++        self.assertEqual(proof['policy'], association.POLICY)
++        self.native.assert_called_once()
++
++    def test_final_failed_visit_is_authenticated_without_rewriting_original_source(self):
++        final_failure(self.f)
++        before = copy.deepcopy((self.f.data, self.f.pair, self.f.raw_attempt))
++        proof = self.verify()
++        binding = proof['source_final_preflight_binding']
++        self.assertEqual(binding['selected_controller_id'], 'marked_controller_000')
++        self.assertEqual(binding['last_attempted_controller_id'], 'marked_controller_001')
++        self.assertEqual(proof['controller_id'], 'marked_controller_000')
++        self.assertEqual(proof['source_final_controller_id'], 'marked_controller_000')
++        self.assertEqual(proof['original_source_final_preflight_reference'],
++                         self.f.visits[1]['preflight_reference'])
++        self.assertEqual((self.f.data, self.f.pair, self.f.raw_attempt), before)
++        self.native.assert_called_once()
++        self.assertEqual(len(proof['witness_resource_admission']['worlds']), 2)
++
++    def test_wrong_reference_sha_is_rejected(self):
++        final_failure(self.f)
++        self.f.data['metrics']['scene_preflight_reference'] = {
++            **self.f.visits[1]['preflight_reference'], 'sha256': '0' * 64}
++        with self.assertRaisesRegex(ValueError, 'SHA-mismatched'):
++            self.verify()
++
++    def test_repointing_final_and_exclusion_to_previous_success_is_rejected(self):
++        final_failure(self.f)
++        ref = self.f.visits[0]['preflight_reference']
++        self.f.data['metrics']['scene_preflight_reference'] = ref
++        self.f.data['metrics']['scene_excluded']['evidence'] = ref
++        with self.assertRaisesRegex(ValueError, 'exact original exclusion'):
++            self.verify()
++
++    def test_forged_failed_declaration_does_not_override_native_passed_file(self):
++        final_failure(self.f)
++        rewrite_preflight(self.f, 1, True)
++        ref = self.f.visits[1]['preflight_reference']
++        self.f.data['metrics']['scene_preflight_reference'] = ref
++        self.f.data['metrics']['scene_excluded']['evidence'] = ref
++        with self.assertRaisesRegex(ValueError, 'native verdict'):
++            self.verify()
++
++    def test_selecting_final_failed_visit_is_rejected(self):
++        final_failure(self.f)
++        self.f.data['metrics']['selected_controller_id'] = 'marked_controller_001'
++        with self.assertRaisesRegex(ValueError, 'last preflight-passed'):
++            self.verify()
++
++    def test_selecting_an_earlier_success_is_rejected_even_when_refs_match(self):
++        self.f.data['metrics']['selected_controller_id'] = 'marked_controller_000'
++        self.f.data['metrics']['scene_preflight_reference'] = self.f.visits[0]['preflight_reference']
++        with self.assertRaisesRegex(ValueError, 'last preflight-passed'):
++            self.verify()
++
++    def test_exclusion_scene_reason_and_native_reasons_must_all_match(self):
++        final_failure(self.f)
++        original = copy.deepcopy(self.f.data['metrics']['scene_excluded'])
++        for key, value in (('scene', 'FloorPlan204'), ('reason', 'different_failure'),
++                           ('reasons', ['fabricated_failure'])):
++            with self.subTest(key=key):
++                self.f.data['metrics']['scene_excluded'] = {**original, key: value}
++                with self.assertRaises(ValueError):
++                    self.verify()
++
++    def test_missing_final_index_membership_is_rejected(self):
++        final_failure(self.f)
++        path = self.f.visits[1]['preflight_reference']['file']
++        self.f.records[1]['entries'] = [ref for ref in self.f.records[1]['entries'] if ref['file'] != path]
++        self.f.refresh_index(1)
++        with self.assertRaisesRegex(ValueError, 'index membership'):
++            self.verify()
++
++    def test_tampered_final_preflight_bytes_are_rejected(self):
++        final_failure(self.f)
++        Path(self.f.visits[1]['preflight_reference']['file']).write_text('{}')
++        with self.assertRaisesRegex(ValueError, 'SHA-mismatched'):
++            self.verify()
++
++    def test_failed_visit_cleanup_or_unordered_ledger_is_rejected(self):
++        final_failure(self.f)
++        self.f.visits[1]['cleanup_errors'] = ['owned process remains']
++        with self.assertRaisesRegex(ValueError, 'ownership/cleanup'):
++            self.verify()
++        self.f.visits[1]['cleanup_errors'] = []
++        self.f.visits.reverse()
++        with self.assertRaisesRegex(ValueError, 'final-failed-visit'):
++            self.verify()
++
++    def test_original_pair_preflight_and_witness_checks_remain_required(self):
++        final_failure(self.f)
++        with patch.object(association.merge, 'verify_preflight', side_effect=ValueError('native gate failed')):
++            with self.assertRaisesRegex(ValueError, 'native gate failed'):
++                self.verify()
++        self.f.data['metrics']['g01_witness_admission']['lease_records'] = []
++        with self.assertRaisesRegex(ValueError, 'actual admitted resource lease'):
++            self.verify()
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_g01_quota.py b/tests/test_g01_quota.py
+new file mode 100644
+index 00000000..cae8d50e
+--- /dev/null
++++ b/tests/test_g01_quota.py
+@@ -0,0 +1,442 @@
++"""Static-ticket CPU fixtures; native source science is an explicit mock boundary.
++
++Use unittest discover -s tests. These fixtures do not certify a real inventory,
++T02 pass, Stay filter or balance report. Test publication gates are real; the
++full source loader is an explicit tested call boundary rather than fake science.
++"""
++import copy
++from contextlib import ExitStack
++import hashlib
++import json
++from pathlib import Path
++import tempfile
++import unittest
++from unittest.mock import patch
++
++from test_pair_v2_g01 import record as mixed_record
++from src.envs import pair_v2_g01_policy as policy
++from src.envs import pair_v2_g01_search as search
++from src.envs import pair_v2_g01_shard as shard
++from src.envs import pair_v2_stay_order as stay
++from src.tools import g01_quota_plan as quota
++from src.tools import g01_collect_parallel as collect
++from src.tools import g01_parallel as parent
++from src.tools import t01v2_g01_review_checkpoint as review
++
++
++def counts(**kwargs):
++    return {kind: kwargs.get(kind, 0) for kind in quota.KINDS}
++
++
++def ref(path):
++    return {'file': str(path), 'sha256': hashlib.sha256(Path(path).read_bytes()).hexdigest()}
++
++
++def write(path, value):
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(json.dumps(value, sort_keys=True) + '\n')
++    return ref(path)
++
++
++def plan(partition='train', scenes=None, caps=None):
++    scenes = scenes or (['FloorPlan1', 'FloorPlan7'] if partition == 'train' else ['FloorPlan21', 'FloorPlan22'])
++    caps = caps or counts(look_flip=1, look_stay=2)
++    return {'version': quota.VERSION, 'partition': partition, 'parent_run_name': f'gen_{partition}_quota_fixture',
++        'count_stage': quota.STAGES[partition],
++        'targets': {kind: 60 if partition == 'test' else 0 if kind.startswith('direct_') else 40 for kind in quota.KINDS},
++        'confirmed_by_kind': counts(), 'confirmed_by_scene': {},
++        'count_basis_sources': [{'file': 'logs/review/fixture/count_cutoff.json', 'sha256': 'a' * 64}],
++        'outstanding_reservations': [],
++        'assignments': [{'scene': scene, 'actual_output_caps': dict(caps),
++                         'allowed_kinds': [kind for kind in quota.KINDS if caps[kind] > 0]} for scene in scenes]}
++
++
++def configuration(root, *, partition='train', caps=None):
++    value = plan(partition, caps=caps)
++    reference = write(root / 'configs/quota.json', value)
++    scene = value['assignments'][0]['scene']
++    name = value['parent_run_name'] + '_c6_' + scene.lower()
++    ticket = quota.assignment(value, reference, scene, name)
++    fields = {**policy.declared(scene, partition, ticket), **stay.fields(), 'producer_module': policy.PRODUCER}
++    cfg = {**fields, 'name': name, 'scene': scene, 'raw_evidence_dir': str(root / 'raw'),
++           'deadline': 10000000000, 'enable_candidate_clone': False,
++           'scene_pairs_per_class': policy.class_cap(partition)}
++    cfg['shard'] = {**copy.deepcopy(fields), 'name': name, 'scene': scene}
++    return value, reference, cfg
++
++
++def row(config, *, pool='look', mode='stay', actual='look_stay', status='passed'):
++    return {**shard.tags(config), 'counts_as_pair_attempt': True, 'proposed_pool': pool,
++            'mode': mode, 'kind': actual, 'status': status, 'discard_reasons': []}
++
++
++class PlanTests(unittest.TestCase):
++    def test_train_stage_and_pending_reservations_are_not_confirmed_passes(self):
++        value = plan()
++        value['confirmed_by_scene'] = {'FloorPlan203': counts(look_flip=8)}
++        value['confirmed_by_kind'] = counts(look_flip=8)
++        pending = {'reservation_id': 'already_running_legacy',
++            'source': {'file': 'logs/pbs/legacy/payload.json', 'sha256': 'b' * 64},
++            'scope': 'submitted_job_upper_bound',
++            'by_scene': {'FloorPlan204': counts(look_flip=8)}, 'by_kind': counts(look_flip=8)}
++        value['outstanding_reservations'] = [pending]
++        measured = quota.validate_structure(value)
++        self.assertEqual(measured['confirmed_by_kind']['look_flip'], 8)
++        self.assertEqual(measured['reserved_upper_bound_by_kind']['look_flip'], 8)
++        self.assertEqual(measured['remaining_before_new_tickets']['look_flip'], 24)
++        self.assertFalse(measured['count_basis_authenticated'])
++        wrong = copy.deepcopy(value); wrong['count_stage'] = quota.STAGES['test']
++        with self.assertRaises(ValueError): quota.validate_structure(wrong)
++        wrong = copy.deepcopy(value); wrong['confirmed_by_kind']['look_flip'] = 41
++        with self.assertRaises(ValueError): quota.validate_structure(wrong)
++
++    def test_global_and_aggregate_scene_caps_cannot_be_granted_to_each_worker(self):
++        value = plan('test', caps=counts(look_flip=3))
++        value['confirmed_by_scene'] = {f'FloorPlan{number}': counts(look_flip=6) for number in range(23, 32)
++                                       if number <= 30}
++        value['confirmed_by_scene']['FloorPlan221'] = counts(look_flip=6)
++        value['confirmed_by_kind'] = counts(look_flip=54)
++        measured = quota.validate_structure(value)
++        self.assertEqual(measured['new_tickets_by_kind']['look_flip'], 6)
++        value['assignments'][1]['actual_output_caps']['look_flip'] = 4
++        with self.assertRaisesRegex(ValueError, 'global'): quota.validate_structure(value)
++        value = plan('test', caps=counts(look_flip=3))
++        value['confirmed_by_scene'] = {'FloorPlan21': counts(look_flip=4)}
++        value['confirmed_by_kind'] = counts(look_flip=4)
++        with self.assertRaisesRegex(ValueError, 'scene ticket'): quota.validate_structure(value)
++
++    def test_legacy_overreservations_do_not_become_confirmed_and_block_new_tickets(self):
++        value = plan('test', caps=counts(look_flip=1))
++        pending = {f'FloorPlan{i}': counts(look_flip=6) for i in range(21, 31)}
++        pending['FloorPlan221'] = counts(look_flip=6)
++        value['outstanding_reservations'] = [{'reservation_id': 'legacy_queued_and_running',
++            'source': {'file': 'logs/review/old_reservations.json', 'sha256': 'c' * 64},
++            'scope': 'submitted_job_upper_bound', 'by_scene': pending,
++            'by_kind': quota.summed(pending.values())}]
++        with self.assertRaises(ValueError): quota.validate_structure(value)
++        self.assertEqual(value['confirmed_by_kind'], counts())
++
++    def test_no_train_direct_wrong_split_duplicate_or_partial_allowed_domain(self):
++        for edit in ('direct', 'split', 'duplicate', 'allowed', 'boolean', 'stage'):
++            value = plan()
++            if edit == 'direct':
++                value['assignments'][0]['actual_output_caps']['direct_stay'] = 1
++                value['assignments'][0]['allowed_kinds'].insert(0, 'direct_stay')
++            elif edit == 'split': value['assignments'][0]['scene'] = 'FloorPlan21'
++            elif edit == 'duplicate': value['assignments'][1]['scene'] = value['assignments'][0]['scene']
++            elif edit == 'allowed': value['assignments'][0]['allowed_kinds'] = ['look_flip']
++            elif edit == 'boolean': value['assignments'][0]['actual_output_caps']['look_flip'] = True
++            else: value['count_stage'] = 'producer_raw_pass_count'
++            with self.subTest(edit=edit), self.assertRaises(ValueError): quota.validate_structure(value)
++
++    def test_real_dispatch_fails_closed_without_actual_count_basis_adapter(self):
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); value, reference, config = configuration(root)
++            with patch.object(quota, 'ROOT', root):
++                with self.assertRaisesRegex(ValueError, 'count-basis adapter is not implemented'):
++                    quota.load_plan(reference)
++                with self.assertRaisesRegex(ValueError, 'count-basis adapter is not implemented'):
++                    quota.validate_assignment(config, authenticate=True)
++                changed = {**reference, 'sha256': '0' * 64}
++                with self.assertRaisesRegex(ValueError, 'bytes changed'): quota.load_plan(changed)
++
++
++class TestCountBasisTests(unittest.TestCase):
++    def fixture(self, *, repeated=False):
++        value = plan('test', scenes=['FloorPlan22'], caps=counts(look_stay=1))
++        value['confirmed_by_kind'] = counts(look_flip=1)
++        value['confirmed_by_scene'] = {'FloorPlan21': counts(look_flip=1)}
++        containers, packages = {}, {}
++        for index in range(2 if repeated else 1):
++            name = f't01v2_checkpoint_test_fixture_{index}'
++            path = 'results/' + name + '.json'
++            published = {'file': path, 'sha256': str(index + 1) * 64, 'audit': {'warn': []}}
++            pair = {'file': f'data/world_pairs/v2/source{index}/floorplan21_00001/pair.json', 'sha256': 'b' * 64}
++            entry = {'pair_id': 'floorplan21_00001', 'scene': 'FloorPlan21', 'kind': 'look_flip',
++                     'proposal_identity': 'c' * 64, 'pair_reference': pair}
++            container = {'_meta': {'name': name, 'exit_code': 0, 'end': 'fixture ended',
++                'command': ['python3', '-m', 'src.tools.t01v2_g01_review_checkpoint', '--name', name]},
++                'config': {'name': name}, 'metrics': {'kind': 't01v2_review_checkpoint',
++                    'status': 'checkpoint_ready_for_human_review', 'errors': [], 'final_pilot_acceptance': False,
++                    'candidate_pairs': [entry], 'published_pair_count': 1, 'published_by_class': counts(look_flip=1)}}
++            containers[path] = container, published
++            packages[pair['file']] = {'kind': 'look_flip', 'scene': 'FloorPlan21',
++                'target_names': ['A', 'B'], 'source_config': {'g01_partition': 'test'},
++                'independent_verification': {'proposal_identity': entry['proposal_identity']},
++                'source_provenance': {'pair': pair, 'scene': {'file': 'results/scene.json', 'sha256': 'd' * 64}}}
++        value['count_basis_sources'] = [{key: ref[key] for key in ('file', 'sha256')}
++                                        for _, ref in containers.values()]
++        return value, containers, packages
++
++    def test_successful_publication_rechecks_every_entry_and_deduplicates_proposals(self):
++        from src.envs import pair_table_source as source
++        value, containers, packages = self.fixture(repeated=True)
++        def audited(path): return containers['results/' + Path(path).name]
++        def loaded(path, pair_id, *, pair_file):
++            self.assertEqual(pair_id, 'floorplan21_00001')
++            return copy.deepcopy(packages[pair_file])
++        # The real _container publication/name/producer gate runs. Byte audit and
++        # full scientific loader remain explicit boundaries, never fake physics.
++        with patch.object(source, 'audited_result', side_effect=audited), \
++             patch.object(source, 'load_reviewed_pair', side_effect=loaded) as loader:
++            proof = quota.authenticate_count_basis(value)
++        self.assertEqual(loader.call_count, 2)
++        self.assertEqual(proof['confirmed_by_kind'], counts(look_flip=1))
++        self.assertEqual(len(proof['unique_proposals']), 1)
++        self.assertEqual(len(proof['duplicate_occurrences']), 1)
++        self.assertNotIn('training_authorized', proof)
++
++    def test_failed_or_partial_publication_and_changed_original_source_are_not_counts(self):
++        from src.envs import pair_table_source as source
++        for failure in ('exit1', 'unpublished', 'wrong_producer', 'changed_sha', 'raw_count',
++                        'train_pair', 'pair_reference', 'loader_failure', 'reservation'):
++            value, containers, packages = self.fixture()
++            container, published = next(iter(containers.values()))
++            package = next(iter(packages.values()))
++            if failure == 'exit1': container['_meta']['exit_code'] = 1
++            elif failure == 'unpublished': container['metrics']['status'] = 'invalid_evidence'
++            elif failure == 'wrong_producer': container['_meta']['command'][2] = 'src.tools.t01v2_review_checkpoint'
++            elif failure == 'changed_sha': published['sha256'] = 'e' * 64
++            elif failure == 'raw_count': value['confirmed_by_kind'] = counts(look_flip=17)
++            elif failure == 'train_pair': package['source_config']['g01_partition'] = 'train'
++            elif failure == 'pair_reference': package['source_provenance']['pair'] = {'file': 'other', 'sha256': 'f' * 64}
++            elif failure == 'reservation': value['outstanding_reservations'] = [{'source': 'unimplemented'}]
++            error = ValueError('original independent science failure') if failure == 'loader_failure' else None
++            with self.subTest(failure=failure), \
++                 patch.object(source, 'audited_result', return_value=(container, published)), \
++                 patch.object(source, 'load_reviewed_pair', return_value=package, side_effect=error):
++                with self.assertRaises(ValueError): quota.authenticate_count_basis(value)
++
++    def test_conflicting_duplicate_measurement_is_rejected_not_selected(self):
++        from src.envs import pair_table_source as source
++        value, containers, packages = self.fixture(repeated=True)
++        list(packages.values())[1]['target_names'] = ['B', 'A']
++        with patch.object(source, 'audited_result', side_effect=lambda p: containers['results/' + Path(p).name]), \
++             patch.object(source, 'load_reviewed_pair', side_effect=lambda p, i, pair_file: packages[pair_file]):
++            with self.assertRaisesRegex(ValueError, 'conflicting'): quota.authenticate_count_basis(value)
++
++    def test_runtime_assignment_does_not_repeat_historical_science_but_checker_does(self):
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); _, reference, config = configuration(root)
++            with patch.object(quota, 'ROOT', root), \
++                 patch.object(quota, 'authenticate_count_basis', side_effect=ValueError('count authentication required')) as auth:
++                quota.validate_assignment(config)
++                auth.assert_not_called()
++                with self.assertRaisesRegex(ValueError, 'count authentication required'):
++                    quota.validate_assignment(config, authenticate=True)
++                auth.assert_called_once()
++
++
++
++class RuntimeTests(unittest.TestCase):
++    def test_stay_only_never_spends_disabled_flip_or_direct_proposals(self):
++        q = search.SceneQuota(8, actual_output_caps=counts(look_stay=2), allowed_kinds=['look_stay'])
++        catalog = mixed_record(); catalog.update(search.fields(True))
++        iterator = search.MixedIterator([catalog], q)
++        for index in range(2):
++            proposal, _, _ = next(iterator)
++            self.assertEqual((proposal['projection_pool']['pool'], proposal['mode']), ('look', 'stay'))
++            q.record(str(index), {'counts_as_pair_attempt': True, 'proposed_pool': 'look', 'mode': 'stay',
++                                 'kind': 'look_stay', 'status': 'passed'})
++        self.assertTrue(q.complete())
++        with self.assertRaises(StopIteration): next(iterator)
++        self.assertEqual(q.attempts['look_flip'], 0)
++        self.assertEqual(q.passed['direct_stay'], 0)
++
++    def test_filled_flip_switches_to_stay_and_class_crossover_keeps_its_real_verdict(self):
++        q = search.SceneQuota(8, actual_output_caps=counts(look_flip=1, look_stay=2),
++                              allowed_kinds=['look_flip', 'look_stay'])
++        q.record('flip', {'counts_as_pair_attempt': True, 'proposed_pool': 'look', 'mode': 'flip',
++                         'kind': 'look_flip', 'status': 'passed'})
++        self.assertEqual(q.desired_modes('look', 'flip'), ['stay'])
++        with self.assertRaises(search.CollectionQuotaFull): q.before_export({'kind': 'direct_stay'})
++        with tempfile.TemporaryDirectory() as text:
++            _, _, config = configuration(Path(text), caps=counts(look_stay=2))
++            measured = {'kind': 'direct_stay', 'validity': {'acceptance_passed': True}}
++            def original(*args, **kwargs):
++                kwargs['attempt_row'].update(measured)
++                raise search.CollectionQuotaFull('direct_stay')
++            # Physical/render scientific implementation is not mocked as a pass:
++            # this fixture isolates the existing export-quota exception boundary.
++            with patch.object(shard, '_ORIGINAL_BUILD', side_effect=original), \
++                 patch.object(shard.labels, 'pair_context'):
++                out = shard.measured_build(None, config, {}, {'candidate_names': ['A', 'B']},
++                    {'mode': 'stay', 'projection_pool': {'pool': 'look'}, '_private_pool_record': {
++                     'points': {}, 'stay_points_by_pool': {'look': {}}}}, {}, 'floorplan1_00001', None, None)
++            self.assertEqual(out['kind'], 'direct_stay')
++            self.assertTrue(out['validity']['acceptance_passed'])
++            self.assertEqual(out['discard_reasons'], ['collection_quota_full'])
++            self.assertEqual(out['collection_quota_skip']['actual_output_cap'], 0)
++            self.assertNotIn('pair_file', out)
++
++    def test_policy_and_spawn_context_propagate_exact_plan_and_restore_hooks(self):
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); value, reference, config = configuration(root)
++            with patch.object(quota, 'ROOT', root), patch.object(quota, 'authenticate_count_basis', return_value={'fixture_boundary': True}):
++                policy.validate_source(config, config)
++                before = shard.marked.tags
++                with shard.installed(config) as q:
++                    self.assertEqual(shard.marked.tags()['g01_quota_assignment'], config['g01_quota_assignment'])
++                    self.assertEqual(q.limits, config['actual_output_caps'])
++                    self.assertEqual(q.allowed, config['allowed_kinds'])
++                    raw = row(config)
++                    compact = shard.compact_attempt(raw)
++                    self.assertEqual(compact['g01_quota_assignment'], config['g01_quota_assignment'])
++                self.assertIs(shard.marked.tags, before)
++                broken = copy.deepcopy(config); broken['shard']['actual_output_caps']['look_stay'] = 8
++                with self.assertRaises(ValueError): policy.validate_source(broken)
++                broken = copy.deepcopy(config); broken['g01_version'] = policy.VERSION
++                with self.assertRaises(ValueError): policy.validate_source(broken)
++
++    def test_real_generator_and_replay_entry_restore_ticket_hooks_and_labels(self):
++        from src.tools import g01_admission
++        from contextlib import contextmanager
++        class Bridge:
++            def report(self): return {'fixture_resource_boundary': True}
++        @contextmanager
++        def bridge(config):
++            yield Bridge()
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); _, _, config = configuration(root)
++            before = shard.marked.tags, shard.marked.generator_worker, shard.labels._CONTEXT.get()
++            def generation(cfg, connection):
++                self.assertEqual(shard.marked.tags()['actual_output_caps'], cfg['actual_output_caps'])
++                self.assertEqual(shard.marked.tags()['g01_search_version'], search.QUOTA_VERSION)
++                return {'original_generator_boundary': True}
++            with patch.object(quota, 'ROOT', root), patch.object(g01_admission, 'witness_bridge', side_effect=bridge), \
++                 patch.object(shard.stay, '_ORIGINAL_GENERATOR', side_effect=generation):
++                self.assertTrue(shard.generator_worker(config, None)['original_generator_boundary'])
++            self.assertEqual((shard.marked.tags, shard.marked.generator_worker, shard.labels._CONTEXT.get()), before)
++            config.update(candidate_policy=shard.marked.candidates.CANDIDATE_POLICY,
++                snapshot={'clone_context': None}, candidate_names=['A', 'B'], enable_candidate_clone=True,
++                **shard.labels.pair_fields('floorplan1_00001', ['A', 'B']))
++            def replay(cfg, connection):
++                self.assertFalse(cfg['enable_candidate_clone'])
++                self.assertEqual(cfg['g01_quota_assignment'], config['g01_quota_assignment'])
++                self.assertEqual(shard.labels._CONTEXT.get()[0], 'floorplan1_00001')
++                return {'original_replay_boundary': True}
++            with patch.object(quota, 'ROOT', root), patch.object(shard.look, '_ORIGINAL_REPLAY', side_effect=replay):
++                actual = shard.replay_worker(config, None)
++                self.assertEqual(actual['actual_output_caps'], config['actual_output_caps'])
++            self.assertEqual(shard.labels._CONTEXT.get(), before[2])
++            with patch.object(quota, 'ROOT', root), \
++                 patch.object(shard.look, '_ORIGINAL_REPLAY', side_effect=ValueError('original witness failure')):
++                with self.assertRaisesRegex(ValueError, 'original witness failure'):
++                    shard.replay_worker(config, None)
++            self.assertEqual(shard.labels._CONTEXT.get(), before[2])
++
++
++class IndependentJournalTests(unittest.TestCase):
++    def fixture(self, root, *, bad=None):
++        _, _, cfg = configuration(root, caps=counts(look_stay=2))
++        raw = row(cfg)
++        if bad == 'disabled_proposal': raw.update(mode='flip')
++        if bad == 'raw_assignment': raw['actual_output_caps']['look_stay'] = 3
++        if bad == 'forbidden_output': raw['kind'] = 'direct_stay'
++        if bad == 'valid_skip':
++            raw.update(kind='direct_stay', status='rejected', validity={'acceptance_passed': True},
++                       discard_reasons=['collection_quota_full'], collection_quota_skip=shard.quota_skip(cfg, 'direct_stay'))
++        raw_ref = write(root / 'raw/attempt.json', raw)
++        journal_path = root / 'data/world_pairs/v2/fixture/journal.jsonl'
++        journal_path.parent.mkdir(parents=True)
++        journal_path.write_text(json.dumps({'raw_attempt': raw_ref, 'proposed_pool': 'look'}) + '\n')
++        q = shard.make_quota(cfg)
++        if bad not in ('disabled_proposal', 'forbidden_output'):
++            q.record(root / 'raw/attempt.json', raw)
++        metrics = {'g01_collection': q.summary(), 'passed_by_class': q.passed}
++        if bad == 'reported_count': metrics['passed_by_class'] = counts(look_stay=2)
++        return {'config': cfg, 'metrics': metrics}, ref(journal_path)
++
++    def test_original_journal_is_replayed_and_actual_quotas_not_saved_flags_are_checked(self):
++        for bad in (None, 'valid_skip', 'disabled_proposal', 'forbidden_output', 'raw_assignment', 'reported_count'):
++            with self.subTest(bad=bad), tempfile.TemporaryDirectory() as text:
++                root = Path(text); data, journal = self.fixture(root, bad=bad)
++                with patch.object(quota, 'ROOT', root), patch.object(review.merge, 'ROOT', root), \
++                     patch.object(quota, 'authenticate_count_basis', return_value={'fixture_boundary': True}), \
++                     patch.object(review, 'verified_passed_rows', return_value=({'eligible': True}, journal, [])):
++                    if bad in (None, 'valid_skip'):
++                        self.assertEqual(review.verify_collection(data), data['metrics']['g01_collection'])
++                    else:
++                        with self.assertRaises((ValueError, search.CollectionQuotaFull)):
++                            review.verify_collection(data)
++
++
++class QuotaSourceContextTests(unittest.TestCase):
++    def test_new_policy_reaches_original_geometry_and_science_without_old_version_spoof(self):
++        from test_g01_geometry_checkpoint import evidence_fixture, source_fixture
++        with tempfile.TemporaryDirectory() as text:
++            f = evidence_fixture(text)
++            value = plan(scenes=[f.scene], caps=counts(look_flip=1))
++            reference = write(f.root / 'configs/quota.json', value)
++            name = value['parent_run_name'] + '_c6_' + f.scene.lower()
++            fields = policy.declared(f.scene, 'train', quota.assignment(value, reference, f.scene, name))
++            cfg = f.data['config']; cfg.update(fields, name=name)
++            cfg['shard'].update(fields, name=name)
++            f.data['metrics'].update(fields, name=name)
++            f.row.update(fields)
++            catalog = copy.deepcopy(f.read(f.pool_ref)); catalog.update(search.fields(True))
++            f.pool_ref = f.write(Path(f.pool_ref['file']), catalog)
++            f.row['projection_pool_reference'] = f.pool_ref
++            f.refresh_index(); f.association['controller_index_reference'] = f.index
++            positions = {obj['name']: obj['position'] for obj in f.baseline['objects']}
++            def science(row, path, **kwargs):
++                self.assertEqual(review.roles.verify_proposal_role(row, positions)['g01_search_version'], search.QUOTA_VERSION)
++                return {'original_scientific_boundary': True}
++            with patch.object(quota, 'ROOT', f.root):
++                with source_fixture(f, science):
++                    checked = review.merge.check_pair(f.row, f.pair_path, raw_root=cfg['raw_evidence_dir'])
++                    self.assertTrue(checked['original_scientific_boundary'])
++                    f.row['actual_output_caps'] = counts(look_flip=2)
++                    with self.assertRaisesRegex(ValueError, 'static quota assignment'):
++                        review.merge.check_pair(f.row, f.pair_path, raw_root=cfg['raw_evidence_dir'])
++
++
++class ParentWiringTests(unittest.TestCase):
++    def test_exact_submission_command_binds_quota_manifest_and_old_default_is_unchanged(self):
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); value = plan(); reference = write(root / 'configs/quota.json', value)
++            name, scenes, concurrency = value['parent_run_name'], [r['scene'] for r in value['assignments']], 6
++            timeout = collect.required_timeout(scenes, concurrency)
++            command = ['python3', '-m', collect.MODULE, '--name', name, '--scenes', *scenes,
++                '--concurrency', '6', '--benchmark-source', 'results/benchmark.json', '--timeout-seconds', str(timeout),
++                '--partition', 'train', '--quota-plan', reference['file'], '--quota-plan-sha256', reference['sha256']]
++            base = root / 'logs/pbs/submission'; base.mkdir(parents=True)
++            payload = {'name': name, 'command': command, 'budget_group': 'G01', 'task_id': 'T01',
++                'budget_batch': 't00b_t01_20261108', 'queue': 'autox', 'requested_host': None,
++                'requested_gpu_count': 1, 'requested_wall_seconds': timeout + 30}
++            write(base / 'payload.json', payload)
++            write(base / 'submission.json', {'stdout': '700001.hopper-m-02\n'})
++            kwargs = dict(scenes=scenes, concurrency=concurrency, benchmark='results/benchmark.json',
++                          partition='train', explicit_partition=True, quota_reference=reference)
++            collect.submission_identity(root, name, '700001.hopper-m-02', timeout, **kwargs)
++            for changed in ({**reference, 'sha256': 'f' * 64}, None):
++                with self.assertRaises(ValueError):
++                    collect.submission_identity(root, name, '700001.hopper-m-02', timeout,
++                                                **{**kwargs, 'quota_reference': changed})
++
++    def test_parent_injects_only_its_scene_tickets_and_restores_after_exception(self):
++        with tempfile.TemporaryDirectory() as text:
++            root = Path(text); value = plan(); reference = write(root / 'configs/quota.json', value)
++            scenes = [r['scene'] for r in value['assignments']]
++            supplied = {'plan': value, 'reference': reference, 'arithmetic': quota.validate_structure(value),
++                        'count_basis_proof': {'fixture_boundary': True}}
++            before = parent.make_shard
++            def base(name, scene, *args, **kwargs):
++                return {'name': name, 'scene': scene, 'original_resource_proof': 'unchanged',
++                        **policy.declared(scene)}
++            with patch.object(parent, 'make_shard', side_effect=base) as original:
++                with self.assertRaisesRegex(RuntimeError, 'fixture stop'):
++                    with collect.installed(scenes=scenes, concurrency=6, benchmark='results/benchmark.json',
++                            proof={'source': {'file': 'results/benchmark.json'}}, quota=supplied):
++                        actual = parent.make_shard(value['parent_run_name'] + '_c6_floorplan1', 'FloorPlan1')
++                        self.assertEqual(actual['allowed_kinds'], ['look_flip', 'look_stay'])
++                        self.assertEqual(actual['actual_output_caps'], counts(look_flip=1, look_stay=2))
++                        self.assertEqual(actual['original_resource_proof'], 'unchanged')
++                        self.assertEqual(actual['g01_quota_assignment']['plan_reference'], reference)
++                        raise RuntimeError('fixture stop')
++                self.assertIs(parent.make_shard, original)
++            self.assertIs(parent.make_shard, before)
++
++
++if __name__ == '__main__':
++    unittest.main()

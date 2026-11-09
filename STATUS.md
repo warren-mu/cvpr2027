@@ -1095,3 +1095,33 @@ gen_test_fixed40_60_a01_retry1_c6_floorplan222: {"direct_flip": 0, "direct_stay"
 708894(B)、708912(A_retry1)已通过gate在运行，保留原作业；它们是旧版本全类别计划，不能追溯宣称有新全局配额能力，剩余最大可能产出先保守预留。708909(D)与708918(C_retry1)再次black/F86，实际账已记录，暂不按旧全类别计划重提；后续按新scene×kind不可转移配额补采。新配额实现隔离准备，不热改运行中共享生成器。无可安全新增的测试配额时，空名额先用于T02首6单卡并行实测。后续成本预测按新训练规模与测试目标，不再按训练400。
 
 测试Look原始预览8张已由diag_g01_test_live_preview_01从封存前缀逐SHA复制至logs/review/g01_test_live_preview_01；显式provisional，原source仍可能在跑，尚非独立验收。
+
+
+## 2026-11-09 17:39 UTC — 测试生成运行中计数
+
+gen_test_fixed40_60_b01_c6_floorplan24: {"direct_flip": 0, "direct_stay": 0, "look_flip": 4, "look_stay": 0}; observed attempts=145; ended
+gen_test_fixed40_60_b01_c6_floorplan224: {"direct_flip": 0, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=59; ended
+gen_test_fixed40_60_b01_c6_floorplan324: {"direct_flip": 0, "direct_stay": 0, "look_flip": 2, "look_stay": 0}; observed attempts=54; ended
+gen_test_fixed40_60_b01_c6_floorplan424: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=107; ended
+gen_test_fixed40_60_b01_c6_floorplan25: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=46; ended
+gen_test_fixed40_60_b01_c6_floorplan225: {"direct_flip": 0, "direct_stay": 3, "look_flip": 6, "look_stay": 0}; observed attempts=97; ended
+gen_test_fixed40_60_b01_c6_floorplan325: {"direct_flip": 1, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=4; ended
+gen_test_fixed40_60_b01_c6_floorplan425: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=141; ended
+gen_test_fixed40_60_b01_c6_floorplan26: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=0; ended
+gen_test_fixed40_60_b01_c6_floorplan226: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=128; ended
+gen_test_fixed40_60_b01_c6_floorplan326: {"direct_flip": 2, "direct_stay": 5, "look_flip": 0, "look_stay": 0}; observed attempts=107; ended
+gen_test_fixed40_60_b01_c6_floorplan426: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=333; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan21: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=24; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan221: {"direct_flip": 2, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=187; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan321: {"direct_flip": 0, "direct_stay": 0, "look_flip": 1, "look_stay": 1}; observed attempts=280; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan421: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=221; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan22: {"direct_flip": 0, "direct_stay": 6, "look_flip": 0, "look_stay": 0}; observed attempts=193; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan222: {"direct_flip": 2, "direct_stay": 6, "look_flip": 6, "look_stay": 3}; observed attempts=135; ended
+gen_test_fixed40_60_a01_retry1_c6_floorplan322: {"direct_flip": 1, "direct_stay": 2, "look_flip": 4, "look_stay": 1}; observed attempts=85; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan422: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=123; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan23: {"direct_flip": 6, "direct_stay": 6, "look_flip": 0, "look_stay": 0}; observed attempts=70; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan223: {"direct_flip": 0, "direct_stay": 3, "look_flip": 0, "look_stay": 0}; observed attempts=85; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan323: {"direct_flip": 6, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=169; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan423: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=164; running snapshot
+
+以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 diag_g01_test_live_03。
