@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 30.666613636014517
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_stay_priority_regressions_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t01v2_stay_priority_regressions_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T14:41:15",
+    "log_path": "logs/runs/t01v2_stay_priority_regressions_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "c0993041ea8d1673bf34d60cc802d0c43bdb910c",
+    "git_dirty": false,
+    "end": "2026-11-09T14:41:47",
+    "duration_sec": 31.1,
+    "exit_code": 0,
+    "metrics_sha256": "55dfc4c600d2b119ee93356b64907e2371a82905c3eeed9bf08d4d2658200965"
+  }
+}

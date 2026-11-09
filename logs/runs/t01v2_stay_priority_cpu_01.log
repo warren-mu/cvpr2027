@@ -1,0 +1,27 @@
+# run_logged: python3 -m src.tools.record_command --name t01v2_stay_priority_cpu_01 -- python3 -c import unittest
+s=unittest.TestSuite()
+for p in ('test_pair_v2_stay_priority.py','test_t01v2_stay_priority_checkpoint.py'):
+ s.addTests(unittest.defaultTestLoader.discover('tests',pattern=p))
+raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())
+
+# start: 2026-11-09T14:38:23
+test_deadline_propagates_without_selecting_or_consuming_any_domain (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_peek_reads_original_far_first_row_without_consuming_stream_or_native_tokens (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_real_partial_round_prioritizes_min_world_area_and_next_round_restores_flip_order (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_replay_and_parent_delegate_complete_existing_paths_with_explicit_new_policy (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_selection_is_planned_only_and_schema_cannot_impute_unknown_or_change_original_row (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_source_tags_scope_and_actual_spawn_entry_hooks_restore (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_stable_ties_unknown_retention_and_no_phantom_counted_attempt (test_pair_v2_stay_priority.StayPriorityTests) ... ok
+test_actual_context_installs_explicit_policy_and_restores_on_error (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+test_both_modes_retain_complete_checker_inputs_and_failure (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+test_main_uses_original_controller_collector_and_restores_ownership (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+test_new_identity_still_requires_original_byte_backed_geometry_and_old_scope_stays_strict (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+test_selection_failure_cannot_be_bypassed_by_scientific_success (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+test_wrong_producer_version_or_missing_order_fields_fail_before_science (test_t01v2_stay_priority_checkpoint.StayPriorityCheckpointTests) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.308s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.2659742350224406}
+# exit_code: 0

@@ -1,0 +1,29 @@
+{
+  "name": "diag_next_night_substeps_ready_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_next_night_substeps_ready_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib,re\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();f=r/'logs/pbs/gen_train_concurrency_s15_02-20261109T063451Z-65165040'\np=json.loads((f/'payload.json').read_text()); receipt=json.loads((f/'submission.json').read_text()); before=json.loads((f/'budget_before_submission.json').read_text())\nassert receipt['returncode']==0 and receipt['stdout'].strip()=='707841.hopper-m-02'\ngate,gref=audited_result(r/'results/gen_train_concurrency_s15_02_j707841_hopper_m_02_gate.json')\nassert gate['metrics']['passed'] is True and gate['metrics']['cleanup_errors']==[]\nrows=[]\nfor name in ('t01v2_stay_priority_cpu_01','t01v2_stay_priority_regressions_01','smoke_e2e_look_plan_cpu_01'):\n d,ref=audited_result(r/'results'/(name+'.json'));assert d['_meta']['exit_code']==0\n counts=re.findall(r'Ran (\\d+) tests', (r/d['_meta']['log_path']).read_text());assert len(counts)==1\n rows.append((name,int(counts[0])))\npre,_=audited_result(r/'results/smoke_e2e_look_source_preflight_01.json');assert pre['_meta']['exit_code']==0\nimages,_=audited_result(r/'results/diag_g01_provisional_lookstay_01.json');assert images['_meta']['exit_code']==0\nreserve=p['requested_wall_seconds']*p['requested_gpu_count']/3600*p['requested_queue_charge_rate']\ns=r/'STATUS.md'\nnote=f'''\n### G01 retry running; next bounded substeps ready\n\nThe original start-failure707807 was retained; retry707841.hopper-m-02 (gen_train_concurrency_s15_02) passed the real image gate and began the c2 stage. It uses the same1GPU/12CPU allocation and2/4/6 benchmark, without a host constraint. The new receipt reserves{reserve}chargedGPUh; before submission the G01 ledger was{before['accounted_or_reserved_by_subbudget']['G01']}, T01v2{before['accounted_or_reserved_by_subbudget']['T01v2']} and the shared phase{before['accounted_or_reserved_total']}. Queue history will be recorded by the original final PBS accounting.\n\nThe new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:{json.dumps(rows)}. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.\n\nNext GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.\n'''\nassert '### G01 retry running; next bounded substeps ready' not in s.read_text()\ns.write_text(s.read_text()+note)\nprint(note)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T14:49:46",
+  "log_path": "logs/runs/diag_next_night_substeps_ready_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c0993041ea8d1673bf34d60cc802d0c43bdb910c",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_next_night_substeps_ready_01.diff",
+  "end": "2026-11-09T14:49:47",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "a0eefeff86c9ab5556ae4a41a2d9c61253f855353616fe06a358eadf33f58ccb"
+}

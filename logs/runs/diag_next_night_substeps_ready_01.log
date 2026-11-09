@@ -1,0 +1,41 @@
+# run_logged: python3 -m src.tools.record_command --name diag_next_night_substeps_ready_01 -- python3 -c import json,pathlib,re
+from src.tools.t01_partition import audited_result
+r=pathlib.Path.cwd();f=r/'logs/pbs/gen_train_concurrency_s15_02-20261109T063451Z-65165040'
+p=json.loads((f/'payload.json').read_text()); receipt=json.loads((f/'submission.json').read_text()); before=json.loads((f/'budget_before_submission.json').read_text())
+assert receipt['returncode']==0 and receipt['stdout'].strip()=='707841.hopper-m-02'
+gate,gref=audited_result(r/'results/gen_train_concurrency_s15_02_j707841_hopper_m_02_gate.json')
+assert gate['metrics']['passed'] is True and gate['metrics']['cleanup_errors']==[]
+rows=[]
+for name in ('t01v2_stay_priority_cpu_01','t01v2_stay_priority_regressions_01','smoke_e2e_look_plan_cpu_01'):
+ d,ref=audited_result(r/'results'/(name+'.json'));assert d['_meta']['exit_code']==0
+ counts=re.findall(r'Ran (\d+) tests', (r/d['_meta']['log_path']).read_text());assert len(counts)==1
+ rows.append((name,int(counts[0])))
+pre,_=audited_result(r/'results/smoke_e2e_look_source_preflight_01.json');assert pre['_meta']['exit_code']==0
+images,_=audited_result(r/'results/diag_g01_provisional_lookstay_01.json');assert images['_meta']['exit_code']==0
+reserve=p['requested_wall_seconds']*p['requested_gpu_count']/3600*p['requested_queue_charge_rate']
+s=r/'STATUS.md'
+note=f'''
+### G01 retry running; next bounded substeps ready
+
+The original start-failure707807 was retained; retry707841.hopper-m-02 (gen_train_concurrency_s15_02) passed the real image gate and began the c2 stage. It uses the same1GPU/12CPU allocation and2/4/6 benchmark, without a host constraint. The new receipt reserves{reserve}chargedGPUh; before submission the G01 ledger was{before['accounted_or_reserved_by_subbudget']['G01']}, T01v2{before['accounted_or_reserved_by_subbudget']['T01v2']} and the shared phase{before['accounted_or_reserved_total']}. Queue history will be recorded by the original final PBS accounting.
+
+The new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:{json.dumps(rows)}. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.
+
+Next GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.
+'''
+assert '### G01 retry running; next bounded substeps ready' not in s.read_text()
+s.write_text(s.read_text()+note)
+print(note)
+
+# start: 2026-11-09T14:49:46
+
+### G01 retry running; next bounded substeps ready
+
+The original start-failure707807 was retained; retry707841.hopper-m-02 (gen_train_concurrency_s15_02) passed the real image gate and began the c2 stage. It uses the same1GPU/12CPU allocation and2/4/6 benchmark, without a host constraint. The new receipt reserves2.186111111111111chargedGPUh; before submission the G01 ledger was0.0008333333333333334, T01v29.314166666666667 and the shared phase22.359444444444442. Queue history will be recorded by the original final PBS accounting.
+
+The new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:[["t01v2_stay_priority_cpu_01", 13], ["t01v2_stay_priority_regressions_01", 613], ["smoke_e2e_look_plan_cpu_01", 39]]. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.
+
+Next GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.
+
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.15649246098473668}
+# exit_code: 0

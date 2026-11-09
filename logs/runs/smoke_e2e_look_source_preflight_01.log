@@ -1,0 +1,10 @@
+# run_logged: python3 -m src.tools.record_command --name smoke_e2e_look_source_preflight_01 -- python3 -c from pathlib import Path
+import json
+from src.tools.smoke_e2e_views import review_packages,ROOT
+plan,ref,images,packages,sources=review_packages(ROOT/'configs/smoke_e2e_look_five.json')
+print('LOOK_SOURCE_PREFLIGHT: '+json.dumps({'pairs':[{'pair_id':p['pair_id'],'kind':p['kind'],'field_of_view':p['source_config']['field_of_view']} for p in packages],'plan':ref,'scope':'read-only source authentication; no new rendering, cache or credit claim'},sort_keys=True))
+
+# start: 2026-11-09T14:41:19
+LOOK_SOURCE_PREFLIGHT: {"pairs": [{"field_of_view": 60, "kind": "look_flip", "pair_id": "floorplan203_00002"}, {"field_of_view": 60, "kind": "look_flip", "pair_id": "floorplan203_00004"}, {"field_of_view": 60, "kind": "look_flip", "pair_id": "floorplan203_00010"}, {"field_of_view": 60, "kind": "look_flip", "pair_id": "floorplan203_00020"}, {"field_of_view": 60, "kind": "look_flip", "pair_id": "floorplan203_00024"}], "plan": {"bytes": 2566, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/smoke_e2e_look_five.json", "sha256": "6a0793e2f14afbb1212cd4038713a2ed1787b11d3e128718a3a38457c748d9c9"}, "scope": "read-only source authentication; no new rendering, cache or credit claim"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 83.3736933740438}
+# exit_code: 0

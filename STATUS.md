@@ -712,3 +712,18 @@ Receipt: logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e. Code a
 PBS707807.hopper-m-02 stopped before launching its render gate or any scene. The shared historical child launcher only accepted pilot_pairs_ names, while G01 requires gen_train_. The original orchestration_failed result, stack trace and all unstarted assignments are retained. PBS measured allocation: 0.0008333333333333334GPUh, charge multiplier1.0, charged0.0008333333333333334GPUh; queue wait5.2minutes (source:results/g01_concurrency_failed_start_accounting_01.json).
 
 G01 now has its own non-overwriting gen_train_ launcher with the same run_logged/seed0/environment/private-session/cleanup contract; shared historical tools are unchanged. Regression fixtures exercise the actual gate and scene names and every existing evidence collision path.60 focused G01/resource/source tests passed (g01_launcher_fix_cpu_01). After audit/push, retry the same benchmark with a new name; no active job was canceled.
+
+### G01 first provisional LookStay images
+
+The running c2 FloorPlan7 source reports LookStay candidates floorplan7_00001 and00008. Existing images were hash-bound to archived live journal prefixes and immutable gate/admission/submission identity, then published in logs/review/g01_provisional_lookstay_01. These remain pending ended-source independent acceptance; they are not counted as qualified pairs yet. Logged evidence:diag_g01_provisional_lookstay_01.
+
+
+G01 2026-11-09T06:47:13.561304+00:00，作业 707841.hopper-m-02（`diag_g01_live_02`）：gen_train_concurrency_s15_02_c2_floorplan1：完整行尝试 34，source-reported {"direct_flip": 1, "direct_stay": 6, "look_flip": 0, "look_stay": 0}；started_complete_journal_prefix；gen_train_concurrency_s15_02_c2_floorplan7：完整行尝试 25，source-reported {"direct_flip": 1, "direct_stay": 4, "look_flip": 0, "look_stay": 3}；started_complete_journal_prefix。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。
+
+### G01 retry running; next bounded substeps ready
+
+The original start-failure707807 was retained; retry707841.hopper-m-02 (gen_train_concurrency_s15_02) passed the real image gate and began the c2 stage. It uses the same1GPU/12CPU allocation and2/4/6 benchmark, without a host constraint. The new receipt reserves2.186111111111111chargedGPUh; before submission the G01 ledger was0.0008333333333333334, T01v29.314166666666667 and the shared phase22.359444444444442. Queue history will be recorded by the original final PBS accounting.
+
+The new opt-in Stay pilot only prioritizes existing domains by the smaller of the two planned worlds best one-action projected box areas. It keeps each domain's original far-point/fallback order, stable unknown/tie ordering, unchanged Flip round order and actual Flip>=Stay quota. No point or threshold is added or removed. CPU suites passed:[["t01v2_stay_priority_cpu_01", 13], ["t01v2_stay_priority_regressions_01", 613], ["smoke_e2e_look_plan_cpu_01", 39]]. The same five fixed LookFlip E2E inputs also passed the real read-only source preflight; that does not claim any new render/cache/credit result.
+
+Next GPU work after this push: a bounded1GPU Stay-priority pilot in FloorPlan203, and the five-pair Look E2E export/cache check in its separate1GPU slot. E2E training still awaits the explicitly listed credit definitions. G01 benchmark sources remain on their already-running unchanged producer.

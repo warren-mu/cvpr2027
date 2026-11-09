@@ -1,0 +1,28 @@
+{
+  "name": "smoke_e2e_look_source_preflight_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "smoke_e2e_look_source_preflight_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom src.tools.smoke_e2e_views import review_packages,ROOT\nplan,ref,images,packages,sources=review_packages(ROOT/'configs/smoke_e2e_look_five.json')\nprint('LOOK_SOURCE_PREFLIGHT: '+json.dumps({'pairs':[{'pair_id':p['pair_id'],'kind':p['kind'],'field_of_view':p['source_config']['field_of_view']} for p in packages],'plan':ref,'scope':'read-only source authentication; no new rendering, cache or credit claim'},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T14:41:19",
+  "log_path": "logs/runs/smoke_e2e_look_source_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c0993041ea8d1673bf34d60cc802d0c43bdb910c",
+  "git_dirty": false,
+  "end": "2026-11-09T14:42:43",
+  "duration_sec": 84.0,
+  "exit_code": 0,
+  "metrics_sha256": "c2f22551fc89ce5ecdba267b4af5c84ddd0446231d7c3463c2f6d85c0c00b378"
+}

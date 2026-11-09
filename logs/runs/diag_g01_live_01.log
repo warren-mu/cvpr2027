@@ -1,0 +1,68 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_live_01 -- python3 -c import datetime as dt,json,shlex
+from pathlib import Path
+from src.tools.t01v2_live_progress import read_prefix,archive,observed_counts
+from src.tools.g01_admission import validate_source_admission
+from src.tools.t01_partition import ROOT,audited_result
+from src.tools.merge_pair_v2 import producer_arguments,option
+name=__import__('os').environ['CVPR_RUN_NAME']
+collection='gen_train_concurrency_s15_02';job='707841.hopper-m-02'
+base=Path('/scratch/e1583364/cvpr2027/g01_parallel')/collection/'707841_hopper_m_02'
+out=ROOT/'logs/runs'/name;out.mkdir(parents=True,exist_ok=False)
+rows=[];missing=[]
+for concurrency in (2,4,6):
+ for number in (1,7,203,204,301,401):
+  scene='FloorPlan'+str(number);child=f'{collection}_c{concurrency}_floorplan{number}'
+  log=ROOT/'logs/runs'/(child+'.log')
+  if not log.exists():
+   missing.append({'name':child,'scene':scene,'concurrency':concurrency,'state':'not_observed_started','counts':None});continue
+  raw,extent=read_prefix(log,limit=max(log.stat().st_size+8388608,8388608))
+  if extent['read_cap_reached']:raise ValueError('Log prefix cap reached')
+  lines=raw.decode().splitlines()
+  if not lines or not lines[0].startswith('# run_logged: '):raise ValueError('Missing actual logged child header')
+  args=producer_arguments(shlex.split(lines[0][len('# run_logged: '):]),'src.envs.pair_v2_g01_shard')
+  shard_path=base/f'c{concurrency}'/scene/'shard_config.json'
+  if (option(args,'--name')!=child or option(args,'--scene')!=scene or Path(option(args,'--shard-config'))!=shard_path or float(option(args,'--timeout-seconds'))!=1200):raise ValueError('Actual child header differs from planned identity')
+  shard_raw=shard_path.read_bytes();shard=json.loads(shard_raw)
+  if shard_path.stat().st_mode&0o222 or shard['pbs_jobid']!=job:raise ValueError('Shard mutable/wrong job')
+  plan=validate_source_admission({'name':child,'scene':scene,'shard':shard})
+  gate,gate_ref=audited_result(shard['gate_result'])
+  if gate['metrics'].get('passed') is not True or any(shard['gate_source'].get(k)!=gate_ref[k] for k in ('file','sha256','metrics_sha256','exit_code','git_commit')):raise ValueError('Different/nonpassing actual gate')
+  row={'name':child,'scene':scene,'concurrency':concurrency,'scope':'source-reported complete journal prefix; not independently accepted',
+   'log_start':[v[len('# start: '):] for v in lines if v.startswith('# start: ')],
+   'log_start_timezone':'cluster local UTC+08:00','log_extent':extent,'log_prefix':archive(raw,out,child+'.log'),
+   'shard':archive(shard_raw,out,child+'_shard.json'),'plan':archive(Path(shard['g01_admission']['plan_file']).read_bytes(),out,child+'_plan.json'),
+   'gate':gate_ref,'gpu_uuid':plan['gpu_uuid'],'node':plan['node'],'counts':None,'state':'started_no_journal_observed'}
+  journal=ROOT/'data/world_pairs/v2'/(child+'_attempts.jsonl')
+  if journal.exists():
+   captured,coverage=read_prefix(journal,limit=max(journal.stat().st_size+8388608,8388608))
+   if coverage['read_cap_reached']:raise ValueError('Journal prefix cap reached')
+   row.update(state='started_complete_journal_prefix',journal_extent=coverage,journal_prefix=archive(captured,out,child+'_attempts.jsonl'),counts=observed_counts(captured,scene))
+  result_path=ROOT/'results'/(child+'.json')
+  if result_path.exists():
+   data=json.loads(result_path.read_text());meta=data.get('_meta',{});measured=data.get('metrics',{})
+   row['reported_terminal']={'end':meta.get('end'),'exit_code':meta.get('exit_code'),'status':measured.get('status'),'error':measured.get('error'),'black_frame_detected':measured.get('black_frame_detected'),'passed_by_class':measured.get('passed_by_class'),'cleanup_errors':measured.get('cleanup_errors')}
+   if meta.get('end'):
+    row['ended_source']=archive(result_path.read_bytes(),out,child+'_result.json');row['state']='ended_source_reported'
+  rows.append(row)
+parent_path=ROOT/'results'/(collection+'.json');parent=None
+if parent_path.exists():
+ data=json.loads(parent_path.read_text());m=data.get('metrics',{});meta=data.get('_meta',{})
+ parent={'end':meta.get('end'),'exit_code':meta.get('exit_code'),'status':m.get('status'),'error':m.get('error'),'stages':m.get('stages'),'stop_reasons':m.get('stop_reasons'),'cleanup_errors':m.get('cleanup_errors')}
+report={'observed_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'pbs_jobid':job,'collection':collection,'scope':'actual started sources only; unstarted/missing journal counts unknown; source-reported not independent acceptance','sources':rows,'not_observed_started':missing,'parent_reported':parent}
+print('G01_PROGRESS_SNAPSHOT: '+json.dumps(report,sort_keys=True,ensure_ascii=False),flush=True)
+parts=[]
+for row in rows:
+ counts=row['counts'];terminal=row.get('reported_terminal',{})
+ detail='journal 未出现，计数 unknown' if counts is None else '完整行尝试 '+str(counts['observed_complete_attempts'])+'，source-reported '+json.dumps(counts['observed_reported_passed_by_class'],sort_keys=True)
+ parts.append(row['name']+'：'+detail+'；'+row['state']+((' / '+str(terminal.get('status'))) if terminal else ''))
+text='\n\nG01 '+report['observed_at_utc']+'，作业 '+job+'（`'+name+'`）：'+('；'.join(parts) if parts else '尚无实际启动子源可见，计数 unknown')+'。未观察到启动的其余计划源全部为 unknown；以上只是源报告的完整 journal 前缀计数，不是独立验收。原始前缀和 immutable shard/plan 已由本次记录归档，未修改运行源。\n'
+with (ROOT/'STATUS.md').open('a') as stream:stream.write(text)
+
+# start: 2026-11-09T14:46:18
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'CVPR_RUN_NAME'
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.21977405197685584}
+# exit_code: 1
