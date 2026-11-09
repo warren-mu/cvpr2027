@@ -2,10 +2,11 @@
 \label{sec:conclusion}
 
 \paragraph{Limitations.}
-All experiments use a single simulator, discrete viewpoints, single-object edits, and a 3B-parameter policy; we do not evaluate on real robots.
-World pairs require a simulator that can restore and edit states deterministically and expose instance masks, which limits where the method applies directly.
-The variance argument for pairing holds for a balanced prior with one rollout per world; for other priors the benefit must be established empirically.
-% TODO(results): add any limitation revealed by the experiments (e.g., arms or rates where the method does not help).
+All experiments use one simulator, discrete viewpoints, a single relocated object per pair, one relational instruction template, and a 3B-parameter policy; we do not evaluate on real robots.
+Constructing pairs requires a simulator that can restore and edit states deterministically and expose instance masks.
+Pre-rendering limits the agent to states within a fixed observation budget of the start.
+The variance argument for paired sampling holds for a balanced change rate with one rollout per world; for other rates the benefit must be established empirically.
+\todo{Add every limitation revealed by the experiments, including methods or rates where our approach does not help.}
 
 \paragraph{Conclusion.}
-TODO(after G2): two or three sentences, written only from verified results.
+\todo{Two or three sentences, written only from verified, aggregated results.}

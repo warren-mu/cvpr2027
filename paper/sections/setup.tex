@@ -1,38 +1,39 @@
 \section{Experimental Setup}
 \label{sec:setup}
 
-\paragraph{Environment and task.}
-We use AI2-THOR~\cite{ai2thor2017} kitchen and living-room scenes, split by scene into training and held-out test sets.
-Each scene is discretized into a navigation graph of viewpoints (TODO: exact count from T01) connected when they are close and mutually reachable; the agent can face eight headings.
-At every step the current frame is overlaid with numeric marks on visible candidates of the target category and on openable containers~\cite{som2023}, and the text lists the reachable neighbors and the available actions.
-Episodes end with \commit\ or after a fixed turn limit.
-% TODO(D1): one sentence on whether frames are rendered live or served from a verified pre-rendered cache.
-
-\paragraph{Constructing and validating world pairs.}
-For each scene we sample a start viewpoint, an instruction, and a single-object edit, and set both worlds in the same simulator process with complete object-pose lists.
-A pair is kept only if it passes every check:
-(i) restoring a state twice reproduces the same frame;
-(ii) the edited object settles within a small tolerance of its commanded pose and no other object moves;
-(iii) the instruction resolves to a unique target in each world;
-(iv) a privileged planner reaches and selects the target in each world within a step budget, and its action sequence is stored as a witness;
-(v) for \Look\ pairs, the agent's inputs are pixel-identical in both worlds before observation, while for direct pairs they already differ inside the relevant objects' masks;
-(vi) after observation, the frames differ in at least a minimum number of pixels inside the relevant objects' instance masks, by a margin well above rendering noise.
-We report discard rates by reason.
-Training pairs come only from training scenes; the test pairs are generated from held-out scenes and frozen before any training.
-
 \paragraph{Model and training.}
-The policy is Qwen2.5-VL-3B-Instruct~\cite{qwen25vl2025}, trained with the multi-turn PPO of VAGEN~\cite{vagen2025} on top of verl~\cite{hybridflow2025} and vLLM~\cite{vllm2023}.
-All methods share one frozen configuration (reward, $\lambda$, turn limit, batch of 64 episodes per step, number of steps); TODO: number of steps and GPUs per run from T00b/T04.
-Unless stated otherwise the training change rate is $\rho = 0.5$.
+The policy is Qwen2.5-VL-3B-Instruct~\cite{qwen25vl2025}, trained with the multi-turn PPO of VAGEN~\cite{vagen2025} on verl~\cite{hybridflow2025} with vLLM~\cite{vllm2023} for generation.
+The observation budget is $D = 4$ (at most $5$ turns per episode), each response is limited to $256$ tokens, the observation cost is $\lambda = 0.05$, and the training change rate is $\rho = 0.5$.
+All methods share one frozen configuration: reward, optimizer, learning rate, KL coefficient, $64$ episodes per step, and \tbd\ training steps \todo{from configs/rl\_common.yaml once frozen}.
+For the consistency term we use $m = 1$ and $\beta = 0.1$.
+Each trained method is run with three seeds.
 
-\paragraph{Methods compared.}
-\emph{Outcome-only PPO} samples single worlds and uses standard GAE.
-\emph{Paired, independent} uses exactly the same lockstep pairs as our method but computes GAE in each world separately; it isolates the cross-world terms.
-\emph{Same-world credit} samples single worlds and uses $A^{\mathrm{same}}_t$ before the evidence step, an adaptation of fork-based evidence seeking~\cite{seekvln2026} to our task.
-\emph{Information-set credit} uses \cref{eq:is}; \emph{ours} adds post-evidence consistency.
-Training-free references keep the base model's target choices but fix when it may commit: never look, always explore up to the budget, explore for a fixed number of actions, or explore until the anchor and a target-category candidate are visible (the last uses ground-truth masks and is privileged).
+\paragraph{Methods.}
+The $2{\times}2$ design of \cref{sec:credit} gives four methods, all with the same reward and rollout budget:
+\begin{itemize}
+\item \textbf{PPO} (single-world, critic): standard outcome-based multi-turn PPO.
+\item \textbf{Paired-GAE} (paired, critic): the same lockstep pairs, with the critic's GAE in each world. \todo{Run if compute allows; otherwise state that this cell is missing.}
+\item \textbf{Single-$\Qc$} (single-world, commit-now baseline): $A^{\mathrm{single}}_t$ before the evidence, our adaptation of a same-world look-versus-commit contrast~\cite{seekvln2026}.
+\item \textbf{IS-credit} (paired, commit-now baseline): information-set credit, \cref{eq:is}.
+\end{itemize}
+\textbf{Ours} adds post-evidence consistency (\cref{sec:consistency}) to IS-credit.
+The comparisons are: IS-credit vs.\ Single-$\Qc$ for the effect of paired sampling; Single-$\Qc$ vs.\ PPO (and IS-credit vs.\ Paired-GAE) for the effect of the commit-now baseline; and Ours vs.\ IS-credit for the effect of the consistency term.
 
-\paragraph{Metrics and protocol.}
-We report success rate (SR), observation cost (observation actions per episode), success as a function of observation cost, the rate of premature commitment (selecting before the evidence step in \Look\ pairs), post-evidence update accuracy separately for \Look$\to$\Flip\ and \Look$\to$\Stay, and accuracy on direct \Flip\ and \Stay\ pairs.
-Each metric is evaluated on frozen test pairs at test change rates of $0$, $0.25$, and $0.5$.
-Trained methods are run with three seeds; we report the mean, standard deviation, and 95\% confidence interval across seeds, and call a difference significant only when the confidence interval of the Welch difference excludes zero.
+\paragraph{Training-free references.}
+The base model chooses the target in all of them; they differ only in when it may commit.
+\emph{Never look} must commit at the first turn.
+\emph{Always look} spends the budget on a fixed sweep (left, right, right, left) that returns to $s_0$, and then commits.
+\emph{Look twice} performs the first two actions of that sweep.
+\emph{Look until seen} keeps sweeping until the anchor is visible in its own world; it uses ground-truth instance masks and is therefore privileged.
+\emph{Base model} decides by itself when to look and when to commit.
+
+\paragraph{Metrics.}
+Success rate (SR) is the fraction of episodes that select the correct target; observation cost is the number of observation actions per episode.
+\emph{Premature commitment} is the fraction of \Look\ episodes whose \commit\ occurs before $\tauseen$, \ie before the agent has seen the anchor in its own world, including episodes that never see it.
+\emph{Post-evidence update accuracy} is the accuracy of \Look\ episodes that commit after $\tauseen$, reported separately for \Look$\to$\Flip\ (correctly switching) and \Look$\to$\Stay\ (correctly keeping), together with the number of such episodes.
+We also report accuracy on direct \Flip\ and \Stay\ pairs and SR as a function of observation cost.
+Following our pre-registered protocol, the primary endpoints are SR and premature commitment at test change rates of $0.5$ and $0.25$ under a matched observation budget, with the constraint that SR at rate $0$ does not drop significantly.
+Each test episode uses the edited world with probability equal to the test change rate, with a fixed sampling seed.
+Evaluation uses greedy decoding.
+For trained methods we average episodes within each seed and report the mean, standard deviation, and $95\%$ confidence interval over seeds; a difference is called significant only if the $95\%$ confidence interval of the Welch difference excludes zero.
+Secondary measures are the variance of the pre-evidence credit per independent decision unit during training and the area under the validation SR curve.

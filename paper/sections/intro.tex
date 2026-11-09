@@ -1,38 +1,50 @@
 \section{Introduction}
 \label{sec:intro}
 
-Consider an embodied agent asked to bring ``the apple in the fridge.''
-In most homes the apple is where it usually is, and an agent that walks to its habitual location will often succeed.
-Sometimes, however, someone has moved it, and the only way to know is to open the fridge and look.
-A competent agent should spend a little effort to check when its current observations cannot settle the question, and it should then act on what it sees: change its goal when the evidence says so, and keep it when the evidence does not.
+\begin{figure}[t]
+  \centering
+  % Placeholder for the teaser. Hand-drawn method diagrams need the comment below on the \includegraphics line.
+  % \includegraphics[width=\linewidth]{figures/teaser.pdf} % fig-ok: diagram
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{2.2cm}\todo{Teaser: one \Look$\to$\Flip\ pair. Left: the shared start view (both candidates marked, anchor out of view). Middle: after one turn, world $w_0$ shows the anchor next to candidate~1, world $w_1$ does not. Right: an agent that guesses at the start is right in one world and wrong in the other; paired credit sees both outcomes at once.}\vspace{2.2cm}}}
+  \caption{\todo{Caption.} Two worlds that are indistinguishable at the start should receive the same credit for the same decision; they are allowed, and required, to diverge only after the agent has looked.}
+  \label{fig:teaser}
+\end{figure}
 
-Vision-language models (VLMs) are increasingly trained as such agents with reinforcement learning (RL) in simulation~\cite{vagen2025,glance2026,seekvln2026}.
-The usual learning signal, however, is computed in the single world that the episode happened to sample.
-If the agent commits without looking and the apple happens to be in its usual place, the episode succeeds and the premature commitment is reinforced; if the apple was moved, the same decision, taken on the same observations, is punished.
-The agent's inputs were identical in both cases, so the difference in credit carries no information the agent could have used.
-Averaged over many episodes the signal is still correct in expectation, but it is noisy exactly where it matters, and it never tells the agent what it should have done with the evidence it did not collect.
+Consider an agent asked to ``select the marked object closest to the kettle'' when the kettle is out of view.
+Two candidates are marked in front of it.
+It could guess, or it could turn its head once and see where the kettle is.
+A competent agent should spend that small observation when its current view cannot settle the question, and then act on what it sees: change its answer if the kettle turns out to be next to the other candidate, and keep it otherwise.
 
-We propose to remove this noise at its source.
-Instead of sampling one world per episode, we construct \emph{pairs} of simulated worlds that agree on everything the agent has observed so far but may differ in the hidden fact that determines the goal.
-While the agent cannot tell the two worlds apart, it acts once and receives credit averaged over both; once discriminating evidence enters its input, the two episodes are allowed, and required, to diverge.
-This gives two learning signals.
-First, \emph{information-set credit} for evidence-seeking: the value of looking is compared with the value of committing now, averaged over the worlds consistent with the agent's information.
-Second, \emph{post-evidence consistency} for the goal decision: after looking, the agent should switch targets in pairs whose goals differ (\Flip) and keep its target in pairs whose goals agree (\Stay).
+Vision-language models (VLMs) are increasingly trained as embodied agents with multi-turn reinforcement learning (RL) in simulation~\cite{vagen2025,glance2026,seekvln2026}.
+The learning signal in these systems is computed in the one world that the episode happened to sample.
+If the agent commits without looking and the kettle happens to be near its first guess, the episode succeeds and the guess is reinforced; if the kettle was elsewhere, the same decision, taken on exactly the same input, is punished.
+Because the input was identical in both cases, the difference in credit carries no information the agent could have used.
+In expectation the signal is still correct, but it is noisy exactly at the decision we care about, and it rewards lucky guesses along the way.
 
-Building such pairs requires care.
-A pair is only useful if the two worlds really are indistinguishable to the agent up to the decision point, if each world has a unique and reachable target, and if the evidence becomes visible after looking.
-We therefore check every pair for deterministic restoration, physical validity, target uniqueness, an executable success witness, and pixel-level equality of the agent's inputs, and we discard pairs that fail any check.
+We remove this noise at its source.
+Instead of sampling one world per episode, we construct \emph{pairs} of simulated worlds that differ only in the position of one object, the anchor of the instruction.
+Before the agent looks, the two worlds produce byte-identical inputs; after it looks, they may call for different answers (\Flip) or the same answer (\Stay).
+We run the two worlds in lockstep: while their inputs are identical, the policy samples a single action that is executed in both, and the decision receives the same credit in both.
+Two learning signals follow.
+First, pre-evidence decisions are credited against the value of committing immediately, averaged over the worlds the agent cannot yet distinguish (\emph{information-set credit}).
+Second, once the agent has actually seen the anchor, a consistency term asks it to switch targets in \Flip\ pairs and to keep its choice in \Stay\ pairs.
 
-We are careful about what the pairs do and do not buy.
-If worlds are sampled from the same prior, a same-world comparison between looking and committing, as in recent evidence-seeking navigation work~\cite{seekvln2026}, is also unbiased.
-Our claim is narrower: at an equal rollout budget, pairing acts as stratified sampling over the hidden world, removing the between-world component of the variance of the credit, and it lets us balance \Flip\ and \Stay\ cases and control how often the world changes.
-Our experiments are designed to test this claim directly.
+We are careful about what pairing does and does not buy.
+If training worlds are sampled from the true prior, the usual single-world credit is not biased, and a same-world comparison between looking and committing, as in concurrent evidence-seeking navigation work~\cite{seekvln2026}, is also unbiased.
+Our claim is narrower.
+Under lockstep sampling, information-set credit is the sum over the two worlds of ``return minus the value of committing now''; it therefore combines two ingredients that can be tested separately: \emph{stratified sampling} over the hidden world, which removes the between-world component of the variance at an equal rollout budget, and a \emph{commit-now baseline} that replaces the learned critic before the evidence step.
+We test them with a $2{\times}2$ design: \{single-world, paired\} sampling $\times$ \{critic, commit-now\} baseline, plus the consistency term on top.
+
+Building the pairs requires care.
+A pair is only useful if the two worlds are truly indistinguishable before the agent looks, if each has a unique and reachable target, and if the evidence actually becomes visible after one observation.
+We pre-render every view the agent can reach within its observation budget in both worlds, reuse one image for both worlds only when the two renders are verified to be identical, and discard pairs that fail any validity check (\cref{sec:data}).
+We also distinguish two moments that are easy to conflate: when the two worlds' inputs first differ ($\tau$), and when the agent has actually seen the anchor in its own world ($\tauseen$).
+An agent that has only seen ``no kettle next to candidate 1'' has reached $\tau$ but not $\tauseen$; a commitment at that point is still a guess.
 
 \paragraph{Contributions.}
 \begin{itemize}
-\item A formulation of evidence-seeking and goal updating in embodied VLM agents as credit assignment over information sets, with \Look/\Flip/\Stay\ cases defined relative to what the agent has observed (\cref{sec:method}).
-\item A procedure for constructing and validating counterfactual world pairs in AI2-THOR~\cite{ai2thor2017}, including pixel-level checks of information consistency and evidence visibility (\cref{sec:setup}).
-\item Information-set credit and post-evidence consistency objectives that plug into multi-turn PPO for VLM agents~\cite{vagen2025}, with an analysis showing that they keep the expected credit unchanged while removing between-world variance (\cref{sec:method}).
-\item A controlled comparison against outcome-only RL, the same paired data without cross-world terms, same-world look-versus-commit branching, and fixed and heuristic observation policies, at equal rollout budgets and across rates of world change (\cref{sec:results}).
-% TODO(results): add one clause per contribution stating what we found, from agg_* results only, and register each in CLAIMS.md.
+\item A formulation of when to look and when to change one's mind as credit assignment over information sets, with \Look/direct and \Flip/\Stay\ cases defined relative to what the agent has observed and two explicit moments, $\tau$ and $\tauseen$ (\cref{sec:method}).
+\item Counterfactual world pairs in AI2-THOR~\cite{ai2thor2017} with pre-rendered view tables, verified identical inputs before the evidence step, and validity checks for physics, target uniqueness, evidence visibility, and solvability (\cref{sec:data}).
+\item An analysis showing that paired credit decomposes into stratified sampling and a commit-now baseline, a controlled $2{\times}2$ design that tests each ingredient at an equal rollout budget, and a post-evidence consistency term that is applied only after the agent has seen the evidence (\cref{sec:method,sec:setup}).
+\item \todo{Experimental finding(s), one clause per claim, written only from aggregated results and registered in CLAIMS.md.}
 \end{itemize}

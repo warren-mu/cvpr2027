@@ -1,10 +1,10 @@
-% Draft abstract. No numbers until results exist; the last two sentences are replaced after G2.
+% Abstract. No numbers until results exist; the final sentence is written only from aggregated (agg_*) results.
 \begin{abstract}
-Embodied vision-language agents should gather evidence when their observations cannot yet determine the right goal, and then change or keep that goal once the evidence arrives.
-Reinforcement learning makes this hard to teach: when credit is computed only in the world that happened to be realized, an agent that commits without looking is rewarded whenever its guess happens to be right.
-We construct pairs of simulated worlds that are consistent with exactly the same observation history but may call for different goals, and require behavioral divergence only after discriminating evidence has entered the agent's input.
-These pairs let us assign credit to evidence-seeking decisions over the worlds the agent cannot yet tell apart, which keeps the expected credit unchanged while removing the variance that comes from which world happened to be realized, and they let us supervise how the goal should be updated once the worlds can be told apart.
-Every pair is checked for deterministic restoration, physical validity, a unique target in each world, an executable success witness, and pixel-level information consistency.
-We compare against training on the same pairs without cross-world terms, same-world look-versus-commit branching, outcome-only reinforcement learning, and fixed and heuristic observation policies, and report success as a function of observation cost across different rates of world change.
-% TODO(results, after G2): one sentence on the main finding and one on its limits, written only from agg_* results.
+An embodied agent should look before it commits when its observations cannot yet determine the goal, and once it has looked it should change or keep its goal according to what it saw.
+Reinforcement learning makes the first lesson hard to teach: credit is computed in the single world an episode happens to sample, so an agent that commits without looking is rewarded whenever its guess is right.
+We construct pairs of simulated worlds that differ only in the position of one object, so that they produce identical observations until the agent looks, yet may require different answers.
+Running the two worlds in lockstep, we credit each pre-evidence decision against the value of committing immediately, averaged over the worlds the agent cannot yet tell apart, and after the agent has actually seen the evidence we add a consistency term that asks it to switch targets when the worlds disagree and to keep its target when they agree.
+We show that, under lockstep sampling, this credit splits into two separable ingredients, stratified sampling over the hidden world and a commit-now baseline, and we test them with a controlled $2{\times}2$ design.
+Every pair is validated for physical plausibility, a unique target in each world, identical inputs before the evidence step, visible evidence afterwards, and solvability within the observation budget.
+\todo{One sentence on the main finding and one on its limits, written only from aggregated multi-seed results.}
 \end{abstract}

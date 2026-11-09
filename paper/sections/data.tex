@@ -1,0 +1,40 @@
+\section{Constructing and Validating World Pairs}
+\label{sec:data}
+
+\paragraph{Scenes and split.}
+We use the 120 iTHOR scenes of AI2-THOR~\cite{ai2thor2017} (kitchens, living rooms, bedrooms, bathrooms).
+Scenes 1--20 of each room type are used for training and scenes 21--30 of each type only for the frozen test set; the split was fixed before any pair was generated.
+The agent's view has a $60^\circ$ horizontal field of view and moves on a discrete graph of viewpoints with eight headings.
+
+\paragraph{Construction.}
+For a start state $s_0$ we choose two candidates that are marked at $s_0$ and an anchor $X$ of another category that does not roll.
+We then search for a pose of $X$ in each world: next to the target candidate in $w_0$, and next to the other candidate (\Flip) or at a different place next to the same candidate (\Stay) in $w_1$.
+For \Look\ pairs, candidate placements are pre-filtered by projecting the anchor's bounding box: it must lie entirely outside the start frame but inside the frame reached by one observation action.
+Each placement is settled with the physics engine.
+To make the two worlds differ \emph{only} in $X$, the state of $w_1$ is the settled state of $w_0$ with the pose of $X$ replaced; both worlds are rendered with physics paused, and all poses are read back and checked after rendering.
+Candidate labels are fixed per object and randomized per pair; the side of the correct target and the assignment of $w_0$/$w_1$ in \Flip\ pairs are randomized so that neither a fixed label nor a fixed screen side predicts the answer.
+
+\paragraph{Pre-rendered view tables.}
+Rendering two simulators inside the RL loop is slow and noisy, so we pre-render, for every pair, every state the agent can reach from $s_0$ within $D$ observation actions, in both worlds and in the same process.
+A state is \emph{shared} if the anchor's instance mask is empty in both renders and the two frames differ by at most $3$ intensity levels in every channel; shared states use a single image for both worlds, which is what makes the pre-evidence inputs byte-identical.
+All other states are \emph{divergent} and each world uses its own image.
+This includes states where the anchor itself is out of view but its shadow or reflection differs; we treat these honestly as divergent, which moves $\tau$ earlier, and report results on the subset of \Look\ pairs without such states as a pre-registered robustness check.
+
+\paragraph{Validity checks.}
+A pair is kept only if it passes all of the following.
+\begin{itemize}
+\item \emph{Physics.} After settling, the anchor lies within $2$\,cm of its commanded pose on a legal receptacle, and every object within $0.5$\,m of the anchor, as well as the anchor's receptacle, moves by at most $1$\,cm. Displacements of farther objects (\eg cloth drifting by itself) are recorded but do not reject the pair, because those objects are copied unchanged into both worlds; we report results on the subset that also passes a stricter rule applying the $1$\,cm limit to every object.
+\item \emph{Unique target.} In each world the correct candidate is at least $1.5$ times closer to the anchor than the other one.
+\item \emph{Identical inputs before the evidence.} For \Look\ pairs the start state is shared; for direct pairs the anchor is visible at $s_0$ in both worlds.
+\item \emph{Visible evidence.} The anchor's instance mask covers at least $250$ pixels (at $255{\times}255$ resolution) in the frame where it is first seen, in both worlds.
+\item \emph{Solvability.} In each world some single observation action reveals the anchor, and a breadth-first search over the view table finds a policy that acts only on what it has seen and selects the correct target in both worlds within $D{+}1$ turns.
+\item \emph{Cache fidelity.} On a random sample of at least $200$ (pair, state) combinations, a fresh process re-renders both worlds from their snapshots; instance masks of the anchor and candidates must agree with the cached ones (pixel count within $2\%$ or $10$ pixels, IoU $\ge 0.9$), and the shared/divergent classification must not change.
+\end{itemize}
+We report discard rates by reason in the supplementary material \todo{table from the generation logs}.
+
+\paragraph{Test set and training pool.}
+Pairs that share the scene, the start state, the anchor, and the candidates differ only in where the anchor was placed; they present the same start input and therefore provide little independent information about when to look.
+We call such a group a \emph{configuration}, and the test set keeps at most one pair per configuration and case.
+The test set contains \tbd\ pairs (\tbd\ / \tbd\ / \tbd\ / \tbd\ for direct \Flip\ / direct \Stay\ / \Look$\to$\Flip\ / \Look$\to$\Stay) from \tbd\ held-out scenes, and was frozen, with its manifest hash committed, before any evaluation.
+The training pool contains \tbd\ pairs from \tbd\ training scenes; about $10\%$ of the training scenes, stratified by room type, are held out as a fixed validation set.
+\todo{All counts via \textbackslash res\{\} from the frozen manifests.}

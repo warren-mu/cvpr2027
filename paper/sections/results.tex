@@ -1,24 +1,87 @@
 \section{Results}
 \label{sec:results}
-% Every number in this section must come from \res{...}; keys are produced by scripts/export_numbers.py from agg_* results.
-% Planned structure (fill only after the corresponding tasks pass review):
+% Every number in this section comes from \res{key}; keys are produced by scripts/export_numbers.py
+% from aggregated multi-seed results (agg_*). Never type a number by hand, and never fill a cell
+% before the corresponding result exists. "We observe" rather than "we prove"; no causal
+% explanation without an ablation that supports it. Negative results are reported as they are.
 
-\subsection{Do the tasks require selective looking?}
-% T03: training-free observation policies and the base model at test change rates 0 / 0.25 / 0.5.
-% Table: policy x rate x {SR, Obs-cost, premature commitment}. Expected story to TEST (not assume):
-% never-look fails as the change rate grows; always-look pays a high observation cost.
-TODO(T03).
+\subsection{Does the task require selective looking?}
+\label{sec:res-trainfree}
+\todo{Text written from the training-free results: does never-look lose accuracy as the change rate grows, and does always-look pay a clear observation cost? How often does the base model commit prematurely?}
+
+\begin{table}[t]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lccccccc@{}}
+    \toprule
+    & \multicolumn{3}{c}{SR $\uparrow$} & Obs. & \multicolumn{3}{c}{Premature $\downarrow$} \\
+    \cmidrule(lr){2-4}\cmidrule(lr){6-8}
+    Policy & $r{=}0$ & $0.25$ & $0.5$ & cost & $r{=}0$ & $0.25$ & $0.5$ \\
+    \midrule
+    Never look       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Look twice       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Always look      & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Look until seen$^\dagger$ & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Base model       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    \bottomrule
+  \end{tabular}
+  \caption{Training-free references on the frozen test set at test change rates $r$. $^\dagger$Uses ground-truth instance masks. \todo{Confidence intervals.}}
+  \label{tab:trainfree}
+\end{table}
 
 \subsection{Main comparison}
-% T06: outcome-only PPO, paired-independent, same-world credit, information-set credit, ours; 3 seeds each.
-% Table 1: SR and premature commitment at rates 0.5 and 0.25 under a matched observation budget; constraint at rate 0.
-% Figure: success vs. observation cost.
-TODO(T06).
+\label{sec:res-main}
+\todo{Text written only from aggregated results, following the pre-registered reading of the $2{\times}2$ design: paired sampling (IS-credit vs.\ Single-$\Qc$), commit-now baseline (Single-$\Qc$ vs.\ PPO; IS-credit vs.\ Paired-GAE if run), and consistency (Ours vs.\ IS-credit). State non-significant differences as such.}
 
-\subsection{What changes after the evidence arrives?}
-% Post-evidence update accuracy for Look->Flip and Look->Stay separately; direct Flip/Stay accuracy.
-TODO(T06).
+\begin{table*}[t]
+  \centering
+  \small
+  \begin{tabular}{@{}lcccccc@{}}
+    \toprule
+    & Sampling & Baseline & SR@0.5 $\uparrow$ & SR@0.25 $\uparrow$ & Prem.@0.5 $\downarrow$ & SR@0 \\
+    \midrule
+    PPO           & single & critic & \tbd & \tbd & \tbd & \tbd \\
+    Paired-GAE    & paired & critic & \tbd & \tbd & \tbd & \tbd \\
+    Single-$\Qc$  & single & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
+    IS-credit     & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
+    Ours          & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
+    \bottomrule
+  \end{tabular}
+  \caption{Main results (mean $\pm$ s.d.\ over three seeds) at a matched observation budget. Ours = IS-credit + post-evidence consistency. \todo{Observation cost column and significance markers.}}
+  \label{tab:main}
+\end{table*}
 
-\subsection{Ablations}
-% T07: observation cost lambda (two values); training change rate rho (0.25 / 0.75), including the effect on looking frequency.
-TODO(T07).
+\begin{figure}[t]
+  \centering
+  % Data figures must be produced by analysis/ scripts via savefig_with_provenance; no hand-made plots.
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1.8cm}\todo{Figure: SR versus observation cost for all methods and training-free references, at $r = 0.5$.}\vspace{1.8cm}}}
+  \caption{\todo{Caption.}}
+  \label{fig:sr-cost}
+\end{figure}
+
+\subsection{What happens after the evidence arrives?}
+\label{sec:res-post}
+\todo{Post-evidence update accuracy for \Look$\to$\Flip\ and \Look$\to$\Stay\ separately, with the number of episodes entering each statistic; accuracy on direct pairs.}
+
+\begin{table}[t]
+  \centering
+  \small
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    & \Look$\to$\Flip & \Look$\to$\Stay & direct \Flip & direct \Stay \\
+    \midrule
+    PPO           & \tbd & \tbd & \tbd & \tbd \\
+    Single-$\Qc$  & \tbd & \tbd & \tbd & \tbd \\
+    IS-credit     & \tbd & \tbd & \tbd & \tbd \\
+    Ours          & \tbd & \tbd & \tbd & \tbd \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Accuracy after the evidence ($r = 0.5$). For \Look\ cases only episodes that commit after $\tauseen$ are counted; \todo{report their number}.}
+  \label{tab:post}
+\end{table}
+
+\subsection{Robustness and training signal}
+\label{sec:res-robust}
+\todo{Pre-registered robustness checks: (i) \Look\ pairs without shadow/reflection-only divergent states; (ii) pairs that also pass the stricter physics rule. Secondary measures: variance of the pre-evidence credit during training and validation learning curves.}
