@@ -1,0 +1,29 @@
+# run_logged: /scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3 -u -m src.tools.t02_export --name t02_export_train_six_10_u0001 --source results/t01v2_checkpoint_flip_geometry_01.json --pair-id floorplan203_00086 --pair-file data/world_pairs/v2/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203/floorplan203_00086/pair.json --timeout-seconds 900.0 --pair-timeout-seconds 660.0 --gate-timeout-seconds 180.0
+# start: 2026-11-10T06:24:29
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ai2thor/controller.py", line 979, in step
+    self.last_event = self.server.receive()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ai2thor/fifo_server.py", line 229, in receive
+    metadata, files = self._recv_message(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ai2thor/fifo_server.py", line 145, in _recv_message
+    header = self._read_with_timeout(
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ai2thor/fifo_server.py", line 134, in _read_with_timeout
+    raise TimeoutError(f"Reading from AI2-THOR backend timed out (using {timeout}s) timeout.")
+TimeoutError: Reading from AI2-THOR backend timed out (using 45s) timeout.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 177, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 99, in export_checked
+    _, measured = sim.restore_snapshot(world)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_v2_simulator.py", line 531, in restore_snapshot
+    self.action("TeleportFull", **setup)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_v2_simulator.py", line 261, in action
+    event = self.controller.step(action=action, **arguments)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/ai2thor/controller.py", line 997, in step
+    raise (TimeoutError if isinstance(e, TimeoutError) else RuntimeError)(
+TimeoutError: Error encountered when running action {'action': 'TeleportFull', 'forceAction': False, 'horizon': 30, 'position': {'x': -4.5, 'y': 0.9070531129837036, 'z': -1.75}, 'rotation': {'x': 0, 'y': 0, 'z': 0}, 'standing': True, 'sequenceId': 5} in scene FloorPlan203_physics.
+FINAL_METRICS_JSON: {"black_frame_detected": false, "cache_matches_live": null, "cache_status": "not_run_requires_at_least_200_paired_states", "cleanup_errors": [], "downstream_allowed": false, "errors": [], "export_checks_complete": false, "gate": {"audit": {"fail": [], "file": "results/t02_export_train_six_10_u0001_gate.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_train_six_10_u0001_gate.json", "git_commit": "1d2f5b61073c678662063e77188313b93a69432c", "metrics_sha256": "c84e5d0457b3682d2ff0e4bcc5f99aebcd6792b9fc6ab51f5a8f57a055efb5de", "sha256": "d8120d7e221635161d9de53a2452671fef46433bae5664c58b6dc203da7358e9"}, "kind": "t02_table_export", "pairs": [{"actual_action_records": 3, "actual_frame_records": 3, "black_frame_reference": null, "cache_matches_live": null, "cleanup_errors": [], "downstream_allowed": false, "error": {"message": "Error encountered when running action {'action': 'TeleportFull', 'forceAction': False, 'horizon': 30, 'position': {'x': -4.5, 'y': 0.9070531129837036, 'z': -1.75}, 'rotation': {'x': 0, 'y': 0, 'z': 0}, 'standing': True, 'sequenceId': 5} in scene FloorPlan203_physics.", "type": "TimeoutError"}, "kind": "look_flip", "pair_id": "floorplan203_00086", "raw_incremental_index": {"bytes": 2983, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_10_u0001/709329.hopper-m-02/pair_0000/raw/evidence_index.jsonl", "sha256": "36b4285254f364d469b37e35310ee205de7f10fe7871d75c1ba0c7d4ac2ebeda"}, "raw_index": {"bytes": 2863, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_10_u0001/709329.hopper-m-02/pair_0000/raw/evidence_index.json", "sha256": "72b965be9de09e9c665822186afad35fa26b987ce47682c562fef33d50831205"}, "rejection_reasons": [], "report_reference": {"bytes": 1274, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_10_u0001/709329.hopper-m-02/pair_0000/pair_report.json", "sha256": "493c8ddda4563e7ad857bd93bc33ada63014006962b2b2820ee4a62ec1598e96"}, "scene": "FloorPlan203", "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_10_u0001/709329.hopper-m-02/pair_0000", "source_package": {"bytes": 7973072, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_10_u0001/709329.hopper-m-02/pair_0000/authenticated_source.json", "sha256": "77e7c16dbb903a0dd9c7afd27c683705082cdf390007374d16946677bfdfb462"}, "status": "error", "table_complete": false, "task_acceptance": null, "unity_identity": {"pgid": 53445, "pid": 53969, "sid": 53445, "start_ticks": 85110881}, "worker_elapsed_seconds": 48.23097701393999, "worker_identity": {"pgid": 34825, "pid": 53445, "sid": 34825, "start_ticks": 85110813}}], "producer_exit_code": 1, "status": "incomplete", "task_acceptance": null, "unstarted_pair_ids": []}
+# exit_code: 1

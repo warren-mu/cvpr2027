@@ -1,0 +1,23 @@
+{
+  "name": "diag_g01_test_round2_s01_live_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib,sys\nfrom pathlib import Path\nfrom datetime import datetime,timezone\nfrom src.tools.t01v2_live_progress import read_prefix,archive,observed_counts\nfrom src.tools.t01_partition import ROOT\nname=sys.argv[1]; parent='gen_test_config_round2_40_s01_retry2'\nplanfile=ROOT/'configs/gen_test_config_round2_40_s01_retry2_quota.json'\nrawplan=planfile.read_bytes();expected='2bb1fd9d91723a591b2784ae7f243501d5e521302f04624c9a57670b03af7afe'\nassert hashlib.sha256(rawplan).hexdigest()==expected\nplan=json.loads(rawplan);assert plan['parent_run_name']==parent\nfolder=ROOT/'logs/runs'/name/'evidence';folder.mkdir(parents=True,exist_ok=False)\nrows=[]\nfor unit in plan['assignments']:\n scene=unit['scene'];child=parent+'_c6_'+scene.lower()\n row={'run_name':child,'scene':scene,'observed_counts':None,'ended':False,'scientific_acceptance':None}\n result=ROOT/'results'/(child+'.json')\n if result.exists():\n  body=result.read_bytes();data=json.loads(body);m=data['metrics']\n  row.update(ended=bool(data.get('_meta',{}).get('end')),source_file=str(result.relative_to(ROOT)),source_sha256=hashlib.sha256(body).hexdigest(),status=m.get('status'),error=m.get('error'),scene_excluded=m.get('scene_excluded'),reported_passed_by_class=m.get('passed_by_class'))\n journal=ROOT/'data/world_pairs/v2'/(child+'_attempts.jsonl')\n if journal.exists():\n  raw,extent=read_prefix(journal);row.update(journal_prefix={**extent,'snapshot':archive(raw,folder,child+'.jsonl')},observed_counts=observed_counts(raw,scene))\n rows.append(row)\nmetrics={'snapshot_utc':datetime.now(timezone.utc).isoformat(),'scene_runs':rows,'scope':'complete archived journal-prefix producer-reported observations only; no independent scientific acceptance; unavailable sources remain unknown','task_acceptance':None}\nconfig={'name':name,'parent':parent,'quota_plan_reference':{'file':str(planfile.relative_to(ROOT)),'sha256':expected},'snapshot_cap_per_source_bytes':8*1024*1024}\nwith (ROOT/'results'/(name+'.json')).open('x') as handle:json.dump({'config':config,'metrics':metrics},handle,indent=2);handle.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True),flush=True)\n",
+    "diag_g01_test_round2_s01_live_01"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T06:29:45",
+  "log_path": "logs/runs/diag_g01_test_round2_s01_live_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c81371742caccdecbed2feea9ceb320cc93bfd2f",
+  "git_dirty": false,
+  "end": "2026-11-10T06:29:48",
+  "duration_sec": 0.4,
+  "exit_code": 0,
+  "metrics_sha256": "a5017ba45195dcd07e30ff423f8a19413b1216efe1293225968e6fa11b5185f3"
+}
