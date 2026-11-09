@@ -80,3 +80,38 @@ Largest recorded CUDA allocator peak allocated142252924416bytes; peak reserved16
 Planning only: the five measured updates average131.5465668162098seconds; multiplying that mean by200 gives7.308142600900545hours, excluding all setup and checkpoint overhead. This extrapolation assumes the same Direct/tau0 short trajectories and is not a measured200-step run or a reliable bound for Look training. Each training uses one GPU; independent repeats can be packed only after their actual memory/concurrency and budget checks.
 
 All current pairs areDirect/tau0: **证据前逻辑未覆盖**. T3 next uses the same reviewed100-degree smoke pool and common config, adding paired sampling and Q_commit scoring. It cannot certify pre-evidence credit until a separately authorized Look smoke is implemented and run.
+
+
+## Step5 PASS; Direct-only E2E steps1–5 completed
+
+PBS 707642.hopper-m-02 on hopper-30 completed all 5 real T3 PPO updates, using the same common configuration and fixed five reviewed 100-degree Direct pairs as T0. Each update contains 64 episodes / 32 sampled pairs. The producer and run_logged exited0; errors and cleanup_errors are empty. Both actor and critic checkpoints were saved on scratch. Critic offload remained false. This establishes the bounded Direct smoke pipeline; it is not formal T03/T04/T05 acceptance or a paper result.
+
+| Update | Generation seconds | Scoring seconds | Actor+critic update seconds | Total seconds | Raw-model syntax failures / outputs |
+|---|---:|---:|---:|---:|---:|
+| 1 | 19.4622292999411 | 66.92308282596059 | 95.81631059700157 | 182.20162272290327 | 0/64 |
+| 2 | 11.18495745700784 | 61.85113084106706 | 64.1086006090045 | 137.1446889070794 | 0/64 |
+| 3 | 7.965900354087353 | 48.72496871300973 | 64.91962409997359 | 121.61049316707067 | 0/64 |
+| 4 | 8.076449931017123 | 48.77525428298395 | 64.08328905899543 | 120.93499327299651 | 0/64 |
+| 5 | 8.110607679001987 | 48.52600291301496 | 64.13653016707394 | 120.7731407590909 | 0/64 |
+
+The syntax parser is the existing parse_action applied to recorded raw responses. These are per-update training-policy outputs, kept separate from original-model greedy Step3 strategies. Canonical but unavailable actions are counted separately in results/smoke_e2e_training_report_01.json; they are not syntax failures. Shared physical sample IDs are counted once in the physical-output denominator while both logical world decisions remain recorded.
+
+| Update | T0 candidate-scoring RPCs | T3 candidate-scoring RPCs | T3 candidate action scores | T0 scoring seconds | T3 scoring seconds |
+|---|---:|---:|---:|---:|---:|
+| 1 | 0 | 4 | 128 | 61.86384365800768 | 66.92308282596059 |
+| 2 | 0 | 4 | 128 | 33.341926231049 | 61.85113084106706 |
+| 3 | 0 | 4 | 128 | 34.50496250006836 | 48.72496871300973 |
+| 4 | 0 | 4 | 128 | 31.69141386600677 | 48.77525428298395 |
+| 5 | 0 | 4 | 128 | 33.540992914000526 | 48.52600291301496 |
+
+Q_commit used actual teacher-forced probabilities for every complete public select action plus EOS, normalized over the complete public candidate set. Scoring_seconds includes candidate scoring, actor/reference log-probability recomputation, critic values, advantages and related logging. Its T0/T3 difference is not a separately measured isolated Q_commit time. The source-recorded total-time ratios T3/T0 for updates1–5 are [1.0276530502670231, 1.1509823435110411, 0.9852025647144047, 1.0001529092578565, 1.0329019465556655]. Both jobs used an H200, on different nodes, so this smoke comparison is not a causal estimate of algorithm overhead.
+
+Model/Ray initialization was 65.45255886495579 seconds, separately from the update timings. The run_logged interval was 1064.5 seconds and includes setup/finalization. Update1 reported CUDA allocator peak allocated 142252924416 bytes and peak reserved 163229728768 bytes. These are counters inside the colocated PPO process, not sampled whole-device physical occupancy; reserved bytes must not be interpreted as physical GPU use.
+
+**证据前逻辑未覆盖。** All reviewed inputs are tau=0; no pre-evidence T3 advantage replacement or shared-prefix generation path was exercised. S1 variance remains unavailable, and the five-update run did not reach the S2 evaluation interval20. A Look-pair Step5 run remains required before claiming that coverage.
+
+| PBS job | GPUs | Queue wait seconds | PBS walltime | PBS allocation GPU-hours |
+|---|---:|---:|---|---:|
+| 707642.hopper-m-02 | 1 | 161 | 00:17:46 | 0.2961111111111111 |
+
+These are PBS allocation hours, not an independent project credit-bill reconciliation. Sources: results/smoke_e2e_T3_01.json, results/smoke_e2e_training_report_01.json, results/smoke_e2e_T3_accounting_01.json, and the matching run logs plus ppo/update_*.jsonl journals. The retained run diff contains only STATUS.md progress notes; training source/configuration were unchanged. The source audit has no FAIL and retains its dirty-tree warning. The warning is not removed or treated as a clean checkout.
