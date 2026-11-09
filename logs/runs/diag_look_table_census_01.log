@@ -1,0 +1,452 @@
+# run_logged: python3 -m src.tools.record_command --name diag_look_table_census_01 -- python3 -c import pathlib,json
+from src.tools.t01_partition import audited_result,sha_file
+r=pathlib.Path.cwd();p=r/'logs/review/diag_look_census_extension_plan_02/extension_plan.json'
+d,ref=audited_result(r/'results/diag_look_census_extension_plan_02.json');assert d['_meta']['exit_code']==0
+out=pathlib.Path('/scratch/e1583364/cvpr2027/diag_look_table_census_01_inputs');out.mkdir(exist_ok=False)
+runs={'t02_look_table_a01':['t02_look_table_a01'],'t02_look_table_b01':['t02_look_table_b01','t02_look_table_b01_retry1','t02_look_table_b01_retry2'],'t02_look_table_c01':['t02_look_table_c01'],'t02_look_table_fp204_extension01':['t02_look_table_fp204_extension01','t02_look_table_fp204_extension01_retry1','t02_look_table_fp204_extension01_retry2','t02_look_table_fp204_extension01_retry3','t02_look_table_fp204_extension01_retry4']}
+ext=[{'plan':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'logged_result':ref}]
+(out/'runs.json').write_text(json.dumps(runs,indent=2)+'\n');(out/'extensions.json').write_text(json.dumps(ext,indent=2)+'\n')
+
+"""One-off read-only-source census; run through run_logged + record_command.
+
+This is a work/ script, not a project tool or a replacement scientific checker.
+Example runs JSON (append explicit inner retry names to the corresponding list):
+{"t02_look_table_a01": ["t02_look_table_a01"],
+ "t02_look_table_b01": ["t02_look_table_b01"],
+ "t02_look_table_c01": ["t02_look_table_c01"]}
+
+The caller supplies the independently fixed plan SHA. No GPU is used. Original
+failed runs remain inputs; an authenticated observed trigger takes precedence
+over other observations of the SAME original proposal identity.
+
+Optional --extensions-json contains a list of {"plan": {file, sha256},
+"logged_result": {file, sha256, metrics_sha256, git_commit, exit_code}} entries.
+Each successful logged plan must print CENSUS_EXTENSION_PLAN_JSON with the
+exact extension plan. Extensions add observations of original pairs only.
+"""
+import argparse
+from collections import Counter
+import datetime
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+sys.path.insert(0, str(Path.cwd()))
+from src.tools import merge_pair_v2 as merge
+from src.tools.t01_partition import audited_result, sha_file
+from src.envs import pair_v2_fixed_labels as labels
+
+ROOT = merge.ROOT.resolve()
+TRIGGER = "triggered_non_anchor_divergent"
+COMPLETE = "completed_without_this_trigger"
+UNKNOWN = "unknown_timeout_or_other_error"
+REF_KEYS = ("file", "sha256", "metrics_sha256", "git_commit", "exit_code")
+AUDITED = {}
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def checked_path(reference, within=None):
+    path = merge.reference_path(reference, root=ROOT, within=within)
+    if "bytes" in reference:
+        require(type(reference["bytes"]) is int and path.stat().st_size == reference["bytes"],
+                "Artifact byte length differs: " + str(path))
+    return path
+
+
+def read_ref(reference, within=None):
+    return json.loads(checked_path(reference, within).read_text())
+
+
+def same_ref(actual, expected):
+    require(isinstance(actual, dict) and isinstance(expected, dict), "Missing original reference")
+    for key in REF_KEYS:
+        if key in expected:
+            require(actual.get(key) == expected[key], "Original reference differs: " + key)
+
+
+def audit(reference_or_file):
+    file = reference_or_file if isinstance(reference_or_file, str) else reference_or_file["file"]
+    if file not in AUDITED:
+        data, ref = audited_result(ROOT / file)
+        require(bool(data["_meta"].get("end")), "Run has no recorded end: " + file)
+        AUDITED[file] = (data, ref)
+    data, ref = AUDITED[file]
+    if isinstance(reference_or_file, dict):
+        same_ref(ref, reference_or_file)
+    return data, ref
+
+
+def authenticate_entry(entry):
+    """Recheck the immutable original publication, not a new acceptance test."""
+    checkpoint, _ = audit(entry["checkpoint"])
+    source, source_ref = audit(entry["source"])
+    require(checkpoint["_meta"]["exit_code"] == 0 and checkpoint["metrics"]["errors"] == [],
+            "Inventory checkpoint is not an ended positive publication")
+    matches = [r for r in checkpoint["metrics"]["candidate_pairs"]
+               if r.get("pair_reference") == entry["pair_reference"]]
+    require(len(matches) == 1, "Inventory pair not uniquely published")
+    published = matches[0]
+    pair = read_ref(entry["pair_reference"], ROOT / "data/world_pairs/v2")
+    identity = merge.proposal_identity(pair)
+    require(identity == entry["proposal_identity"] == published["proposal_identity"]
+            == published["independent_verification"]["proposal_identity"], "Proposal identity mismatch")
+    require(published["independent_verification"]["validity"]["acceptance_passed"] is True,
+            "Inventory lacks original independent construction acceptance")
+    for key in ("pair_id", "scene", "kind", "target_w0", "target_w1"):
+        require(pair[key] == entry[key] == published[key], "Published identity differs: " + key)
+    require(entry["kind"] in ("look_flip", "look_stay") and entry["field_of_view"] == 60
+            and source["config"].get("field_of_view") == 60, "Wrong current census population")
+    require(entry["source_file"] == source_ref["file"] == published["source_file"]
+            and published["source_sha256"] == source_ref["sha256"]
+            and published["source_metrics_sha256"] == source_ref["metrics_sha256"], "Source changed")
+    declared = [r for r in checkpoint["sources"] if r.get("file") == source_ref["file"]]
+    require(len(declared) == 1, "Checkpoint source manifest missing or duplicated")
+    same_ref(declared[0], source_ref)
+    expected = labels.pair_fields(pair["pair_id"], pair["identities"]["candidate_names"])
+    labels.validate_fields(source["config"])
+    for value in (pair, published["independent_verification"]["fixed_labels_verified"]):
+        require(all(value.get(k) == v for k, v in expected.items()), "Original fixed-label proof changed")
+    require(entry["fixed_label_version"] == labels.VERSION
+            and entry["candidate_label_assignment"] == expected["candidate_label_assignment"],
+            "Inventory fixed-label assignment changed")
+    return pair
+
+
+def authenticate_package(reference, entry, original_pair):
+    package = read_ref(reference)
+    for key in ("pair_id", "scene", "kind"):
+        require(package.get(key) == entry[key], "Export package identity differs: " + key)
+    require(package["row"] == original_pair, "Export package changed original pair bytes/content")
+    provenance = package["source_provenance"]
+    for key, expected in (("container", entry["checkpoint"]), ("scene", entry["source"]),
+                          ("pair", entry["pair_reference"])):
+        same_ref(provenance[key], expected)
+        checked_path(provenance[key])
+    checked_path(provenance["journal"])
+    for reference in package["sources"]:
+        audit(reference)
+    source, _ = audit(entry["source"])
+    require(package["source_config"] == source["config"], "Package source configuration changed")
+    require(package["independent_verification"]["proposal_identity"] == entry["proposal_identity"]
+            and package["independent_verification"]["validity"]["acceptance_passed"] is True,
+            "Package independent proposal proof differs")
+    verified = labels.validate_table_package(package)
+    require(verified["t01_t02_assignment_equal"] is True
+            and package.get("fixed_label_verification") == verified, "Package fixed labels disagree")
+    for world in package["worlds"]:
+        checked_path(world["reference"])
+    return package
+
+
+def row_observation(row, entry, original_pair, result_reference):
+    """Keep authentication failures as unknown, without discarding original rows."""
+    observation = {"result": result_reference, "row": row, "classification": UNKNOWN,
+                   "authentication_errors": [], "full_T02_acceptance": None,
+                   "cache_or_training_authorized": False}
+    try:
+        for key in ("pair_id", "scene", "kind"):
+            require(row.get(key) == entry[key], "Result row identity mismatch: " + key)
+        package = authenticate_package(row["source_package"], entry, original_pair)
+        report = read_ref(row["report_reference"])
+        # The parent adds source/worker identities and may append cleanup errors
+        # AFTER pair_report.json is written; compare the immutable worker fields.
+        for key, value in report.items():
+            if key == "cleanup_errors":
+                require(isinstance(row.get(key), list) and row[key][:len(value)] == value,
+                        "Parent cleanup no longer preserves the worker report")
+            else:
+                require(row.get(key) == value, "Original worker report differs: " + key)
+        raw_refs = [report[k] for k in ("raw_index", "raw_incremental_index") if report.get(k)]
+        require(bool(raw_refs), "No authenticated original native index")
+        for reference in raw_refs:
+            checked_path(reference)
+        observation["authenticated_package_proposal_identity"] = package["independent_verification"]["proposal_identity"]
+        observation["worker_report"] = report
+        triggered = ("non_anchor_divergent" in report.get("rejection_reasons", [])
+                     and report.get("error") == {"type": "ValueError", "message": "non_anchor_divergent"})
+        if triggered:
+            # Any measured trigger is decisive even if a later cleanup/index
+            # failure prevented a full table. Such failures stay in the row.
+            observation["classification"] = TRIGGER
+            return observation
+        if report.get("table_complete") is not True or report.get("native_evidence_verified") is not True:
+            observation["unknown_reason"] = "No complete independently checked export table"
+            return observation
+        require(report.get("status") in ("exported", "rejected") and report.get("error") is None
+                and row.get("cleanup_errors") == [] and not report.get("raw_index_error"),
+                "Completed-table status/cleanup is not trustworthy")
+        detail = read_ref(report["detail"])
+        require(detail.get("table_complete") is True and detail["native_checks"].get("passed") is True
+                and detail["table_manifest"] == report["table_manifest"]
+                and detail["pair_checks"]["passed"] == report["pair_checks_passed"]
+                and detail["pair_checks"]["reasons"] == report["rejection_reasons"],
+                "Original native/checks detail differs")
+        table_ref = detail["table_manifest"]
+        table_path = checked_path(table_ref)
+        table = json.loads(table_path.read_text())
+        for key in ("pair_id", "scene", "kind"):
+            require(table[key] == entry[key], "Table identity differs: " + key)
+        require(table["depth"] == 4 and table["source"]["field_of_view"] == 60
+                and table["source"]["t01"] == package["source_provenance"], "Table D4/camera/source differs")
+        for reference in table["files"]:
+            checked_path({**reference, "file": str(table_path.parent / reference["file"])}, table_path.parent)
+        measurement = report["export_measurements"]
+        require(measurement == detail["export_measurements"] == table["export_measurements"]
+                and measurement["state_count"] == len(table["states"])
+                and measurement["non_anchor_divergent_states"] == 0,
+                "Complete Look table measurement differs")
+        observation.update(classification=COMPLETE, pair_checks_passed=report["pair_checks_passed"],
+                           other_pair_rejection_reasons=report["rejection_reasons"], detail_reference=report["detail"])
+    except Exception as error:
+        observation["authentication_errors"].append(f"{type(error).__name__}: {error}")
+    return observation
+
+
+def options(arguments, key):
+    return [arguments[index + 1] for index, value in enumerate(arguments[:-1]) if value == key]
+
+
+def validate_export_run(data, group, name):
+    cfg, metrics, meta = data["config"], data["metrics"], data["_meta"]
+    argv = merge.producer_arguments(meta["command"], "src.tools.t02_export")
+    require(meta["name"] == cfg["name"] == name and options(argv, "--name") == [name], "Run name mismatch")
+    require(metrics["kind"] == "t02_table_export" and cfg["gpus"] == 1 and cfg["resolution"] == 255
+            and cfg["depth"] == 4, "Not the declared single-GPU D4 exporter")
+    require(cfg["pair_id"] == group["pair_ids"] == options(argv, "--pair-id"), "Retry changed the pair list/order")
+    require(len(options(argv, "--source")) == 1 and (ROOT / cfg["source"]).resolve() == (ROOT / group["source"]).resolve()
+            == (ROOT / options(argv, "--source")[0]).resolve(), "Retry changed source checkpoint")
+    require(cfg.get("pair_file") is None and not options(argv, "--pair-file"), "Unexpected alternative pair file")
+    for key in ("timeout_seconds", "pair_timeout_seconds", "gate_timeout_seconds"):
+        flag = "--" + key.replace("_", "-")
+        values = options(argv, flag)
+        # The unchanged exporter defaults only its gate timeout to 180 seconds.
+        actual = 180 if key == "gate_timeout_seconds" and not values else float(values[0]) if len(values) == 1 else None
+        require(cfg[key] == group[key] == actual, "Retry changed deadline: " + key)
+    ids = [r["pair_id"] for r in metrics["pairs"]]
+    unstarted = metrics["unstarted_pair_ids"]
+    require(len(ids) == len(set(ids)) and len(unstarted) == len(set(unstarted))
+            and set(ids).isdisjoint(unstarted) and set(ids) | set(unstarted) == set(group["pair_ids"]),
+            "Run does not partition the exact scheduled pair inventory")
+    if metrics.get("gate") is not None:
+        gate, _ = audit(metrics["gate"])
+        if metrics["pairs"]:
+            from src.tools.t02_export import gate_runtime
+            gate_runtime(gate, cfg, cfg["node"], Path(cfg["scratch_directory"]) / "unity_logs")
+    else:
+        require(not metrics["pairs"], "Pair results exist without an authenticated gate")
+
+
+def read_extensions(path, base_plan):
+    """Authenticate explicitly recorded additional runs, not a new population."""
+    if path is None:
+        return [], [], None
+    content = json.loads(path.read_bytes())
+    require(isinstance(content, list) and content, "Extensions must be an explicit nonempty reference list")
+    groups, references = [], []
+    for item in content:
+        require(isinstance(item, dict) and set(item) == {"plan", "logged_result"},
+                "Each extension requires its original plan and logged result references")
+        plan_ref, result_ref = item["plan"], item["logged_result"]
+        require(isinstance(plan_ref, dict) and set(plan_ref) == {"file", "sha256"}
+                and isinstance(result_ref, dict) and all(key in result_ref for key in REF_KEYS),
+                "Freeze the extension plan SHA and complete logged result identity")
+        extension = read_ref(plan_ref, ROOT / "logs/review")
+        data, actual_ref = audit(result_ref)
+        meta = data["_meta"]
+        arguments = merge.producer_arguments(meta["command"], "src.tools.record_command")
+        require(meta["exit_code"] == 0 and data["metrics"]["command_exit_code"] == 0
+                and data.get("error") is None and arguments[:3] == ["--name", meta["name"], "--"]
+                and arguments[3:] == data["config"]["command"],
+                "Extension plan was not successfully recorded by its exact original wrapper")
+        log = (ROOT / meta["log_path"]).resolve()
+        require(log.is_relative_to(ROOT / "logs/runs"), "Extension log escaped original run directory")
+        marker = "CENSUS_EXTENSION_PLAN_JSON: "
+        printed = [json.loads(line[len(marker):]) for line in log.read_text().splitlines()
+                   if line.startswith(marker)]
+        require(printed == [extension], "Extension file differs from its unique original logged plan")
+        require(extension.get("base_plan") == base_plan,
+                "Extension does not bind the unchanged original fixed17 plan")
+        extra = extension.get("groups")
+        require(isinstance(extra, list) and extra, "Extension has no explicit export group")
+        groups.extend(extra)
+        references.append({"plan": plan_ref, "logged_result": actual_ref,
+                           "log": {"file": str(log.relative_to(ROOT)), "sha256": sha_file(log)}})
+    return groups, references, {"file": str(path), "sha256": sha_file(path), "content": content}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--name", default="diag_look_table_census_01")
+    parser.add_argument("--plan", default="logs/review/diag_look_census_plan_01/census_plan.json")
+    parser.add_argument("--plan-sha256", required=True)
+    parser.add_argument("--runs-json", type=Path, required=True)
+    parser.add_argument("--extensions-json", type=Path)
+    args = parser.parse_args()
+    require(re.fullmatch(r"diag_look_table_census_[A-Za-z0-9_]+", args.name), "Use an unused diagnostic name")
+    require(os.environ.get("CVPR_RUN_NAME") == args.name, "Set CVPR_RUN_NAME; run through the authorized wrapper")
+    plan_ref = {"file": args.plan, "sha256": args.plan_sha256}
+    plan = read_ref(plan_ref)
+    inventory = read_ref(plan["inventory"])
+    current = inventory["current_standard"]
+    entries = current["pairs"]
+    require(plan["unique_denominator"] == current["unique_count"] == len(entries) == 17,
+            "Pinned census denominator differs from the authenticated inventory")
+    by_identity = {e["proposal_identity"]: e for e in entries}
+    require(len(by_identity) == 17 and current["field_of_view"] == 60
+            and current["fixed_label_version"] == labels.VERSION, "Wrong unique population")
+    by_pair_ref = {(e["pair_reference"]["file"], e["pair_reference"]["sha256"]): e for e in entries}
+    original_pairs = {e["proposal_identity"]: authenticate_entry(e) for e in entries}
+    observations = {identity: [] for identity in by_identity}
+    old = plan["existing_conclusive_failure"]
+    require(old["entry"] == by_identity[old["entry"]["proposal_identity"]], "Old failure changed inventory representative")
+    covered = [old["entry"]["proposal_identity"]]
+    groups = list(plan["groups"])
+    group_entries = {}
+    for group in groups:
+        require(len(group["pair_ids"]) == len(group["pair_references"]), "Plan IDs/references length differs")
+        chosen = []
+        for pair_id, ref in zip(group["pair_ids"], group["pair_references"]):
+            entry = by_pair_ref[(ref["file"], ref["sha256"])]
+            require(entry["pair_id"] == pair_id and entry["checkpoint"]["file"] == group["source"], "Plan pair/source mismatch")
+            covered.append(entry["proposal_identity"])
+            chosen.append(entry)
+        require(group["inner_name"] not in group_entries, "Duplicate plan group")
+        group_entries[group["inner_name"]] = chosen
+    require(len(covered) == 17 and set(covered) == set(by_identity), "Plan has duplicate or missing proposals")
+    # Check the original population first. Additional observations never add to
+    # covered, replace a base group, or remove the original timeout/failure run.
+    extensions, extension_refs, extensions_list = read_extensions(args.extensions_json, plan_ref)
+    for group in extensions:
+        require(group.get("gpus") == 1 and group["inner_name"] not in group_entries,
+                "Extension must be a distinct original single-GPU run group")
+        require(group["pair_ids"] and len(group["pair_ids"]) == len(group["pair_references"])
+                and len(group["pair_ids"]) == len(set(group["pair_ids"])),
+                "Extension pair IDs/references missing or duplicated")
+        chosen = []
+        for pair_id, ref in zip(group["pair_ids"], group["pair_references"]):
+            entry = by_pair_ref[(ref["file"], ref["sha256"])]
+            require(ref == entry["pair_reference"] and entry["pair_id"] == pair_id
+                    and entry["checkpoint"]["file"] == group["source"],
+                    "Extension changed an original pair reference/source or added to the population")
+            chosen.append(entry)
+        group_entries[group["inner_name"]] = chosen
+        groups.append(group)
+    runs_body = args.runs_json.read_bytes()
+    runs = json.loads(runs_body)
+    require(set(runs) == set(group_entries), "Run lists must explicitly cover every original and extension group")
+    require(all(isinstance(values, list) for values in runs.values()), "Each run group must be an explicit list")
+    all_names = [name for values in runs.values() for name in values]
+    require(len(all_names) == len(set(all_names)), "A run was assigned more than once")
+    for group in groups:
+        names = runs[group["inner_name"]]
+        require(isinstance(names, list) and names and names[0] == group["inner_name"]
+                and all(isinstance(n, str) and re.fullmatch(r"t02_[A-Za-z0-9_]+", n) for n in names),
+                "Keep each original run first; append explicit inner retry names")
+    run_records = []
+    # Original failure is retained, authenticated, and never rerendered here.
+    old_data, old_ref = audit(old["export_result"])
+    old_rows = [r for r in old_data["metrics"]["exports"] if r.get("pair_id") == old["entry"]["pair_id"]]
+    require(len(old_rows) == 1 and old_rows[0] == old["report"], "Pinned original failure row changed")
+    identity = old["entry"]["proposal_identity"]
+    observations[identity].append(row_observation(old_rows[0], old["entry"], original_pairs[identity], old_ref))
+    run_records.append({"reference": old_ref, "reused_original_failure": True,
+                        "status": old_data["metrics"].get("status"), "errors": old_data["metrics"].get("errors"),
+                        "cleanup_errors": old_data["metrics"].get("cleanup_errors")})
+    for group in groups:
+        for name in runs[group["inner_name"]]:
+            file = f"results/{name}.json"
+            record = {"file": file, "group": group["inner_name"], "authentication_error": None}
+            run_records.append(record)
+            try:
+                data, reference = audit(file)
+                record.update(reference=reference, original_config=data["config"], original_metrics=data["metrics"])
+                validate_export_run(data, group, name)
+                rows = {r["pair_id"]: r for r in data["metrics"]["pairs"]}
+                for entry in group_entries[group["inner_name"]]:
+                    identity = entry["proposal_identity"]
+                    if entry["pair_id"] in rows:
+                        observation = row_observation(rows[entry["pair_id"]], entry, original_pairs[identity], reference)
+                    else:
+                        observation = {"result": reference, "classification": UNKNOWN,
+                                       "unknown_reason": "Explicitly unstarted in original exporter",
+                                       "original_run_status": data["metrics"].get("status"),
+                                       "original_run_errors": data["metrics"].get("errors")}
+                    observations[identity].append(observation)
+            except Exception as error:
+                record["authentication_error"] = f"{type(error).__name__}: {error}"
+                for entry in group_entries[group["inner_name"]]:
+                    observations[entry["proposal_identity"]].append({"file": file, "classification": UNKNOWN,
+                        "unknown_reason": record["authentication_error"]})
+    rows = []
+    for entry in entries:
+        seen = observations[entry["proposal_identity"]]
+        kinds = {r["classification"] for r in seen}
+        classification = TRIGGER if TRIGGER in kinds else COMPLETE if COMPLETE in kinds else UNKNOWN
+        rows.append({"entry": entry, "classification": classification, "observations": seen,
+                     "conflicting_trigger_and_complete_observations": TRIGGER in kinds and COMPLETE in kinds})
+    counts = dict(Counter(r["classification"] for r in rows))
+    counts = {key: counts.get(key, 0) for key in (TRIGGER, COMPLETE, UNKNOWN)}
+    report = {"created_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "scope": plan["scope"], "plan": plan_ref, "inventory": plan["inventory"],
+        "extensions": extension_refs, "extensions_list": extensions_list,
+        "runs_list": {"file": str(args.runs_json), "sha256": sha_file(args.runs_json), "content": runs},
+        "population_scope": "Original frozen17 plan/inventory snapshot only; later independently accepted G01 Look pairs belong to a separate batch and are not counted here.",
+        "denominator": 17, "counts": counts, "triggered_fraction_of_frozen_inventory": counts[TRIGGER] / 17,
+        "fraction_interpretation": "Observed any-trigger fraction of the fixed 17; unknowns remain in denominator, not passes.",
+        "historical_not_current": {"unique_count": inventory["historical_not_current"]["unique_count"],
+                                   "scope": inventory["historical_not_current"]["scope"]},
+        "pairs": rows, "runs": run_records, "thresholds_changed": False, "source_artifacts_modified": False,
+        "full_T02_acceptance": None, "cache_or_training_authorized": False,
+        "classification_notes": ["Triggered means an authenticated existing worker reported the unchanged non_anchor_divergent rejection.",
+            "Completed-without-trigger requires a complete original native-verified table; other pair-check rejection remains explicit.",
+            "Error/timeout/black/unstarted/missing or unauthenticated evidence is unknown, never a pass.",
+            "No new rendering or scientific acceptance check was performed; original audited checks and artifact bytes are preserved."]}
+    folder = ROOT / "logs/review" / args.name
+    folder.mkdir(parents=True, exist_ok=False)
+    with (folder / "report.json").open("x") as stream:
+        json.dump(report, stream, indent=2, sort_keys=True, allow_nan=False)
+        stream.write("\n")
+    lines = ["# Look full-view diagnostic census", "", report["scope"], "",
+        f"Original frozen batch: 17 unique 60-degree, fixed-label Look proposals. Triggered: {counts[TRIGGER]}; "
+        f"complete without this trigger: {counts[COMPLETE]}; unknown: {counts[UNKNOWN]}.", "",
+        report["population_scope"], "",
+        "Unknowns remain in the denominator and are not counted as passes. Historical nonfixed-label pairs are excluded. "
+        "This report does not authorize cache use or training, and does not imply complete T02 acceptance.", "",
+        "| Pair | Outcome | Original runs / evidence status |", "|---|---|---|"]
+    for row in rows:
+        detail = "; ".join((o.get("result", {}).get("file") or o.get("file", "unknown")) + ": " +
+                           o["classification"] + (" (" + o["unknown_reason"] + ")" if o.get("unknown_reason") else "")
+                           for o in row["observations"])
+        lines.append("| " + row["entry"]["pair_id"] + " | " + row["classification"] + " | "
+                     + detail.replace("|", "\\|").replace("\n", " ") + " |")
+    lines += ["", "Full original references, errors, cleanup status, authenticated package associations and retry observations are in report.json."]
+    with (folder / "report.md").open("x") as stream:
+        stream.write("\n".join(lines) + "\n")
+    with (ROOT / "STATUS.md").open("a") as stream:
+        stream.write(f"\n\nLook D4 census (`{args.name}`): original frozen batch with unique denominator 17; "
+            f"observed non_anchor_divergent {counts[TRIGGER]}/17; complete without that trigger {counts[COMPLETE]}; "
+            f"unknown {counts[UNKNOWN]} (timeouts/errors/unstarted/unauthenticated evidence are not passes). "
+            "The original failure and all explicitly listed retries are preserved; any authenticated trigger takes precedence per proposal. "
+            "Later independently accepted G01 Look pairs remain a separate batch outside this frozen inventory. "
+            f"Historical nonfixed-label pairs remain separate. [Report](logs/review/{args.name}/report.md). "
+            "No threshold changed; no cache/training authorization or full T02 acceptance is implied.\n")
+    print("LOOK_TABLE_CENSUS_SUMMARY: " + json.dumps({"name": args.name, "denominator": 17, "counts": counts,
+        "extensions": extension_refs,
+        "report": {"file": str((folder / "report.json").relative_to(ROOT)), "sha256": sha_file(folder / "report.json")},
+        "markdown": {"file": str((folder / "report.md").relative_to(ROOT)), "sha256": sha_file(folder / "report.md")}},
+        sort_keys=True, allow_nan=False), flush=True)
+
+
+if __name__ == "__main__":
+    main()
+ --plan-sha256 25a5024eb00ba3f2104413ab61ac418600cdb6a51b70237c53ac60d6f2c0ca34 --runs-json /scratch/e1583364/cvpr2027/diag_look_table_census_01_inputs/runs.json --extensions-json /scratch/e1583364/cvpr2027/diag_look_table_census_01_inputs/extensions.json
+# start: 2026-11-09T19:17:45
+LOOK_TABLE_CENSUS_SUMMARY: {"counts": {"completed_without_this_trigger": 3, "triggered_non_anchor_divergent": 14, "unknown_timeout_or_other_error": 0}, "denominator": 17, "extensions": [{"log": {"file": "logs/runs/diag_look_census_extension_plan_02.log", "sha256": "ed692109bea512c530805eb20a1404074e80ddcc9dad495cfc295b33e47c1345"}, "logged_result": {"audit": {"fail": [], "file": "results/diag_look_census_extension_plan_02.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_look_census_extension_plan_02.diff"]}, "exit_code": 0, "file": "results/diag_look_census_extension_plan_02.json", "git_commit": "6689409063abd6c1037a77b29413acfd3681865a", "metrics_sha256": "0e69fb6695dab3954f349910338ba4fc1da605a29f666b8aae1688cf107317bc", "sha256": "359ff41b51dc7dd8fac4f6812b65dc1017628d59824d554810a5b1a8074f52ba"}, "plan": {"file": "logs/review/diag_look_census_extension_plan_02/extension_plan.json", "sha256": "f225c81bd78386ad897be3e3f2e3789a3428acbe96cda5e3a18c3336e21152e2"}}], "markdown": {"file": "logs/review/diag_look_table_census_01/report.md", "sha256": "6f6f3fd0b2f8ed53a7eaae8e80493ee660d8188e675b2f93c995d859812ce348"}, "name": "diag_look_table_census_01", "report": {"file": "logs/review/diag_look_table_census_01/report.json", "sha256": "4e0516e0e81fbacc3ff3d06891f6edfb18eb83f2bc61b6909a172c3c5778a0c3"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 23.133416372991633}
+# exit_code: 0
