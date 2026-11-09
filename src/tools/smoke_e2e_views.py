@@ -224,6 +224,9 @@ def load_success(path):
     for index, package in enumerate(packages):
         table, checked, checks = reload_export(rows[index], package, directory / f"export_{index:04d}")
         tables[table.pair_id], checked_packages[table.pair_id], pair_checks[table.pair_id] = table, checked, checks
+    counts = {pair: checks["non_anchor_divergent_states"] for pair, checks in pair_checks.items()}
+    if metrics.get("non_anchor_divergent_states_by_pair") != counts:
+        raise ValueError("Saved Direct hidden-divergence counts differ from the actual table states")
     population = [(pair, state) for pair, table in tables.items() for state in table.states]
     sampling = read_json_ref(metrics["sampling_plan"], directory, expected=directory / "sampling_plan.json")
     if sampling != sample_plan(population):
@@ -264,6 +267,7 @@ def main():
               "raw_cap_scope": "per owned export/fresh worker; not a whole-job cap",
               "budget_scope": "root must enforce cumulative 4 charged GPUh across ALL E2E jobs/retries"}
     metrics = {"kind": "smoke_e2e_views", "status": "incomplete", "step1_passed": False,
+               "non_anchor_divergent_states_by_pair": {},
                "exports": [], "fresh_runs": [], "errors": [], "cleanup_errors": [], "gate": None,
                "black_frame_detected": False, "formal_T02_acceptance": None, "formal_cache_matches_live": None,
                "paper_result": False, "steps_3_to_5_started": False}
@@ -311,6 +315,7 @@ def main():
                     break
                 table, checked, pair_checks = reload_export(row, package, target)
                 tables[table.pair_id], checked_packages[table.pair_id], checks[table.pair_id] = table, checked, pair_checks
+                metrics["non_anchor_divergent_states_by_pair"][table.pair_id] = pair_checks["non_anchor_divergent_states"]
             if not metrics["black_frame_detected"]:
                 population = [(pair, state) for pair, table in tables.items() for state in table.states]
                 sampling = sample_plan(population)

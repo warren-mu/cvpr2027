@@ -172,7 +172,7 @@ def make_sample(table, state_id, fresh):
     cached = tuple(table.states[state_id].captures)
     return CacheSample(table.pair_id, state_id, table.anchor_name, tuple(table.candidate_names),
                        cached, tuple(fresh), tuple(labels(view, table) for view in cached),
-                       tuple(labels(view, table) for view in fresh))
+                       tuple(labels(view, table) for view in fresh), kind=table.kind)
 
 
 def describe_view(view):

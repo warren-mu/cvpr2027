@@ -23,6 +23,7 @@ CACHE_POLICY = {
     'either_positive_requires_iou': True,
     'fresh_pair_render_process': 'one_new_process_same_exact_camera_pose',
     'rgb_difference': 'diagnostic_only_except_existing_shared_state_definition',
+    'non_anchor_divergence': 'Look rejects; Direct forks with own world RGB and records a count (supplement 8)',
     'failure_scope': 'whole_downstream_pipeline',
 }
 
@@ -66,6 +67,7 @@ class CacheSample:
     fresh: tuple   # both worlds actually re-rendered, never a cached image copy
     cached_labels: tuple  # per world: {stable candidate name: public numeric label}
     fresh_labels: tuple
+    kind: str  # bound to the source table before cache authorization
 
 
 def _labels(view, actual, pair_id, candidates):
@@ -142,7 +144,7 @@ def check_cached_state(sample):
         raise ValueError('Fresh render process must differ from the cached export process')
     if len({(view.process_id, view.render_id) for view in views}) != 4:
         raise ValueError('Require four distinct originating renders')
-    cached_class = classify_views(sample.cached, sample.anchor_name)
+    cached_class = classify_views(sample.cached, sample.anchor_name, kind=sample.kind)
     if (sample.fresh[0].process_id != sample.fresh[1].process_id
             or _encoded(sample.fresh[0].agent) != _encoded(sample.fresh[1].agent)):
         raise ValueError('Both fresh world renders require one process and the exact same camera pose')
@@ -169,16 +171,17 @@ def check_cached_state(sample):
                          'cache_max_abs_diff': max(abs(a - b) for a, b in zip(cached.rgb.data, fresh.rgb.data)),
                          'agent_pose_exact_diagnostic': _encoded(cached.agent) == _encoded(fresh.agent),
                          'cached_source': cached_source, 'fresh_source': fresh_source}
-    if fresh_divergent:
+    if fresh_divergent and sample.kind.startswith('look_'):
         reasons.append('fresh_non_anchor_divergent')
     if cached_class['shared'] != fresh_shared:
         reasons.append('shared_fork_classification_changed')
     passed, synthetic = not reasons, views[0].synthetic
-    return {'pair_id': sample.pair_id, 'state_id': sample.state_id, 'version': CACHE_VERSION,
+    return {'pair_id': sample.pair_id, 'state_id': sample.state_id, 'kind': sample.kind, 'version': CACHE_VERSION,
             'synthetic': synthetic, 'checks_passed': passed,
             'cache_matches_live': None if synthetic else passed,
             'reasons': reasons, 'worlds': worlds,
             'cached_classification': {'shared': cached_class['shared'],
+                                      'non_anchor_divergent': cached_class['non_anchor_divergent'],
                                       'frame_max_abs_diff': cached_class['frame_max_abs_diff']},
             'fresh_classification': {'shared': fresh_shared, 'non_anchor_divergent': fresh_divergent,
                                      'anchor_pixels': fresh_pixels, 'frame_max_abs_diff': fresh_difference}}

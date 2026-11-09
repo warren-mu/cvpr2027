@@ -29,7 +29,7 @@ def sample(pair_id='pair0', state_id='s0', *, anchor_count=0):
              'snapshot_sha256': ('0' if world == 'w0' else '1') * 64}, synthetic=True)
     return CacheSample(pair_id, state_id, 'x', ('a', 'b'),
         (view('w0', False), view('w1', False)), (view('w0', True), view('w1', True)),
-        (dict(assignments), dict(assignments)), (dict(assignments), dict(assignments)))
+        (dict(assignments), dict(assignments)), (dict(assignments), dict(assignments)), kind='look_flip')
 
 
 def change_view(item, which, world, **changes):
@@ -85,6 +85,24 @@ class CacheStateTests(unittest.TestCase):
         result = check_cached_state(item)
         self.assertFalse(result['checks_passed'])
         self.assertIn('fresh_non_anchor_divergent', result['reasons'])
+
+    def test_direct_hidden_divergence_is_a_counted_fork_in_cache_and_fresh(self):
+        for kind in ('direct_flip', 'direct_stay'):
+            item = replace(sample(), kind=kind)
+            for which in ('cached', 'fresh'):
+                item = change_view(item, which, 1, rgb=RGBFrame(bytes([14]) * (PIXELS * 3), 255, 255))
+            result = check_cached_state(item)
+            self.assertTrue(result['checks_passed'])
+            self.assertEqual(result['kind'], kind)
+            for stage in ('cached_classification', 'fresh_classification'):
+                self.assertFalse(result[stage]['shared'])
+                self.assertTrue(result[stage]['non_anchor_divergent'])
+            self.assertNotIn('fresh_non_anchor_divergent', result['reasons'])
+            # Direct relaxation does not relax cross-process classification.
+            changed = change_view(item, 'fresh', 1, rgb=BASE_RGB)
+            result = check_cached_state(changed)
+            self.assertFalse(result['checks_passed'])
+            self.assertIn('shared_fork_classification_changed', result['reasons'])
 
     def test_one_world_mask_failure_blocks_state(self):
         item = sample(anchor_count=250)

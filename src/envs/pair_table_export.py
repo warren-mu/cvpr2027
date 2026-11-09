@@ -99,7 +99,7 @@ def build_table(renderer, *, pair_id, scene, kind, instruction, anchor_name,
                     distances[following] = distances[view] + 1
                     queue.append(following)
         captures = tuple(renderer.render_pair(view))
-        measurement = classify_views(captures, anchor_name)
+        measurement = classify_views(captures, anchor_name, kind=kind)
         intermediate[view] = (successors, neighbors, domains, captures, measurement)
     states = {}
     for view, (successors, neighbors, domains, captures, measured) in intermediate.items():
@@ -114,6 +114,8 @@ def build_table(renderer, *, pair_id, scene, kind, instruction, anchor_name,
         initial_state=state_id(initial), positions=positions, states=states, source=source,
         export_verified=False, cache_verified=False)
     table.export_measurements = {'state_count': len(states), 'elapsed_seconds': time.perf_counter() - started,
+        'non_anchor_divergent_states': sum(state.anchor_pixels == (0, 0) and state.frame_max_abs_diff > 3
+                                          for state in states.values()),
         'includes': 'native graph queries and paired capture construction; excludes caller startup and serialization',
         'synthetic_only': table.synthetic}
     return table

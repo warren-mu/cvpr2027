@@ -132,6 +132,8 @@ def check_pair(table, t01):
     if any(row['passed'] is False for row in replays):
         reasons.append('witness_replay_failed')
     return {'passed': not reasons, 'reasons': reasons, 'min_solution_turns': minimum,
+            'non_anchor_divergent_states': sum(state.anchor_pixels == (0, 0) and state.frame_max_abs_diff > 3
+                                              for state in table.states.values()),
             'first_step_visible_actions': observations, 'witness_replay': replays,
             'prefix_verified_identical': table.export_verified and all(
                 state.frame_max_abs_diff <= 3 and state.anchor_pixels == (0, 0)
@@ -178,8 +180,8 @@ def verify_agent_setup(action, state, table):
 
 def verify_cached_binding(table, row):
     """Bind a cache report's reference pixels, masks and labels to this table."""
-    if row['pair_id'] != table.pair_id:
-        raise ValueError('Cache report names another table')
+    if row['pair_id'] != table.pair_id or row.get('kind') != table.kind:
+        raise ValueError('Cache report names another table or pair kind')
     state = table.states[row['state_id']]
     from .pair_table import label_assignment
     assignments = label_assignment(table.pair_id, table.candidate_names)
@@ -209,6 +211,10 @@ def verify_render_sources(table, *, evidence_roots):
     read = lambda ref: verified_read(ref, evidence_roots)
     seen = set()
     for key, state in table.states.items():
+        measured = classify_views(state.captures, table.anchor_name, kind=table.kind)
+        if (state.shared is not measured['shared'] or state.anchor_pixels != measured['anchor_pixels']
+                or state.frame_max_abs_diff != measured['frame_max_abs_diff']):
+            raise ValueError('Native verification state classification differs from its pair kind')
         for world, view in enumerate(state.captures):
             src, capture = view.source, view.source['capture']
             if (src.get('pair_id') != table.pair_id or src.get('world_id') != f'w{world}'
@@ -407,8 +413,8 @@ def authenticate_cache_sources(tables, samples, *, evidence_roots):
     for sample in samples:
         table = indexed[sample.pair_id]
         state = table.states[sample.state_id]
-        if tuple(sample.cached) != tuple(state.captures):
-            raise ValueError('Sample cached captures differ from the explicit table')
+        if tuple(sample.cached) != tuple(state.captures) or sample.kind != table.kind:
+            raise ValueError('Sample cached captures or pair kind differ from the explicit table')
         key = (sample.pair_id, sample.state_id)
         if key in grouped:
             raise ValueError('Duplicate fresh paired-state source')
@@ -419,7 +425,7 @@ def authenticate_cache_sources(tables, samples, *, evidence_roots):
         for (source_pair, state_id), sample in grouped.items():
             if source_pair != pair_id:
                 continue
-            measured = classify_views(sample.fresh, checked.anchor_name)
+            measured = classify_views(sample.fresh, checked.anchor_name, kind=checked.kind)
             checked.states[state_id] = replace(checked.states[state_id], captures=tuple(sample.fresh),
                 shared=measured['shared'], frame_max_abs_diff=measured['frame_max_abs_diff'],
                 anchor_pixels=measured['anchor_pixels'])

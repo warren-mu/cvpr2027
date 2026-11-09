@@ -53,7 +53,7 @@ def samples_for(values, plan):
         fresh = tuple(replace(view, process_id="fresh_fixture_" + pair,
                               render_id="fresh:" + view.render_id) for view in old)
         labels = label_assignment(pair, table.candidate_names)
-        samples.append(CacheSample(pair, state, "X", ("A", "B"), old, fresh, (labels, labels), (labels, labels)))
+        samples.append(CacheSample(pair, state, "X", ("A", "B"), old, fresh, (labels, labels), (labels, labels), kind=table.kind))
     return samples
 
 

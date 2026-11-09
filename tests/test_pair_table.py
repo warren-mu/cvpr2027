@@ -137,7 +137,7 @@ class TableTests(unittest.TestCase):
         for key, state in altered.items():
             if state.anchor_pixels[1]:
                 capture = replace(state.captures[1], masks={**state.captures[1].masks, 'X': mask(249)})
-                measured = classify_views((state.captures[0], capture), 'X')
+                measured = classify_views((state.captures[0], capture), 'X', kind='look_flip')
                 altered[key] = replace(state, captures=(state.captures[0], capture), anchor_pixels=measured['anchor_pixels'])
         value.states = altered
         self.assertIsNone(min_solution_turns(value))
@@ -146,6 +146,53 @@ class TableTests(unittest.TestCase):
         for option, error in [('mismatch', 'graph_mismatch'), ('leak', 'non_anchor_divergent'), ('missing', 'Missing mask')]:
             with self.subTest(option=option), self.assertRaisesRegex(ValueError, error):
                 table(**{option: True})
+
+    def test_direct_hidden_divergence_forks_counts_and_preserves_each_world(self):
+        class DirectRenderer(FixtureRenderer):
+            def render_pair(self, state):
+                captures = super().render_pair(state)
+                if state.heading_index == 0:
+                    captures = tuple(replace(view, masks={**view.masks, 'X': mask(250, 1000)})
+                                     for view in captures)
+                return captures
+        value = build_table(DirectRenderer(leak=True), pair_id='direct_fixture', scene='FloorPlan1',
+            kind='direct_stay', instruction='Select the marked object closest to the kettle.',
+            anchor_name='X', candidate_names=('A', 'B'), target_names=('A', 'A'),
+            initial_position={'x': 0, 'y': 0, 'z': 0}, initial_heading=0, source={'synthetic': True})
+        self.assertEqual(value.export_measurements['non_anchor_divergent_states'], 5)
+        source = {'pair_id': value.pair_id, 'witnesses': [
+            {'actions': [{'kind': 'select', 'target_name': 'A'}]} for _ in (0, 1)]}
+        checked = check_pair(value, source)
+        self.assertTrue(checked['passed'])
+        self.assertEqual(checked['non_anchor_divergent_states'], 5)
+        for state in value.states.values():
+            if state.anchor_pixels == (0, 0):
+                self.assertFalse(state.shared)
+                self.assertGreater(state.frame_max_abs_diff, 3)
+        with tempfile.TemporaryDirectory() as temporary:
+            reference = save_table(value, Path(temporary) / 'table')
+            loaded = load_table(reference['file'], expected_sha256=reference['sha256'])
+            left, right = self.env(loaded), self.env(loaded)
+            left.reset(loaded.pair_id, 'w0'); right.reset(loaded.pair_id, 'w1')
+            for _ in range(2):
+                observation0, _, _, _ = left.step('turn_right')
+                observation1, _, _, _ = right.step('turn_right')
+            self.assertEqual(left.info['anchor_pixels_w0'], 0)
+            self.assertEqual(left.info['anchor_pixels_w1'], 0)
+            self.assertNotEqual(observation0.image, observation1.image)
+            self.assertEqual((left.info['tau'], right.info['tau']), (0, 0))
+        # Identical captures remain forbidden for Look regardless of Flip/Stay.
+        hidden = next(state for state in value.states.values() if state.anchor_pixels == (0, 0))
+        for kind in ('look_flip', 'look_stay'):
+            with self.assertRaisesRegex(ValueError, 'non_anchor_divergent'):
+                classify_views(hidden.captures, 'X', kind=kind)
+
+    def test_kind_is_explicit_and_direct_noise_boundary_still_shares(self):
+        captures = FixtureRenderer().render_pair(ViewState('v', 0))
+        for kind in ('direct_flip', 'direct_stay'):
+            self.assertTrue(classify_views(captures, 'X', kind=kind)['shared'])
+        with self.assertRaisesRegex(ValueError, 'pair kind'):
+            classify_views(captures, 'X', kind='direct_unknown')
 
     def test_d4_graph_and_real_provenance_not_certified_by_mock(self):
         value = table()
@@ -159,9 +206,9 @@ class TableTests(unittest.TestCase):
     def test_native_pair_camera_and_render_identity_required(self):
         captures = FixtureRenderer().render_pair(ViewState('v', 0))
         with self.assertRaises(ValueError):
-            classify_views((captures[0], replace(captures[1], process_id='other')), 'X')
+            classify_views((captures[0], replace(captures[1], process_id='other')), 'X', kind='look_flip')
         with self.assertRaises(ValueError):
-            classify_views((captures[0], replace(captures[1], agent={'heading': 1})), 'X')
+            classify_views((captures[0], replace(captures[1], agent={'heading': 1})), 'X', kind='look_flip')
 
     def test_explicit_world_relabel_maps_targets_and_temporal_proof_not_pixels(self):
         value = table()
@@ -212,7 +259,7 @@ class TableTests(unittest.TestCase):
         value.kind = 'direct_flip'
         start = value.states[value.initial_state]
         captures = tuple(replace(c, masks={**c.masks, 'X': mask(250, 1000)}) for c in start.captures)
-        measurement = classify_views(captures, 'X')
+        measurement = classify_views(captures, 'X', kind='direct_flip')
         value.states[value.initial_state] = replace(start, captures=captures,
             shared=False, anchor_pixels=measurement['anchor_pixels'])
         self.assertEqual(min_solution_turns(value), 1)
@@ -251,13 +298,15 @@ class TableTests(unittest.TestCase):
         state = replace(state, captures=tuple(replace(c, source={'snapshot_sha256': str(w) * 64})
                                               for w, c in enumerate(state.captures)))
         value.states[value.initial_state] = state
-        row = {'pair_id': value.pair_id, 'state_id': value.initial_state, 'worlds': {}}
+        row = {'pair_id': value.pair_id, 'kind': value.kind, 'state_id': value.initial_state, 'worlds': {}}
         for world, capture in enumerate(state.captures):
             row['worlds'][f'w{world}'] = {'cached_source': {'rgb_sha256': capture.rgb.sha256,
                 'render_id': capture.render_id, 'snapshot_sha256': capture.source['snapshot_sha256']},
                 'cached_labels': dict(value.labels), 'masks': {name: {'cached_mask_sha256': hashlib.sha256(mask).hexdigest()}
                     for name, mask in capture.masks.items()}}
         verify_cached_binding(value, row)
+        with self.assertRaisesRegex(ValueError, 'pair kind'):
+            verify_cached_binding(value, {**row, 'kind': 'direct_flip'})
         altered = copy.deepcopy(row)
         altered['worlds']['w1']['masks']['X']['cached_mask_sha256'] = 'f' * 64
         with self.assertRaisesRegex(ValueError, 'different masks'):

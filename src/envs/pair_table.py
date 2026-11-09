@@ -55,7 +55,10 @@ class RenderedView:
         return self.masks[name].count(1)
 
 
-def classify_views(views, anchor_name):
+def classify_views(views, anchor_name, *, kind):
+    """Apply the human-approved Look-only no-anchor-leak rule (supplement 8)."""
+    if kind not in ('look_flip', 'look_stay', 'direct_flip', 'direct_stay'):
+        raise ValueError('Explicit registered pair kind is required for state classification')
     if len(views) != 2 or any(not isinstance(view, RenderedView) for view in views):
         raise ValueError('Two actual render records required')
     a, b = views
@@ -64,10 +67,11 @@ def classify_views(views, anchor_name):
         raise ValueError('Paired export must use two renders in one process without changing camera pose')
     pixels = (a.count(anchor_name), b.count(anchor_name))
     difference = max(abs(x - y) for x, y in zip(a.rgb.data, b.rgb.data))
-    if pixels == (0, 0) and difference > 3:
+    divergent = pixels == (0, 0) and difference > 3
+    if divergent and kind.startswith('look_'):
         raise ValueError('non_anchor_divergent')
-    return {'shared': pixels == (0, 0), 'anchor_pixels': pixels,
-            'frame_max_abs_diff': difference}
+    return {'shared': pixels == (0, 0) and difference <= 3, 'anchor_pixels': pixels,
+            'frame_max_abs_diff': difference, 'non_anchor_divergent': divergent}
 
 
 def label_assignment(pair_id, candidate_names):
@@ -146,7 +150,7 @@ class PairTable:
             raise ValueError('Malformed fixed-D4 table identity or target')
         synthetic = set()
         for key, state in self.states.items():
-            measurement = classify_views(state.captures, anchor_name)
+            measurement = classify_views(state.captures, anchor_name, kind=kind)
             if (key != state.state_id or state.view.opened_containers or state.view.viewpoint_id not in positions
                     or state.shared is not measurement['shared']
                     or state.frame_max_abs_diff != measurement['frame_max_abs_diff']
