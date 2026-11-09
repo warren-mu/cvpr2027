@@ -1,0 +1,22 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_metadata_revalidation_submit_01 -- python3 -c import json,pathlib,re,importlib.util
+from src.tools.t01_partition import audited_result
+r=pathlib.Path.cwd();folder=r/'logs/pbs/gen_train_metadata_revalidate_01-20261109T085201Z-cbca629d'
+p=json.loads((folder/'payload.json').read_text());receipt=json.loads((folder/'submission.json').read_text())
+assert receipt['returncode']==0 and re.findall(r'\b\d+\.hopper-m-\d+\b',receipt['stdout'])==['708092.hopper-m-02']
+assert p['requested_gpu_count']==1 and p['requested_wall_seconds']==1630 and p['requested_host'] is None and p['queue']=='autox' and p['budget_group']=='G01'
+a,ar=audited_result(r/'results/t02_look_table_a01.json');assert a['_meta']['exit_code']==0 and a['metrics']['cleanup_errors']==[] and len(a['metrics']['pairs'])==7
+assert all(row['rejection_reasons']==['non_anchor_divergent'] and row['error']=={'message':'non_anchor_divergent','type':'ValueError'} for row in a['metrics']['pairs'])
+account,account_ref=audited_result(r/'results/diag_look_census_a_accounting_01.json');assert account['_meta']['exit_code']==0
+mod=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(mod);mod.loader.exec_module(phase);b=phase.budget_state(r)
+assert b['accounted_or_reserved_by_subbudget']['G01']<=20 and b['accounted_or_reserved_by_subbudget']['T01v2']<=16 and b['accounted_or_reserved_total']<=60
+note='\n### Post-fix bounded G01 job submitted; Look census A completed\n\n'
+note+='708092 (gen_train_metadata_revalidate_01) submitted after plan8f974d5 push: oneGPU, Express/autox, no host,1630s ceiling, same six training scenes/concurrency6. G01 full-target cost exceeds current cap in the source-candidate balanced extrapolation; this is only the previously bounded implementation/stability revalidation.\n\n'
+note+='Look census A (708051) completed its scheduled7 pair checks; all7 original worker rows rejected non_anchor_divergent, cleanup clean. Together with the retained original E2E failure,8 distinct scheduled proposals have an observed trigger; B/C remaining9 are pending, not counted as passes. Final census will authenticate exact proposal associations. A actual chargedGPUh='+str(account['metrics']['total_allocation_gpu_hours'])+', recorded queue wait='+str(account['metrics']['queue_wait_seconds_by_job']['708051.hopper-m-02'])+' seconds.\n\n'
+note+='Actual-or-reserved chargedGPUh (pending walltime ceilings retained): '+json.dumps(b['accounted_or_reserved_by_subbudget'],sort_keys=True)+'; shared '+str(b['accounted_or_reserved_total'])+'/60.\n'
+with (r/'STATUS.md').open('a') as f:f.write(note)
+print('POST_FIX_SUBMISSION_AND_CENSUS_A: '+json.dumps({'job':'708092.hopper-m-02','a_result':ar,'a_accounting':account_ref,'budget':b['accounted_or_reserved_by_subbudget'],'shared':b['accounted_or_reserved_total']},sort_keys=True))
+
+# start: 2026-11-09T16:56:16
+POST_FIX_SUBMISSION_AND_CENSUS_A: {"a_accounting": {"audit": {"fail": [], "file": "results/diag_look_census_a_accounting_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_look_census_a_accounting_01.diff"]}, "exit_code": 0, "file": "results/diag_look_census_a_accounting_01.json", "git_commit": "e4edbdaedad729faabc8d580526f8e970f542e1b", "metrics_sha256": "9839002b7125cf77d637d4e942d027c4d88c7aeff1ad1a9b4514d505f835b830", "sha256": "e9f635ca6caae448095eb53fa4ad4d75aacebfa5935e86705b532f533ab105b3"}, "a_result": {"audit": {"fail": [], "file": "results/t02_look_table_a01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/t02_look_table_a01.diff"]}, "exit_code": 0, "file": "results/t02_look_table_a01.json", "git_commit": "02196e0b0ae73243e215243848edd380604499c4", "metrics_sha256": "fabe88b606dc0117c68f2cefa7973ada63c584553d9aa579f8591e0e90ced495", "sha256": "cb76f0256274c8b589c20fdac67b4eeb6c5cf555a9f745c0a280dc59c675fe9c"}, "budget": {"E2E": 1.4341666666666666, "G01": 2.401388888888889, "T01v2": 10.815277777777778}, "job": "708092.hopper-m-02", "shared": 26.33416666666667}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 89.18367008300265}
+# exit_code: 0

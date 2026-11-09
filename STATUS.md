@@ -828,3 +828,11 @@ G01 吞吐一次性分析（diag_g01_concurrency_analysis_01，2026-11-09T08:43:
 ### Bounded post-fix G01 revalidation plan
 
 Six lanes had the highest measured source-candidate throughput but one native action timeout, so stability is not established. The measured balanced-target extrapolation exceeds the approved20GPUh G01 cap; no full-scale commitment is made. Before expanding, repeat only the same six training scenes after the original-metadata retention fix, with full1200s/scene grants, at most8 Unity processes and oneGPU/12CPU. Requested1630s (0.4527777777777778GPUh), including bounded authentication/render gate/cleanup. This is a limited implementation and stability revalidation within the existing cap; no thresholds or task structure change, and old evidence stays invalid where missing. Source candidates still require independent verification and T02 filtering. Plan: logs/review/diag_g01_metadata_revalidation_plan_01/plan.json.
+
+### Post-fix bounded G01 job submitted; Look census A completed
+
+708092 (gen_train_metadata_revalidate_01) submitted after plan8f974d5 push: oneGPU, Express/autox, no host,1630s ceiling, same six training scenes/concurrency6. G01 full-target cost exceeds current cap in the source-candidate balanced extrapolation; this is only the previously bounded implementation/stability revalidation.
+
+Look census A (708051) completed its scheduled7 pair checks; all7 original worker rows rejected non_anchor_divergent, cleanup clean. Together with the retained original E2E failure,8 distinct scheduled proposals have an observed trigger; B/C remaining9 are pending, not counted as passes. Final census will authenticate exact proposal associations. A actual chargedGPUh=0.15777777777777777, recorded queue wait=250 seconds.
+
+Actual-or-reserved chargedGPUh (pending walltime ceilings retained): {"E2E": 1.4341666666666666, "G01": 2.401388888888889, "T01v2": 10.815277777777778}; shared 26.33416666666667/60.
