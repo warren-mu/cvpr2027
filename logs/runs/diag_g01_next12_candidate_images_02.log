@@ -1,0 +1,86 @@
+# run_logged: python3 -u -m src.tools.record_command --name diag_g01_next12_candidate_images_02 -- python3 -c import json,os,datetime,subprocess,re,hashlib
+from pathlib import Path
+from collections import Counter
+from src.tools.t01_partition import audited_result,sha_file
+from src.tools import merge_pair_v2 as merge
+ROOT=merge.ROOT.resolve(); NAME='diag_g01_next12_candidate_images_02'
+assert os.environ['CVPR_RUN_NAME']==NAME
+parent='gen_train_next12_60_01_retry1'; job='708238.hopper-m-02'
+directory=ROOT/'logs/review/g01_next12_candidates_01'
+assert not directory.exists(),'Preserve previous candidate publication'
+scan=[]; images=[]; references=[]
+for number in (8,9,10,205,206,207,302,303,304,402,403,404):
+ scene=f'FloorPlan{number}'; source_path=ROOT/'results'/f'{parent}_c6_{scene.lower()}.json'
+ if not source_path.exists():
+  scan.append({'scene':scene,'source_file':str(source_path.relative_to(ROOT)),'source_ended':False,'scope':'No final scene result at this snapshot; no outcome inferred'}); continue
+ data,ref=audited_result(source_path); cfg,m,meta=data['config'],data['metrics'],data['_meta']
+ assert meta.get('end') and cfg['scene']==scene and cfg['shard']['pbs_jobid']==job
+ assert cfg['producer_module']=='src.envs.pair_v2_g01_shard' and cfg['field_of_view']==60
+ scan.append({'scene':scene,'source':ref,'source_ended':True,'source_end':meta['end'],'status':m['status'],'error':m.get('error'),
+              'reported_passed_by_class':m['passed_by_class'],'cleanup_errors':m['cleanup_errors']})
+ if not any(m['passed_by_class'][kind] for kind in ('look_flip','look_stay')): continue
+ assert m['final_metrics_verified'] is True and m['terminal_verified_after_cleanup'] is True
+ journal_ref={'file':cfg['attempt_journal'],'sha256':m['attempt_journal_sha256']}
+ journal=merge.reference_path(journal_ref,root=ROOT,within=ROOT/'data/world_pairs/v2')
+ rows=[json.loads(line) for line in journal.read_text().splitlines() if line.strip()]
+ assert len(rows)==m['attempts'] and len({row['pair_id'] for row in rows})==len(rows)
+ passed=[row for row in rows if row['status']=='passed']
+ counts=Counter(row['kind'] for row in passed)
+ assert {kind:counts.get(kind,0) for kind in merge.KINDS}==m['passed_by_class']
+ assert [{'file':row['pair_file'],'sha256':row['pair_sha256']} for row in passed]==m['passed_pair_files']
+ references.append(ref)
+ for journal_index,row in enumerate(rows):
+  if row['status']!='passed' or row['kind'] not in ('look_flip','look_stay'): continue
+  pair_ref={'file':row['pair_file'],'sha256':row['pair_sha256']}
+  pair_path=merge.reference_path(pair_ref,root=ROOT,within=ROOT/'data/world_pairs/v2')
+  pair=json.loads(pair_path.read_bytes())
+  raw_path=merge.reference_path(row['raw_attempt'],root=ROOT,within=cfg['raw_evidence_dir'])
+  raw=json.loads(raw_path.read_bytes())
+  for key in ('pair_id','scene','kind','status','discard_reasons'):
+   assert pair[key]==row[key]==raw[key], 'Original pair/raw/journal identity mismatch'
+  assert row['scene']==scene and row['discard_reasons']==[]
+  image_ref=pair['review_image']
+  assert image_ref in pair['portable_files'],'Original review not in original portable manifest'
+  image_path=merge.reference_path(image_ref,root=ROOT,within=pair_path.parent)
+  body=image_path.read_bytes(); assert body.startswith(b'\x89PNG\r\n\x1a\n')
+  images.append({'entry':{'pair_id':pair['pair_id'],'scene':scene,'kind':pair['kind'],
+    'source':ref,'source_ended':True,'source_status':m['status'],'source_error':m.get('error'),
+    'journal':journal_ref,'journal_index':journal_index,'raw_attempt':row['raw_attempt'],'pair_reference':pair_ref,
+    'original_review_image':image_ref,'status':'candidate_image_not_independently_verified',
+    'review_label':'候选图，尚未独立验收','independent_acceptance':None,'T02_acceptance':None},
+    'bytes':body})
+assert images,'No ended Look candidates available; no empty publication'
+from types import SimpleNamespace
+prior_failure,prior_failure_ref=audited_result(ROOT/'results/diag_g01_next12_candidate_images_01.json')
+assert prior_failure['_meta']['exit_code']==1 and prior_failure['_meta'].get('end')
+pbs=SimpleNamespace(returncode=None,stdout='',stderr='Previous logged qstat timed out; scheduler query not repeated')
+match=None
+parent_ref=None
+parent_path=ROOT/'results'/f'{parent}.json'
+if parent_path.exists():
+ ended,parent_ref=audited_result(parent_path); assert ended['_meta'].get('end')
+manifest={'created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ 'scope':'Original source-reported Look candidate review PNGs only. Source/journal/raw/pair/image byte identities verified; no independent scientific checkpoint executed.',
+ 'review_label':'候选图，尚未独立验收','parent_run_name':parent,'pbs_jobid':job,
+ 'parent_snapshot':{'qstat_returncode':pbs.returncode,'qstat_stdout':pbs.stdout,'qstat_stderr':pbs.stderr,
+  'job_state':match.group(1) if match else None,'parent_running_at_capture':None if match is None else match.group(1)=='R','previous_scheduler_query_failure':prior_failure_ref,'parent_result_absent_at_capture':parent_ref is None,
+  'parent_ended_result':parent_ref},
+ 'scene_source_snapshot':scan,'sources':references,'images':[],
+ 'independent_acceptance':None,'full_T02_acceptance':None,'human_review_approved':None,'is_checkpoint':False,
+ 'source_files_modified':False,'new_GPU_rendering':False}
+directory.mkdir(parents=True,exist_ok=False)
+for index,image in enumerate(images):
+ entry=image['entry']; destination=directory/f"{index:05d}_{entry['pair_id']}_{entry['kind']}.png"
+ with destination.open('xb') as stream: stream.write(image['bytes'])
+ assert sha_file(destination)==entry['original_review_image']['sha256']
+ manifest['images'].append({**entry,'copied_review_image':{'file':str(destination.relative_to(ROOT)),'sha256':sha_file(destination)}})
+path=directory/'manifest.json'
+with path.open('x') as stream: json.dump(manifest,stream,indent=2,sort_keys=True,allow_nan=False); stream.write('\n')
+print('G01_NEXT12_CANDIDATE_IMAGES_JSON: '+json.dumps({'manifest':{'file':str(path.relative_to(ROOT)),'sha256':sha_file(path)},
+ 'image_count':len(manifest['images']),'images':[{'pair_id':r['pair_id'],'scene':r['scene'],'kind':r['kind'],'copied_review_image':r['copied_review_image']} for r in manifest['images']],
+ 'review_label':manifest['review_label'],'parent_snapshot':manifest['parent_snapshot'],'independent_acceptance':None,'is_checkpoint':False},sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-09T19:03:54
+G01_NEXT12_CANDIDATE_IMAGES_JSON: {"image_count": 5, "images": [{"copied_review_image": {"file": "logs/review/g01_next12_candidates_01/00000_floorplan207_00009_look_stay.png", "sha256": "33bb7ca709d8923123f008ddc209ed19388737d26edbbfee090ce886a6c14a4b"}, "kind": "look_stay", "pair_id": "floorplan207_00009", "scene": "FloorPlan207"}, {"copied_review_image": {"file": "logs/review/g01_next12_candidates_01/00001_floorplan207_00017_look_stay.png", "sha256": "0f2f95e240ce9eb2f821ea7f63e98e06980f71e1ce247ac31ce8b7775da9248f"}, "kind": "look_stay", "pair_id": "floorplan207_00017", "scene": "FloorPlan207"}, {"copied_review_image": {"file": "logs/review/g01_next12_candidates_01/00002_floorplan207_00063_look_stay.png", "sha256": "97e8b25ce32d3c85b3b5e59c4b28d311d6400906ab213ba66e2c63a8fb50d67c"}, "kind": "look_stay", "pair_id": "floorplan207_00063", "scene": "FloorPlan207"}, {"copied_review_image": {"file": "logs/review/g01_next12_candidates_01/00003_floorplan207_00137_look_stay.png", "sha256": "ad8aa14e8f5c8db441c3a2d5c952155fbfccfc1381302d0f087ea00dd2d19239"}, "kind": "look_stay", "pair_id": "floorplan207_00137", "scene": "FloorPlan207"}, {"copied_review_image": {"file": "logs/review/g01_next12_candidates_01/00004_floorplan302_00088_look_flip.png", "sha256": "3ddf639f4b96f2499f8e493df3f2adbc58ed8bdd722ac98e684193e63bd66edc"}, "kind": "look_flip", "pair_id": "floorplan302_00088", "scene": "FloorPlan302"}], "independent_acceptance": null, "is_checkpoint": false, "manifest": {"file": "logs/review/g01_next12_candidates_01/manifest.json", "sha256": "387234e27328d3743dbb16da0bdc59607cb2df00c9a52d4e8ceb7352426f2991"}, "parent_snapshot": {"job_state": null, "parent_ended_result": null, "parent_result_absent_at_capture": true, "parent_running_at_capture": null, "previous_scheduler_query_failure": {"audit": {"fail": [], "file": "results/diag_g01_next12_candidate_images_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_g01_next12_candidate_images_01.diff", "P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/diag_g01_next12_candidate_images_01.json", "git_commit": "6ee7ec9aca986275e19fa4ff868061e15d2129d3", "metrics_sha256": "21561b6dbaa433856d749d669ae4284023ecab44b95c1dbe9e7756af439ad653", "sha256": "09a8f41e60da850b0fe45ab21ec2868a7453edc5e1e5c8eaf3c2397e060d336c"}, "qstat_returncode": null, "qstat_stderr": "Previous logged qstat timed out; scheduler query not repeated", "qstat_stdout": ""}, "review_label": "\u5019\u9009\u56fe\uff0c\u5c1a\u672a\u72ec\u7acb\u9a8c\u6536"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 8.113510825962294}
+# exit_code: 0

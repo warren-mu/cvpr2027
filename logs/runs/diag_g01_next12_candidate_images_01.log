@@ -1,0 +1,93 @@
+# run_logged: python3 -u -m src.tools.record_command --name diag_g01_next12_candidate_images_01 -- python3 -c import json,os,datetime,subprocess,re,hashlib
+from pathlib import Path
+from collections import Counter
+from src.tools.t01_partition import audited_result,sha_file
+from src.tools import merge_pair_v2 as merge
+ROOT=merge.ROOT.resolve(); NAME='diag_g01_next12_candidate_images_01'
+assert os.environ['CVPR_RUN_NAME']==NAME
+parent='gen_train_next12_60_01_retry1'; job='708238.hopper-m-02'
+directory=ROOT/'logs/review/g01_next12_candidates_01'
+assert not directory.exists(),'Preserve previous candidate publication'
+scan=[]; images=[]; references=[]
+for number in (8,9,10,205,206,207,302,303,304,402,403,404):
+ scene=f'FloorPlan{number}'; source_path=ROOT/'results'/f'{parent}_c6_{scene.lower()}.json'
+ if not source_path.exists():
+  scan.append({'scene':scene,'source_file':str(source_path.relative_to(ROOT)),'source_ended':False,'scope':'No final scene result at this snapshot; no outcome inferred'}); continue
+ data,ref=audited_result(source_path); cfg,m,meta=data['config'],data['metrics'],data['_meta']
+ assert meta.get('end') and cfg['scene']==scene and cfg['shard']['pbs_jobid']==job
+ assert cfg['producer_module']=='src.envs.pair_v2_g01_shard' and cfg['field_of_view']==60
+ scan.append({'scene':scene,'source':ref,'source_ended':True,'source_end':meta['end'],'status':m['status'],'error':m.get('error'),
+              'reported_passed_by_class':m['passed_by_class'],'cleanup_errors':m['cleanup_errors']})
+ if not any(m['passed_by_class'][kind] for kind in ('look_flip','look_stay')): continue
+ assert m['final_metrics_verified'] is True and m['terminal_verified_after_cleanup'] is True
+ journal_ref={'file':cfg['attempt_journal'],'sha256':m['attempt_journal_sha256']}
+ journal=merge.reference_path(journal_ref,root=ROOT,within=ROOT/'data/world_pairs/v2')
+ rows=[json.loads(line) for line in journal.read_text().splitlines() if line.strip()]
+ assert len(rows)==m['attempts'] and len({row['pair_id'] for row in rows})==len(rows)
+ passed=[row for row in rows if row['status']=='passed']
+ counts=Counter(row['kind'] for row in passed)
+ assert {kind:counts.get(kind,0) for kind in merge.KINDS}==m['passed_by_class']
+ assert [{'file':row['pair_file'],'sha256':row['pair_sha256']} for row in passed]==m['passed_pair_files']
+ references.append(ref)
+ for journal_index,row in enumerate(rows):
+  if row['status']!='passed' or row['kind'] not in ('look_flip','look_stay'): continue
+  pair_ref={'file':row['pair_file'],'sha256':row['pair_sha256']}
+  pair_path=merge.reference_path(pair_ref,root=ROOT,within=ROOT/'data/world_pairs/v2')
+  pair=json.loads(pair_path.read_bytes())
+  raw_path=merge.reference_path(row['raw_attempt'],root=ROOT,within=cfg['raw_evidence_dir'])
+  raw=json.loads(raw_path.read_bytes())
+  for key in ('pair_id','scene','kind','status','discard_reasons'):
+   assert pair[key]==row[key]==raw[key], 'Original pair/raw/journal identity mismatch'
+  assert row['scene']==scene and row['discard_reasons']==[]
+  image_ref=pair['review_image']
+  assert image_ref in pair['portable_files'],'Original review not in original portable manifest'
+  image_path=merge.reference_path(image_ref,root=ROOT,within=pair_path.parent)
+  body=image_path.read_bytes(); assert body.startswith(b'\x89PNG\r\n\x1a\n')
+  images.append({'entry':{'pair_id':pair['pair_id'],'scene':scene,'kind':pair['kind'],
+    'source':ref,'source_ended':True,'source_status':m['status'],'source_error':m.get('error'),
+    'journal':journal_ref,'journal_index':journal_index,'raw_attempt':row['raw_attempt'],'pair_reference':pair_ref,
+    'original_review_image':image_ref,'status':'candidate_image_not_independently_verified',
+    'review_label':'候选图，尚未独立验收','independent_acceptance':None,'T02_acceptance':None},
+    'bytes':body})
+assert images,'No ended Look candidates available; no empty publication'
+pbs=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-f',job],capture_output=True,text=True,timeout=30)
+match=re.search(r'^\s*job_state\s*=\s*(\S+)',pbs.stdout,re.M)
+parent_ref=None
+parent_path=ROOT/'results'/f'{parent}.json'
+if parent_path.exists():
+ ended,parent_ref=audited_result(parent_path); assert ended['_meta'].get('end')
+manifest={'created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ 'scope':'Original source-reported Look candidate review PNGs only. Source/journal/raw/pair/image byte identities verified; no independent scientific checkpoint executed.',
+ 'review_label':'候选图，尚未独立验收','parent_run_name':parent,'pbs_jobid':job,
+ 'parent_snapshot':{'qstat_returncode':pbs.returncode,'qstat_stdout':pbs.stdout,'qstat_stderr':pbs.stderr,
+  'job_state':match.group(1) if match else None,'parent_running_at_capture':bool(match and match.group(1)=='R'),
+  'parent_ended_result':parent_ref},
+ 'scene_source_snapshot':scan,'sources':references,'images':[],
+ 'independent_acceptance':None,'full_T02_acceptance':None,'human_review_approved':None,'is_checkpoint':False,
+ 'source_files_modified':False,'new_GPU_rendering':False}
+directory.mkdir(parents=True,exist_ok=False)
+for index,image in enumerate(images):
+ entry=image['entry']; destination=directory/f"{index:05d}_{entry['pair_id']}_{entry['kind']}.png"
+ with destination.open('xb') as stream: stream.write(image['bytes'])
+ assert sha_file(destination)==entry['original_review_image']['sha256']
+ manifest['images'].append({**entry,'copied_review_image':{'file':str(destination.relative_to(ROOT)),'sha256':sha_file(destination)}})
+path=directory/'manifest.json'
+with path.open('x') as stream: json.dump(manifest,stream,indent=2,sort_keys=True,allow_nan=False); stream.write('\n')
+print('G01_NEXT12_CANDIDATE_IMAGES_JSON: '+json.dumps({'manifest':{'file':str(path.relative_to(ROOT)),'sha256':sha_file(path)},
+ 'image_count':len(manifest['images']),'images':[{'pair_id':r['pair_id'],'scene':r['scene'],'kind':r['kind'],'copied_review_image':r['copied_review_image']} for r in manifest['images']],
+ 'review_label':manifest['review_label'],'parent_snapshot':manifest['parent_snapshot'],'independent_acceptance':None,'is_checkpoint':False},sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-09T19:01:19
+Traceback (most recent call last):
+  File "<string>", line 53, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 505, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1154, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 2022, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1198, in _check_timeout
+    raise TimeoutExpired(
+subprocess.TimeoutExpired: Command '['/cm/shared/apps/pbspro/current/bin/qstat', '-f', '708238.hopper-m-02']' timed out after 30 seconds
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 37.71542505198158}
+# exit_code: 1
