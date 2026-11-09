@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from tests.test_pair_table import table
+from test_pair_table import table
 from tests.test_pair_table_cache import sample
 from src.envs.paired_env import RGBFrame, table_environment
 from src.envs.pair_table import TableObservationBackend
