@@ -13,8 +13,11 @@ import re
 from src.envs.thor_common import ROOT
 
 VERSION = 'g01_static_scene_kind_tickets_v1'
+CONFIG_VERSION = 'g01_static_configuration_tickets_v2'
+from src.envs import pair_v2_configuration as configurations
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
-FIELDS = ('g01_quota_version', 'g01_quota_assignment', 'allowed_kinds', 'actual_output_caps')
+FIELDS = ('g01_quota_version', 'g01_quota_assignment', 'allowed_kinds', 'actual_output_caps',
+          'g01_configuration_version', 'g01_seen_configurations')
 _ACTIVE_COUNT_PLANS = set()
 
 STAGES = {'test': 'independent_unique_construction_before_T02_filtering',
@@ -52,10 +55,14 @@ def summed(rows):
 
 
 def validate_structure(plan):
-    if (not isinstance(plan, dict) or plan.get('version') != VERSION
+    if (not isinstance(plan, dict) or plan.get('version') not in (VERSION, CONFIG_VERSION)
             or plan.get('partition') not in STAGES):
         raise ValueError('Unknown static quota plan/partition')
     partition = plan['partition']
+    if plan['version'] == CONFIG_VERSION:
+        if partition != 'test':
+            raise ValueError('Configuration deduplication is restricted to approved test collection')
+        configurations.validate_seen(plan.get('confirmed_configurations'))
     if not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', str(plan.get('parent_run_name'))):
         raise ValueError('Quota parent name must match the declared partition')
     target = {kind: (60 if partition == 'test' else 0 if kind.startswith('direct_') else 40) for kind in KINDS}
@@ -65,6 +72,15 @@ def validate_structure(plan):
     scene_confirmed = by_scene(plan.get('confirmed_by_scene'), partition)
     if summed(scene_confirmed.values()) != confirmed:
         raise ValueError('Confirmed per-scene totals do not equal the declared global counts')
+    if plan['version'] == CONFIG_VERSION:
+        occupancy = {}
+        for item in plan['confirmed_configurations']:
+            scene = item['configuration']['key']['scene']
+            if not scene_allowed(scene, partition):
+                raise ValueError('Confirmed configuration escaped the fixed test split')
+            occupancy.setdefault(scene, {kind: 0 for kind in KINDS})[item['kind']] += 1
+        if occupancy != scene_confirmed:
+            raise ValueError('Confirmed counts differ from unique configuration/class occupancy')
     basis = plan.get('count_basis_sources')
     if not isinstance(basis, list) or not basis:
         raise ValueError('Even zero confirmed counts require an explicit authenticated inventory cutoff')
@@ -123,22 +139,14 @@ def validate_structure(plan):
             'scope': 'structural arithmetic only; reservations are not scientific acceptance'}
 
 
-def authenticate_count_basis(plan):
-    """Recheck every published test pair; raw or failed checkpoint counts never count.
-
-    This grants collection capacity, not image-review or training permission.
-    Training requires a separate actual post-T02/Stay/ratio adapter. Nonempty
-    reservations require authentic submission/inventory upper-bound certificates;
-    trusting caller-supplied integers would not establish global safety.
-    """
-    if plan['partition'] != 'test':
-        raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
-    if plan['outstanding_reservations']:
-        raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
+def reconstruct_test_inventory(count_basis_sources, *, configuration=False):
+    """One shared audited inventory implementation for planning and dispatch."""
+    if not isinstance(count_basis_sources, list) or not count_basis_sources:
+        raise ValueError('Require an explicit complete published checkpoint cutoff')
     from src.envs import pair_table_source as sources
     identities, publications, duplicates, source_refs = {}, [], [], set()
     measured = {}
-    for expected in plan['count_basis_sources']:
+    for expected in count_basis_sources:
         reference(expected)
         key = (expected['file'], expected['sha256'])
         if key in source_refs:
@@ -164,11 +172,14 @@ def authenticate_count_basis(plan):
                     or package['source_provenance']['pair'] != entry['pair_reference']):
                 raise ValueError('Published test quota pair differs from its authenticated scene/proposal/class')
             local_counts[kind] += 1
+            config_value = configurations.from_pair(package['row'], package['worlds']) if configuration else None
             record = {'proposal_identity': identity, 'scene': scene, 'kind': kind,
                 'target_names': copy.deepcopy(package['target_names']),
                 'checkpoint_reference': copy.deepcopy(actual_ref),
                 'pair_reference': copy.deepcopy(package['source_provenance']['pair']),
                 'source_reference': copy.deepcopy(package['source_provenance']['scene'])}
+            if config_value is not None:
+                record['configuration'] = config_value
             # Same proposal across retries consumes one ticket. Conflicting
             # independently measured outcomes are not resolved by cherry-picking.
             if identity in identities:
@@ -183,13 +194,43 @@ def authenticate_count_basis(plan):
         if container['metrics'].get('published_by_class') != local_counts:
             raise ValueError('Checkpoint publication counts differ from its complete authenticated entries')
         publications.append(copy.deepcopy(actual_ref))
-    if measured != plan['confirmed_by_scene'] or summed(measured.values()) != plan['confirmed_by_kind']:
-        raise ValueError('Plan confirmed counts differ from independent unique test construction evidence')
+    raw_measured = copy.deepcopy(measured)
+    selection = None
+    if configuration:
+        selection = configurations.select(list(identities.values()))
+        measured = {}
+        for item in selection['selected']:
+            measured.setdefault(item['scene'], {kind: 0 for kind in KINDS})[item['kind']] += 1
     return {'count_basis_authenticated': True, 'count_stage': STAGES['test'],
         'confirmed_by_kind': summed(measured.values()), 'confirmed_by_scene': measured,
         'checkpoint_references': publications, 'unique_proposals': list(identities.values()),
         'duplicate_occurrences': duplicates, 'outstanding_reservations': [],
+        **({'raw_unique_proposals_by_kind': summed(raw_measured.values()),
+            'raw_unique_proposals_by_scene': raw_measured, 'configuration_selection': selection}
+           if selection is not None else {}),
         'scope': 'independently rechecked test construction; before T02; no human image approval or training permission inferred'}
+
+
+def authenticate_count_basis(plan):
+    """Recheck every published test pair; raw or failed checkpoint counts never count.
+
+    This grants collection capacity, not image-review or training permission.
+    Training requires a separate actual post-T02/Stay/ratio adapter. Nonempty
+    reservations require authentic submission/inventory upper-bound certificates;
+    trusting caller-supplied integers would not establish global safety.
+    """
+    if plan['partition'] != 'test':
+        raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
+    if plan['outstanding_reservations']:
+        raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
+    proof = reconstruct_test_inventory(plan['count_basis_sources'], configuration=plan['version'] == CONFIG_VERSION)
+    if (proof['confirmed_by_scene'] != plan['confirmed_by_scene']
+            or proof['confirmed_by_kind'] != plan['confirmed_by_kind']):
+        raise ValueError('Plan confirmed counts differ from independent unique test construction evidence')
+    if plan['version'] == CONFIG_VERSION:
+        if proof['configuration_selection']['seen_configurations'] != plan['confirmed_configurations']:
+            raise ValueError('Plan configuration occupancy differs from authenticated fixed-seed selection')
+    return proof
 
 
 def load_plan(ref, *, authenticate=True):
@@ -220,21 +261,29 @@ def assignment(plan, ref, scene, child_run_name):
     rows = [row for row in plan['assignments'] if row['scene'] == scene]
     if len(rows) != 1 or not re.fullmatch(re.escape(plan['parent_run_name']) + r'_c[246]_' + re.escape(scene.lower()), child_run_name):
         raise ValueError('Child must match one explicit parent scene assignment')
-    return {'version': VERSION, 'plan_reference': reference(ref), 'parent_run_name': plan['parent_run_name'],
+    return {'version': plan['version'], 'plan_reference': reference(ref), 'parent_run_name': plan['parent_run_name'],
             'partition': plan['partition'], 'scene': scene, 'child_run_name': child_run_name,
             'allowed_kinds': copy.deepcopy(rows[0]['allowed_kinds']),
-            'actual_output_caps': copy.deepcopy(rows[0]['actual_output_caps'])}
+            'actual_output_caps': copy.deepcopy(rows[0]['actual_output_caps']),
+            **({'seen_configurations': [copy.deepcopy(item) for item in plan['confirmed_configurations']
+                 if item['configuration']['key']['scene'] == scene]} if plan['version'] == CONFIG_VERSION else {})}
 
 
 def declared_fields(value):
-    if not isinstance(value, dict) or value.get('version') != VERSION:
+    if not isinstance(value, dict) or value.get('version') not in (VERSION, CONFIG_VERSION):
         raise ValueError('Unknown quota assignment')
     reference(value.get('plan_reference'))
     limits = counts(value.get('actual_output_caps'))
     if value.get('allowed_kinds') != [kind for kind in KINDS if limits[kind] > 0] or not any(limits.values()):
         raise ValueError('Assignment proposal kinds differ from positive actual output tickets')
-    return {'g01_quota_version': VERSION, 'g01_quota_assignment': copy.deepcopy(value),
-            'allowed_kinds': list(value['allowed_kinds']), 'actual_output_caps': limits}
+    extra = {}
+    if value['version'] == CONFIG_VERSION:
+        if value.get('partition') != 'test':
+            raise ValueError('Configuration occupancy is test-only')
+        extra = {'g01_configuration_version': configurations.VERSION,
+                 'g01_seen_configurations': configurations.validate_seen(value.get('seen_configurations'), value.get('scene'))}
+    return {'g01_quota_version': value['version'], 'g01_quota_assignment': copy.deepcopy(value),
+            'allowed_kinds': list(value['allowed_kinds']), 'actual_output_caps': limits, **extra}
 
 
 def validate_assignment(config, *, authenticate=False):
@@ -246,7 +295,7 @@ def validate_assignment(config, *, authenticate=False):
     """
     value = config.get('g01_quota_assignment')
     fields = declared_fields(value)
-    if any(config.get(key) != item for key, item in fields.items()):
+    if any(config.get(key) != fields.get(key) for key in FIELDS):
         raise ValueError('Source quota fields differ from the explicit assignment')
     plan, arithmetic, proof = load_plan(value['plan_reference'], authenticate=authenticate)
     expected = assignment(plan, value['plan_reference'], config['scene'], config['name'])

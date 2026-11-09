@@ -38,8 +38,9 @@ def tags(config=None):
     partition = 'train' if config is None else config['g01_partition']
     quota_assignment = None if config is None else config.get('g01_quota_assignment')
     extra = {} if quota_assignment is None else policy.quota_plan.declared_fields(quota_assignment)
-    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None),
-            **extra, **search.fields(quota_assignment is not None), **labels.fields(),
+    configuration = config is not None and config.get('g01_configuration_version') is not None
+    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None, configuration),
+            **extra, **search.fields(quota_assignment is not None, configuration), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
 
@@ -48,6 +49,8 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
     row = {} if attempt_row is None else attempt_row
     fields = labels.pair_fields(pair_id, identities['candidate_names'])
     row.update(fields, mode=proposal['mode'], proposed_pool=proposal['projection_pool']['pool'])
+    if config.get('g01_configuration_version') is not None:
+        row['g01_configuration'] = search.configurations.from_inputs(config['scene'], view, identities)
     if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':
         geometry.complete_pair(proposal['_private_pool_record'], proposal['w0'], proposal['w1'])
     if proposal['mode'] == 'stay':
@@ -63,8 +66,12 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
         except search.CollectionQuotaFull as error:
             if row.get('validity', {}).get('acceptance_passed') is not True or row.get('kind') != str(error):
                 raise ValueError('Quota skip lacks an unchanged positive scientific verdict') from error
-            row['collection_quota_skip'] = quota_skip(config, row['kind'])
-            row.update(status='rejected', discard_reasons=['collection_quota_full'])
+            if isinstance(error, search.ConfigurationAlreadyCollected):
+                row['collection_configuration_skip'] = configuration_skip(config, row)
+                row.update(status='rejected', discard_reasons=['collection_configuration_already_represented'])
+            else:
+                row['collection_quota_skip'] = quota_skip(config, row['kind'])
+                row.update(status='rejected', discard_reasons=['collection_quota_full'])
             return row
 
 
@@ -74,9 +81,9 @@ def compact_attempt(row):
                 *cadence.FIELDS, *sharing.FIELDS, *rank.FIELDS, *geometry.FIELDS,
                 'flip_geometry_initial_tuple', 'flip_geometry_final_tuple', 'flip_geometry_native_guards',
                 'collection_quota_skip', 'proposed_pool') + tuple(
-                    key for key in policy.quota_plan.FIELDS if key in row):
+                    key for key in (*policy.quota_plan.FIELDS, 'g01_configuration', 'collection_configuration_skip') if key in row):
         result[key] = copy.deepcopy(row.get(key))
-    if row.get('collection_quota_skip') is not None:
+    if row.get('collection_quota_skip') is not None or row.get('collection_configuration_skip') is not None:
         result['validity'] = copy.deepcopy(row.get('validity'))
     return result
 
@@ -104,6 +111,8 @@ def make_quota(config):
     options = {}
     if config is not None and config.get('g01_quota_version') is not None:
         options = {key: config[key] for key in ('actual_output_caps', 'allowed_kinds')}
+    if config is not None and config.get('g01_configuration_version') is not None:
+        options.update(scene=config['scene'], seen_configurations=config['g01_seen_configurations'])
     return search.SceneQuota(policy.class_cap(partition), **options)
 
 
@@ -112,10 +121,17 @@ def quota_skip(config, kind):
         'acceptance_passed_before_collection': True,
         'scope': 'collection capacity only; original scientific validity remains unchanged'}
     if config.get('g01_quota_version') is not None:
-        value.update(quota_version=policy.quota_plan.VERSION,
+        value.update(quota_version=config['g01_quota_version'],
                      actual_output_cap=config['actual_output_caps'][kind],
                      plan_reference=copy.deepcopy(config['g01_quota_assignment']['plan_reference']))
     return value
+
+
+def configuration_skip(config, row):
+    return {'version': search.configurations.VERSION, 'configuration': copy.deepcopy(row['g01_configuration']),
+        'kind': row['kind'], 'acceptance_passed_before_collection': True,
+        'plan_reference': copy.deepcopy(config['g01_quota_assignment']['plan_reference']),
+        'scope': 'configuration capacity only; unchanged positive scientific verdict retained'}
 
 
 @contextmanager
@@ -130,7 +146,7 @@ def installed(config=None):
                 raise RuntimeError('G01 geometry is only bound inside the spawned generator')
             record = search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
             if quota.ticketed:
-                record.update(search.fields(True))
+                record.update(search.fields(True, quota.configuration_enabled))
             return record
         def observer(sim, proposal, role, record, row, **kwargs):
             if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':

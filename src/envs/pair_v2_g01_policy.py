@@ -15,6 +15,7 @@ VERSION = 'g01_mixed_train80_complete_look_geometry_selected60_v2'
 TEST_VERSION = 'g01_mixed_test40_frozen_generator_selected60_v1'
 QUOTA_VERSIONS = {'train': 'g01_train_static_tickets_selected60_v1',
                   'test': 'g01_test_static_tickets_selected60_v1'}
+CONFIG_QUOTA_VERSION = 'g01_test_configuration_tickets_selected60_v2'
 from src.tools import g01_quota_plan as quota_plan
 PRODUCER = 'src.envs.pair_v2_g01_shard'
 TRAIN_SCENES = frozenset(f'FloorPlan{i}' for start in (1, 201, 301, 401) for i in range(start, start + 20))
@@ -50,7 +51,7 @@ def class_cap(partition):
     return 8 if partition == 'train' else 6
 
 
-def fields(partition='train', quota=False):
+def fields(partition='train', quota=False, configuration=False):
     split_scenes(partition)
     spec = copy.deepcopy(POLICY)
     if partition == 'test':
@@ -64,23 +65,30 @@ def fields(partition='train', quota=False):
             classes='explicit allowed_kinds in the immutable scene assignment',
             search=search.QUOTA_VERSION, quota=quota_plan.VERSION,
             actual_class='unchanged scientific classification; only actual classes with reserved tickets are exported')
+    if configuration:
+        if partition != 'test' or not quota:
+            raise ValueError('Configuration collection requires explicit test tickets')
+        spec.update(version=CONFIG_QUOTA_VERSION, approval='83828652 human approved',
+            quota=quota_plan.CONFIG_VERSION, search=search.CONFIG_VERSION,
+            configuration=copy.deepcopy(quota_plan.configurations.POLICY))
     return {'g01_version': spec['version'], 'g01_policy': spec, 'g01_partition': partition}
 
 
 def declared(scene, partition='train', quota_assignment=None):
     if scene not in split_scenes(partition):
         raise ValueError('G01 scene is outside its explicitly declared train/test partition')
-    values = fields(partition, quota_assignment is not None)
+    configuration = quota_assignment is not None and quota_assignment.get('version') == quota_plan.CONFIG_VERSION
+    values = fields(partition, quota_assignment is not None, configuration)
     quota_fields = {} if quota_assignment is None else quota_plan.declared_fields(quota_assignment)
     return {'field_of_view': 60, 'fov_contrast_version': values['g01_version'],
         'fov_contrast_policy': copy.deepcopy(values['g01_policy']), 'fov_contrast_group': 'g01_selected60',
         **values,
-        **quota_fields, **search.fields(quota_assignment is not None), **labels.fields(), **cadence.fields(),
+        **quota_fields, **search.fields(quota_assignment is not None, configuration), **labels.fields(), **cadence.fields(),
         **sharing.fields(), **rank.fields(), **geometry.fields()}
 
 
 def declared_fields(config):
-    if config.get('fov_contrast_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values()) and not any(key in config for key in FIELDS):
+    if config.get('fov_contrast_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION) and not any(key in config for key in FIELDS):
         return _ORIGINAL_DECLARED(config)
     ticketed = any(key in config for key in quota_plan.FIELDS)
     expected = declared(config.get('scene'), config.get('g01_partition'),
@@ -94,7 +102,7 @@ def declared_fields(config):
 
 def validate_source(config, metrics=None):
     expected, shard = declared_fields(config), declared_fields(config['shard'])
-    if (expected.get('g01_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values()) or expected != shard or config['scene'] != config['shard']['scene']
+    if (expected.get('g01_version') not in (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION) or expected != shard or config['scene'] != config['shard']['scene']
             or config.get('producer_module') != PRODUCER or config['shard'].get('producer_module') != PRODUCER):
         raise ValueError('G01 source differs from its immutable train/test scene/producer policy')
     if config.get('enable_candidate_clone') is not False or config.get('scene_pairs_per_class') != class_cap(expected['g01_partition']):
@@ -103,7 +111,7 @@ def validate_source(config, metrics=None):
         if (not re.fullmatch(r'gen_test_[A-Za-z0-9_]+', config.get('name', ''))
                 or config['shard'].get('name') != config['name']):
             raise ValueError('Evaluation source requires its isolated gen_test_ namespace')
-    if config.get('g01_version') in QUOTA_VERSIONS.values():
+    if config.get('g01_version') in (*QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION):
         quota_plan.validate_assignment(config)
     for value in (config, config['shard']):
         stay.validate_fields(value); labels.validate_fields(value); search.validate_fields(value)

@@ -260,7 +260,7 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
                       required_timeout_seconds=required_timeout(scenes, concurrency, partition),
                       benchmark_validation_timeout_seconds=BENCHMARK_VALIDATION_SECONDS)
         if quota is not None:
-            config.update(collection_quota_version=quota_plan.VERSION, quota_plan_reference=quota_reference,
+            config.update(collection_quota_version=quota['plan']['version'], quota_plan_reference=quota_reference,
                           quota_arithmetic=copy.deepcopy(quota['arithmetic']),
                           quota_count_basis_proof=copy.deepcopy(quota['count_basis_proof']))
             config['pool_scope'] += '; actual output bounded by explicitly assigned static class tickets'

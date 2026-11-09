@@ -78,7 +78,7 @@ def verify_collection(data):
             raise ValueError('G01 collection claim lacks an authenticated attempt journal')
         return None
     journal = merge.reference_path(journal_ref, within=merge.ROOT / 'data/world_pairs/v2')
-    from src.envs.pair_v2_g01_shard import make_quota, quota_skip
+    from src.envs.pair_v2_g01_shard import make_quota, quota_skip, configuration_skip
     quota = make_quota(config)
     if quota.ticketed:
         policy.quota_plan.validate_assignment(config, authenticate=True)
@@ -93,7 +93,7 @@ def verify_collection(data):
         search.validate_fields(raw)
         if quota.ticketed and any(raw.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
             raise ValueError('Raw journal attempt changed its immutable scene tickets')
-        if (raw.get('g01_search_version') == search.QUOTA_VERSION) != quota.ticketed:
+        if (raw.get('g01_search_version') in (search.QUOTA_VERSION, search.CONFIG_VERSION)) != quota.ticketed:
             raise ValueError('Raw journal proposal policy differs from source quota version')
         if raw.get('collection_quota_skip') is not None:
             kind = raw.get('kind')
@@ -103,6 +103,17 @@ def verify_collection(data):
                     or raw.get('validity', {}).get('acceptance_passed') is not True
                     or raw.get('pair_file') is not None or raw.get('pair_sha256') is not None):
                 raise ValueError('G01 quota skip lacks its original positive verdict and actual full class')
+        if raw.get('collection_configuration_skip') is not None:
+            if not quota.configuration_enabled:
+                raise ValueError('Legacy source cannot claim configuration suppression')
+            configuration = quota.configuration_of(raw)
+            if (raw['collection_configuration_skip'] != configuration_skip(config, raw)
+                    or (configuration['configuration_id'], raw.get('kind')) not in quota.configuration_seen
+                    or raw.get('collection_quota_skip') is not None or raw.get('status') != 'rejected'
+                    or raw.get('discard_reasons') != ['collection_configuration_already_represented']
+                    or raw.get('validity', {}).get('acceptance_passed') is not True
+                    or raw.get('pair_file') is not None or raw.get('pair_sha256') is not None):
+                raise ValueError('Configuration skip lacks its original verdict and authenticated earlier occupancy')
         quota.record(merge.reference_path(reference, within=config['raw_evidence_dir']), raw)
     if measured != quota.summary() or metrics.get('passed_by_class') != quota.passed:
         raise ValueError('G01 collection summary differs from its authenticated actual attempts')
@@ -161,7 +172,8 @@ def source_support():
             data, reference = source
             config = data['config']
             if (row.get('producer_module') != policy.PRODUCER
-                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())
+                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None,
+                    config.get('g01_configuration_version') is not None).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')

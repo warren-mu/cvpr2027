@@ -9,11 +9,13 @@ from . import pair_v2_role_policy as roles
 from . import pair_v2_flip_geometry as geometry
 from . import pair_v2_bbox_rank as rank
 from . import pair_v2_spawn_sharing as sharing
+from . import pair_v2_configuration as configurations
 
 VERSION = 'g01_mixed_complete_look_geometry_four_class_quota_v2'
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 PER_CLASS = 8
 QUOTA_VERSION = 'g01_static_ticket_proposal_selection_v1'
+CONFIG_VERSION = 'g01_test_configuration_ticket_proposals_v2'
 POLICY = {
     'version': VERSION, 'task': 'G01; approved supplements13/14/15',
     'look_flip': 'supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged',
@@ -29,7 +31,7 @@ POLICY = {
 FIELDS = ('g01_search_version', 'g01_search_policy')
 
 
-def fields(quota=False):
+def fields(quota=False, configuration=False):
     spec = copy.deepcopy(POLICY)
     if quota:
         spec.update(version=QUOTA_VERSION,
@@ -37,11 +39,15 @@ def fields(quota=False):
             look_attempt_mix='retain Flip/Stay preference while both are open; never propose a disabled or full class',
             collection='actual output counts bounded by immutable scene/class tickets; scientific acceptance remains separate',
             balance_after_cap='no forced Flip after its tickets are full; Stay-only is allowed by the new task')
+    if configuration:
+        if not quota: raise ValueError('Configuration proposal policy requires static tickets')
+        spec.update(version=CONFIG_VERSION, configuration=configurations.POLICY,
+            collection='one exported actual class per canonical configuration across Controller restarts and authenticated historical inventory; static tickets unchanged')
     return {FIELDS[0]: spec['version'], FIELDS[1]: spec}
 
 
 def validate_fields(value):
-    if any(value.get(key) != item for key, item in fields(value.get(FIELDS[0]) == QUOTA_VERSION).items()):
+    if any(value.get(key) != item for key, item in fields(value.get(FIELDS[0]) in (QUOTA_VERSION, CONFIG_VERSION), value.get(FIELDS[0]) == CONFIG_VERSION).items()):
         raise ValueError('Missing or altered G01 mixed-search policy')
 
 
@@ -49,8 +55,12 @@ class CollectionQuotaFull(RuntimeError):
     pass
 
 
+class ConfigurationAlreadyCollected(CollectionQuotaFull):
+    pass
+
+
 class SceneQuota:
-    def __init__(self, per_class=PER_CLASS, *, actual_output_caps=None, allowed_kinds=None):
+    def __init__(self, per_class=PER_CLASS, *, actual_output_caps=None, allowed_kinds=None, scene=None, seen_configurations=None):
         if type(per_class) is not int or per_class not in (6, 8):
             raise ValueError('Require the approved train8/test6 scene-class cap')
         self.per_class = per_class
@@ -67,15 +77,24 @@ class SceneQuota:
         self.passed = {kind: 0 for kind in KINDS}
         self.attempts = {kind: 0 for kind in KINDS}
         self.saved = set()
+        self.configuration_enabled = seen_configurations is not None
+        self.scene, self.configuration_seen = scene, {}
+        if self.configuration_enabled:
+            if not self.ticketed or per_class != 6 or not isinstance(scene, str):
+                raise ValueError('Configuration proposal capacity requires explicit test tickets')
+            for item in configurations.validate_seen(seen_configurations, scene):
+                self.configuration_seen[(item['configuration']['configuration_id'], item['kind'])] = copy.deepcopy(item['configuration'])
 
     def complete(self):
         return all(self.passed[kind] == self.limits[kind] for kind in KINDS)
 
-    def desired_modes(self, pool, preferred):
+    def desired_modes(self, pool, preferred, configuration=None):
         if self.ticketed:
             choices = [mode for mode in ('flip', 'stay')
                        if f'{pool}_{mode}' in self.allowed
-                       and self.passed[f'{pool}_{mode}'] < self.limits[f'{pool}_{mode}']]
+                       and self.passed[f'{pool}_{mode}'] < self.limits[f'{pool}_{mode}']
+                       and (not self.configuration_enabled or
+                            (configurations.validate(configuration)['configuration_id'], f'{pool}_{mode}') not in self.configuration_seen)]
             if pool == 'look' and len(choices) == 2:
                 preferred = 'flip' if self.attempts['look_flip'] <= self.attempts['look_stay'] else 'stay'
             return sorted(choices, key=lambda mode: mode != preferred)
@@ -89,12 +108,22 @@ class SceneQuota:
         return [mode for mode in (preferred, 'stay' if preferred == 'flip' else 'flip')
                 if self.passed[f'direct_{mode}'] < self.per_class]
 
+    def configuration_of(self, row):
+        value = configurations.validate(row.get('g01_configuration'))
+        if value != configurations.from_pair(row) or value['key']['scene'] != self.scene:
+            raise ValueError('Attempt configuration differs from original scene/view/identities')
+        return value
+
     def before_export(self, row):
         kind = row.get('kind')
         if kind not in self.passed:
             raise ValueError('Unknown actual output class')
         if self.passed[kind] >= self.limits[kind]:
             raise CollectionQuotaFull(kind)
+        if self.configuration_enabled:
+            value = self.configuration_of(row)
+            if (value['configuration_id'], kind) in self.configuration_seen:
+                raise ConfigurationAlreadyCollected(kind)
 
     def record(self, path, row):
         if row.get('counts_as_pair_attempt') is not True or str(path) in self.saved:
@@ -104,18 +133,27 @@ class SceneQuota:
             raise ValueError('Counted G01 attempt lacks its actual proposed pool/mode')
         if self.ticketed and (key not in self.allowed or self.passed[key] >= self.limits[key]):
             raise ValueError('Counted proposal used a disabled or already-full class')
+        configuration = self.configuration_of(row) if self.configuration_enabled else None
+        if configuration is not None and (configuration['configuration_id'], key) in self.configuration_seen:
+            raise ValueError('Counted proposal repeated an already represented configuration/class')
         if (not self.ticketed and key == 'look_stay'
                 and self.attempts['look_flip'] <= self.attempts['look_stay']):
             raise ValueError('LookStay consumed unearned actual LookFlip attempt balance')
         if row.get('status') == 'passed':
             self.before_export(row)
             self.passed[row['kind']] += 1
+            if configuration is not None:
+                self.configuration_seen[(configuration['configuration_id'], row['kind'])] = configuration
         self.attempts[key] += 1
         self.saved.add(str(path))
 
     def summary(self):
         if self.ticketed:
-            return {'version': QUOTA_VERSION, 'accepted_by_actual_class': dict(self.passed),
+            return {'version': CONFIG_VERSION if self.configuration_enabled else QUOTA_VERSION, 'accepted_by_actual_class': dict(self.passed),
+                    **({'configuration_version': configurations.VERSION, 'seen_configurations':
+                        [{'configuration': copy.deepcopy(value), 'kind': kind}
+                         for (identity, kind), value in sorted(self.configuration_seen.items())]}
+                       if self.configuration_enabled else {}),
                     'counted_by_proposed_pool_mode': dict(self.attempts),
                     'per_scene_class_cap': self.per_class, 'actual_output_caps': dict(self.limits),
                     'allowed_kinds': list(self.allowed), 'all_class_caps_reached': self.complete(),
@@ -220,9 +258,12 @@ class MixedIterator(pools.PoolProposalIterator):
         if len(self.records) != 1:
             raise ValueError('One authenticated view/identity catalog required')
         validate_fields(self.records[0])
-        if (self.records[0].get(FIELDS[0]) == QUOTA_VERSION) != quota.ticketed:
+        if (self.records[0].get(FIELDS[0]) in (QUOTA_VERSION, CONFIG_VERSION)) != quota.ticketed:
             raise ValueError('Proposal pool and scene quota versions differ')
         record = self.records[0]
+        if (record.get(FIELDS[0]) == CONFIG_VERSION) != quota.configuration_enabled:
+            raise ValueError('Proposal pool and scene configuration policy differ')
+        self.configuration = configurations.from_inputs(quota.scene, record['view'], record['identity']) if quota.configuration_enabled else None
         self.streams = {pool: flip.FlipRoles({**record,
             'points': {'look': record['points'][pool]}, 'stay_points': record['stay_points_by_pool'][pool]})
             for pool in ('look', 'direct')}
@@ -234,7 +275,7 @@ class MixedIterator(pools.PoolProposalIterator):
         choices = {}
         for pool, stream in self.streams.items():
             remaining = stream.summary()['remaining']
-            for mode in self.quota.desired_modes(pool, stream.next_kind):
+            for mode in self.quota.desired_modes(pool, stream.next_kind, self.configuration):
                 available = remaining['flip'] if mode == 'flip' else remaining['stay_a'] or remaining['stay_b']
                 if available:
                     choices[pool] = mode; break

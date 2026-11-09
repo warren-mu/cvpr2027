@@ -130,7 +130,8 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
     raw = merge.read_reference(raw_ref, root=root, within=raw_root)
     for value in (pair, raw):
         if (value.get('producer_module') != policy.PRODUCER
-                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())):
+                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None,
+                    config.get('g01_configuration_version') is not None).items())):
             raise ValueError('Pair/raw differs from its authenticated G01 source policy')
         if config.get('g01_quota_version') is not None and any(
                 value.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
