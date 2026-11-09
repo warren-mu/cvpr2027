@@ -1167,3 +1167,14 @@ Human superseded the unsubmitted18-unit plan: remaining155 train units are now f
 剩余155次训练导出尝试已固定为26个独立清单（每批6，最后5），旧18对计划未提交且保留。首两批709028/709029均在逐卡出图检查发现纯黑帧，未进入任何导出单元；按原严格规则保留并重提。固定首5张有效表的200 paired states/seed0缓存复核709024同样黑帧止损，原样重提为709034；尚未形成缓存通过证书，不能提前计入训练可用数。
 
 E2E第6步15文件实现已推送5bc907a8，真实Torch梯度与固定版本PPO接线、T4归约、原信用分配回归均已正式CPU测试通过（diag_e2e_pilot_frozen_cpu_01–06，无依赖跳过）。使用获批的整场景留出、任务奖励、看到锚点率和等权逐更新窗口；恰好0.05边界用math.fsum消除普通求和舍入误触发，阈值不变。仍等待≥80对完整T02检查及原平衡检查，不声称已经训练。
+
+
+## 2026-11-09 14:06 ET — 首批正式缓存检查通过
+
+results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pair检查与固定seed0的200个配对状态实时复核：sample_complete=true、cache_matches_live=true，missing/errors/cleanup均空。当前通过上述完整T02对级检查的训练对数：direct_flip=0、direct_stay=0、look_flip=4、look_stay=1；仍须累计≥80且四类都有，并完成全池原平衡/整场景留出后才能试跑。原先第6对FloorPlan203_00001的碰撞导出失败仍是unknown/未纳入，不从失败缓存中删表重抽。
+
+709054的计费和排队见diag_pbs_usage_709054_final；固定5表与200状态本次自然结束。后续可将连续四个6对导出批次的完整cutoff集中做一次原200状态缓存检查，所有失败/unknown保留在筛选ledger，只有完整导出的表进入预先固定人口；缓存失败时整批失败，不删表/换人口重抽。
+
+测试准备709062在hopper-19原gate黑帧86止损，inventory/funnel均未开始；经原strict guard后原样重提709108，仍无host。关于临时指定已验证正常节点的可选询问尚未获人类回复，不能视为批准，现有作业不动。
+
+后续cache载入的原始证据读取复用已推bebe623e：仅单调用内缓存已验bytes，不缓存验收结论，原科学checker逐对执行，成功退出前对全部涉及文件再核SHA，发生变化整批失败。此优化未用于已完成709054，无真实加速数字；正式技术/回归见diag_t02_evidence_read_cpu_01–03。

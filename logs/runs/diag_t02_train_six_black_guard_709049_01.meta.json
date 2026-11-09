@@ -1,0 +1,22 @@
+{
+  "name": "diag_t02_train_six_black_guard_709049_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib\nfrom pathlib import Path\nfrom PIL import Image\nfrom src.tools import phase_watch as p\nroot=Path.cwd().resolve();job='709049.hopper-m-02';parent='t02_export_train_six_01_retry1';name='diag_t02_train_six_black_guard_709049_01'\nauditor=p.load_module('original_auditor',root/'scripts/audit_provenance.py')\nouter,oref=p.load_logged(root,root/'results'/f'{parent}.json',auditor)\ngate,gref=p.load_logged(root,root/'results'/f'{parent}_gate.json',auditor)\naccount,aref=p.load_logged(root,root/'results/diag_t02_train_six_black_accounting_02.json',auditor)\ndirectory=next((root/'logs/pbs').glob(parent+'-*'));payload=json.loads((directory/'payload.json').read_text());receipt=json.loads((directory/'submission.json').read_text())\nassert receipt['returncode']==0 and job in receipt['stdout']\nassert account['_meta']['command']==['python3','src/tools/pbs_usage.py','--name','diag_t02_train_six_black_accounting_02','709049.hopper-m-02','709051.hopper-m-02']\nfields=next(row['fields'] for row in account['config']['jobs'] if row['job_id']==job)\ncfg,m=outer['config'],outer['metrics']\nassert payload['budget_group']=='T02' and payload['task_id']=='T01' and payload['requested_gpu_count']==1 and payload['requested_host'] is None\nassert cfg['version']=='t02_single_gpu_parallel_original_exports_v1' and cfg['concurrency']==6 and cfg['gpus']==1\nassert m['kind']=='t02_parallel_export' and m['status']=='blocked_by_render_gate' and m['units']==[] and m['errors']==[] and m['cleanup_errors']==[] and m['unstarted_unit_indices']==list(range(6)) and m['producer_exit_code']==86\nassert m['gate']['sha256']==gref['sha256']\nassert cfg['manifest_sha256']==hashlib.sha256((root/cfg['manifest']).read_bytes()).hexdigest()\nassert 'src.tools.t02_export_parallel' in payload['command'] and cfg['planned_units']==json.loads((root/cfg['manifest']).read_text())['entries']\nreason=p.validate_black_retry(payload,job,fields,outer,gate,parent+'_gate','t02_export_parallel')\nassert gate['config']['resolution']==255 and gate['config']['segmentation'] is True\nassert cfg['cpu_affinity']==gate['config']['allocation']['cpu_affinity'] and len(cfg['cpu_affinity'])==12\nevidence=[]\nfor row in gate['metrics']['devices']:\n ob=row['observation'];assert ob['node']==cfg['node'] and ob['gpu_identity']['gpu_uuid']==cfg['cuda_visible_devices']\n assert ob['actual_fresh_rgb_payload_count']>0 and any(w['stage']=='Pass' and w['fresh_main_rgb_payloads']>0 and w['cached_metadata'] is False for w in ob['wire_packets'])\n for capture in ob['captures']:\n  ref=capture['png'];path=Path(ref['path']);assert path.is_relative_to(root/'logs/runs'/f'{parent}_gate')\n  assert hashlib.sha256(path.read_bytes()).hexdigest()==ref['sha256']\n  with Image.open(path) as im:assert im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3\n  evidence.append(ref)\nmetrics={'eligible_for_same_manifest_retry':True,'reason':reason,'job_id':job,'node':cfg['node'],'gpu_uuid':cfg['cuda_visible_devices'],'units_started':0,'black_pngs':evidence,'allocation_gpu_hours':account['metrics']['allocation_gpu_hours_by_job'][job],'queue_wait_seconds':account['metrics']['queue_wait_seconds_by_job'][job]}\nresult={'config':{'name':name,'scope':'original completed black gate only; no scientific acceptance'},'metrics':metrics,'sources':[{'file':r['path'],'sha256':r['sha256'],'metrics_sha256':d['_meta']['metrics_sha256']} for r,d in ((oref,outer),(gref,gate),(aref,account))]}\nwith (root/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2);f.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T02:49:07",
+  "log_path": "logs/runs/diag_t02_train_six_black_guard_709049_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8913a16f853796b87a0ba80861daf396144fbe78",
+  "git_dirty": false,
+  "end": "2026-11-10T02:49:11",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "4acbccb2075a5d4b1fcd4a3b50be639d4e7967cd16fd0c7149156c98ccddff0f"
+}

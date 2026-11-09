@@ -1,0 +1,40 @@
+# run_logged: python3 -c import json,hashlib
+from pathlib import Path
+from PIL import Image
+from src.tools import phase_watch as p
+root=Path.cwd().resolve();job='709074.hopper-m-02';parent='t02_export_train_six_01_retry2';name='diag_t02_train_six_black_guard_709074_01'
+auditor=p.load_module('original_auditor',root/'scripts/audit_provenance.py')
+outer,oref=p.load_logged(root,root/'results'/f'{parent}.json',auditor)
+gate,gref=p.load_logged(root,root/'results'/f'{parent}_gate.json',auditor)
+account,aref=p.load_logged(root,root/'results/diag_t02_train_six_709074_accounting_01.json',auditor)
+directory=next((root/'logs/pbs').glob(parent+'-*'));payload=json.loads((directory/'payload.json').read_text());receipt=json.loads((directory/'submission.json').read_text())
+assert receipt['returncode']==0 and job in receipt['stdout']
+assert account['_meta']['command']==['python3','src/tools/pbs_usage.py','--name','diag_t02_train_six_709074_accounting_01',job]
+fields=account['config']['jobs'][0]['fields']
+cfg,m=outer['config'],outer['metrics']
+assert payload['budget_group']=='T02' and payload['task_id']=='T01' and payload['requested_gpu_count']==1 and payload['requested_host'] is None
+assert cfg['version']=='t02_single_gpu_parallel_original_exports_v1' and cfg['concurrency']==6 and cfg['gpus']==1
+assert m['kind']=='t02_parallel_export' and m['status']=='blocked_by_render_gate' and m['units']==[] and m['errors']==[] and m['cleanup_errors']==[] and m['unstarted_unit_indices']==list(range(6)) and m['producer_exit_code']==86
+assert m['gate']['sha256']==gref['sha256']
+assert cfg['manifest_sha256']==hashlib.sha256((root/cfg['manifest']).read_bytes()).hexdigest()
+assert 'src.tools.t02_export_parallel' in payload['command'] and cfg['planned_units']==json.loads((root/cfg['manifest']).read_text())['entries']
+reason=p.validate_black_retry(payload,job,fields,outer,gate,parent+'_gate','t02_export_parallel')
+assert gate['config']['resolution']==255 and gate['config']['segmentation'] is True
+assert cfg['cpu_affinity']==gate['config']['allocation']['cpu_affinity'] and len(cfg['cpu_affinity'])==12
+evidence=[]
+for row in gate['metrics']['devices']:
+ ob=row['observation'];assert ob['node']==cfg['node'] and ob['gpu_identity']['gpu_uuid']==cfg['cuda_visible_devices']
+ assert ob['actual_fresh_rgb_payload_count']>0 and any(w['stage']=='Pass' and w['fresh_main_rgb_payloads']>0 and w['cached_metadata'] is False for w in ob['wire_packets'])
+ for capture in ob['captures']:
+  ref=capture['png'];path=Path(ref['path']);assert path.is_relative_to(root/'logs/runs'/f'{parent}_gate')
+  assert hashlib.sha256(path.read_bytes()).hexdigest()==ref['sha256']
+  with Image.open(path) as im:assert im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3
+  evidence.append(ref)
+metrics={'eligible_for_same_manifest_retry':True,'reason':reason,'job_id':job,'node':cfg['node'],'gpu_uuid':cfg['cuda_visible_devices'],'units_started':0,'black_pngs':evidence,'allocation_gpu_hours':account['metrics']['total_allocation_gpu_hours'],'queue_wait_seconds':account['metrics']['queue_wait_seconds_by_job'][job]}
+result={'config':{'name':name,'scope':'original completed black gate only; no scientific acceptance'},'metrics':metrics,'sources':[{'file':r['path'],'sha256':r['sha256'],'metrics_sha256':d['_meta']['metrics_sha256']} for r,d in ((oref,outer),(gref,gate),(aref,account))]}
+with (root/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2);f.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-10T02:59:33
+FINAL_METRICS_JSON: {"allocation_gpu_hours": 0.004722222222222222, "black_pngs": [{"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t02_export_train_six_01_retry2_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t02_export_train_six_01_retry2_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_for_same_manifest_retry": true, "gpu_uuid": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957", "job_id": "709074.hopper-m-02", "node": "hopper-19", "queue_wait_seconds": 107, "reason": "render_gate_black_capture", "units_started": 0}
+# exit_code: 0
