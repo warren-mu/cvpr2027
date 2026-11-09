@@ -1,0 +1,28 @@
+{
+  "name": "t01v2_flip_rounds_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_flip_rounds_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T12:36:39",
+  "log_path": "logs/runs/t01v2_flip_rounds_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "a4a0d6de080848c56c7fff100975e0dfc7efe3b4",
+  "git_dirty": false,
+  "end": "2026-11-09T12:36:52",
+  "duration_sec": 13.5,
+  "exit_code": 1,
+  "metrics_sha256": "2e3171d0b8e6fb7ee9a3e44e981f63f3e8042309b7f7531575df132ae209c256"
+}

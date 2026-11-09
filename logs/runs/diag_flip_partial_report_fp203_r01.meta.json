@@ -1,0 +1,29 @@
+{
+  "name": "diag_flip_partial_report_fp203_r01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_flip_partial_report_fp203_r01",
+    "--",
+    "python3",
+    "-c",
+    "import json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nfrom src.tools import t01v2_look_funnel as funnel\nsource,ref=audited_result(Path('results/diag_flip_partial_fp203_r01.json'))\nrecords=[json.loads(line.split(': ',1)[1]) for line in Path(source['_meta']['log_path']).read_text().splitlines() if line.startswith('PARTIAL_ENDED_FLIP_FUNNEL_JSON: ')]\nassert len(records)==1 and len(records[0]['sources'])==1\nunit=records[0]['sources'][0]\ngroups=[{'field_of_view':unit['field_of_view'],'mode':row['mode'],'provided_sources':[unit['source']['file']],'funnel':row['funnel']} for row in unit['groups']]\ntable=funnel.markdown({'groups':groups,'unprovided_units':[]})\nintro='本单元未取得经核验的终止回执。下表只统计已归档、逐条核对原始SHA的完整journal前缀，不是最终计数；完整独立checkpoint仅把该源记为ledger-only，独立通过数为0。未测关卡保留未知。'\npath=Path('logs/review/diag_flip_partial_fp203_r01.md')\nwith path.open('x') as stream:stream.write(intro+'\\n\\n'+table)\nsummary={'observed_prefix_counts':unit['observed_prefix_counts'],'observed_quota':unit['observed_prefix_actual_quota'],'timing':unit['timing'],'funnel':{row['mode']:{key:{k:v for k,v in val.items() if k!='rejected_examples'} for key,val in row['funnel']['stages'].items()} for row in unit['groups']}}\nprint(json.dumps(summary,sort_keys=True))\np=Path('STATUS.md')\np.write_text(p.read_text()+'\\nEnded-prefix diagnostic diag_flip_partial_fp203_r01 authenticated '+str(unit['observed_prefix_counts']['observed_complete_attempts'])+' recorded attempts; actual observed quota='+json.dumps(unit['observed_prefix_actual_quota'],sort_keys=True)+'. The failed source is unsealed, so these remain observed-prefix diagnostics only. Per-gate Flip/Stay counts and the first available rejected examples are in logs/review/diag_flip_partial_fp203_r01.md; strict checkpoint t01v2_checkpoint_flip60_fp203_r01 independently admits0 pairs and leaves final attempt counts unknown. Recorded timing scope='+json.dumps(unit['timing'],sort_keys=True)+'.\\n')\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T12:45:52",
+  "log_path": "logs/runs/diag_flip_partial_report_fp203_r01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "b08350d49274e7f07fd1551f018b3707e00933cf",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_flip_partial_report_fp203_r01.diff",
+  "end": "2026-11-09T12:45:53",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "7117f8139d5f939edfb49c1443bae000a5afa48751bf5456eb4c3b217800dff6"
+}
