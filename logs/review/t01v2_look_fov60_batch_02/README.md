@@ -1,0 +1,1 @@
+Additional unchanged60-degree Look review images from running FloorPlan203. These are generator-passed candidates; ended-source independent acceptance remains pending. The completed six-unit cohort and human image review still govern expansion and FOV choice.

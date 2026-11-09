@@ -1,0 +1,19 @@
+# run_logged: /scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3 -m src.tools.pbs_usage --name smoke_e2e_eval_accounting_03 707555.hopper-m-02
+# start: 2026-11-09T10:53:45
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_usage.py", line 156, in <module>
+    sys.exit(main())
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_usage.py", line 90, in main
+    proc = subprocess.run(["qstat", "-fx", job], capture_output=True, text=True, timeout=120)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 503, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 971, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1863, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'qstat'
+# exit_code: 1

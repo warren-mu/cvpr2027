@@ -1,0 +1,28 @@
+{
+  "name": "t01v2_look60_batch_publish_02",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_look60_batch_publish_02",
+    "--",
+    "python3",
+    "-c",
+    "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve();source='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203'\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nselected=[json.loads(x) for x in raw.splitlines() if x.strip()]\nselected=[r for r in selected if r['status']=='passed' and r['kind'].startswith('look_') and r['pair_id']!='floorplan203_00001']\nassert selected\nout=root/'logs/review/t01v2_look_fov60_batch_02';out.mkdir(exist_ok=False)\nproofs=[]\nfor row in selected:\n p=(root/row['pair_file']).resolve();p.relative_to(root/'data/world_pairs/v2')\n rawpair=p.read_bytes();assert hashlib.sha256(rawpair).hexdigest()==row['pair_sha256']\n d=json.loads(rawpair); ref=d['review_image'];png=(root/ref['file']).resolve();png.relative_to(root)\n blob=png.read_bytes();assert hashlib.sha256(blob).hexdigest()==ref['sha256']\n target=out/(row['pair_id']+'.png');target.write_bytes(blob)\n proofs.append({'journal_row':row,'original_review':ref,'published_file':str(target.relative_to(root))})\nproof={'scope':'provisional generator-passed additional Look pairs; running source, independent final checkpoint pending','source_run':source,'field_of_view':60,'pairs':proofs,'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent}\n(out/'provisional.json').write_text(json.dumps(proof,sort_keys=True,indent=2)+'\\n')\n(out/'README.md').write_text('Additional unchanged60-degree Look review images from running FloorPlan203. These are generator-passed candidates; ended-source independent acceptance remains pending. The completed six-unit cohort and human image review still govern expansion and FOV choice.\\n')\nprint(json.dumps(proof,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T10:53:34",
+  "log_path": "logs/runs/t01v2_look60_batch_publish_02.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "f6232991e65a4a6f0aa9f29d9f32665f8954d077",
+  "git_dirty": false,
+  "end": "2026-11-09T10:53:34",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "0aa422b43d3640f56f76cde49b5036a1b2597755d3865509d68b2ae8867d14b1"
+}
