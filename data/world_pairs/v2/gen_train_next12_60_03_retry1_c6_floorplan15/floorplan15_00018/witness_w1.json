@@ -1,0 +1,1248 @@
+{
+  "action_successes": [
+    true
+  ],
+  "actions": [
+    {
+      "distance_m": 0.8780231339873029,
+      "distance_method": "3D Euclidean agent metadata.position to object metadata.position",
+      "kind": "select",
+      "label": 1,
+      "mark_labels_by_name": {
+        "Apple_8a347234": 2,
+        "Pan_669802a6": 1
+      },
+      "measurement_action_sent": false,
+      "metadata_distance": 0.8780231475830078,
+      "realized_relation": {
+        "anchor_name": "DishSponge_22e43762",
+        "candidate_names": [
+          "Apple_8a347234",
+          "Pan_669802a6"
+        ],
+        "candidate_policy": "two_marked_pickupables_v1",
+        "candidate_types": [
+          "Apple",
+          "Pan"
+        ],
+        "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+        "distances_m": {
+          "Apple_8a347234": 0.9558579492780015,
+          "Pan_669802a6": 0.12578698590057125
+        },
+        "passed": true,
+        "reasons": [],
+        "same_class": false,
+        "target_name": "Pan_669802a6"
+      },
+      "selected_object_id": "Pan|-02.61|+00.90|+03.62",
+      "selected_object_name": "Pan_669802a6",
+      "success": true,
+      "target_name": "Pan_669802a6",
+      "visible_mask_pixels": 1147
+    }
+  ],
+  "bbox_proposal_rank_policy": {
+    "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+    "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+    "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+    "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+    "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+    "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+    "scope": "proposal prediction only; no acceptance result or measured visibility is produced",
+    "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+    "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+    "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1"
+  },
+  "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+  "buffered_raw_complete": true,
+  "candidate_label_assignment": {
+    "Apple_8a347234": 2,
+    "Pan_669802a6": 1
+  },
+  "captures": [
+    {
+      "action_index": 2,
+      "black": false,
+      "files": {
+        "masks": {
+          "bytes": 7635,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/frame_000003_masks.npz",
+          "sha256": "8d18d9506361b487367fa2c8f7776f57c9e82e3a243813463b1a414578f25e55"
+        },
+        "metadata": {
+          "bytes": 140440,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/frame_000003_metadata.json",
+          "sha256": "801919473a461813053a0edfcbec82ebe118eb2e213547ee3e9332b839877a9b"
+        },
+        "rgb": {
+          "bytes": 76226,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/frame_000003_rgb.png",
+          "sha256": "77d603a8e3e3e04ab91716d64e71416de152c0ba450e0f077dacfd79df9bbaa6"
+        }
+      },
+      "mask_pixels_by_name": {
+        "Apple_8a347234": 837,
+        "Cabinet_4b06d3ae": 3038,
+        "Cabinet_50405b68": 510,
+        "Cabinet_75be0e6f": 2790,
+        "Cabinet_b0f79cab": 3503,
+        "Cabinet_cb449b50": 307,
+        "CoffeeMachine_01e4672d": 9878,
+        "CounterTop_3b10358b": 16095,
+        "DishSponge_22e43762": 345,
+        "Drawer_885b42c3": 901,
+        "Drawer_b25e44e1": 1425,
+        "Mug_15c21204": 496,
+        "Pan_669802a6": 1147,
+        "Plate_e52bf766": 1446,
+        "Toaster_60a283ed": 269,
+        "WineBottle_1e8ef6ff": 453
+      },
+      "rgb_sha256": "1c2a60c1fedb38c8f8126803a083b21c50987f035d715145fa3bdf379c4255f5",
+      "rgb_shape": [
+        255,
+        255,
+        3
+      ],
+      "sequence_id": null,
+      "source_action": "TeleportFull",
+      "stem": "action_2_TeleportFull",
+      "valid": true
+    }
+  ],
+  "cleanup_errors": [],
+  "construction_process_id": 1727624,
+  "discovery_schedule_policy": {
+    "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+    "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+    "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+    "round": "discover at most one new combination, then process each combination active at that round start once",
+    "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim",
+    "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+    "version": "one_discovery_then_full_active_round_v1",
+    "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order"
+  },
+  "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+  "done": true,
+  "error": null,
+  "executed_actions": [
+    "select 1"
+  ],
+  "field_of_view": 60,
+  "fixed_label_pair_id": "floorplan15_00018",
+  "fixed_label_policy": {
+    "approved_task_commit": "5a50999",
+    "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+    "legacy": "absent policy means the original spatial policy; no retrospective upgrades",
+    "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+    "scope": "one object keeps its number across both worlds and all views of one pair",
+    "version": "pair_stable_object_labels_v1",
+    "visible_subset": "draw only currently visible declared candidates; never renumber a subset"
+  },
+  "fixed_label_version": "pair_stable_object_labels_v1",
+  "flip_geometry_policy": {
+    "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+    "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+    "approval": "T01v2 supplement15;5a0a138",
+    "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+    "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+    "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+    "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+    "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+    "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+    "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+    "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim",
+    "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+    "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+    "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+    "unknown": "unknown projection/geometry never counts as a passing prediction",
+    "version": "look_flip_complete_tuple_predicted_center_geometry_v1"
+  },
+  "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+  "fov_contrast_group": "g01_selected60",
+  "fov_contrast_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "fov_contrast_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "g01_partition": "train",
+  "g01_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "g01_search_policy": {
+    "balance_after_cap": "additional LookFlip proposals may earn required attempt balance while their full class is not exported",
+    "collection": "at most8 producer-passed outputs per actual class per scene; independent verification remains separate",
+    "direct_flip": "unchanged G01 native-surface3D ratio roles and in-frame centre projection; no proximity or per-side cap",
+    "look_attempt_mix": "scene-wide counted LookFlip >= counted LookStay, across Controller restarts; uncounted native failures earn nothing",
+    "look_flip": "supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged",
+    "pool_order": "alternate Look/Direct when an available requested mode exists; explicitly record exhaustion fallback",
+    "quota_skip": "retain original validity verdict and record collection_quota_full; never recast this as physical failure",
+    "stay": "original horizontal native domain; original Look12/Direct40 cap and far-first actual-w0 retries",
+    "task": "G01; approved supplements13/14/15",
+    "unchanged": "seed0 role orientation, native token proof, all physical/target/prefix/evidence/solvability/witness thresholds",
+    "version": "g01_mixed_complete_look_geometry_four_class_quota_v2"
+  },
+  "g01_search_version": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+  "g01_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "passed": true,
+  "planned_actions": [
+    "select 1"
+  ],
+  "process_id": 1788214,
+  "producer_module": "src.envs.pair_v2_g01_shard",
+  "raw_evidence": {
+    "bytes": 5192,
+    "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/evidence_index.json",
+    "sha256": "4ba71bdf6d20b4b95ddbeb7856488f7ba759d24fa54048fdb24a13b823e5e495"
+  },
+  "restoration": {
+    "agent_pose_exact": true,
+    "agent_realized": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -2.5,
+        "y": 0.914953351020813,
+        "z": 2.75
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 315.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "agent_requested": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -2.5,
+        "y": 0.914953351020813,
+        "z": 2.75
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 315.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "executed_agent_setup_arguments": {
+      "forceAction": false,
+      "horizon": 30,
+      "position": {
+        "x": -2.5,
+        "y": 0.914953351020813,
+        "z": 2.75
+      },
+      "rotation": {
+        "x": 0,
+        "y": 315,
+        "z": 0
+      },
+      "standing": true
+    },
+    "frozen_pose_readback": {
+      "all_pose_components_exact": false,
+      "max_position_delta_m": 0.0,
+      "max_rotation_component_abs_diff_degrees": 0.00017547607421875,
+      "max_rotation_shortest_component_diff_degrees": 0.00017547607421875,
+      "objects": {
+        "Apple_8a347234": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.00017547607421875,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.00017547607421875,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Bowl_42fb2348": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 2.9103830456733704e-11
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 2.9103830456733704e-11
+          }
+        },
+        "Bread_36a16484": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "ButterKnife_b418f853": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CoffeeMachine_01e4672d": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 6.984919309616089e-10,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 6.984919309616089e-10,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          }
+        },
+        "Cup_6beb01b4": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 3.725290298461914e-09,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 3.725290298461914e-09,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "DiningTable_1a3a158f": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "DishSponge_22e43762": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Egg_a64cee2a": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Fork_1fd3f6c3": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "GarbageBag_dae8cc28": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 1.1641532182693481e-10,
+            "z": 2.9802322387695312e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 1.1641532182693481e-10,
+            "z": 2.9802322387695312e-08
+          }
+        },
+        "GarbageCan_d9b76573": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Kettle_25f098cb": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Knife_90f45783": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.707463525235653e-06,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.707463525235653e-06,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          }
+        },
+        "Lettuce_ed91ea03": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Microwave_77c8df37": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Mug_15c21204": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Pan_669802a6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 2.3283064365386963e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 2.3283064365386963e-10,
+            "z": 0.0
+          }
+        },
+        "PepperShaker_da3ff0da": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Plate_e52bf766": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 1.4551915228366852e-11,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 1.4551915228366852e-11,
+            "z": 0.0
+          }
+        },
+        "Pot_93605e1b": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 2.9103830456733704e-11,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 2.9103830456733704e-11,
+            "z": 0.0
+          }
+        },
+        "Potato_0d730430": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.2351741790771484e-08,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.2351741790771484e-08,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SaltShaker_9c3648ef": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SoapBottle_40110d8f": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Spatula_a120ef63": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Spoon_d666171d": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 7.450580596923828e-09,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 7.450580596923828e-09,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Stool_c2b66393": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Toaster_60a283ed": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Tomato_08a009fe": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.00014495849609375,
+            "y": 1.52587890625e-05,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.00014495849609375,
+            "y": 1.52587890625e-05,
+            "z": 0.0
+          }
+        },
+        "WineBottle_1e8ef6ff": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "scope": "actual metadata versus requested pose values; diagnostic, not a new acceptance threshold"
+    },
+    "frozen_pose_readback_reference": {
+      "bytes": 8965,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/frozen_restore_readback_000003.json",
+      "sha256": "abbc3309a55e376bf81dd59e38de5b61498cbe6c172dddf452502705c4c589b7"
+    },
+    "pose_measurements": {
+      "added": [],
+      "editable_inventory_exact": true,
+      "inventory_exact": true,
+      "missing": [],
+      "objects": {
+        "Apple_8a347234": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 88.88302612304688,
+            "y": 180.8533935546875,
+            "z": 180.83811950683594
+          },
+          "rotation_before": {
+            "x": 88.8832015991211,
+            "y": 180.8533935546875,
+            "z": 180.83811950683594
+          },
+          "rotation_exact": false
+        },
+        "Bowl_42fb2348": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.021069087088108063,
+            "y": -0.0004880378837697208,
+            "z": 0.00042235333239659667
+          },
+          "rotation_before": {
+            "x": 0.021069087088108063,
+            "y": -0.0004880378837697208,
+            "z": 0.0004223533032927662
+          },
+          "rotation_exact": false
+        },
+        "Bread_36a16484": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0031035325955599546,
+            "y": 280.3119201660156,
+            "z": -0.002684131031855941
+          },
+          "rotation_before": {
+            "x": -0.003103532362729311,
+            "y": 280.3119201660156,
+            "z": -0.002684131031855941
+          },
+          "rotation_exact": false
+        },
+        "ButterKnife_b418f853": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.005573434289544821,
+            "y": 285.5651550292969,
+            "z": 89.97988891601562
+          },
+          "rotation_before": {
+            "x": 0.005573434289544821,
+            "y": 285.5651550292969,
+            "z": 89.97988891601562
+          },
+          "rotation_exact": true
+        },
+        "CoffeeMachine_01e4672d": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.002982438076287508,
+            "y": 89.99967956542969,
+            "z": 0.020158298313617706
+          },
+          "rotation_before": {
+            "x": -0.002982437377795577,
+            "y": 89.99967956542969,
+            "z": 0.020158296450972557
+          },
+          "rotation_exact": false
+        },
+        "Cup_6beb01b4": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.05542120337486267,
+            "y": 359.9921875,
+            "z": 359.979736328125
+          },
+          "rotation_before": {
+            "x": 0.05542119964957237,
+            "y": 359.9921875,
+            "z": 359.979736328125
+          },
+          "rotation_exact": false
+        },
+        "DiningTable_1a3a158f": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -2.170429979742039e-06,
+            "y": -0.0004050364368595183,
+            "z": -8.539688678865787e-06
+          },
+          "rotation_before": {
+            "x": -2.170429979742039e-06,
+            "y": -0.0004050364368595183,
+            "z": -8.539688678865787e-06
+          },
+          "rotation_exact": true
+        },
+        "DishSponge_22e43762": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 358.8718566894531,
+            "y": 299.98138427734375,
+            "z": 0.636651873588562
+          },
+          "rotation_before": {
+            "x": 358.8718566894531,
+            "y": 299.98138427734375,
+            "z": 0.636651873588562
+          },
+          "rotation_exact": true
+        },
+        "Egg_a64cee2a": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_before": {
+            "x": -0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true
+        },
+        "Fork_1fd3f6c3": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.30011335015296936,
+            "y": 135.89259338378906,
+            "z": 359.8341369628906
+          },
+          "rotation_before": {
+            "x": 0.300113320350647,
+            "y": 135.89259338378906,
+            "z": 359.8341369628906
+          },
+          "rotation_exact": false
+        },
+        "GarbageBag_dae8cc28": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0401717908680439,
+            "y": 0.0015547015937045217,
+            "z": 0.3666030764579773
+          },
+          "rotation_before": {
+            "x": 0.0401717908680439,
+            "y": 0.0015547014772891998,
+            "z": 0.3666030466556549
+          },
+          "rotation_exact": false
+        },
+        "GarbageCan_d9b76573": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.00013053031580056995,
+            "y": 270.0013122558594,
+            "z": 3.41991035384126e-05
+          },
+          "rotation_before": {
+            "x": -0.00013053031580056995,
+            "y": 270.0013122558594,
+            "z": 3.41991035384126e-05
+          },
+          "rotation_exact": true
+        },
+        "Kettle_25f098cb": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -7.943263335619122e-05,
+            "y": 270.00750732421875,
+            "z": 359.9799499511719
+          },
+          "rotation_before": {
+            "x": -7.943263335619122e-05,
+            "y": 270.00750732421875,
+            "z": 359.9799499511719
+          },
+          "rotation_exact": true
+        },
+        "Knife_90f45783": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0014719057362526655,
+            "y": 74.99803161621094,
+            "z": 89.99140930175781
+          },
+          "rotation_before": {
+            "x": 0.0014701982727274299,
+            "y": 74.9980239868164,
+            "z": 89.99140930175781
+          },
+          "rotation_exact": false
+        },
+        "Lettuce_ed91ea03": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 6.38682222366333,
+            "y": 346.6724853515625,
+            "z": 292.671630859375
+          },
+          "rotation_before": {
+            "x": 6.38682222366333,
+            "y": 346.6724853515625,
+            "z": 292.671630859375
+          },
+          "rotation_exact": true
+        },
+        "Microwave_77c8df37": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.08028101921081543,
+            "y": 89.99335479736328,
+            "z": 0.01974492520093918
+          },
+          "rotation_before": {
+            "x": 0.08028101921081543,
+            "y": 89.99335479736328,
+            "z": 0.01974492520093918
+          },
+          "rotation_exact": true
+        },
+        "Mug_15c21204": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.89190673828125,
+            "y": 89.72389221191406,
+            "z": 0.03993997350335121
+          },
+          "rotation_before": {
+            "x": 359.89190673828125,
+            "y": 89.72389221191406,
+            "z": 0.03993997350335121
+          },
+          "rotation_exact": true
+        },
+        "Pan_669802a6": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.02024681679904461,
+            "y": -0.0030654440633952618,
+            "z": 5.8608828112483025e-05
+          },
+          "rotation_before": {
+            "x": 0.02024681679904461,
+            "y": -0.003065443830564618,
+            "z": 5.8608828112483025e-05
+          },
+          "rotation_exact": false
+        },
+        "PepperShaker_da3ff0da": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9783630371094,
+            "y": 359.9842224121094,
+            "z": 359.9934387207031
+          },
+          "rotation_before": {
+            "x": 359.9783630371094,
+            "y": 359.9842224121094,
+            "z": 359.9934387207031
+          },
+          "rotation_exact": true
+        },
+        "Plate_e52bf766": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.013402150943875313,
+            "y": -0.00021718947391491383,
+            "z": -0.0038083428516983986
+          },
+          "rotation_before": {
+            "x": 0.013402150943875313,
+            "y": -0.00021718948846682906,
+            "z": -0.0038083428516983986
+          },
+          "rotation_exact": false
+        },
+        "Pot_93605e1b": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0036750207655131817,
+            "y": -0.0002599082363303751,
+            "z": 0.016555195674300194
+          },
+          "rotation_before": {
+            "x": -0.0036750207655131817,
+            "y": -0.0002599082072265446,
+            "z": 0.016555195674300194
+          },
+          "rotation_exact": false
+        },
+        "Potato_0d730430": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.11331898719072342,
+            "y": 325.89251708984375,
+            "z": 359.88812255859375
+          },
+          "rotation_before": {
+            "x": 0.11331896483898163,
+            "y": 325.89251708984375,
+            "z": 359.88812255859375
+          },
+          "rotation_exact": false
+        },
+        "SaltShaker_9c3648ef": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9828186035156,
+            "y": 359.98712158203125,
+            "z": 0.0030426180455833673
+          },
+          "rotation_before": {
+            "x": 359.9828186035156,
+            "y": 359.98712158203125,
+            "z": 0.0030426180455833673
+          },
+          "rotation_exact": true
+        },
+        "SoapBottle_40110d8f": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9895935058594,
+            "y": 119.99842071533203,
+            "z": 0.01876036450266838
+          },
+          "rotation_before": {
+            "x": 359.9895935058594,
+            "y": 119.99842071533203,
+            "z": 0.01876036450266838
+          },
+          "rotation_exact": true
+        },
+        "Spatula_a120ef63": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.037529099732637405,
+            "y": 269.99725341796875,
+            "z": 0.20767982304096222
+          },
+          "rotation_before": {
+            "x": 0.037529099732637405,
+            "y": 269.99725341796875,
+            "z": 0.20767982304096222
+          },
+          "rotation_exact": true
+        },
+        "Spoon_d666171d": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.10198342800140381,
+            "y": 316.33380126953125,
+            "z": 359.8690185546875
+          },
+          "rotation_before": {
+            "x": 0.10198342055082321,
+            "y": 316.33380126953125,
+            "z": 359.8690185546875
+          },
+          "rotation_exact": false
+        },
+        "Stool_c2b66393": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 1.233657956123352,
+            "y": 20.757919311523438,
+            "z": 359.8661804199219
+          },
+          "rotation_before": {
+            "x": 1.2336578369140625,
+            "y": 20.757919311523438,
+            "z": 359.8661804199219
+          },
+          "rotation_exact": false
+        },
+        "Toaster_60a283ed": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9801330566406,
+            "y": 179.99998474121094,
+            "z": -5.454888378153555e-05
+          },
+          "rotation_before": {
+            "x": 359.9801330566406,
+            "y": 179.99998474121094,
+            "z": -5.454888378153555e-05
+          },
+          "rotation_exact": true
+        },
+        "Tomato_08a009fe": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 88.74602508544922,
+            "y": 172.69215393066406,
+            "z": 172.86488342285156
+          },
+          "rotation_before": {
+            "x": 88.74617004394531,
+            "y": 172.69216918945312,
+            "z": 172.86488342285156
+          },
+          "rotation_exact": false
+        },
+        "WineBottle_1e8ef6ff": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.027471359819173813,
+            "y": 74.99689483642578,
+            "z": 359.9466552734375
+          },
+          "rotation_before": {
+            "x": 0.027471357956528664,
+            "y": 74.99689483642578,
+            "z": 359.9466552734375
+          },
+          "rotation_exact": false
+        }
+      }
+    },
+    "restore_deterministic": true,
+    "restore_max_abs_diff": 2,
+    "restore_rgb_exact": false,
+    "restored_positions_within_1cm": true,
+    "restored_snapshot_reference": {
+      "bytes": 137148,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan15/floorplan15_00018_trial000019/replay_w1/snapshot_000000.json",
+      "sha256": "d72f2c2076c0232a63a86158a37f436d7e5629267d337bd577750a5dab5b32dd"
+    },
+    "scope": "state restore: all movable/pickupable positions <=1cm and exact full agent pose; RGB separate"
+  },
+  "restore_deterministic": true,
+  "restore_max_abs_diff": 2,
+  "selected_distance_m": 0.8780231339873029,
+  "selected_mask_pixels": 1147,
+  "selected_name": "Pan_669802a6",
+  "snapshot_restored": true,
+  "spawn_token_storage_policy": {
+    "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+    "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+    "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+    "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+    "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes",
+    "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+    "version": "native_token_shared_json_exact_sha256_v1"
+  },
+  "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+  "status": "completed",
+  "success": true,
+  "unity_pid": 1789128,
+  "worker_pid": 1788214
+}

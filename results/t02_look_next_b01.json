@@ -1,0 +1,152 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794233752.647269,
+    "cpu_affinity": [
+      48,
+      50,
+      52,
+      54,
+      56,
+      58,
+      60,
+      62,
+      64,
+      66,
+      68,
+      70
+    ],
+    "cuda_visible_devices": "GPU-1c909297-37ab-846e-db01-342162a7544e",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_look_next_b01",
+    "node": "hopper-21",
+    "pair_file": null,
+    "pair_id": [
+      "floorplan305_00078",
+      "floorplan306_00050",
+      "floorplan306_00090",
+      "floorplan306_00126",
+      "floorplan306_00139",
+      "floorplan306_00160",
+      "floorplan306_00182"
+    ],
+    "pair_timeout_seconds": 600.0,
+    "pbs_jobid": "708475.hopper-m-02",
+    "resolution": 255,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_look_next_b01/708475.hopper-m-02",
+    "source": "results/t01v2_checkpoint_g01_next12_02.json",
+    "timeout_seconds": 4440.0,
+    "version": "t02_single_gpu_export_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_next_b01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t02_look_next_b01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_next_b01_gate.json",
+      "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+      "metrics_sha256": "3356ec994fe8336d9092e0e40150f0efbc5a7f1f1d910da35b6c8c5b6b8b6a66",
+      "sha256": "be83807e1a579eb7a549d644fa2e3d74a0b1d5950ca3bea7f5cdb6ef0329e259"
+    },
+    "kind": "t02_table_export",
+    "pairs": [],
+    "producer_exit_code": 86,
+    "status": "blocked_by_render_gate",
+    "task_acceptance": null,
+    "unstarted_pair_ids": [
+      "floorplan305_00078",
+      "floorplan306_00050",
+      "floorplan306_00090",
+      "floorplan306_00126",
+      "floorplan306_00139",
+      "floorplan306_00160",
+      "floorplan306_00182"
+    ]
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_next_b01_gate.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t02_look_next_b01_gate.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_next_b01_gate.json",
+      "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+      "metrics_sha256": "3356ec994fe8336d9092e0e40150f0efbc5a7f1f1d910da35b6c8c5b6b8b6a66",
+      "sha256": "be83807e1a579eb7a549d644fa2e3d74a0b1d5950ca3bea7f5cdb6ef0329e259"
+    }
+  ],
+  "_meta": {
+    "name": "t02_look_next_b01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_look_next_b01",
+      "--source",
+      "results/t01v2_checkpoint_g01_next12_02.json",
+      "--pair-id",
+      "floorplan305_00078",
+      "--pair-id",
+      "floorplan306_00050",
+      "--pair-id",
+      "floorplan306_00090",
+      "--pair-id",
+      "floorplan306_00126",
+      "--pair-id",
+      "floorplan306_00139",
+      "--pair-id",
+      "floorplan306_00160",
+      "--pair-id",
+      "floorplan306_00182",
+      "--timeout-seconds",
+      "4440",
+      "--pair-timeout-seconds",
+      "600",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-21",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-09T21:01:52",
+    "log_path": "logs/runs/t02_look_next_b01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/t02_look_next_b01.diff",
+    "end": "2026-11-09T21:02:08",
+    "duration_sec": 16.5,
+    "exit_code": 86,
+    "metrics_sha256": "e0f9456e331e990ddcd7e5ee61b1379bfdcf021ddaa6d6840cf3371012bdf8f5"
+  }
+}
