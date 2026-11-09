@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 15.58119431999512
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.envs.pair_table_source import load_reviewed_pair\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();c,cr=audited_result(r/'results/t02_stay_source_cpu_01.json');assert c['_meta']['exit_code']==0\np=load_reviewed_pair(r/'results/t01v2_checkpoint_stay_visible_01.json','floorplan203_00104')\nassert p['kind']=='look_flip' and p['fixed_label_verification']['t01_t02_assignment_equal'] is True\nassert p['execution_authorized'] is False and p['full_t02_acceptance'] is None\nprint('STAY_T02_SOURCE: '+json.dumps({'pair_id':p['pair_id'],'scene':p['scene'],'kind':p['kind'],'provenance':p['source_provenance'],'fixed_labels':p['fixed_label_verification'],'scope':'original source reauthentication only; no render or table acceptance'},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_t02_stay_source_ready_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_t02_stay_source_ready_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.envs.pair_table_source import load_reviewed_pair\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();c,cr=audited_result(r/'results/t02_stay_source_cpu_01.json');assert c['_meta']['exit_code']==0\np=load_reviewed_pair(r/'results/t01v2_checkpoint_stay_visible_01.json','floorplan203_00104')\nassert p['kind']=='look_flip' and p['fixed_label_verification']['t01_t02_assignment_equal'] is True\nassert p['execution_authorized'] is False and p['full_t02_acceptance'] is None\nprint('STAY_T02_SOURCE: '+json.dumps({'pair_id':p['pair_id'],'scene':p['scene'],'kind':p['kind'],'provenance':p['source_provenance'],'fixed_labels':p['fixed_label_verification'],'scope':'original source reauthentication only; no render or table acceptance'},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T15:47:58",
+    "log_path": "logs/runs/diag_t02_stay_source_ready_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "dd873da8fa7b4aa46343aae96467fff1d006fa02",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_t02_stay_source_ready_01.diff",
+    "end": "2026-11-09T15:48:15",
+    "duration_sec": 15.7,
+    "exit_code": 0,
+    "metrics_sha256": "dc558ca6d08a659f1dfe5c45dfe6c06b612a5340ac12648ba3e11448df3690c7"
+  }
+}

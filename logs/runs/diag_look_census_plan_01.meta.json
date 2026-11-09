@@ -1,0 +1,29 @@
+{
+  "name": "diag_look_census_plan_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_census_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,hashlib,importlib.util\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd(); inv=r/'logs/review/diag_current_look_inventory_01/current_look_inventory.json'\nassert sha_file(inv)=='8e2d3b4ac0e15015c0ba14831d904b26baa6bf43afac558bd12ce90423d2e189'\nd=json.loads(inv.read_text());rows=d['current_standard']['pairs'];assert len(rows)==17\nfor n in ('t02_stay_source_cpu_01','diag_t02_stay_source_ready_01'):\n test,_=audited_result(r/'results'/f'{n}.json');assert test['_meta']['exit_code']==0\ne,er=audited_result(r/'results/smoke_e2e_look_views_01_retry2.json')\nfirst=e['metrics']['exports'][0];assert e['_meta']['exit_code']==1 and e['metrics']['cleanup_errors']==[] and e['metrics']['black_frame_detected'] is False\nassert first['pair_id']=='floorplan203_00002' and first['rejection_reasons']==['non_anchor_divergent'] and first['cleanup_errors']==[]\nsp=first['source_package'];assert sha_file(pathlib.Path(sp['file']))==sp['sha256'];package=json.loads(pathlib.Path(sp['file']).read_text())\nexisting=next(x for x in rows if x['pair_id']=='floorplan203_00002')\nassert package['source_provenance']['pair']==existing['pair_reference']\nremaining=[x for x in rows if x is not existing]\nold=[x for x in remaining if x['checkpoint']['file']=='results/t01v2_checkpoint_flip_geometry_01.json']\nnew=[x for x in remaining if x['checkpoint']['file']=='results/t01v2_checkpoint_stay_visible_01.json']\nassert len(old)==13 and [x['pair_id'] for x in new]==['floorplan203_00104','floorplan203_00114','floorplan203_00116']\ngroups=[]\nfor suffix,subset,wall,timeout in [('a01',old[:7],2700,2640),('b01',old[7:],2340,2280),('c01',new,1320,1260)]:\n source=subset[0]['checkpoint']['file'];assert all(x['checkpoint']['file']==source for x in subset)\n groups.append({'outer_name':'pilot_pairs_v2_look_table_'+suffix,'inner_name':'t02_look_table_'+suffix,'source':source,'pair_ids':[x['pair_id'] for x in subset],'pair_references':[x['pair_reference'] for x in subset],'gpus':1,'wall_seconds':wall,'timeout_seconds':timeout,'pair_timeout_seconds':300,'gate_timeout_seconds':180,'budget_group':'T01v2'})\nspec=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase);b=phase.budget_state(r)\nrequested=sum(g['wall_seconds']/3600 for g in groups)\nassert b['accounted_or_reserved_by_subbudget']['T01v2']+requested<=16 and b['accounted_or_reserved_total']+requested<=60\nplan={'scope':'current60degree_fixed_labels_independently_constructed_Look_pairs; diagnose only, unchanged D4 classifier; no cache/training authorization','inventory':{'file':str(inv.relative_to(r)),'sha256':sha_file(inv)},'unique_denominator':17,'existing_conclusive_failure':{'entry':existing,'export_result':er,'report':first,'definition':'any observed Look D4 state with anchor_pixels0,0 and maxRGBdiff>3 suffices to trigger; reuse actual first failure, do not rerender or erase it'},'groups':groups,'reserved_gpu_hours_upper_bound':requested,'budget_before':b['accounted_or_reserved_by_subbudget'],'classification':'triggered_non_anchor_divergent; completed_without_this_trigger; unknown_timeout_or_other_error; count no unknown as pass','historical12_unfixed_labels':'listed separately in inventory; not current standard','budget_note':'per-pair300s bound follows prior bounded exporter; request includes source authentication/gate/finalization, actual end accounting replaces ceilings'}\nout=r/'logs/review/diag_look_census_plan_01';out.mkdir(parents=True,exist_ok=False)\nwith (out/'census_plan.json').open('x') as f:json.dump(plan,f,indent=2,sort_keys=True);f.write('\\n')\nprint('LOOK_CENSUS_PLAN: '+json.dumps(plan,sort_keys=True))\np=r/'STATUS.md';p.write_text(p.read_text()+'\\n### Human-requested unchanged-rule Look export census\\n\\nThe frozen current inventory contains17 unique60degree fixed-label LookFlip pairs and0 LookStay. The earlier12 unfixed-label Stay records remain a separate historical cohort. The already measured floorplan203_00002 rejection is reused as one conclusive trigger; the other16 will run original T02 D4 export in fixed7/6/3-pair groups, each on oneGPU, keeping failures and unknowns separate. The existing exporter continues after ordinary rejections and retains its original black/cleanup/deadline stops. No threshold, classifier, cache requirement or training gate changes. Requested ceilings total '+str(requested)+' GPUh inside the16 T01v2 subbudget; exact plan logs/review/diag_look_census_plan_01/census_plan.json.\\n')\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T15:49:37",
+  "log_path": "logs/runs/diag_look_census_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "dd873da8fa7b4aa46343aae96467fff1d006fa02",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_look_census_plan_01.diff",
+  "end": "2026-11-09T15:50:29",
+  "duration_sec": 51.0,
+  "exit_code": 0,
+  "metrics_sha256": "266ee7c6ccf3b3c363e2bcc75d3a7bf54bce9bd5b31d36f902d4eb38e22bfef1"
+}

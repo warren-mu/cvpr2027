@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 1.0567653970210813
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib, json, math\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom src.envs.pair_v2_projection_pool import camera_from_metadata, project_point\nfrom src.envs.pair_v2_bbox_rank import project_box\nfrom src.tools.t01_partition import audited_result\nname='diag_e2e_look_anchor_projection_01'\nroot=Path.cwd().resolve()\ndata,ref=audited_result(root/'results/smoke_e2e_look_views_01_retry2.json')\nfailed=data['metrics']['exports'][0]\nraw=Path(failed['scratch_directory'])/'raw'\ndef read(reference):\n p=Path(reference['file']).resolve(); body=p.read_bytes()\n assert len(body)==reference['bytes'] and hashlib.sha256(body).hexdigest()==reference['sha256']\n return body\nindex=json.loads(read(failed['raw_index']))\nrefs={Path(x['file']).name:x for x in index['files']}\npackage=json.loads(read(failed['source_package']))\nanchor=package['anchor_name']\nrows=[];frames=[]\nbounds=[241,235,255,255]\nfor world,frame in enumerate(('000135','000138')):\n metadata_ref=refs['frame_'+frame+'_metadata.json']\n metadata=json.loads(read(metadata_ref))\n obj=next(o for o in metadata['objects'] if o['name']==anchor)\n camera=camera_from_metadata(metadata,metadata_ref)\n projected=project_box(obj['axisAlignedBoundingBox']['center'],obj['axisAlignedBoundingBox']['size'],camera)\n gap=None\n if projected['projectable']:\n  b=projected['rectangle_px']\n  dx=max(bounds[0]-b['right'],b['left']-bounds[2],0)\n  dy=max(bounds[1]-b['bottom'],b['top']-bounds[3],0)\n  gap={'dx_pixels':dx,'dy_pixels':dy,'euclidean_pixels':math.hypot(dx,dy)}\n rows.append({'world':'w'+str(world),'metadata_reference':metadata_ref,'position':obj['position'],\n  'rotation':obj['rotation'],'aabb_center':obj['axisAlignedBoundingBox']['center'],\n  'aabb_size':obj['axisAlignedBoundingBox']['size'],'projected_aabb':projected,\n  'position_projection':project_point(obj['position'],camera),\n  'diff_region_rectangle_pixel_edges':bounds,'projected_rectangle_min_gap_to_diff':gap})\n image_ref=refs['frame_'+frame+'_rgb.png'];read(image_ref)\n frames.append(np.asarray(Image.open(image_ref['file'])).astype(np.int16))\ndelta=frames[1]-frames[0];mask=np.abs(delta).max(axis=2)>3\nsummary={'source':ref,'raw_index':failed['raw_index'],'pair_id':failed['pair_id'],'anchor_name':anchor,'worlds':rows,\n 'signed_rgb_change_w1_minus_w0_in_gt3_region':{'negative_channels':int((delta[mask]<0).sum()),\n 'positive_channels':int((delta[mask]>0).sum()),'equal_channels':int((delta[mask]==0).sum()),\n 'mean_RGB':delta[mask].mean(axis=0).tolist()},\n 'limitation':'Projected AABB and a 2D floor patch do not identify causal shadow/reflection or a 3D light path; no depth/light buffer or intervention is present.',\n 'scope':'Existing authenticated raw only, geometry is diagnostic, no scientific acceptance changed.'}\nout=root/'logs/runs'/name;out.mkdir(exist_ok=False)\n(out/'diagnostic.json').write_text(json.dumps(summary,sort_keys=True,indent=2,allow_nan=False)+'\\n')\nprint('DIAGNOSTIC_JSON: '+json.dumps(summary,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_e2e_look_anchor_projection_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_e2e_look_anchor_projection_01",
+      "--",
+      "python3",
+      "-c",
+      "import hashlib, json, math\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom src.envs.pair_v2_projection_pool import camera_from_metadata, project_point\nfrom src.envs.pair_v2_bbox_rank import project_box\nfrom src.tools.t01_partition import audited_result\nname='diag_e2e_look_anchor_projection_01'\nroot=Path.cwd().resolve()\ndata,ref=audited_result(root/'results/smoke_e2e_look_views_01_retry2.json')\nfailed=data['metrics']['exports'][0]\nraw=Path(failed['scratch_directory'])/'raw'\ndef read(reference):\n p=Path(reference['file']).resolve(); body=p.read_bytes()\n assert len(body)==reference['bytes'] and hashlib.sha256(body).hexdigest()==reference['sha256']\n return body\nindex=json.loads(read(failed['raw_index']))\nrefs={Path(x['file']).name:x for x in index['files']}\npackage=json.loads(read(failed['source_package']))\nanchor=package['anchor_name']\nrows=[];frames=[]\nbounds=[241,235,255,255]\nfor world,frame in enumerate(('000135','000138')):\n metadata_ref=refs['frame_'+frame+'_metadata.json']\n metadata=json.loads(read(metadata_ref))\n obj=next(o for o in metadata['objects'] if o['name']==anchor)\n camera=camera_from_metadata(metadata,metadata_ref)\n projected=project_box(obj['axisAlignedBoundingBox']['center'],obj['axisAlignedBoundingBox']['size'],camera)\n gap=None\n if projected['projectable']:\n  b=projected['rectangle_px']\n  dx=max(bounds[0]-b['right'],b['left']-bounds[2],0)\n  dy=max(bounds[1]-b['bottom'],b['top']-bounds[3],0)\n  gap={'dx_pixels':dx,'dy_pixels':dy,'euclidean_pixels':math.hypot(dx,dy)}\n rows.append({'world':'w'+str(world),'metadata_reference':metadata_ref,'position':obj['position'],\n  'rotation':obj['rotation'],'aabb_center':obj['axisAlignedBoundingBox']['center'],\n  'aabb_size':obj['axisAlignedBoundingBox']['size'],'projected_aabb':projected,\n  'position_projection':project_point(obj['position'],camera),\n  'diff_region_rectangle_pixel_edges':bounds,'projected_rectangle_min_gap_to_diff':gap})\n image_ref=refs['frame_'+frame+'_rgb.png'];read(image_ref)\n frames.append(np.asarray(Image.open(image_ref['file'])).astype(np.int16))\ndelta=frames[1]-frames[0];mask=np.abs(delta).max(axis=2)>3\nsummary={'source':ref,'raw_index':failed['raw_index'],'pair_id':failed['pair_id'],'anchor_name':anchor,'worlds':rows,\n 'signed_rgb_change_w1_minus_w0_in_gt3_region':{'negative_channels':int((delta[mask]<0).sum()),\n 'positive_channels':int((delta[mask]>0).sum()),'equal_channels':int((delta[mask]==0).sum()),\n 'mean_RGB':delta[mask].mean(axis=0).tolist()},\n 'limitation':'Projected AABB and a 2D floor patch do not identify causal shadow/reflection or a 3D light path; no depth/light buffer or intervention is present.',\n 'scope':'Existing authenticated raw only, geometry is diagnostic, no scientific acceptance changed.'}\nout=root/'logs/runs'/name;out.mkdir(exist_ok=False)\n(out/'diagnostic.json').write_text(json.dumps(summary,sort_keys=True,indent=2,allow_nan=False)+'\\n')\nprint('DIAGNOSTIC_JSON: '+json.dumps(summary,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T15:44:34",
+    "log_path": "logs/runs/diag_e2e_look_anchor_projection_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "b3db9bff4871fc638f602c58e437057d16a7830c",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_e2e_look_anchor_projection_01.diff",
+    "end": "2026-11-09T15:44:36",
+    "duration_sec": 1.2,
+    "exit_code": 0,
+    "metrics_sha256": "a787094a047eb0cea7a158490b2bc3effb789a7a88f7ca2d41265add22f2fac8"
+  }
+}

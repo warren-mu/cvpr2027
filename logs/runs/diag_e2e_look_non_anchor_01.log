@@ -1,0 +1,196 @@
+# run_logged: python3 -m src.tools.record_command --name diag_e2e_look_non_anchor_01 -- python3 -c import hashlib, io, json, math
+from collections import deque
+from pathlib import Path
+import numpy as np
+from PIL import Image
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from src.tools.t01_partition import audited_result
+from src.envs.pair_table_export import point_id, state_id, ViewState
+
+NAME = 'diag_e2e_look_non_anchor_01'
+ROOT = Path.cwd().resolve()
+source, source_ref = audited_result(ROOT / 'results/smoke_e2e_look_views_01_retry2.json')
+assert source['_meta']['exit_code'] == 1 and source['metrics']['black_frame_detected'] is False
+assert source['metrics']['cleanup_errors'] == []
+failed = source['metrics']['exports'][0]
+assert failed['error'] == {'message': 'non_anchor_divergent', 'type': 'ValueError'}
+raw = (Path(failed['scratch_directory']) / 'raw').resolve()
+used = []
+
+def checked(ref, inside=None):
+    path = Path(ref['file']).resolve()
+    if inside is not None:
+        assert path.is_relative_to(inside), path
+    body = path.read_bytes()
+    assert len(body) == ref['bytes'] and hashlib.sha256(body).hexdigest() == ref['sha256'], path
+    if ref not in used: used.append(ref)
+    return body
+
+index = json.loads(checked(failed['raw_index'], raw))
+refs = {Path(ref['file']).resolve(): ref for ref in index['files']}
+assert len(refs) == len(index['files'])
+package = json.loads(checked(failed['source_package']))
+anchor, candidates = package['anchor_name'], package['candidate_names']
+actions = []
+for path, ref in refs.items():
+    if path.name.startswith('action_') and path.suffix == '.json':
+        actions.append((ref, json.loads(checked(ref, raw))))
+actions.sort(key=lambda item: item[1]['index'])
+last = actions[-4:]
+assert [item[1]['action'] for item in last] == ['Pass', 'SetObjectPoses', 'PhysicsSyncTransforms', 'Pass']
+assert all(item[1]['exception'] is None and item[1]['after_metadata']['lastActionSuccess'] for item in last)
+world_records = [last[0][1], last[3][1]]
+teleport = next(item for item in reversed(actions[:-3]) if item[1]['action'] == 'TeleportFull')
+arguments = teleport[1]['arguments']
+heading = int(round(arguments['rotation']['y'] / 45)) % 8
+view = ViewState(point_id(arguments['position']), heading)
+
+frames, metadata, masks, structural, frame_refs = [], [], [], [], []
+for action in world_records:
+    capture = action['capture']
+    files = capture['files']
+    for ref in files.values():
+        assert refs[Path(ref['file']).resolve()] == ref
+    meta = json.loads(checked(files['metadata'], raw))
+    assert meta == action['after_metadata']
+    frame = np.array(Image.open(io.BytesIO(checked(files['rgb'], raw))))
+    assert frame.shape == (255, 255, 3) and frame.dtype == np.uint8
+    assert hashlib.sha256(frame.tobytes()).hexdigest() == capture['rgb_sha256']
+    with np.load(io.BytesIO(checked(files['masks'], raw)), allow_pickle=False) as pack:
+        named = {str(name): mask.copy().astype(bool) for name, mask in zip(pack['names'], pack['masks'])}
+        other = {str(name): mask.copy().astype(bool) for name, mask in zip(pack['structural_ids'], pack['structural_masks'])}
+    assert all(value.shape == (255, 255) for value in [*named.values(), *other.values()])
+    frames.append(frame); metadata.append(meta); masks.append(named); structural.append(other); frame_refs.append(files)
+
+delta = np.abs(frames[0].astype(np.int16) - frames[1].astype(np.int16))
+maximum = delta.max(axis=2)
+empty = np.zeros((255, 255), dtype=bool)
+anchor_pixels = [int(world.get(anchor, empty).sum()) for world in masks]
+assert anchor_pixels == [0, 0] and maximum.max() > 3
+assert metadata[0]['agent'] == metadata[1]['agent']
+camera_fields = ('cameraPosition', 'fov', 'screenWidth', 'screenHeight')
+assert all(metadata[0].get(key) == metadata[1].get(key) for key in camera_fields)
+
+def box(mask):
+    yy, xx = np.nonzero(mask)
+    return None if not len(xx) else [int(xx.min()), int(yy.min()), int(xx.max()), int(yy.max())]
+
+pixel_stats = {}
+for threshold in (0, 3, 10):
+    changed = maximum > threshold
+    pixel_stats[str(threshold)] = {'pixels': int(changed.sum()), 'channels': int((delta > threshold).sum()),
+        'inclusive_xy_bbox': box(changed), 'row_counts': [int(v) for v in changed.sum(axis=1)],
+        'column_counts': [int(v) for v in changed.sum(axis=0)]}
+
+objects = [{row['name']: row for row in meta['objects']} for meta in metadata]
+assert set(objects[0]) == set(objects[1])
+pose_differences, state_differences = [], []
+state_fields = ('openness', 'isOpen', 'isToggled', 'isBroken', 'isFilledWithLiquid', 'isCooked',
+                'isSliced', 'isPickedUp', 'temperature', 'axisAlignedBoundingBox', 'objectOrientedBoundingBox')
+for name in sorted(objects[0]):
+    if name == anchor: continue
+    a, b = objects[0][name], objects[1][name]
+    if a['position'] != b['position'] or a['rotation'] != b['rotation']:
+        pose_differences.append({'name': name, 'object_type': a['objectType'],
+            'w0_position': a['position'], 'w1_position': b['position'],
+            'w0_rotation': a['rotation'], 'w1_rotation': b['rotation'],
+            'position_delta_m': {axis: b['position'][axis] - a['position'][axis] for axis in ('x','y','z')},
+            'rotation_delta_degrees': {axis: b['rotation'][axis] - a['rotation'][axis] for axis in ('x','y','z')}})
+    changed_fields = {key: [a.get(key), b.get(key)] for key in state_fields if a.get(key) != b.get(key)}
+    if changed_fields: state_differences.append({'name': name, 'fields': changed_fields})
+
+overlaps = []
+union_all = empty.copy()
+for name in sorted(set(masks[0]) | set(masks[1])):
+    union = masks[0].get(name, empty) | masks[1].get(name, empty)
+    union_all |= union
+    counts = {str(threshold): int((union & (maximum > threshold)).sum()) for threshold in (0,3,10)}
+    if counts['0']:
+        eroded = union.copy()
+        eroded[1:] &= union[:-1]; eroded[:-1] &= union[1:]
+        eroded[:,1:] &= union[:,:-1]; eroded[:,:-1] &= union[:,1:]
+        edge = union & ~eroded
+        overlaps.append({'name': name, 'object_type': objects[0].get(name, {}).get('objectType'),
+            'mask_union_pixels': int(union.sum()), 'difference_overlap_pixels': counts,
+            'difference_bbox': box(union & (maximum > 3)),
+            'edge_overlap_gt3': int((edge & (maximum > 3)).sum()),
+            'interior_overlap_gt3': int((eroded & (maximum > 3)).sum()),
+            'mask_equal': bool(np.array_equal(masks[0].get(name, empty), masks[1].get(name, empty)))})
+overlaps.sort(key=lambda item: (-item['difference_overlap_pixels']['3'], item['name']))
+structural_overlaps = []
+for name in sorted(set(structural[0]) | set(structural[1])):
+    union = structural[0].get(name, empty) | structural[1].get(name, empty)
+    count = int((union & (maximum > 3)).sum())
+    if count: structural_overlaps.append({'id': name, 'pixels_gt3': count, 'difference_bbox': box(union & (maximum > 3))})
+
+remaining = maximum > 3
+components = []
+remaining = remaining.copy()
+for y, x in zip(*np.nonzero(remaining)):
+    if not remaining[y, x]: continue
+    queue = deque([(int(y),int(x))]); remaining[y, x] = False; coords = []
+    while queue:
+        py, px = queue.popleft(); coords.append((py, px))
+        for ny, nx in ((py-1,px),(py+1,px),(py,px-1),(py,px+1)):
+            if 0 <= ny < 255 and 0 <= nx < 255 and remaining[ny,nx]:
+                remaining[ny,nx] = False; queue.append((ny,nx))
+    ys, xs = zip(*coords)
+    components.append({'pixels': len(coords), 'inclusive_xy_bbox': [min(xs),min(ys),max(xs),max(ys)],
+                       'max_channel_difference': int(maximum[list(ys),list(xs)].max())})
+components.sort(key=lambda item: (-item['pixels'], item['inclusive_xy_bbox']))
+
+out = ROOT / 'logs/runs' / NAME
+out.mkdir(parents=True, exist_ok=False)
+figure_dir = ROOT / 'logs/review' / NAME
+figure_dir.mkdir(parents=True, exist_ok=False)
+fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
+for world in (0,1):
+    axes[world].imshow(frames[world]); axes[world].set_title('Original w' + str(world))
+    axes[world].set_xlabel('x pixel'); axes[world].set_ylabel('y pixel')
+im = axes[2].imshow(maximum, cmap='inferno', vmin=0, vmax=int(maximum.max()))
+axes[2].set_title('Max channel absolute difference'); axes[2].set_xlabel('x pixel')
+fig.colorbar(im, ax=axes[2], shrink=.8)
+for ax in axes:
+    bounds = pixel_stats['3']['inclusive_xy_bbox']
+    if bounds:
+        from matplotlib.patches import Rectangle
+        x0,y0,x1,y1 = bounds
+        ax.add_patch(Rectangle((x0-.5,y0-.5),x1-x0+1,y1-y0+1,fill=False,color='cyan',linewidth=1))
+fig.suptitle(f"{failed['pair_id']} | {state_id(view)} | cyan: difference > 3 bounds")
+figure_path = figure_dir / 'original_frames_and_difference.png'
+fig.savefig(figure_path, dpi=160); plt.close(fig)
+figure_bytes = figure_path.read_bytes()
+summary = {'diagnostic_only': True, 'source': source_ref, 'pair_id': failed['pair_id'],
+    'raw_index': failed['raw_index'], 'authenticated_source_package': failed['source_package'],
+    'failed_view_state_id': state_id(view), 'heading_index': heading,
+    'last_TeleportFull': {'reference': teleport[0], 'arguments': arguments},
+    'paired_action_sequence': [{'reference': ref, 'action': item['action'], 'index': item['index']} for ref,item in last],
+    'frame_references_w0_w1': frame_refs, 'anchor_name': anchor, 'candidate_names': candidates,
+    'anchor_pixels_w0_w1': anchor_pixels, 'camera_identical': True,
+    'agent': metadata[0]['agent'], 'camera': {key: metadata[0].get(key) for key in camera_fields},
+    'anchor_world_objects': [world[anchor] for world in objects],
+    'pixel_counts_by_strict_threshold': pixel_stats, 'max_channel_abs_difference': int(delta.max()),
+    'per_pixel_max_difference_histogram': [{'difference': int(value), 'pixels': int((maximum == value).sum())}
+        for value in np.unique(maximum)],
+    'non_anchor_object_count': len(objects[0])-1, 'non_anchor_pose_exactly_identical': not pose_differences,
+    'non_anchor_pose_differences': pose_differences, 'non_anchor_state_field_differences': state_differences,
+    'object_mask_overlaps': overlaps, 'structural_mask_overlaps': structural_overlaps,
+    'unassigned_pixels_gt3': int(((maximum > 3) & ~union_all).sum()),
+    'connected_components_gt3': components,
+    'interpretation_limit': 'Masks identify receiving surfaces, not the causal light/shadow/reflection source. No rerender or new scientific threshold.',
+    'E2E_stop_rule': 'tasks/E2E.md: each step failure stops; original fixed five-pair exporter rejects subset filtering',
+    'figure': {'file': str(figure_path.relative_to(ROOT)), 'sha256': hashlib.sha256(figure_bytes).hexdigest(), 'bytes': len(figure_bytes)},
+    'authenticated_raw_references': used}
+summary_path = out / 'diagnostic.json'
+with summary_path.open('x') as stream: json.dump(summary, stream, sort_keys=True, indent=2, allow_nan=False); stream.write('\n')
+compact = {key:value for key,value in summary.items() if key not in ('authenticated_raw_references','anchor_world_objects')}
+for value in compact['pixel_counts_by_strict_threshold'].values():
+    value.pop('row_counts'); value.pop('column_counts')
+print('DIAGNOSTIC_JSON: ' + json.dumps(compact, sort_keys=True, allow_nan=False), flush=True)
+
+# start: 2026-11-09T15:41:26
+DIAGNOSTIC_JSON: {"E2E_stop_rule": "tasks/E2E.md: each step failure stops; original fixed five-pair exporter rejects subset filtering", "agent": {"cameraHorizon": 30.000003814697266, "inHighFrictionArea": false, "isStanding": true, "name": "agent", "position": {"x": -4.25, "y": 0.9070531129837036, "z": -1.75}, "rotation": {"x": -0.0, "y": 0.0, "z": 0.0}}, "anchor_name": "Box_8e5b2c6b", "anchor_pixels_w0_w1": [0, 0], "authenticated_source_package": {"bytes": 7983725, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/authenticated_source.json", "sha256": "00abddcbf735f300bbdf28fe2b427ed6c53d13151bde854635a8130dfcd7c341"}, "camera": {"cameraPosition": {"x": -4.25, "y": 1.5820531845092773, "z": -1.75}, "fov": 60.0, "screenHeight": 255, "screenWidth": 255}, "camera_identical": true, "candidate_names": ["Book_e173324d", "Bowl_cd243bbd"], "connected_components_gt3": [{"inclusive_xy_bbox": [241, 235, 254, 254], "max_channel_difference": 77, "pixels": 239}], "diagnostic_only": true, "failed_view_state_id": "v_5c39249b3450164be27f:h0", "figure": {"bytes": 329535, "file": "logs/review/diag_e2e_look_non_anchor_01/original_frames_and_difference.png", "sha256": "fdf0f5eef0873f025e2cee52618082617848050a65823c4754333fdb7f768f3a"}, "frame_references_w0_w1": [{"masks": {"bytes": 8363, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000135_masks.npz", "sha256": "9d7361f03a6d922019ef2591cdb4f4a8e274e5cf5cb4de54d9934f83663852dc"}, "metadata": {"bytes": 113370, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000135_metadata.json", "sha256": "d88c2f926afc38f40aa0c7411683f17caf86f2561985b755e8c2daddda1cb21d"}, "rgb": {"bytes": 82423, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000135_rgb.png", "sha256": "1be7b4dbb15d77355cbd3011bc969b42567c5ed4dad81a843e617cfa3e0ce505"}}, {"masks": {"bytes": 8363, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000138_masks.npz", "sha256": "9d7361f03a6d922019ef2591cdb4f4a8e274e5cf5cb4de54d9934f83663852dc"}, "metadata": {"bytes": 113377, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000138_metadata.json", "sha256": "5d7f5c0dbd6cab1601de1e8014530b73928c7ad3d6762f193d77cf59eeea939d"}, "rgb": {"bytes": 82421, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/frame_000138_rgb.png", "sha256": "f73f7c3199f070e8844050d4840fadb43a0e73d739803663293c9c0f1284dee1"}}], "heading_index": 0, "interpretation_limit": "Masks identify receiving surfaces, not the causal light/shadow/reflection source. No rerender or new scientific threshold.", "last_TeleportFull": {"arguments": {"forceAction": false, "horizon": 30, "position": {"x": -4.25, "y": 0.9070531129837036, "z": -1.75}, "rotation": {"x": 0, "y": 0, "z": 0}, "standing": true}, "reference": {"bytes": 228470, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/action_000133.json", "sha256": "f18f66e1bfeee4732f035d052e012e8aa3e40d65df041a59f78bfcdfa49b24dd"}}, "max_channel_abs_difference": 77, "non_anchor_object_count": 45, "non_anchor_pose_differences": [], "non_anchor_pose_exactly_identical": true, "non_anchor_state_field_differences": [], "object_mask_overlaps": [{"difference_bbox": [241, 235, 254, 254], "difference_overlap_pixels": {"0": 353, "10": 170, "3": 239}, "edge_overlap_gt3": 0, "interior_overlap_gt3": 239, "mask_equal": true, "mask_union_pixels": 15144, "name": "Floor_ce5eb378", "object_type": "Floor"}], "pair_id": "floorplan203_00002", "paired_action_sequence": [{"action": "Pass", "index": 134, "reference": {"bytes": 228275, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/action_000134.json", "sha256": "8f018f26523fd7cdaca4159c3874ef3a4e27e4803b8eca6b132f22abe4a9171c"}}, {"action": "SetObjectPoses", "index": 135, "reference": {"bytes": 235416, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/action_000135.json", "sha256": "cc526e05599a63c52cdc5e4ac771b821e6afecc6f4b4521c4e29f93068047ce6"}}, {"action": "PhysicsSyncTransforms", "index": 136, "reference": {"bytes": 228359, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/action_000136.json", "sha256": "b1c154a779d37b9ad6195b39525ec6dcd2ff4240416cd11ee5e8b2d7be14b97e"}}, {"action": "Pass", "index": 137, "reference": {"bytes": 228300, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/action_000137.json", "sha256": "21dc7a10005582e7cf50d26588a06986c5d474f3726e8f5f17728454c3d70616"}}], "per_pixel_max_difference_histogram": [{"difference": 0, "pixels": 64672}, {"difference": 1, "pixels": 60}, {"difference": 2, "pixels": 33}, {"difference": 3, "pixels": 21}, {"difference": 4, "pixels": 13}, {"difference": 5, "pixels": 13}, {"difference": 6, "pixels": 12}, {"difference": 7, "pixels": 8}, {"difference": 8, "pixels": 10}, {"difference": 9, "pixels": 5}, {"difference": 10, "pixels": 8}, {"difference": 11, "pixels": 5}, {"difference": 12, "pixels": 9}, {"difference": 13, "pixels": 5}, {"difference": 14, "pixels": 5}, {"difference": 15, "pixels": 5}, {"difference": 16, "pixels": 5}, {"difference": 17, "pixels": 5}, {"difference": 18, "pixels": 6}, {"difference": 19, "pixels": 4}, {"difference": 20, "pixels": 2}, {"difference": 21, "pixels": 3}, {"difference": 22, "pixels": 3}, {"difference": 23, "pixels": 6}, {"difference": 24, "pixels": 2}, {"difference": 25, "pixels": 3}, {"difference": 26, "pixels": 5}, {"difference": 27, "pixels": 3}, {"difference": 28, "pixels": 3}, {"difference": 29, "pixels": 2}, {"difference": 30, "pixels": 2}, {"difference": 31, "pixels": 4}, {"difference": 32, "pixels": 4}, {"difference": 33, "pixels": 3}, {"difference": 34, "pixels": 2}, {"difference": 35, "pixels": 2}, {"difference": 36, "pixels": 2}, {"difference": 37, "pixels": 2}, {"difference": 38, "pixels": 4}, {"difference": 39, "pixels": 3}, {"difference": 40, "pixels": 2}, {"difference": 41, "pixels": 2}, {"difference": 42, "pixels": 2}, {"difference": 43, "pixels": 1}, {"difference": 44, "pixels": 2}, {"difference": 45, "pixels": 3}, {"difference": 46, "pixels": 3}, {"difference": 47, "pixels": 3}, {"difference": 49, "pixels": 2}, {"difference": 50, "pixels": 2}, {"difference": 51, "pixels": 2}, {"difference": 52, "pixels": 2}, {"difference": 53, "pixels": 2}, {"difference": 54, "pixels": 2}, {"difference": 55, "pixels": 2}, {"difference": 56, "pixels": 1}, {"difference": 57, "pixels": 1}, {"difference": 58, "pixels": 2}, {"difference": 59, "pixels": 3}, {"difference": 61, "pixels": 1}, {"difference": 62, "pixels": 3}, {"difference": 64, "pixels": 3}, {"difference": 65, "pixels": 1}, {"difference": 66, "pixels": 2}, {"difference": 67, "pixels": 1}, {"difference": 69, "pixels": 2}, {"difference": 70, "pixels": 2}, {"difference": 71, "pixels": 1}, {"difference": 72, "pixels": 1}, {"difference": 73, "pixels": 1}, {"difference": 74, "pixels": 1}, {"difference": 76, "pixels": 2}, {"difference": 77, "pixels": 1}], "pixel_counts_by_strict_threshold": {"0": {"channels": 964, "inclusive_xy_bbox": [237, 230, 254, 254], "pixels": 353}, "10": {"channels": 414, "inclusive_xy_bbox": [244, 238, 254, 254], "pixels": 170}, "3": {"channels": 651, "inclusive_xy_bbox": [241, 235, 254, 254], "pixels": 239}}, "raw_index": {"bytes": 134874, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_look_views_01_retry2/707904.hopper-m-02/export_0000/raw/evidence_index.json", "sha256": "6a7ea710472a1e20258b5b421c1f0b5c29ec1678e4ce684e698cbd91362d09ee"}, "source": {"audit": {"fail": [], "file": "results/smoke_e2e_look_views_01_retry2.json", "warn": ["P5 run used uncommitted changes; see logs/runs/smoke_e2e_look_views_01_retry2.diff", "P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/smoke_e2e_look_views_01_retry2.json", "git_commit": "13e686676fb28455918ee40faf9c95d69756c1d3", "metrics_sha256": "e35d81250147b05df10e882310b54b0524e4c22e0ba913b031d5d47b693d40ec", "sha256": "7e155b5e25776f302052b50c4d2145690810c097f35fa187276434f2d864b568"}, "structural_mask_overlaps": [], "unassigned_pixels_gt3": 0}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 5.527996298973449}
+# exit_code: 0
