@@ -6,6 +6,7 @@ the population. No E2E exception, simulated live status, submission or training.
 """
 import argparse
 import copy
+from contextlib import contextmanager
 import hashlib
 import io
 import json
@@ -332,6 +333,18 @@ def load_samples(table, report, directory, roots, state_ids, *, use_dataset_key=
     return samples
 
 
+@contextmanager
+def engineering_phase(target, key):
+    """Monotonic execution timings only; a normal return is not acceptance."""
+    start, returned = time.perf_counter(), False
+    try:
+        yield
+        returned = True
+    finally:
+        target[key] = {"elapsed_seconds": time.perf_counter() - start,
+                       "returned_normally": returned}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True)
@@ -354,11 +367,13 @@ def main():
     config = {**vars(args), "source": [str(p) for p in args.source], "version": VERSION,
               "policy": dict(CACHE_POLICY), "gpus": 1, "resolution": 255, "node": socket.gethostname(),
               "max_raw_mib_scope": "per owned fresh pair worker, not whole job",
-              "sample_count_scope": "native-authenticated complete paired captures; unverified worker diagnostics retained separately"}
+              "sample_count_scope": "native-authenticated complete paired captures; unverified worker diagnostics retained separately",
+              "engineering_timing_scope": "perf_counter wall durations; failed phases retained; normal return is not scientific acceptance; fresh validation includes final byte rehash"}
     metrics = {"kind": "t02_formal_cache_check", "status": "incomplete", "cache_matches_live": None,
                "downstream_allowed": False, "stop_downstream": True, "task_acceptance": None,
                "sampling_plan": None, "validation_report": None, "gate": None, "worker_runs": [],
-               "population_ledger": [], "cleanup_errors": [], "errors": [], "black_frame_detected": False}
+               "population_ledger": [], "cleanup_errors": [], "errors": [], "black_frame_detected": False,
+               "engineering_timings": {"version": "t02_engineering_phases_v1", "fresh_pairs": []}}
     sources, worker, samples, authenticated, code = [], None, [], set(), 1
     install_signals()
     try:
@@ -370,7 +385,8 @@ def main():
         directory = Path(identity["scratch"]) / "t02_cache" / args.name / identity["pbs_jobid"]
         directory.mkdir(parents=True, exist_ok=False)
         config["scratch_directory"] = str(directory)
-        gate, gate_ref, cleanup = logged_gate(args.name + "_gate", args.gate_timeout_seconds, directory, deadline, sources)
+        with engineering_phase(metrics["engineering_timings"], "gate"):
+            gate, gate_ref, cleanup = logged_gate(args.name + "_gate", args.gate_timeout_seconds, directory, deadline, sources)
         metrics["gate"], metrics["cleanup_errors"] = gate_ref, cleanup
         if gate["_meta"]["exit_code"] != 0:
             metrics.update(status="blocked_by_render_gate", black_frame_detected=gate["_meta"]["exit_code"] == 86)
@@ -380,14 +396,16 @@ def main():
             config["runtime"] = runtime
             if cleanup:
                 raise RuntimeError("Gate cleanup is uncertain")
-            tables, packages, pair_checks, export_sources, ledger = load_exports(args.source, identity["scratch"])
+            with engineering_phase(metrics["engineering_timings"], "load_exports"):
+                tables, packages, pair_checks, export_sources, ledger = load_exports(args.source, identity["scratch"])
             sources.extend(export_sources)
             metrics["population_ledger"] = ledger
             metrics["table_shadow_metadata"] = {pair_id: table.shadow_metadata for pair_id, table in tables.items()}
-            population = [(pair_id, state_id) for pair_id, table in tables.items() for state_id in table.states]
-            plan = sample_state_keys(population, seed=args.seed, sample_size=args.sample_size)
-            metrics["sampling_plan"] = save_json(directory / "sampling_plan.json", plan)
-            config["population_sha256"] = plan["population_sha256"]
+            with engineering_phase(metrics["engineering_timings"], "population_sampling"):
+                population = [(pair_id, state_id) for pair_id, table in tables.items() for state_id in table.states]
+                plan = sample_state_keys(population, seed=args.seed, sample_size=args.sample_size)
+                metrics["sampling_plan"] = save_json(directory / "sampling_plan.json", plan)
+                config["population_sha256"] = plan["population_sha256"]
             # Group predetermined keys to amortize startup. This changes only
             # execution order; no key is added, removed, resampled or replaced.
             groups = {}
@@ -408,17 +426,21 @@ def main():
                     "max_raw_bytes": args.max_raw_mib * 1024 * 1024}
                 for key in ("grid_size", "visibility_distance", "field_of_view"):
                     child[key] = package["source_config"][key]
-                worker = Worker(fresh_worker, child)
-                while worker.result is None and worker.error is None and time.time() < child["deadline"] + 1:
+                pair_timing = {"dataset_key": pair_id, "original_pair_id": package["pair_id"],
+                               "sampled_state_count": len(state_ids)}
+                metrics["engineering_timings"]["fresh_pairs"].append(pair_timing)
+                with engineering_phase(pair_timing, "worker_execution_and_cleanup"):
+                    worker = Worker(fresh_worker, child)
+                    while worker.result is None and worker.error is None and time.time() < child["deadline"] + 1:
+                        worker.receive()
+                        time.sleep(.05)
                     worker.receive()
-                    time.sleep(.05)
-                worker.receive()
-                row = worker.result or {**worker.latest, "pair_id": package['pair_id'], "dataset_key": pair_id, "status": "error",
-                    "error": worker.error or {"type": "TimeoutError", "message": "Fresh worker did not complete"}, "cleanup_errors": []}
-                row.update(worker_identity=worker.identity, unity_identity=worker.unity_identity,
-                           scratch_directory=str(pair_dir))
-                row["cleanup_errors"].extend(stop_workers([worker]))
-                worker = None
+                    row = worker.result or {**worker.latest, "pair_id": package['pair_id'], "dataset_key": pair_id, "status": "error",
+                        "error": worker.error or {"type": "TimeoutError", "message": "Fresh worker did not complete"}, "cleanup_errors": []}
+                    row.update(worker_identity=worker.identity, unity_identity=worker.unity_identity,
+                               scratch_directory=str(pair_dir))
+                    row["cleanup_errors"].extend(stop_workers([worker]))
+                    worker = None
                 metrics["worker_runs"].append(row)
                 metrics["cleanup_errors"].extend(row["cleanup_errors"])
                 if row.get("black_frame_reference"):
@@ -430,47 +452,53 @@ def main():
                 if row["cleanup_errors"]:
                     break
                 roots = [*package["cache_evidence_roots"], str(pair_dir)]
-                observed = load_samples(tables[pair_id], row, pair_dir, roots, state_ids, use_dataset_key=True)
-                if any(view.process_id in all_cached_processes for sample in observed for view in sample.fresh):
-                    raise ValueError("Fresh process is also an export process in the complete population")
-                try:
-                    identities = authenticate_cache_sources([tables[pair_id]], observed, evidence_roots=roots)
-                except (ValueError, KeyError, TypeError, OSError) as error:
-                    row["native_authentication_error"] = f"{type(error).__name__}: {error}"
-                    metrics["errors"].append("fresh_native_provenance_failed:" + pair_id)
-                    break
+                from src.tools.t02_evidence_read_session import authenticated_read_reuse
+                with engineering_phase(pair_timing, "fresh_validation_including_final_rehash"):
+                    with authenticated_read_reuse(sys.modules[__name__]):
+                        with engineering_phase(pair_timing, "decode_and_comparison"):
+                            observed = load_samples(tables[pair_id], row, pair_dir, roots, state_ids, use_dataset_key=True)
+                        if any(view.process_id in all_cached_processes for sample in observed for view in sample.fresh):
+                            raise ValueError("Fresh process is also an export process in the complete population")
+                        try:
+                            with engineering_phase(pair_timing, "native_authentication"):
+                                identities = authenticate_cache_sources([tables[pair_id]], observed, evidence_roots=roots)
+                        except (ValueError, KeyError, TypeError, OSError) as error:
+                            row["native_authentication_error"] = f"{type(error).__name__}: {error}"
+                            metrics["errors"].append("fresh_native_provenance_failed:" + pair_id)
+                            break
                 samples.extend(observed)
                 authenticated.update(identities)
                 if row["status"] != "captured" or row.get("error") or row.get("raw_index_error"):
                     metrics["errors"].append("fresh_capture_incomplete_or_mismatched:" + pair_id)
                     break
-            report = validate_cache_sample(samples, population=population, sampling_plan=plan)
-            report["table_shadow_metadata"] = copy.deepcopy(metrics["table_shadow_metadata"])
-            report["native_authenticated_render_ids"] = [list(key) for key in sorted(authenticated)]
-            report["producer_cleanup_errors"] = list(metrics["cleanup_errors"])
-            report["producer_errors"] = list(metrics["errors"])
-            # A pure comparison result alone is never a real certificate.
-            complete = (report["cache_matches_live"] is True and not metrics["cleanup_errors"]
-                        and not metrics["errors"] and not metrics["black_frame_detected"])
-            if complete:
-                authorize_tables(list(tables.values()), pair_checks=pair_checks, cache_report=report,
-                                 authenticated_cache_source_ids=authenticated)
-                report["table_native_and_pair_checks_authorized"] = True
-            else:
-                report.update(downstream_allowed=False, stop_downstream=True)
-            metrics["validation_report"] = save_json(directory / "cache_validation.json", report)
-            metrics.update(cache_matches_live=True if complete else False, downstream_allowed=complete,
-                stop_downstream=not complete, observed_distinct_states=report["observed_distinct_states"],
-                sample_complete=report["sample_complete"], missing_state_keys=report["missing_state_keys"],
-                status="cache_checks_passed_task_review_pending" if complete else "cache_failed_or_incomplete")
-            if complete:
-                metrics["authorization_manifest"] = save_json(directory / "cache_authorization.json", {
-                    "version": VERSION, "tables": {key: table.manifest_reference for key, table in tables.items()},
-                    "table_shadow_metadata": copy.deepcopy(metrics["table_shadow_metadata"]),
-                    "cache_validation": metrics["validation_report"], "sampling_plan": metrics["sampling_plan"],
-                    "scope": "native export, pair checks and formal cache only; T02 balance/throughput/human review not certified",
-                    "full_T02_acceptance": None})
-                code = 0
+            with engineering_phase(metrics["engineering_timings"], "sample_validation_and_authorization"):
+                report = validate_cache_sample(samples, population=population, sampling_plan=plan)
+                report["table_shadow_metadata"] = copy.deepcopy(metrics["table_shadow_metadata"])
+                report["native_authenticated_render_ids"] = [list(key) for key in sorted(authenticated)]
+                report["producer_cleanup_errors"] = list(metrics["cleanup_errors"])
+                report["producer_errors"] = list(metrics["errors"])
+                # A pure comparison result alone is never a real certificate.
+                complete = (report["cache_matches_live"] is True and not metrics["cleanup_errors"]
+                            and not metrics["errors"] and not metrics["black_frame_detected"])
+                if complete:
+                    authorize_tables(list(tables.values()), pair_checks=pair_checks, cache_report=report,
+                                     authenticated_cache_source_ids=authenticated)
+                    report["table_native_and_pair_checks_authorized"] = True
+                else:
+                    report.update(downstream_allowed=False, stop_downstream=True)
+                metrics["validation_report"] = save_json(directory / "cache_validation.json", report)
+                metrics.update(cache_matches_live=True if complete else False, downstream_allowed=complete,
+                    stop_downstream=not complete, observed_distinct_states=report["observed_distinct_states"],
+                    sample_complete=report["sample_complete"], missing_state_keys=report["missing_state_keys"],
+                    status="cache_checks_passed_task_review_pending" if complete else "cache_failed_or_incomplete")
+                if complete:
+                    metrics["authorization_manifest"] = save_json(directory / "cache_authorization.json", {
+                        "version": VERSION, "tables": {key: table.manifest_reference for key, table in tables.items()},
+                        "table_shadow_metadata": copy.deepcopy(metrics["table_shadow_metadata"]),
+                        "cache_validation": metrics["validation_report"], "sampling_plan": metrics["sampling_plan"],
+                        "scope": "native export, pair checks and formal cache only; T02 balance/throughput/human review not certified",
+                        "full_T02_acceptance": None})
+                    code = 0
     except BaseException as error:
         traceback.print_exc()
         metrics["errors"].append(f"{type(error).__name__}: {error}")
