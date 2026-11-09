@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.33238457300467417
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve();source='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203';known=set()\nfor p in root.glob('logs/review/t01v2_look_fov60_*/provisional.json'):\n d=json.load(p.open())\n if d.get('source_run')!=source:continue\n if d.get('pair_id'):known.add(d['pair_id'])\n for r in d.get('pairs',[]):known.add(r['journal_row']['pair_id'])\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrows=[json.loads(x) for x in raw.splitlines() if x.strip()]\nselected=[r for r in rows if r['status']=='passed' and r['kind'].startswith('look_') and r['pair_id'] not in known]\nproofs=[];out=root/'logs/review/t01v2_look_fov60_batch_03'\nif selected:\n out.mkdir(exist_ok=False)\n for r in selected:\n  p=(root/r['pair_file']).resolve();p.relative_to(root/'data/world_pairs/v2');blob=p.read_bytes();assert hashlib.sha256(blob).hexdigest()==r['pair_sha256']\n  d=json.loads(blob);ref=d['review_image'];p=(root/ref['file']).resolve();p.relative_to(root);blob=p.read_bytes();assert hashlib.sha256(blob).hexdigest()==ref['sha256']\n  image=out/(r['pair_id']+'.png');image.write_bytes(blob);proofs.append({'journal_row':r,'original_review':ref,'published_file':str(image.relative_to(root))})\n proof={'scope':'provisional producer pass; source still running, independent final acceptance pending','source_run':source,'field_of_view':60,'pairs':proofs,'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent}\n (out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n print(json.dumps(proof,sort_keys=True))\nelse: print('No additional unpublished Look rows at this snapshot.')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_look60_batch_publish_03",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t01v2_look60_batch_publish_03",
+      "--",
+      "python3",
+      "-c",
+      "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve();source='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203';known=set()\nfor p in root.glob('logs/review/t01v2_look_fov60_*/provisional.json'):\n d=json.load(p.open())\n if d.get('source_run')!=source:continue\n if d.get('pair_id'):known.add(d['pair_id'])\n for r in d.get('pairs',[]):known.add(r['journal_row']['pair_id'])\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrows=[json.loads(x) for x in raw.splitlines() if x.strip()]\nselected=[r for r in rows if r['status']=='passed' and r['kind'].startswith('look_') and r['pair_id'] not in known]\nproofs=[];out=root/'logs/review/t01v2_look_fov60_batch_03'\nif selected:\n out.mkdir(exist_ok=False)\n for r in selected:\n  p=(root/r['pair_file']).resolve();p.relative_to(root/'data/world_pairs/v2');blob=p.read_bytes();assert hashlib.sha256(blob).hexdigest()==r['pair_sha256']\n  d=json.loads(blob);ref=d['review_image'];p=(root/ref['file']).resolve();p.relative_to(root);blob=p.read_bytes();assert hashlib.sha256(blob).hexdigest()==ref['sha256']\n  image=out/(r['pair_id']+'.png');image.write_bytes(blob);proofs.append({'journal_row':r,'original_review':ref,'published_file':str(image.relative_to(root))})\n proof={'scope':'provisional producer pass; source still running, independent final acceptance pending','source_run':source,'field_of_view':60,'pairs':proofs,'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent}\n (out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n print(json.dumps(proof,sort_keys=True))\nelse: print('No additional unpublished Look rows at this snapshot.')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T11:00:16",
+    "log_path": "logs/runs/t01v2_look60_batch_publish_03.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "ec1223113b7bd64dbdefb3a71a3087f300696164",
+    "git_dirty": false,
+    "end": "2026-11-09T11:00:17",
+    "duration_sec": 0.4,
+    "exit_code": 0,
+    "metrics_sha256": "97e7a08ccce956df5c4a5728e56fa03777341353158d0affc769b9c93c07c9ca"
+  }
+}
