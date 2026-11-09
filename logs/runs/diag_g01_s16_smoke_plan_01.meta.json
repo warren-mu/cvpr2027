@@ -1,0 +1,22 @@
+{
+  "name": "diag_g01_s16_smoke_plan_01",
+  "command": [
+    "python3",
+    "-c",
+    "\"\"\"Explicit original-quota derivative for the one authorized engineering scene.\nNo source/scientific inventory is accepted here; GPU parent reauthenticates the\nunchanged confirmed configuration basis after its real render gate.\n\"\"\"\nimport copy,hashlib,json\nfrom pathlib import Path\nfrom src.tools.g01_quota_plan import load_plan,validate_structure\nfrom src.tools.g01_physics_smoke import validate_quota,SCOPE\nNAME='diag_g01_s16_smoke_plan_01'\nPARENT='gen_test_s16_smoke_01'\nSOURCE={'file':'configs/gen_test_config_round2_40_s01_retry2_quota.json',\n        'sha256':'2bb1fd9d91723a591b2784ae7f243501d5e521302f04624c9a57670b03af7afe'}\nOUT='configs/gen_test_s16_smoke_01_quota.json'\nassert not Path('results',NAME+'.json').exists() and not Path(OUT).exists()\noriginal,_,_=load_plan(SOURCE,authenticate=False)\nassert original['parent_run_name']=='gen_test_config_round2_40_s01_retry2'\nplan=copy.deepcopy(original)\nplan['parent_run_name']=PARENT\nplan['assignments']=[row for row in original['assignments'] if row['scene']=='FloorPlan21']\nplan['engineering_smoke_authorization']={'version':'g01_s16_single_scene_600s_v1',\n    'original_quota_reference':SOURCE,'scene_timeout_seconds':600,\n    'formal_collection_eligible':False,'quota_occupancy_authorized':False,'scope':SCOPE}\nvalidate_structure(plan);validate_quota(plan,PARENT)\nwith Path(OUT).open('x') as stream:json.dump(plan,stream,indent=2,allow_nan=False);stream.write('\\n')\nPath(OUT).chmod(0o444)\nref={'file':OUT,'sha256':hashlib.sha256(Path(OUT).read_bytes()).hexdigest()}\nmetrics={'status':'engineering_smoke_plan_ready','quota_reference':ref,'source_quota_reference':SOURCE,\n    'scene':'FloorPlan21','scene_grant_seconds':600,'parent_seconds':1000,'pbs_seconds':1030,\n    'formal_collection_eligible':False,'quota_occupancy_authorized':False,\n    'count_basis_reauthenticated_here':False,'scope':SCOPE}\nPath('results',NAME+'.json').write_text(json.dumps({'config':{'name':NAME,'original_quota_reference':SOURCE},\n    'metrics':metrics},indent=2,allow_nan=False)+'\\n')\nprint('G01_S16_SMOKE_QUOTA_JSON: '+json.dumps(plan,sort_keys=True,allow_nan=False))\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T07:06:15",
+  "log_path": "logs/runs/diag_g01_s16_smoke_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "fd9fb8c598c1d1738a2ea95dc38bef6716f66983",
+  "git_dirty": false,
+  "end": "2026-11-10T07:06:16",
+  "duration_sec": 0.4,
+  "exit_code": 0,
+  "metrics_sha256": "97959f02dec8a95578991d2e0020f2146288bf9d2d7f71a8bd4c960e9725475d"
+}

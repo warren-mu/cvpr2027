@@ -1,0 +1,9 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_s16_cpu_01 -- python3 -c import unittest; patterns=['test_pair_v2_nearby_physics.py', 'test_g01_compact_configuration.py', 'test_t01v2_nearby_physics_check.py', 'test_merge_pair_v2.py', 'test_g01_geometry_checkpoint.py', 'test_g01_final_preflight_binding.py', 'test_g01_test_partition.py', 'test_g01_shared_unit.py', 'test_g01_parallel.py', 'test_g01_collect_parallel.py', 'test_g01_physics_smoke.py', 'test_pair_v2_g01.py', 'test_g01_quota.py', 'test_g01_configuration.py']; suite=unittest.TestSuite(); [suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=p)) for p in patterns]; result=unittest.TextTestRunner(verbosity=1).run(suite); raise SystemExit(not result.wasSuccessful())
+# start: 2026-11-10T07:05:57
+..........................................................................................................................................................................................
+----------------------------------------------------------------------
+Ran 186 tests in 14.118s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 15.012455131975003}
+# exit_code: 0
