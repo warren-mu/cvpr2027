@@ -8,7 +8,7 @@
   "response_tokens": 256,
   "rho": 0.5,
   "seed": 0,
-  "format_policy": "explicit_human_confirmed_CLI_argument_required",
+  "format_policy": "explicit_task_zero",
   "upstream": "pinned_VAGEN_Base_Navigation_optimizer_GAE_KL_and_sampling",
   "changes": {
     "tensor_parallel_size": 1,
@@ -25,5 +25,14 @@
   "T3_scope": "paired_32_world_pairs_exact_prompt_dedup_real_Q_commit_scores_token_GAE_unchanged_post_tau",
   "pre_evidence_scope": "not_covered_tau0_only_reject_any_pre_evidence_decision",
   "S1": "actual_per_decision_token_advantages_and_zero_pre_evidence_independent_units_from_update1",
-  "S2": "interval20_no_point_due_in_exactly5updates_no_synthetic_holdout_or_endpoint"
+  "S2": "interval20_no_point_due_in_exactly5updates_no_synthetic_holdout_or_endpoint",
+  "human_reward_confirmation": {
+    "scope": "E2E T0 and T3",
+    "correct_select": 1,
+    "wrong_select": 0,
+    "observation": -0.05,
+    "invalid_output": 0,
+    "valid_format_bonus": 0,
+    "source": "explicit human reply in Codex conversation, 2026-11-08 America/New_York"
+  }
 }
