@@ -1,0 +1,294 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_fp301_hidden_anchor_predicate_01 -- python3 -c """One-off read-only predicate census; execute its full text through run_logged."""
+from collections import deque
+import hashlib
+import io
+import json
+from pathlib import Path
+import traceback
+
+import numpy as np
+from PIL import Image
+
+from src.tools.t01_partition import audited_result
+from src.envs.pair_core import ViewState
+from src.envs.pair_table import RenderedView, classify_views, encoded
+from src.envs.paired_env import RGBFrame
+from src.envs.pair_table_export import (load_table, point_id, state_id, directions,
+    verify_frozen_world_request, frozen_target_measurement, FROZEN_RENDER_VERSION)
+from src.envs.pair_table_checks import (verified_read, verify_paused_setup,
+    verify_agent_setup, world_metadata_matches, frozen_non_anchor_measurements,
+    verify_render_sources)
+from src.envs.pair_v2_construct import adjacent_moves
+from src.envs.pair_simulator import path_complete, point
+from src.envs.pair_v2_solvable_policy import native_path_known
+from src.envs.pair_v2_fov import verify_native_fov
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def checked_json(reference, roots):
+    return json.loads(verified_read(reference, roots))
+
+
+def native_views(table, key, state, read, seen):
+    """Authenticate predicate inputs; this never certifies selectability distances."""
+    result, metadata_pair = [], []
+    for world, view in enumerate(state.captures):
+        src, capture = view.source, view.source['capture']
+        require(src.get('pair_id') == table.pair_id and src.get('world_id') == f'w{world}'
+                and src.get('state_id') == key and view.render_id not in seen,
+                'Capture identity/repeated render mismatch')
+        seen.add(view.render_id)
+        identity = json.loads(read(src['process_reference']))
+        require(src['process_reference']['sha256'] == view.process_id
+                and identity.get('worker') and identity.get('unity'), 'Process identity missing')
+        metadata = json.loads(read(capture['files']['metadata']))
+        verify_native_fov(metadata, table.source['field_of_view'])
+        with Image.open(io.BytesIO(read(capture['files']['rgb']))) as image:
+            rgb = np.asarray(image).copy()
+        require(rgb.dtype == np.uint8 and rgb.shape == (255, 255, 3) and np.any(rgb)
+                and rgb.tobytes() == view.rgb.data and capture.get('black') is False
+                and capture.get('valid') is True
+                and capture.get('rgb_sha256') == view.rgb.sha256, 'Original RGB differs')
+        with np.load(io.BytesIO(read(capture['files']['masks'])), allow_pickle=False) as archive:
+            names, masks = archive['names'].tolist(), archive['masks']
+            require(len(set(names)) == len(names) and masks.dtype == np.bool_
+                    and masks.shape == (len(names), 255, 255), 'Invalid native masks')
+            actual_masks = {name: mask.astype('uint8').tobytes() for name, mask in zip(names, masks)}
+        objects = {obj['name']: obj for obj in metadata['objects']}
+        require(len(objects) == len(metadata['objects']), 'Repeated object identity')
+        predicate_masks = {}
+        for name, mask in view.masks.items():
+            require(name in objects, 'Missing native object identity')
+            predicate_masks[name] = actual_masks.get(name, bytes(255 * 255))
+            require(predicate_masks[name] == mask, 'Original mask differs')
+        agent = metadata['agent']
+        pose = {'position': agent['position'], 'rotation': agent['rotation'],
+                'horizon': agent['cameraHorizon'], 'standing': agent['isStanding']}
+        camera = {k: metadata.get(k) for k in ('cameraPosition', 'fov', 'screenWidth', 'screenHeight')}
+        require(encoded(view.agent) == encoded({'agent': pose, 'camera': camera}), 'Camera metadata differs')
+        action = json.loads(read(src['render_action']))
+        require(action.get('action') == 'Pass' and action.get('exception') is None
+                and action.get('after_metadata') == metadata and action.get('capture') == capture,
+                'Capture is not its native Pass')
+        snapshot = json.loads(read(src['snapshot_reference']))
+        placement = json.loads(read(src['world_pose_action']))
+        require(src.get('snapshot_sha256') == src['snapshot_reference']['sha256']
+                and placement.get('action') == 'SetObjectPoses' and placement.get('exception') is None
+                and placement.get('arguments', {}).get('objectPoses') == snapshot.get('poses')
+                and placement.get('arguments', {}).get('placeStationary') is True
+                and set(objects) == {o['name'] for o in snapshot['objects']}, 'World snapshot binding differs')
+        require(world_metadata_matches(metadata, snapshot) == src.get('restore_readback'),
+                'Native restore readback differs')
+        require(frozen_target_measurement(metadata['objects'], table.candidate_names,
+                table.anchor_name, table.target_names[world], table.source.get('candidate_policy'))
+                == src.get('frozen_target_measurement'), 'Native target readback differs')
+        setup = verify_paused_setup(src, read)
+        if world == 0:
+            require(src['world_pose_action'] == src['paused_setup_actions'][1]['reference']
+                    and action['index'] == setup[-1]['index'] + 1
+                    and action['before_metadata'] == setup[-1]['after_metadata'], 'w0 setup/Pass not contiguous')
+        else:
+            originals = verify_frozen_world_request(snapshot, read)
+            require(originals == table.source.get('render_source_worlds')
+                    and originals[0] == state.captures[0].source['snapshot_reference']
+                    and snapshot['frozen_render_recipe']['anchor_name'] == table.anchor_name,
+                    'Frozen w1 source differs')
+            chain = src.get('between_renders')
+            require(isinstance(chain, list) and [row['action'] for row in chain]
+                    == ['SetObjectPoses', 'PhysicsSyncTransforms', 'Pass'], 'Paired render chain missing')
+            left = state.captures[0].source
+            previous = json.loads(read(left['render_action']))
+            for row in chain:
+                actual = json.loads(read(row['reference']))
+                require(actual.get('action') == row['action'] and actual.get('exception') is None
+                        and actual['index'] == previous['index'] + 1
+                        and actual['before_metadata'] == previous['after_metadata'], 'Paired render chain interrupted')
+                previous = actual
+            require(chain[0]['reference'] == src['world_pose_action']
+                    and chain[-1]['reference'] == src['render_action']
+                    and src['physics_pause_action'] == left['physics_pause_action'], 'Paired source bindings differ')
+            require(frozen_non_anchor_measurements(metadata_pair[0], metadata, table.anchor_name)
+                    == src.get('non_anchor_pose_comparison'), 'Non-anchor readback differs')
+        realized_agent = verify_agent_setup(json.loads(read(src['agent_setup_action'])), state, table)
+        require(encoded(metadata['agent']) == encoded(realized_agent), 'Native camera changed')
+        # Original distances are retained, not corrected; classify_views does
+        # not consult them. Strict native distance verification remains failed.
+        result.append(RenderedView(RGBFrame(rgb.tobytes(), 255, 255), predicate_masks,
+            view.distances, {'agent': pose, 'camera': camera}, view.process_id, view.render_id, src, False))
+        metadata_pair.append(metadata)
+    return tuple(result)
+
+
+def native_domains(table, state, read):
+    require(len(state.graph_evidence) == 2 and all(d.get('complete') is True
+            for d in state.graph_evidence), 'Incomplete graph domain')
+    domains = []
+    for world, domain in enumerate(state.graph_evidence):
+        evidence = domain['evidence']
+        setup = json.loads(read(evidence['setup']))
+        actions = verify_paused_setup(evidence, read)
+        expected = state.captures[world].source['snapshot_reference']
+        graph_ref = evidence.get('world_snapshot_reference')
+        require(evidence.get('world') == world and isinstance(graph_ref, dict)
+                and graph_ref.get('sha256') == expected.get('sha256')
+                and read(graph_ref) == read(expected), 'Graph world snapshot differs')
+        snapshot = json.loads(read(expected))
+        world_metadata_matches({'objects': setup['objects']}, snapshot)
+        placement = json.loads(read(evidence['world_pose_action']))
+        require(placement.get('action') == 'SetObjectPoses' and placement.get('exception') is None
+                and placement['arguments'].get('objectPoses') == snapshot['poses']
+                and evidence['world_pose_action'] == evidence['paused_setup_actions'][1]['reference'],
+                'Native graph world setup differs')
+        require(world_metadata_matches(actions[2]['after_metadata'], snapshot)
+                == evidence.get('restore_readback'), 'Native graph restore readback differs')
+        realized_agent = verify_agent_setup(json.loads(read(evidence['agent_setup_action'])), state, table)
+        position = setup['agent']['position']
+        require(sum((position[k] - table.positions[state.view.viewpoint_id][k]) ** 2
+                    for k in ('x', 'y', 'z')) ** .5 <= .01, 'Graph query viewpoint differs')
+        reachable = json.loads(read(evidence['reachable_reference']))
+        require(reachable.get('action') == 'GetReachablePositions' and reachable.get('exception') is None
+                and reachable['after_metadata'].get('lastActionSuccess') is True
+                and reachable['after_metadata'].get('actionReturn') == evidence['reachable_positions'],
+                'Original reachable catalog differs')
+        queries = [json.loads(read(q['reference'])) for q in evidence['queries']]
+        expected_points = adjacent_moves(evidence['reachable_positions'], position)
+        require(len(queries) == len(expected_points), 'An adjacent native query is missing')
+        available = []
+        for index, (query, target) in enumerate(zip(queries, expected_points), 1):
+            args = query.get('arguments', {})
+            require(query.get('action') == 'GetShortestPathToPoint' and query.get('exception') is None
+                    and args.get('position') == position and args.get('target') == target
+                    and query['after_metadata'].get('lastActionSuccess') is True, 'Native path query differs')
+            world_metadata_matches(query['before_metadata'], snapshot)
+            require(encoded(query['before_metadata']['agent']) == encoded(realized_agent), 'Path camera differs')
+            tolerance = args.get('allowedError')
+            require(type(tolerance) in (int, float) and tolerance == .05, 'Original path tolerance differs')
+            path = query['after_metadata'].get('actionReturn')
+            require(native_path_known(path), 'Unknown native path is not unavailable')
+            if path_complete(path, point(args['position']), point(target), tolerance):
+                available.append((index, target))
+        require(available == [(m['index'], m['position']) for m in domain['moves']],
+                'Declared moves differ from actual native availability')
+        domains.append(available)
+    require(domains[0] == domains[1], 'graph_mismatch')
+
+
+def d4_coverage(table):
+    pending, reached = deque([(table.initial_state, 0)]), {table.initial_state}
+    while pending:
+        key, depth = pending.popleft()
+        state = table.states[key]
+        moves = state.graph_evidence[0]['moves']
+        require(state.neighbors == directions(table.positions[state.view.viewpoint_id],
+                state.view.heading_index, moves), 'Neighbor text differs from native graph')
+        destinations = {'turn_left': state_id(ViewState(state.view.viewpoint_id, (state.view.heading_index - 1) % 8)),
+                        'turn_right': state_id(ViewState(state.view.viewpoint_id, (state.view.heading_index + 1) % 8))}
+        destinations.update({f'move {m["index"]}': state_id(ViewState(point_id(m['position']), state.view.heading_index))
+                             for m in moves})
+        required = {a: target for a, target in destinations.items() if depth < 4 or target in table.states}
+        require(state.transitions == required, 'In-budget transition omitted or changed')
+        if depth < 4:
+            for target in destinations.values():
+                require(target in table.states, 'D4 reachable state is missing')
+                if target not in reached:
+                    reached.add(target)
+                    pending.append((target, depth + 1))
+    require(reached == set(table.states), 'States outside the actual D4 graph')
+    return sorted(reached)
+
+
+def diagnose(pair_id, parent, parent_ref):
+    output = {'pair_id': pair_id, 'status': 'unknown', 'parent': parent_ref,
+              'full_T02_status': 'FAIL', 'combined_census_status': 'unknown',
+              'cache_verified': False, 'downstream_allowed': False}
+    try:
+        matches = [row for row in parent['metrics']['pairs'] if row['pair_id'] == pair_id]
+        require(len(matches) == 1, 'Parent pair identity not unique')
+        row = matches[0]
+        require(row['status'] == 'error' and row['table_complete'] is False and row['cleanup_errors'] == []
+                and row['error'] == {'type': 'ValueError', 'message': 'Candidate selectability distance differs from metadata'},
+                'Parent has a different or unfinished failure')
+        root = Path(row['scratch_directory']).resolve()
+        report = checked_json(row['report_reference'], [root])
+        package = checked_json(row['source_package'], [root])
+        output.update(report_reference=row['report_reference'], source_package_reference=row['source_package'],
+                      raw_index_reference=report['raw_index'], original_error=row['error'])
+        diagnostic, diag_ref = audited_result(Path('results/diag_t02_' + pair_id.replace('floorplan', 'fp') + '_distance_01.json'))
+        require(diagnostic['_meta']['exit_code'] == 0, 'Prior distance diagnostic failed')
+        log = Path(diagnostic['_meta']['log_path']).read_text()
+        prefix = 'T02_DISTANCE_DIAGNOSTIC_JSON: '
+        lines = [line[len(prefix):] for line in log.splitlines() if line.startswith(prefix)]
+        require(len(lines) == 1, 'Prior diagnostic output is ambiguous')
+        prior = json.loads(lines[0])
+        require(prior['pair_id'] == pair_id and prior['raw_index_reference'] == report['raw_index'],
+                'Prior diagnostic belongs to different raw input')
+        manifest = prior['existing_manifest_reference_measured_for_diagnostic']
+        require(Path(manifest['file']).resolve() == root / 'table/table.json', 'Manifest path differs')
+        table = load_table(manifest['file'], expected_sha256=manifest['sha256'])
+        require(table.pair_id == package['pair_id'] == pair_id and table.kind == package['kind'] == 'look_flip'
+                and table.depth == 4 and table.scene == package['scene']
+                and table.anchor_name == package['anchor_name']
+                and tuple(table.candidate_names) == tuple(sorted(package['candidate_names']))
+                and tuple(table.target_names) == tuple(package['target_names'])
+                and table.initial_state == state_id(ViewState(point_id(package['initial_position']), package['initial_heading']))
+                and table.source['t01'] == package['source_provenance']
+                and table.source['render_source_worlds'] == [w['reference'] for w in package['worlds']]
+                and table.source['frozen_render_version'] == FROZEN_RENDER_VERSION,
+                'Table/source identity or original world binding differs')
+        roots = [*package['evidence_roots'], str(root)]
+        index = checked_json(report['raw_index'], roots)
+        indexed = {str(Path(ref['file']).resolve()): ref for ref in index['files']}
+        def read(ref):
+            path = Path(ref['file']).resolve()
+            if path.is_relative_to(root / 'raw'):
+                require(str(path) in indexed and indexed[str(path)]['sha256'] == ref['sha256'],
+                        'Raw proof is absent from the sealed worker index')
+            return verified_read(ref, roots)
+        try:
+            verify_render_sources(table, evidence_roots=roots)
+        except ValueError as error:
+            require(str(error) == row['error']['message'], 'Strict checker now fails elsewhere')
+            output['strict_checker_reproduced_error'] = str(error)
+        else:
+            raise ValueError('Strict failure unexpectedly disappeared')
+        require(table.export_verified is False and table.cache_verified is False, 'Unexpected acceptance flag')
+        seen, observations = set(), []
+        for key, state in table.states.items():
+            views = native_views(table, key, state, read, seen)
+            native_domains(table, state, read)
+            try:
+                measured = classify_views(views, table.anchor_name, kind=table.kind)
+                observations.append({'state_id': key, 'triggered': False, 'measurement': measured})
+            except ValueError as error:
+                if str(error) != 'non_anchor_divergent':
+                    raise
+                observations.append({'state_id': key, 'triggered': True, 'original_predicate_error': str(error)})
+        coverage = d4_coverage(table)
+        require(table.export_verified is False and table.cache_verified is False, 'Diagnostic changed acceptance')
+        output.update(status='original_render_predicate_observed_over_verified_D4',
+            distance_diagnostic=diag_ref, manifest_reference=manifest, state_count=len(coverage),
+            native_capture_count=len(seen), D4_state_ids=coverage, observations=observations,
+            triggered_state_count=sum(row['triggered'] for row in observations),
+            hidden_anchor_state_count=sum(row.get('measurement', {}).get('anchor_pixels') == (0, 0)
+                                          or row['triggered'] for row in observations),
+            scope='Only original hidden-anchor render predicate plus input/graph completeness; strict full T02/native acceptance remains failed; no cache, solvability or training authorization')
+    except BaseException as error:
+        output['diagnostic_error'] = {'type': type(error).__name__, 'message': str(error)}
+        traceback.print_exc()
+    return output
+
+
+parent, parent_ref = audited_result(Path('results/t02_look_additional_b01_retry1.json'))
+require(parent['_meta'].get('end') and parent['_meta']['exit_code'] == 1, 'Parent is not the ended failed run')
+result = {'scope': 'One-off immutable-input CPU target-predicate diagnostic; no original result or combined census edited',
+          'pairs': [diagnose(pair, parent, parent_ref) for pair in ('floorplan301_00049', 'floorplan301_00072')]}
+print('T02_HIDDEN_ANCHOR_PREDICATE_DIAGNOSTIC_JSON: ' + json.dumps(result, sort_keys=True, allow_nan=False))
+
+# start: 2026-11-09T19:52:57
+T02_HIDDEN_ANCHOR_PREDICATE_DIAGNOSTIC_JSON: {"pairs": [{"D4_state_ids": ["v_2054034cc3b5921756c7:h0", "v_2054034cc3b5921756c7:h6", "v_2054034cc3b5921756c7:h7", "v_2fd00db1f6d3387948b1:h0", "v_2fd00db1f6d3387948b1:h1", "v_2fd00db1f6d3387948b1:h2", "v_2fd00db1f6d3387948b1:h3", "v_2fd00db1f6d3387948b1:h4", "v_2fd00db1f6d3387948b1:h5", "v_2fd00db1f6d3387948b1:h6", "v_2fd00db1f6d3387948b1:h7", "v_359070f35f349ac039aa:h7", "v_4cf5ba6430c0f543a401:h0", "v_4cf5ba6430c0f543a401:h1", "v_4cf5ba6430c0f543a401:h2", "v_4cf5ba6430c0f543a401:h4", "v_4cf5ba6430c0f543a401:h5", "v_4cf5ba6430c0f543a401:h6", "v_4cf5ba6430c0f543a401:h7", "v_5949a88b567189f81394:h0", "v_5949a88b567189f81394:h6", "v_5949a88b567189f81394:h7", "v_5f1a959032858e6237a8:h0", "v_5f1a959032858e6237a8:h1", "v_5f1a959032858e6237a8:h2", "v_5f1a959032858e6237a8:h4", "v_5f1a959032858e6237a8:h5", "v_5f1a959032858e6237a8:h6", "v_5f1a959032858e6237a8:h7", "v_73e3ae4f4b8362a844f1:h0", "v_73e3ae4f4b8362a844f1:h1", "v_73e3ae4f4b8362a844f1:h2", "v_73e3ae4f4b8362a844f1:h4", "v_73e3ae4f4b8362a844f1:h5", "v_73e3ae4f4b8362a844f1:h6", "v_73e3ae4f4b8362a844f1:h7", "v_763faa90e1bb297d51dd:h0", "v_763faa90e1bb297d51dd:h1", "v_763faa90e1bb297d51dd:h5", "v_763faa90e1bb297d51dd:h6", "v_763faa90e1bb297d51dd:h7", "v_8858c34fb98f7ec8a808:h0", "v_8858c34fb98f7ec8a808:h1", "v_8858c34fb98f7ec8a808:h5", "v_8858c34fb98f7ec8a808:h6", "v_8858c34fb98f7ec8a808:h7", "v_aacc6f7af31b610fad49:h0", "v_aacc6f7af31b610fad49:h1", "v_aacc6f7af31b610fad49:h5", "v_aacc6f7af31b610fad49:h6", "v_aacc6f7af31b610fad49:h7", "v_cadea35778b446dad43e:h0", "v_cadea35778b446dad43e:h1", "v_cadea35778b446dad43e:h5", "v_cadea35778b446dad43e:h6", "v_cadea35778b446dad43e:h7", "v_cb1d5a391b5b9b28dbff:h0", "v_cb1d5a391b5b9b28dbff:h1", "v_cb1d5a391b5b9b28dbff:h2", "v_cb1d5a391b5b9b28dbff:h4", "v_cb1d5a391b5b9b28dbff:h5", "v_cb1d5a391b5b9b28dbff:h6", "v_cb1d5a391b5b9b28dbff:h7", "v_cf0a2aae77d430884cb1:h0", "v_cf0a2aae77d430884cb1:h6", "v_cf0a2aae77d430884cb1:h7", "v_fa85dd146784941c9523:h0", "v_fa85dd146784941c9523:h6", "v_fa85dd146784941c9523:h7", "v_fc8342c1929f29ff9a68:h0", "v_fc8342c1929f29ff9a68:h1", "v_fc8342c1929f29ff9a68:h5", "v_fc8342c1929f29ff9a68:h6", "v_fc8342c1929f29ff9a68:h7"], "cache_verified": false, "combined_census_status": "unknown", "distance_diagnostic": {"audit": {"fail": [], "file": "results/diag_t02_fp301_00049_distance_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_t02_fp301_00049_distance_01.diff"]}, "exit_code": 0, "file": "results/diag_t02_fp301_00049_distance_01.json", "git_commit": "735455c4901d340bbe00ea4130eced57ac6ea10e", "metrics_sha256": "6af36cae573058cd71e1e64cc802eb9bbb7bb560e9e4f571c4350c17aff188fe", "sha256": "ab9950ed2bd3a176c6bf3a5c6ed41c40fc9ac6eb46adcfdca71f1ec3fc750393"}, "downstream_allowed": false, "full_T02_status": "FAIL", "hidden_anchor_state_count": 32, "manifest_reference": {"bytes": 2585643, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0003/table/table.json", "sha256": "a982e2552b4d173a9b802dabdc170a52997f1cb90a5f4c8a463cdf27868e37eb"}, "native_capture_count": 148, "observations": [{"measurement": {"anchor_pixels": [405, 0], "frame_max_abs_diff": 135, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 431], "frame_max_abs_diff": 170, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h6", "triggered": false}, {"measurement": {"anchor_pixels": [431, 0], "frame_max_abs_diff": 135, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h7", "triggered": false}, {"measurement": {"anchor_pixels": [575, 0], "frame_max_abs_diff": 137, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [648, 0], "frame_max_abs_diff": 135, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h3", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1074], "frame_max_abs_diff": 188, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [513, 0], "frame_max_abs_diff": 111, "non_anchor_divergent": false, "shared": false}, "state_id": "v_359070f35f349ac039aa:h7", "triggered": false}, {"measurement": {"anchor_pixels": [578, 0], "frame_max_abs_diff": 137, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 646], "frame_max_abs_diff": 186, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h6", "triggered": false}, {"measurement": {"anchor_pixels": [566, 0], "frame_max_abs_diff": 133, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h7", "triggered": false}, {"measurement": {"anchor_pixels": [470, 0], "frame_max_abs_diff": 114, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 305], "frame_max_abs_diff": 187, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h6", "triggered": false}, {"measurement": {"anchor_pixels": [392, 0], "frame_max_abs_diff": 121, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1252], "frame_max_abs_diff": 191, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5f1a959032858e6237a8:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1121], "frame_max_abs_diff": 183, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5f1a959032858e6237a8:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h7", "triggered": false}, {"measurement": {"anchor_pixels": [602, 0], "frame_max_abs_diff": 146, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [521, 0], "frame_max_abs_diff": 144, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_73e3ae4f4b8362a844f1:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_73e3ae4f4b8362a844f1:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_73e3ae4f4b8362a844f1:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 2163], "frame_max_abs_diff": 186, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 3], "frame_max_abs_diff": 63, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [594, 0], "frame_max_abs_diff": 131, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_763faa90e1bb297d51dd:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_763faa90e1bb297d51dd:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 430], "frame_max_abs_diff": 188, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h6", "triggered": false}, {"measurement": {"anchor_pixels": [541, 0], "frame_max_abs_diff": 130, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_8858c34fb98f7ec8a808:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_8858c34fb98f7ec8a808:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 506], "frame_max_abs_diff": 186, "non_anchor_divergent": false, "shared": false}, "state_id": "v_8858c34fb98f7ec8a808:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 659], "frame_max_abs_diff": 185, "non_anchor_divergent": false, "shared": false}, "state_id": "v_8858c34fb98f7ec8a808:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_8858c34fb98f7ec8a808:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_aacc6f7af31b610fad49:h0", "triggered": false}, {"measurement": {"anchor_pixels": [577, 0], "frame_max_abs_diff": 137, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1955], "frame_max_abs_diff": 186, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 2358], "frame_max_abs_diff": 183, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_aacc6f7af31b610fad49:h7", "triggered": false}, {"measurement": {"anchor_pixels": [404, 0], "frame_max_abs_diff": 145, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h0", "triggered": false}, {"measurement": {"anchor_pixels": [412, 0], "frame_max_abs_diff": 143, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cadea35778b446dad43e:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 2278], "frame_max_abs_diff": 183, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1905], "frame_max_abs_diff": 178, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h7", "triggered": false}, {"measurement": {"anchor_pixels": [389, 0], "frame_max_abs_diff": 149, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h0", "triggered": false}, {"measurement": {"anchor_pixels": [580, 0], "frame_max_abs_diff": 145, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1126], "frame_max_abs_diff": 185, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1228], "frame_max_abs_diff": 191, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cf0a2aae77d430884cb1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 430], "frame_max_abs_diff": 174, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cf0a2aae77d430884cb1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [494, 0], "frame_max_abs_diff": 114, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cf0a2aae77d430884cb1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [290, 0], "frame_max_abs_diff": 144, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fa85dd146784941c9523:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fa85dd146784941c9523:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 1170], "frame_max_abs_diff": 182, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fa85dd146784941c9523:h7", "triggered": false}, {"measurement": {"anchor_pixels": [392, 0], "frame_max_abs_diff": 140, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fc8342c1929f29ff9a68:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fc8342c1929f29ff9a68:h5", "triggered": false}, {"measurement": {"anchor_pixels": [0, 663], "frame_max_abs_diff": 184, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h6", "triggered": false}, {"measurement": {"anchor_pixels": [571, 587], "frame_max_abs_diff": 178, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h7", "triggered": false}], "original_error": {"message": "Candidate selectability distance differs from metadata", "type": "ValueError"}, "pair_id": "floorplan301_00049", "parent": {"audit": {"fail": [], "file": "results/t02_look_additional_b01_retry1.json", "warn": ["P5 run used uncommitted changes; see logs/runs/t02_look_additional_b01_retry1.diff", "P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/t02_look_additional_b01_retry1.json", "git_commit": "9320587be38cac9eb8c59b6c8c81806cdfc28f16", "metrics_sha256": "f5826b76ace4cb10d639094cd0adafcff720f660eda768e29ae875bc33a62748", "sha256": "9f8479bfbbdf2e65d5315fc907fb5956201a5a4170471dbff202124e0af61d90"}, "raw_index_reference": {"bytes": 1573772, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0003/raw/evidence_index.json", "sha256": "1bb2f82ec6c026cb175c0eaf2ae1e554d5710555c42a9f9bfa88ae49ea1a1b24"}, "report_reference": {"bytes": 1074, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0003/pair_report.json", "sha256": "69396adf825aa4e02ee2b2dbee5460078bad56411ea65d15a5f77ae684e786a9"}, "scope": "Only original hidden-anchor render predicate plus input/graph completeness; strict full T02/native acceptance remains failed; no cache, solvability or training authorization", "source_package_reference": {"bytes": 5598066, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0003/authenticated_source.json", "sha256": "8cd93a318c890b6400cce7f3489d0c2f39c02a010122f7d175c7803fc6c2f0eb"}, "state_count": 74, "status": "original_render_predicate_observed_over_verified_D4", "strict_checker_reproduced_error": "Candidate selectability distance differs from metadata", "triggered_state_count": 0}, {"D4_state_ids": ["v_2054034cc3b5921756c7:h0", "v_2054034cc3b5921756c7:h6", "v_2054034cc3b5921756c7:h7", "v_2fd00db1f6d3387948b1:h0", "v_2fd00db1f6d3387948b1:h1", "v_2fd00db1f6d3387948b1:h2", "v_2fd00db1f6d3387948b1:h3", "v_2fd00db1f6d3387948b1:h4", "v_2fd00db1f6d3387948b1:h5", "v_2fd00db1f6d3387948b1:h6", "v_2fd00db1f6d3387948b1:h7", "v_359070f35f349ac039aa:h7", "v_4cf5ba6430c0f543a401:h0", "v_4cf5ba6430c0f543a401:h1", "v_4cf5ba6430c0f543a401:h2", "v_4cf5ba6430c0f543a401:h4", "v_4cf5ba6430c0f543a401:h5", "v_4cf5ba6430c0f543a401:h6", "v_4cf5ba6430c0f543a401:h7", "v_5949a88b567189f81394:h0", "v_5949a88b567189f81394:h6", "v_5949a88b567189f81394:h7", "v_5f1a959032858e6237a8:h0", "v_5f1a959032858e6237a8:h1", "v_5f1a959032858e6237a8:h2", "v_5f1a959032858e6237a8:h4", "v_5f1a959032858e6237a8:h5", "v_5f1a959032858e6237a8:h6", "v_5f1a959032858e6237a8:h7", "v_73e3ae4f4b8362a844f1:h0", "v_73e3ae4f4b8362a844f1:h1", "v_73e3ae4f4b8362a844f1:h2", "v_73e3ae4f4b8362a844f1:h4", "v_73e3ae4f4b8362a844f1:h5", "v_73e3ae4f4b8362a844f1:h6", "v_73e3ae4f4b8362a844f1:h7", "v_763faa90e1bb297d51dd:h0", "v_763faa90e1bb297d51dd:h1", "v_763faa90e1bb297d51dd:h5", "v_763faa90e1bb297d51dd:h6", "v_763faa90e1bb297d51dd:h7", "v_8858c34fb98f7ec8a808:h0", "v_8858c34fb98f7ec8a808:h1", "v_8858c34fb98f7ec8a808:h5", "v_8858c34fb98f7ec8a808:h6", "v_8858c34fb98f7ec8a808:h7", "v_aacc6f7af31b610fad49:h0", "v_aacc6f7af31b610fad49:h1", "v_aacc6f7af31b610fad49:h5", "v_aacc6f7af31b610fad49:h6", "v_aacc6f7af31b610fad49:h7", "v_cadea35778b446dad43e:h0", "v_cadea35778b446dad43e:h1", "v_cadea35778b446dad43e:h5", "v_cadea35778b446dad43e:h6", "v_cadea35778b446dad43e:h7", "v_cb1d5a391b5b9b28dbff:h0", "v_cb1d5a391b5b9b28dbff:h1", "v_cb1d5a391b5b9b28dbff:h2", "v_cb1d5a391b5b9b28dbff:h4", "v_cb1d5a391b5b9b28dbff:h5", "v_cb1d5a391b5b9b28dbff:h6", "v_cb1d5a391b5b9b28dbff:h7", "v_cf0a2aae77d430884cb1:h0", "v_cf0a2aae77d430884cb1:h6", "v_cf0a2aae77d430884cb1:h7", "v_fa85dd146784941c9523:h0", "v_fa85dd146784941c9523:h6", "v_fa85dd146784941c9523:h7", "v_fc8342c1929f29ff9a68:h0", "v_fc8342c1929f29ff9a68:h1", "v_fc8342c1929f29ff9a68:h5", "v_fc8342c1929f29ff9a68:h6", "v_fc8342c1929f29ff9a68:h7"], "cache_verified": false, "combined_census_status": "unknown", "distance_diagnostic": {"audit": {"fail": [], "file": "results/diag_t02_fp301_00072_distance_01.json", "warn": []}, "exit_code": 0, "file": "results/diag_t02_fp301_00072_distance_01.json", "git_commit": "4b1119af0ef0f85a98ca5c1640a14b3f41f0f6fc", "metrics_sha256": "61cb561f808cd6b83f2f16cbe7a27a8251972a75c3a33330378ba2e976632eda", "sha256": "b0ea4f1680a2fd79571c33ce4ab56d57e94d80185883e4409f688af42db55167"}, "downstream_allowed": false, "full_T02_status": "FAIL", "hidden_anchor_state_count": 27, "manifest_reference": {"bytes": 2603899, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0006/table/table.json", "sha256": "4c29142c3c3a6c94a5b201d31408068eaf27cb0e1fcd3b314b83599017c486b8"}, "native_capture_count": 148, "observations": [{"measurement": {"anchor_pixels": [0, 222], "frame_max_abs_diff": 235, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h0", "triggered": false}, {"measurement": {"anchor_pixels": [147, 0], "frame_max_abs_diff": 226, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h6", "triggered": false}, {"measurement": {"anchor_pixels": [22, 245], "frame_max_abs_diff": 235, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2054034cc3b5921756c7:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 362], "frame_max_abs_diff": 228, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 495], "frame_max_abs_diff": 228, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h3", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h5", "triggered": false}, {"measurement": {"anchor_pixels": [508, 0], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_2fd00db1f6d3387948b1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_2fd00db1f6d3387948b1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 349], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_359070f35f349ac039aa:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 361], "frame_max_abs_diff": 230, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_4cf5ba6430c0f543a401:h5", "triggered": false}, {"measurement": {"anchor_pixels": [254, 0], "frame_max_abs_diff": 229, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 468], "frame_max_abs_diff": 230, "non_anchor_divergent": false, "shared": false}, "state_id": "v_4cf5ba6430c0f543a401:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 361], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h0", "triggered": false}, {"measurement": {"anchor_pixels": [92, 0], "frame_max_abs_diff": 225, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 247], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5949a88b567189f81394:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 193], "frame_max_abs_diff": 223, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5f1a959032858e6237a8:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h4", "triggered": false}, {"measurement": {"anchor_pixels": [571, 0], "frame_max_abs_diff": 235, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5f1a959032858e6237a8:h5", "triggered": false}, {"measurement": {"anchor_pixels": [512, 0], "frame_max_abs_diff": 236, "non_anchor_divergent": false, "shared": false}, "state_id": "v_5f1a959032858e6237a8:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_5f1a959032858e6237a8:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 363], "frame_max_abs_diff": 225, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 336], "frame_max_abs_diff": 225, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_73e3ae4f4b8362a844f1:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_73e3ae4f4b8362a844f1:h4", "triggered": false}, {"measurement": {"anchor_pixels": [308, 0], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h5", "triggered": false}, {"measurement": {"anchor_pixels": [1292, 0], "frame_max_abs_diff": 239, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [184, 0], "frame_max_abs_diff": 239, "non_anchor_divergent": false, "shared": false}, "state_id": "v_73e3ae4f4b8362a844f1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 360], "frame_max_abs_diff": 231, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_763faa90e1bb297d51dd:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_763faa90e1bb297d51dd:h5", "triggered": false}, {"measurement": {"anchor_pixels": [148, 0], "frame_max_abs_diff": 227, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 353], "frame_max_abs_diff": 232, "non_anchor_divergent": false, "shared": false}, "state_id": "v_763faa90e1bb297d51dd:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 194], "frame_max_abs_diff": 226, "non_anchor_divergent": false, "shared": false}, "state_id": "v_8858c34fb98f7ec8a808:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_8858c34fb98f7ec8a808:h1", "triggered": false}, {"measurement": {"anchor_pixels": [207, 0], "frame_max_abs_diff": 232, "non_anchor_divergent": false, "shared": false}, "state_id": "v_8858c34fb98f7ec8a808:h5", "triggered": false}, {"measurement": {"anchor_pixels": [256, 0], "frame_max_abs_diff": 232, "non_anchor_divergent": false, "shared": false}, "state_id": "v_8858c34fb98f7ec8a808:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_8858c34fb98f7ec8a808:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 193], "frame_max_abs_diff": 221, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 493], "frame_max_abs_diff": 222, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h1", "triggered": false}, {"measurement": {"anchor_pixels": [1083, 0], "frame_max_abs_diff": 241, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h5", "triggered": false}, {"measurement": {"anchor_pixels": [1216, 0], "frame_max_abs_diff": 241, "non_anchor_divergent": false, "shared": false}, "state_id": "v_aacc6f7af31b610fad49:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_aacc6f7af31b610fad49:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 227], "frame_max_abs_diff": 231, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 242], "frame_max_abs_diff": 231, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cadea35778b446dad43e:h5", "triggered": false}, {"measurement": {"anchor_pixels": [1264, 0], "frame_max_abs_diff": 247, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h6", "triggered": false}, {"measurement": {"anchor_pixels": [1057, 0], "frame_max_abs_diff": 247, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cadea35778b446dad43e:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 229], "frame_max_abs_diff": 232, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 319], "frame_max_abs_diff": 232, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h2", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h4", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_cb1d5a391b5b9b28dbff:h5", "triggered": false}, {"measurement": {"anchor_pixels": [507, 0], "frame_max_abs_diff": 241, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h6", "triggered": false}, {"measurement": {"anchor_pixels": [559, 0], "frame_max_abs_diff": 242, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cb1d5a391b5b9b28dbff:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 190], "frame_max_abs_diff": 229, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cf0a2aae77d430884cb1:h0", "triggered": false}, {"measurement": {"anchor_pixels": [150, 0], "frame_max_abs_diff": 229, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cf0a2aae77d430884cb1:h6", "triggered": false}, {"measurement": {"anchor_pixels": [0, 463], "frame_max_abs_diff": 230, "non_anchor_divergent": false, "shared": false}, "state_id": "v_cf0a2aae77d430884cb1:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 150], "frame_max_abs_diff": 251, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fa85dd146784941c9523:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fa85dd146784941c9523:h6", "triggered": false}, {"measurement": {"anchor_pixels": [533, 0], "frame_max_abs_diff": 240, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fa85dd146784941c9523:h7", "triggered": false}, {"measurement": {"anchor_pixels": [0, 224], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h0", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fc8342c1929f29ff9a68:h1", "triggered": false}, {"measurement": {"anchor_pixels": [0, 0], "frame_max_abs_diff": 0, "non_anchor_divergent": false, "shared": true}, "state_id": "v_fc8342c1929f29ff9a68:h5", "triggered": false}, {"measurement": {"anchor_pixels": [252, 0], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h6", "triggered": false}, {"measurement": {"anchor_pixels": [244, 303], "frame_max_abs_diff": 233, "non_anchor_divergent": false, "shared": false}, "state_id": "v_fc8342c1929f29ff9a68:h7", "triggered": false}], "original_error": {"message": "Candidate selectability distance differs from metadata", "type": "ValueError"}, "pair_id": "floorplan301_00072", "parent": {"audit": {"fail": [], "file": "results/t02_look_additional_b01_retry1.json", "warn": ["P5 run used uncommitted changes; see logs/runs/t02_look_additional_b01_retry1.diff", "P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/t02_look_additional_b01_retry1.json", "git_commit": "9320587be38cac9eb8c59b6c8c81806cdfc28f16", "metrics_sha256": "f5826b76ace4cb10d639094cd0adafcff720f660eda768e29ae875bc33a62748", "sha256": "9f8479bfbbdf2e65d5315fc907fb5956201a5a4170471dbff202124e0af61d90"}, "raw_index_reference": {"bytes": 1573772, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0006/raw/evidence_index.json", "sha256": "3abfef939c31995a431bb10174506604a14360b42fb5c059f65bc0114842a1b6"}, "report_reference": {"bytes": 1074, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0006/pair_report.json", "sha256": "677d021229305966d03b320dc5a9570a75c44eb12c290ff4439664110cd6ee45"}, "scope": "Only original hidden-anchor render predicate plus input/graph completeness; strict full T02/native acceptance remains failed; no cache, solvability or training authorization", "source_package_reference": {"bytes": 5593926, "file": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_b01_retry1/708299.hopper-m-02/pair_0006/authenticated_source.json", "sha256": "b665f5731138faa2975c81e7bf0804be3d8ef4ef08c9b2bb0735c55946cf0698"}, "state_count": 74, "status": "original_render_predicate_observed_over_verified_D4", "strict_checker_reproduced_error": "Candidate selectability distance differs from metadata", "triggered_state_count": 0}], "scope": "One-off immutable-input CPU target-predicate diagnostic; no original result or combined census edited"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 65.80494680599077}
+# exit_code: 0
