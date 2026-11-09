@@ -1,0 +1,1 @@
+First60-degree Look review: FloorPlan203,Look→Stay,floorplan203_00001. Unchanged image from a generator-passed pair while the source unit runs. Final source audit and independent checkpoint pending. No cohort winner or expansion claim.

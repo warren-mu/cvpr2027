@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.21764812496257946
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve(); source='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203'\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrow=next(json.loads(line) for line in raw.splitlines() if line.strip() and json.loads(line)['pair_id']=='floorplan203_00001')\nassert row['status']=='passed' and row['kind']=='look_stay'\npair=(root/row['pair_file']).resolve();pair.relative_to(root/'data/world_pairs/v2')\nblob=pair.read_bytes();assert hashlib.sha256(blob).hexdigest()==row['pair_sha256']\nd=json.loads(blob);ref=d['review_image'];picture=(root/ref['file']).resolve();picture.relative_to(root)\nimage=picture.read_bytes();assert hashlib.sha256(image).hexdigest()==ref['sha256']\nout=root/'logs/review/t01v2_look_fov60_first_01';out.mkdir(exist_ok=False)\n(out/'floorplan203_00001.png').write_bytes(image)\nproof={'scope':'provisional producer-passed Look pair; source unit still running, ended-source independent checkpoint pending','source_run':source,'pair_id':row['pair_id'],'kind':row['kind'],'scene':row['scene'],'field_of_view':60,'pair_file':row['pair_file'],'pair_sha256':row['pair_sha256'],'original_review_image':ref,'published_image':{'file':str((out/'floorplan203_00001.png').relative_to(root)),'sha256':ref['sha256']},'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent,'journal_row':row}\n(out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n(out/'README.md').write_text('First60-degree Look review: FloorPlan203,Look→Stay,floorplan203_00001. Unchanged image from a generator-passed pair while the source unit runs. Final source audit and independent checkpoint pending. No cohort winner or expansion claim.\\n')\nprint(json.dumps(proof,sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_look60_first_publish_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t01v2_look60_first_publish_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve(); source='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203'\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrow=next(json.loads(line) for line in raw.splitlines() if line.strip() and json.loads(line)['pair_id']=='floorplan203_00001')\nassert row['status']=='passed' and row['kind']=='look_stay'\npair=(root/row['pair_file']).resolve();pair.relative_to(root/'data/world_pairs/v2')\nblob=pair.read_bytes();assert hashlib.sha256(blob).hexdigest()==row['pair_sha256']\nd=json.loads(blob);ref=d['review_image'];picture=(root/ref['file']).resolve();picture.relative_to(root)\nimage=picture.read_bytes();assert hashlib.sha256(image).hexdigest()==ref['sha256']\nout=root/'logs/review/t01v2_look_fov60_first_01';out.mkdir(exist_ok=False)\n(out/'floorplan203_00001.png').write_bytes(image)\nproof={'scope':'provisional producer-passed Look pair; source unit still running, ended-source independent checkpoint pending','source_run':source,'pair_id':row['pair_id'],'kind':row['kind'],'scene':row['scene'],'field_of_view':60,'pair_file':row['pair_file'],'pair_sha256':row['pair_sha256'],'original_review_image':ref,'published_image':{'file':str((out/'floorplan203_00001.png').relative_to(root)),'sha256':ref['sha256']},'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent,'journal_row':row}\n(out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n(out/'README.md').write_text('First60-degree Look review: FloorPlan203,Look→Stay,floorplan203_00001. Unchanged image from a generator-passed pair while the source unit runs. Final source audit and independent checkpoint pending. No cohort winner or expansion claim.\\n')\nprint(json.dumps(proof,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T10:50:20",
+    "log_path": "logs/runs/t01v2_look60_first_publish_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "11bc38cd2c43811c42c8586f85aec7a9e501ba6a",
+    "git_dirty": false,
+    "end": "2026-11-09T10:50:21",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "de15cde451a3c270866735ffb92368972928a9709426c8d6281107f8dadefc0a"
+  }
+}
