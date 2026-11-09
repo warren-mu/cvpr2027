@@ -1,0 +1,55 @@
+# run_logged: /scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3 -m src.tools.record_command --name t01v2_stay_priority_progress_01 -- python3 -c import datetime as dt,json,os,shlex
+from pathlib import Path
+from src.tools.t01v2_live_progress import read_prefix,archive,observed_counts,expected_identity,check_expected_shard
+from src.tools.t01_partition import ROOT,audited_result
+from src.tools.merge_pair_v2 import producer_arguments,option
+from src.envs import pair_v2_stay_priority_policy as policy
+name=os.environ['CVPR_RUN_NAME']
+child='pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203'
+expected=expected_identity(child)
+log=ROOT/'logs/runs'/(child+'.log')
+out=ROOT/'logs/runs'/name;out.mkdir(parents=True,exist_ok=False)
+raw,extent=read_prefix(log,limit=max(log.stat().st_size+8388608,8388608))
+if extent['read_cap_reached']:raise ValueError('Log prefix cap reached')
+lines=raw.decode().splitlines()
+if not lines or not lines[0].startswith('# run_logged: '):raise ValueError('Missing child logged header')
+args=producer_arguments(shlex.split(lines[0][len('# run_logged: '):]),policy.PRODUCER)
+shard_path=Path('/scratch/e1583364/cvpr2027/t01v2_parallel')/expected['collection']/'707865_hopper_m_02'/expected['scene']/'shard_config.json'
+if (option(args,'--name')!=child or option(args,'--scene')!=expected['scene'] or Path(option(args,'--shard-config'))!=shard_path or float(option(args,'--timeout-seconds'))!=1200):raise ValueError('Child command differs from exact planned unit')
+shard_raw=shard_path.read_bytes();shard=json.loads(shard_raw)
+if shard_path.stat().st_mode&0o222:raise ValueError('Mutable shard')
+check_expected_shard(expected,shard)
+policy.validate_source({**shard,'shard':shard})
+if Path(shard['raw_evidence_dir']).resolve()!=shard_path.resolve().parent:raise ValueError('Changed scratch directory')
+gate,gate_ref=audited_result(shard['gate_result'])
+if (gate['metrics'].get('passed') is not True or gate['metrics'].get('cleanup_errors')!=[] or any(shard['gate_source'].get(k)!=gate_ref[k] for k in ('file','sha256','metrics_sha256','exit_code','git_commit'))):raise ValueError('Different/nonpassing audited gate')
+row={**expected,'producer_module':policy.PRODUCER,'scope':'observed complete journal prefix; source-reported counts, not independently accepted',
+'log_extent':extent,'log_prefix':archive(raw,out,child+'.log'),'shard':archive(shard_raw,out,child+'_shard.json'),
+'gate':gate_ref,'node':shard['node'],'gpu_uuid':shard['gpu_identity']['gpu_uuid'],
+'log_start':[v[len('# start: '):] for v in lines if v.startswith('# start: ')],'log_start_timezone':'cluster local UTC+08:00',
+'counts':None,'state':'started_no_journal_observed'}
+journal=ROOT/'data/world_pairs/v2'/(child+'_attempts.jsonl')
+if journal.exists():
+ captured,coverage=read_prefix(journal,limit=max(journal.stat().st_size+8388608,8388608))
+ if coverage['read_cap_reached']:raise ValueError('Journal prefix cap reached')
+ row.update(state='started_complete_journal_prefix',journal_extent=coverage,journal_prefix=archive(captured,out,child+'_attempts.jsonl'),counts=observed_counts(captured,expected['scene']))
+result=ROOT/'results'/(child+'.json')
+if result.exists():
+ data=json.loads(result.read_text());m=data.get('metrics',{});meta=data.get('_meta',{})
+ row['reported_terminal']={'end':meta.get('end'),'exit_code':meta.get('exit_code'),'status':m.get('status'),'error':m.get('error'),'cleanup_errors':m.get('cleanup_errors'),'passed_by_class':m.get('passed_by_class')}
+ if meta.get('end'):row['ended_source']=archive(result.read_bytes(),out,child+'_result.json');row['state']='ended_source_reported'
+report={'observed_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'source':row,'scope':'immutable source identity and audited gate; source-reported prefix only, not independent pair acceptance'}
+print('STAY_PRIORITY_PROGRESS: '+json.dumps(report,sort_keys=True,ensure_ascii=False),flush=True)
+counts=row['counts']
+detail='journal not observed; attempt counts unknown' if counts is None else 'complete attempts '+str(counts['observed_complete_attempts'])+'; source-reported passed '+json.dumps(counts['observed_reported_passed_by_class'],sort_keys=True)+'; rejection counts '+json.dumps(counts['discard_reason_counts'],sort_keys=True)
+text='\n\nStay priority '+report['observed_at_utc']+' (`'+name+'`, PBS '+expected['pbs_jobid']+'): '+detail+'. State '+row['state']+'; node '+row['node']+', GPU '+row['gpu_uuid']+'. Archived complete source prefixes and immutable shard; these are source-reported counts, not independent acceptance. Missing observations remain unknown.\n'
+with (ROOT/'STATUS.md').open('a') as stream:stream.write(text)
+
+# start: 2026-11-09T15:21:00
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'CVPR_RUN_NAME'
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.9018771609989926}
+# exit_code: 1

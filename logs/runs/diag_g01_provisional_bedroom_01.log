@@ -1,0 +1,52 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_provisional_bedroom_01 -- python3 -c import pathlib,json,hashlib,datetime
+from src.tools import t01v2_live_progress as live,merge_pair_v2 as merge
+from src.tools.g01_admission import validate_source_admission
+from src.tools.g01_parallel import submission_identity
+from src.tools.t01_partition import audited_result
+from src.envs import pair_v2_g01_policy as policy
+r=live.ROOT;n='diag_g01_provisional_bedroom_01'
+ev=r/'logs/runs'/n/'evidence';ev.mkdir(parents=True,exist_ok=False)
+out=r/'logs/review/g01_provisional_bedroom_01';out.mkdir(parents=True,exist_ok=False)
+source='gen_train_concurrency_s15_02_c2_floorplan301'
+shardpath=pathlib.Path('/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c2/FloorPlan301/shard_config.json')
+assert shardpath.stat().st_mode & 0o222==0
+shard=json.loads(shardpath.read_text())
+assert shard['name']==source and shard['scene']=='FloorPlan301' and shard['pbs_jobid']=='707841.hopper-m-02' and shard['producer_module']==policy.PRODUCER
+policy.declared_fields(shard)
+plan=validate_source_admission({'name':source,'scene':'FloorPlan301','shard':shard})
+assert plan['concurrency']==2 and plan['parent_run_name']=='gen_train_concurrency_s15_02'
+gate,gref=audited_result(shard['gate_result'])
+assert all(shard['gate_source'][k]==gref[k] for k in ('file','sha256','metrics_sha256','exit_code','git_commit'))
+config={**shard,'shard':shard,'runtime':None}
+with policy.camera_support():
+ merge.verify_source_identity({'config':config,'_meta':{'name':source},'metrics':{'status':'running'}},gate,logged_runtime=None,logged_allocation=merge.logged_configuration((r/gate['_meta']['log_path']).read_text(),'ALLOCATION_CONFIG'))
+submit=submission_identity(r,'gen_train_concurrency_s15_02','707841.hopper-m-02',7840)
+lograw,lex=live.read_prefix(r/'logs/runs'/(source+'.log'))
+assert lograw.decode().splitlines()[0].startswith('# run_logged: ')
+args=merge.producer_arguments(__import__('shlex').split(lograw.decode().splitlines()[0][len('# run_logged: '):]),policy.PRODUCER)
+assert merge.option(args,'--name')==source and merge.option(args,'--scene')=='FloorPlan301' and pathlib.Path(merge.option(args,'--shard-config')).resolve()==shardpath.resolve()
+refs={}
+for filename,data in [('shard_config.json',shardpath.read_bytes()),('admission_plan.json',pathlib.Path(shard['g01_admission']['plan_file']).read_bytes()),('submission_payload.json',(r/submit['file']).read_bytes()),('submission_receipt.json',(r/submit['file']).with_name('submission.json').read_bytes()),('source_log.prefix',lograw)]:
+ refs[filename]=live.archive(data,ev,filename)
+raw,extent=live.read_prefix(r/'data/world_pairs/v2'/(source+'_attempts.jsonl'))
+refs['journal']=live.archive(raw,ev,'journal.prefix')
+rows=[json.loads(x) for x in raw.decode().splitlines()];published=[]
+for pid in ('floorplan301_00026',):
+ matches=[x for x in rows if x['pair_id']==pid];assert len(matches)==1
+ row=matches[0];assert row['kind']=='look_flip' and row['status']=='passed' and row['scene']=='FloorPlan301'
+ p=r/row['pair_file'];assert p.resolve()==(r/'data/world_pairs/v2'/source/pid/'pair.json').resolve()
+ data=p.read_bytes();assert hashlib.sha256(data).hexdigest()==row['pair_sha256']
+ pair=json.loads(data);image_ref=pair['review_image'];ip=r/image_ref['file'];assert ip.resolve().parent==p.resolve().parent
+ image=ip.read_bytes();assert hashlib.sha256(image).hexdigest()==image_ref['sha256']
+ target=out/(pid+'.png')
+ with target.open('xb') as f:f.write(image)
+ pref=live.archive(data,ev,pid+'_pair.json')
+ published.append({'pair_id':pid,'source_pair':pref,'source_image':image_ref,'published_image':str(target.relative_to(r)),'status':'generator_reported_only_independent_acceptance_pending'})
+(out/'README.md').write_text('# Provisional G01 LookFlip images\n\nGenerator-reported candidates only, pending ended-source independent acceptance. The logged command binds original gate, immutable shard/admission/submission, complete journal prefix, pair and image hashes. No final source or scientific acceptance is claimed.\n')
+print('G01_PROVISIONAL_LOOKFLIP: '+json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'source':source,'gate':gref,'identity_scope':'immutable assignment and audited gate; actual live runtime not independently certified','references':refs,'images':published},sort_keys=True))
+p=r/'STATUS.md';p.write_text(p.read_text()+'\n### G01 first provisional bedroom LookFlip image\n\nThe running c2 FloorPlan301 source reports LookFlip candidates floorplan301_00026. Existing images were hash-bound to archived live journal prefixes and immutable gate/admission/submission identity, then published in logs/review/g01_provisional_bedroom_01. These remain pending ended-source independent acceptance; they are not counted as qualified pairs yet. Logged evidence:diag_g01_provisional_bedroom_01.\n')
+
+# start: 2026-11-09T15:23:19
+G01_PROVISIONAL_LOOKFLIP: {"gate": {"audit": {"fail": [], "file": "results/gen_train_concurrency_s15_02_j707841_hopper_m_02_gate.json", "warn": []}, "exit_code": 0, "file": "results/gen_train_concurrency_s15_02_j707841_hopper_m_02_gate.json", "git_commit": "47b8afb99847bf08977197a65cdd9b7af315bcfe", "metrics_sha256": "dddf2c379352147f594a31c8e595335188079cc31dffbfc9c8bbebcd5b53956f", "sha256": "3efbda859d95b106085c0b644286911428d2cf32cdd6fbbb0b676e4be92eee66"}, "identity_scope": "immutable assignment and audited gate; actual live runtime not independently certified", "images": [{"pair_id": "floorplan301_00026", "published_image": "logs/review/g01_provisional_bedroom_01/floorplan301_00026.png", "source_image": {"file": "data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan301/floorplan301_00026/review.png", "sha256": "16aaca165598aa65b7ed919d2d89cd5aa6eef7e112b170ed10e90c9b80e5d47c"}, "source_pair": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/floorplan301_00026_pair.json", "sha256": "66d98adcb95c779f79f7a49ff8f44bf350487b83764aeeb7842ffc081ca9de03"}, "status": "generator_reported_only_independent_acceptance_pending"}], "references": {"admission_plan.json": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/admission_plan.json", "sha256": "1dbb5a311505bcc926d13ffdcdb2efb299e4dbdcbc7c28dde7c2abdc6aba1971"}, "journal": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/journal.prefix", "sha256": "189d31884afd433569f000e0b8e50ca570dd090dc4242b4246ec654c1b1e22bc"}, "shard_config.json": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/shard_config.json", "sha256": "8769c1d113cee4aacaaa936a14ea674506680644967bb4e34a509719fa227f0e"}, "source_log.prefix": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/source_log.prefix", "sha256": "3726e7ecf276939d9cd83be1e19b5c0ce1fb6b26ef7afc3a5a627f391bfaf13c"}, "submission_payload.json": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/submission_payload.json", "sha256": "a1ca95f3b2de1252ef687405e8ae1098c856b30ca5553f1ebe6c5d4e6902b284"}, "submission_receipt.json": {"file": "logs/runs/diag_g01_provisional_bedroom_01/evidence/submission_receipt.json", "sha256": "2e153e8a8682456e8d9a297ff7d50ce96821eaf2da6299a8f83e3eae321c15bd"}}, "source": "gen_train_concurrency_s15_02_c2_floorplan301", "utc": "2026-11-09T07:23:22.381252+00:00"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.8715183489839546}
+# exit_code: 0
