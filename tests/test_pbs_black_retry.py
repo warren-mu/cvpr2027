@@ -17,7 +17,9 @@ class Evidence:
         self.node, self.gpu = 'hopper-16', 'GPU-fixture'
         self.directory = root / 'logs/pbs/original'
         self.directory.mkdir(parents=True)
-        (root / 'scripts').mkdir()
+        (root / 'scripts/pbs').mkdir(parents=True)
+        phase_source = Path(policy.__file__).resolve().parents[2] / 'scripts/pbs/submit_phase.py'
+        (root / 'scripts/pbs/submit_phase.py').write_bytes(phase_source.read_bytes())
         (root / 'scripts/audit_provenance.py').write_text('def audit_file(path): return {"fail": []}\n')
         self.command = ['python3', '-u', '-m', 'src.tools.g01_collect_parallel', '--name', self.name,
                         '--scenes', 'FloorPlan21', '--concurrency', '6', '--timeout-seconds', '1800']

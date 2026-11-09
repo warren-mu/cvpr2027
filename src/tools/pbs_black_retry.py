@@ -158,8 +158,10 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
                     'This original black job already has a successful retry submission')
     same_retry_command(repo, payload['command'], command, payload['name'], name)
     account, account_path = logged(repo, proof['pbs_accounting'])
-    from scripts.pbs.submit_phase import _final_accounting
-    final = _final_accounting(repo, {retry_of}, paths=[account_path])
+    phase_spec = importlib.util.spec_from_file_location('black_retry_original_phase', repo / 'scripts/pbs/submit_phase.py')
+    phase = importlib.util.module_from_spec(phase_spec)
+    phase_spec.loader.exec_module(phase)
+    final = phase._final_accounting(repo, {retry_of}, paths=[account_path])
     require(retry_of in final, 'Original canonical final accounting is unavailable')
     jobs = [row for row in account['config']['jobs'] if row.get('job_id') == retry_of]
     require(len(jobs) == 1 and jobs[0]['qstat_exit'] == 0, 'Original canonical job is ambiguous')
