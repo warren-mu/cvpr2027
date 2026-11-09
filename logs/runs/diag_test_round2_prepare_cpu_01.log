@@ -1,0 +1,18 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_round2_prepare_cpu_01 -- python3 -c import importlib.util,copy
+spec=importlib.util.spec_from_file_location('prep','experiments/g01_test_round2_prepare.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+proof={'confirmed_by_kind':{k:0 for k in m.quota.KINDS},'confirmed_by_scene':{},'checkpoint_references':[{'file':'results/synthetic_not_experiment.json','sha256':'0'*64}],'configuration_selection':{'seen_configurations':[]}}
+p,a=m.round_robin_plan(proof,'synthetic_fixture')
+assert len(p['assignments'])==40 and {r['scene'] for r in p['assignments']}==m.policy.TEST_SCENES
+assert all(any(r['actual_output_caps'].values()) for r in p['assignments'])
+assert all(sum(r['actual_output_caps'][k] for r in p['assignments'])==60 for k in m.quota.KINDS)
+assert all(0<=n<=6 for r in p['assignments'] for n in r['actual_output_caps'].values())
+full=copy.deepcopy(proof);full['confirmed_by_kind']={k:60 for k in m.quota.KINDS}
+try:m.round_robin_plan(full,'synthetic_fixture')
+except ValueError:pass
+else:raise AssertionError('Filled global quotas must reject empty all-scene dispatch')
+print('Pure synthetic allocation invariants passed; no measured inventory, rendering, or submission')
+
+# start: 2026-11-10T02:43:43
+Pure synthetic allocation invariants passed; no measured inventory, rendering, or submission
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.5674996369634755}
+# exit_code: 0

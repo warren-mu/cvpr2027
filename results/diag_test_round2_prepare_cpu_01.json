@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.5674996369634755
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import importlib.util,copy\nspec=importlib.util.spec_from_file_location('prep','experiments/g01_test_round2_prepare.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)\nproof={'confirmed_by_kind':{k:0 for k in m.quota.KINDS},'confirmed_by_scene':{},'checkpoint_references':[{'file':'results/synthetic_not_experiment.json','sha256':'0'*64}],'configuration_selection':{'seen_configurations':[]}}\np,a=m.round_robin_plan(proof,'synthetic_fixture')\nassert len(p['assignments'])==40 and {r['scene'] for r in p['assignments']}==m.policy.TEST_SCENES\nassert all(any(r['actual_output_caps'].values()) for r in p['assignments'])\nassert all(sum(r['actual_output_caps'][k] for r in p['assignments'])==60 for k in m.quota.KINDS)\nassert all(0<=n<=6 for r in p['assignments'] for n in r['actual_output_caps'].values())\nfull=copy.deepcopy(proof);full['confirmed_by_kind']={k:60 for k in m.quota.KINDS}\ntry:m.round_robin_plan(full,'synthetic_fixture')\nexcept ValueError:pass\nelse:raise AssertionError('Filled global quotas must reject empty all-scene dispatch')\nprint('Pure synthetic allocation invariants passed; no measured inventory, rendering, or submission')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_round2_prepare_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_round2_prepare_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import importlib.util,copy\nspec=importlib.util.spec_from_file_location('prep','experiments/g01_test_round2_prepare.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)\nproof={'confirmed_by_kind':{k:0 for k in m.quota.KINDS},'confirmed_by_scene':{},'checkpoint_references':[{'file':'results/synthetic_not_experiment.json','sha256':'0'*64}],'configuration_selection':{'seen_configurations':[]}}\np,a=m.round_robin_plan(proof,'synthetic_fixture')\nassert len(p['assignments'])==40 and {r['scene'] for r in p['assignments']}==m.policy.TEST_SCENES\nassert all(any(r['actual_output_caps'].values()) for r in p['assignments'])\nassert all(sum(r['actual_output_caps'][k] for r in p['assignments'])==60 for k in m.quota.KINDS)\nassert all(0<=n<=6 for r in p['assignments'] for n in r['actual_output_caps'].values())\nfull=copy.deepcopy(proof);full['confirmed_by_kind']={k:60 for k in m.quota.KINDS}\ntry:m.round_robin_plan(full,'synthetic_fixture')\nexcept ValueError:pass\nelse:raise AssertionError('Filled global quotas must reject empty all-scene dispatch')\nprint('Pure synthetic allocation invariants passed; no measured inventory, rendering, or submission')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T02:43:43",
+    "log_path": "logs/runs/diag_test_round2_prepare_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "42ee81f8bf83aab3c01e9286e1d8b1093e26fedb",
+    "git_dirty": false,
+    "end": "2026-11-10T02:43:44",
+    "duration_sec": 0.7,
+    "exit_code": 0,
+    "metrics_sha256": "e634e960593b4bd3d13ef81cdfa65a77bad15685290c501d33b64efafe084026"
+  }
+}

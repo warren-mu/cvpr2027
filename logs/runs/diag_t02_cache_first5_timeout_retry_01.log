@@ -1,0 +1,84 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_first5_timeout_retry_01 -- python3 -c """Exact one-time human-authorized native-initialization retry; not black eligibility."""
+import json
+from pathlib import Path
+from src.tools import phase_watch as watch
+from src.tools import t02_cache_check as cache
+ROOT=Path.cwd().resolve()
+NAME='t02_export_cache_first5_01_retry1'
+JOB='709034.hopper-m-02'
+ACCOUNT='diag_pbs_usage_709034_final'
+D=ROOT/'logs/pbs/t02_export_cache_first5_01_retry1-20261109T183445Z-9d40aabb'
+auditor=watch.load_module('timeout_retry_original_auditor',ROOT/'scripts/audit_provenance.py')
+def require(v,m):
+ if not v:raise ValueError(m)
+def load(n):return watch.load_logged(ROOT,ROOT/'results'/(n+'.json'),auditor)
+outer,oref=load(NAME);gate,gref=load(NAME+'_gate');account,aref=load(ACCOUNT)
+p=json.loads((D/'payload.json').read_text());receipt=json.loads((D/'submission.json').read_text())
+require(account['_meta']['command']==['python3','src/tools/pbs_usage.py','--name',ACCOUNT,JOB]
+ and account['_meta']['exit_code']==0 and account['metrics']['complete_allocation_accounting'] is True
+ and account['config']['errors']==[],'Need canonical final accounting')
+require(json.dumps(account['config'],indent=2) in (ROOT/account['_meta']['log_path']).read_text(),'PBS config not in original log')
+jobs=[r for r in account['config']['jobs'] if r['job_id']==JOB]
+require(len(jobs)==1 and jobs[0]['qstat_exit']==0,'Ambiguous terminal job')
+f=jobs[0]['fields']
+require(f['job_state']=='F' and f['Exit_status']=='1' and f['run_count']=='1'
+ and f['project']=='CFP04-SF-125' and f['Job_Owner'].split('@')[0]=='e1583364'
+ and f['Resource_List.ngpus']=='1' and f['Resource_List.ncpus']=='12'
+ and f['Resource_List.walltime']=='00:20:30' and f['queue']=='smallx'
+ and float(f['Resource_List.queue_charge_rate'])==p['requested_queue_charge_rate'],'Wrong terminal owned allocation')
+sources=[f'results/t02_export_first6_01_retry2_u{i:04d}.json'for i in (0,1,2,4,5)]
+command=['python3','-u','-m','src.tools.t02_cache_check','--name',NAME]
+for s in sources:command+=['--source',s]
+command+=['--sample-size','200','--seed','0','--timeout-seconds','1200','--pair-timeout-seconds','180','--gate-timeout-seconds','180']
+require(receipt['returncode']==0 and receipt['stdout'].strip()==JOB and not receipt['stderr']
+ and p['repo']==str(ROOT) and p['command']==command and p['name']==NAME
+ and p['requested_host'] is None and p['budget_group']=='T02' and p['task_id']=='T01'
+ and p['requested_gpu_count']==1 and p['requested_wall_seconds']==1230 and p['queue']=='autox'
+ and p['retry_of']=='709024.hopper-m-02' and p['dry_run'] is False,'Original submitted cache request differs')
+require((D/'payload.json').stat().st_mode&0o222==0,'Immutable original payload required')
+c,m,meta=outer['config'],outer['metrics'],outer['_meta']
+require(meta['command']==command and meta['name']==NAME and meta['end'] and meta['exit_code']==1
+ and c['pbs_jobid']==JOB and c['name']==NAME and c['version']==cache.VERSION and c['policy']==cache.CACHE_POLICY
+ and c['source']==sources and c['sample_size']==200 and c['seed']==0 and c['gpus']==1
+ and c['timeout_seconds']==1200 and c['pair_timeout_seconds']==180 and c['gate_timeout_seconds']==180,
+ 'Original final cache source/parameters changed')
+require(m['kind']=='t02_formal_cache_check' and m['status']=='blocked_by_render_gate'
+ and m['producer_exit_code']==1 and m['black_frame_detected'] is False and m['cleanup_errors']==[] and m['errors']==[]
+ and m['population_ledger']==[] and m['worker_runs']==[] and m['sampling_plan'] is None
+ and m['validation_report'] is None and m['cache_matches_live'] is None
+ and m['downstream_allowed'] is False and m['stop_downstream'] is True,'Not a clean pre-sampling initialization stop')
+require(m['gate']['file']==gref['path'] and m['gate']['sha256']==gref['sha256']
+ and all(m['gate'][k]==gate['_meta'][k]for k in ('metrics_sha256','git_commit','exit_code')),'Original gate bytes/identity mismatch')
+g,a,gm=gate['config'],gate['config']['allocation'],gate['metrics']
+require(gate['_meta']['end'] and gate['_meta']['exit_code']==1 and gm['exit_code']==1
+ and gm['passed'] is False and gm['black_frame_detected'] is False and gm['errors']==[] and gm['cleanup_errors']==[]
+ and gm['expected_gpu_count']==gm['completed_gpu_count']==1 and len(gm['devices'])==len(a['devices'])==1,
+ 'Incomplete/ambiguous gate or cleanup')
+require(g['name']==NAME+'_gate' and g['pbs_jobid']==JOB and a['pbs_jobid']==JOB
+ and {part.split('/')[0]for part in f['exec_host'].split('+')}=={c['node']}=={g['node']}=={meta['host']}=={gate['_meta']['host']}
+ and a['cuda_visible_devices']==c['cuda_visible_devices'] and a['cuda_driver_uuids']==[c['cuda_visible_devices']]
+ and a['cpu_affinity']==c['cpu_affinity'] and len(set(c['cpu_affinity']))==len(c['cpu_affinity'])==12
+ and g['resolution']==255 and g['segmentation'] is True and g['timeout_seconds']==180,'Native allocation/producer mismatch')
+argv=gate['_meta']['command']
+require(Path(argv[0]).name=='python3'and argv[1:-1]==['-u','-m','src.tools.render_gate','--name',NAME+'_gate','--gpus','1','--resolution','255','--segmentation','--timeout-seconds']and argv[-1]in('180','180.0'),'Wrong gate command')
+row=gm['devices'][0];obs=row['observation']
+require(row['worker_error'] is None and obs['gpu_identity']==a['devices'][0]
+ and obs['captures']==[] and obs['valid'] is False and obs['node']==c['node']
+ and isinstance(obs.get('error'),str) and obs['error'].startswith('TimeoutError: Error encountered when running action ')
+ and "'action': 'Initialize'"in obs['error'] and 'FloorPlan1_physics' in obs['error'],
+ 'Failure is not the recorded initialization timeout before usable captures')
+log=(ROOT/gref['log_path']).read_text()
+require('Reading from AI2-THOR backend timed out (using 30s) timeout.'in log,'No original FIFO timeout traceback')
+for path in(ROOT/'logs/pbs').glob('*/payload.json'):
+ require(json.loads(path.read_text()).get('retry_of')!=JOB,'An explicit retry already exists')
+print('CACHE_INITIALIZE_TIMEOUT_RETRY_JSON: '+json.dumps({'eligible_one_authorized_initialization_retry':True,
+ 'proven_black_frame':False,'job_id':JOB,'node':c['node'],'gpu_uuid':c['cuda_visible_devices'],
+ 'native_error':obs['error'],'source_results':[oref,gref],'canonical_accounting':aref,
+ 'payload':{'file':str((D/'payload.json').relative_to(ROOT)),'sha256':watch.digest(D/'payload.json')},
+ 'fixed_sources':sources,'sample_size':200,'seed':0,'cache_started':False,'cleanup_errors':[],
+ 'retry_scope':'one explicitly authorized retry2 of completed non-scientific Initialize FIFO timeout, identical population/settings; no infinite non-black retry; not black qualification'},sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T02:41:42
+CACHE_INITIALIZE_TIMEOUT_RETRY_JSON: {"cache_started": false, "canonical_accounting": {"log_path": "logs/runs/diag_pbs_usage_709034_final.log", "log_sha256": "7e5e462d3dba578a1ded99afa9017f314e58bbb280b192230ac572928f86e492", "path": "results/diag_pbs_usage_709034_final.json", "sha256": "422fb38ed157b328c80fc02e8f6dacd5fad179eb0751d3f7c49e76fdf770cf33"}, "cleanup_errors": [], "eligible_one_authorized_initialization_retry": true, "fixed_sources": ["results/t02_export_first6_01_retry2_u0000.json", "results/t02_export_first6_01_retry2_u0001.json", "results/t02_export_first6_01_retry2_u0002.json", "results/t02_export_first6_01_retry2_u0004.json", "results/t02_export_first6_01_retry2_u0005.json"], "gpu_uuid": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957", "job_id": "709034.hopper-m-02", "native_error": "TimeoutError: Error encountered when running action {'action': 'Initialize', 'agentMode': 'default', 'gridSize': 0.1, 'visibilityDistance': 10, 'renderDepthImage': False, 'renderInstanceSegmentation': True, 'fieldOfView': 100, 'sequenceId': 2} in scene FloorPlan1_physics.", "node": "hopper-19", "payload": {"file": "logs/pbs/t02_export_cache_first5_01_retry1-20261109T183445Z-9d40aabb/payload.json", "sha256": "9eea4d3004e0f32a7751acf5b991cd0bc3c89fd405381f950e62c81a20217bdd"}, "proven_black_frame": false, "retry_scope": "one explicitly authorized retry2 of completed non-scientific Initialize FIFO timeout, identical population/settings; no infinite non-black retry; not black qualification", "sample_size": 200, "seed": 0, "source_results": [{"log_path": "logs/runs/t02_export_cache_first5_01_retry1.log", "log_sha256": "cdd62f5c569bd6726e4beb95d2c0d18c534bef7c11e7a0037f5a299be043b016", "path": "results/t02_export_cache_first5_01_retry1.json", "sha256": "dcd01240e45f104101ec9956935d6fea3e6b502f3355250c03b6bdf70c26bb73"}, {"log_path": "logs/runs/t02_export_cache_first5_01_retry1_gate.log", "log_sha256": "66a08748193b0dd2daaaef4166c8215d8488b878b3a95dbac3106380f29aeccd", "path": "results/t02_export_cache_first5_01_retry1_gate.json", "sha256": "dd3813159eb48d2c72a18519dcbe9ce44f25b1d6697ffffdc10d7b250e9c1ee5"}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.36266767099732533}
+# exit_code: 0
