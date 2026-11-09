@@ -1,0 +1,1553 @@
+{
+  "action_successes": [
+    true
+  ],
+  "actions": [
+    {
+      "distance_m": 1.3818564266091633,
+      "distance_method": "3D Euclidean agent metadata.position to object metadata.position",
+      "kind": "select",
+      "label": 2,
+      "mark_labels_by_name": {
+        "Pan_d972b8ec": 2,
+        "Plate_6648128f": 1
+      },
+      "measurement_action_sent": false,
+      "metadata_distance": 1.3818564414978027,
+      "realized_relation": {
+        "anchor_name": "Cup_57f41452",
+        "candidate_names": [
+          "Pan_d972b8ec",
+          "Plate_6648128f"
+        ],
+        "candidate_policy": "two_marked_pickupables_v1",
+        "candidate_types": [
+          "Pan",
+          "Plate"
+        ],
+        "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+        "distances_m": {
+          "Pan_d972b8ec": 0.1857317104134265,
+          "Plate_6648128f": 0.8421517892249155
+        },
+        "passed": true,
+        "reasons": [],
+        "same_class": false,
+        "target_name": "Pan_d972b8ec"
+      },
+      "selected_object_id": "Pan|+00.97|+00.96|-01.43",
+      "selected_object_name": "Pan_d972b8ec",
+      "success": true,
+      "target_name": "Pan_d972b8ec",
+      "visible_mask_pixels": 562
+    }
+  ],
+  "bbox_proposal_rank_policy": {
+    "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+    "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+    "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+    "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+    "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+    "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+    "scope": "proposal prediction only; no acceptance result or measured visibility is produced",
+    "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+    "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+    "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1"
+  },
+  "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+  "buffered_raw_complete": true,
+  "candidate_label_assignment": {
+    "Pan_d972b8ec": 2,
+    "Plate_6648128f": 1
+  },
+  "captures": [
+    {
+      "action_index": 2,
+      "black": false,
+      "files": {
+        "masks": {
+          "bytes": 6771,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/frame_000003_masks.npz",
+          "sha256": "b76fc35af56dd173af70597b684e0139b8965fd3d6c8a183e42e410b61f4d8e5"
+        },
+        "metadata": {
+          "bytes": 176386,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/frame_000003_metadata.json",
+          "sha256": "e8e3cbea297ea515ac5fced220bb6ed30e5a33a43cb3ff59f3302505f2af34ed"
+        },
+        "rgb": {
+          "bytes": 73844,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/frame_000003_rgb.png",
+          "sha256": "68a7daae148a6b4546d0fc9aeb9311c2d56e9b1c6f60f0535e6d7fba9ae33636"
+        }
+      },
+      "mask_pixels_by_name": {
+        "Cabinet_20979fe9": 4757,
+        "Cabinet_70da1d2d": 3067,
+        "Cabinet_acb62db2": 4767,
+        "CounterTop_8a9fc433": 5156,
+        "Cup_57f41452": 282,
+        "DishSponge_d3c85ec8": 71,
+        "Drawer_2d029dca": 1015,
+        "Faucet_efcea4a0": 859,
+        "Floor_e1b28141": 4231,
+        "Pan_d972b8ec": 562,
+        "PepperShaker_b2e24385": 126,
+        "Plate_6648128f": 399,
+        "SaltShaker_4f6d6b98": 110,
+        "SinkBasin_2dc16967": 340,
+        "Sink_53169595": 5492,
+        "SoapBottle_21961ebf": 413,
+        "Spatula_4c1f12e7": 78,
+        "StoveBurner_26d8610c": 159,
+        "StoveBurner_ed9066a6": 45,
+        "StoveKnob_45f9207c": 15,
+        "Window_0b8fcb36": 8235
+      },
+      "rgb_sha256": "ab3b04034098b84c8d9d6e9b9389d7e4f48d8f0a475e57e0c63d0ffcc61b8a75",
+      "rgb_shape": [
+        255,
+        255,
+        3
+      ],
+      "sequence_id": null,
+      "source_action": "TeleportFull",
+      "stem": "action_2_TeleportFull",
+      "valid": true
+    }
+  ],
+  "cleanup_errors": [],
+  "construction_process_id": 1747199,
+  "discovery_schedule_policy": {
+    "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+    "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+    "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+    "round": "discover at most one new combination, then process each combination active at that round start once",
+    "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim",
+    "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+    "version": "one_discovery_then_full_active_round_v1",
+    "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order"
+  },
+  "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+  "done": true,
+  "error": null,
+  "executed_actions": [
+    "select 2"
+  ],
+  "field_of_view": 60,
+  "fixed_label_pair_id": "floorplan7_00018",
+  "fixed_label_policy": {
+    "approved_task_commit": "5a50999",
+    "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+    "legacy": "absent policy means the original spatial policy; no retrospective upgrades",
+    "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+    "scope": "one object keeps its number across both worlds and all views of one pair",
+    "version": "pair_stable_object_labels_v1",
+    "visible_subset": "draw only currently visible declared candidates; never renumber a subset"
+  },
+  "fixed_label_version": "pair_stable_object_labels_v1",
+  "flip_geometry_policy": {
+    "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+    "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+    "approval": "T01v2 supplement15;5a0a138",
+    "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+    "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+    "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+    "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+    "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+    "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+    "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+    "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim",
+    "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+    "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+    "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+    "unknown": "unknown projection/geometry never counts as a passing prediction",
+    "version": "look_flip_complete_tuple_predicted_center_geometry_v1"
+  },
+  "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+  "fov_contrast_group": "g01_selected60",
+  "fov_contrast_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "fov_contrast_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "g01_partition": "train",
+  "g01_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "g01_search_policy": {
+    "balance_after_cap": "additional LookFlip proposals may earn required attempt balance while their full class is not exported",
+    "collection": "at most8 producer-passed outputs per actual class per scene; independent verification remains separate",
+    "direct_flip": "unchanged G01 native-surface3D ratio roles and in-frame centre projection; no proximity or per-side cap",
+    "look_attempt_mix": "scene-wide counted LookFlip >= counted LookStay, across Controller restarts; uncounted native failures earn nothing",
+    "look_flip": "supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged",
+    "pool_order": "alternate Look/Direct when an available requested mode exists; explicitly record exhaustion fallback",
+    "quota_skip": "retain original validity verdict and record collection_quota_full; never recast this as physical failure",
+    "stay": "original horizontal native domain; original Look12/Direct40 cap and far-first actual-w0 retries",
+    "task": "G01; approved supplements13/14/15",
+    "unchanged": "seed0 role orientation, native token proof, all physical/target/prefix/evidence/solvability/witness thresholds",
+    "version": "g01_mixed_complete_look_geometry_four_class_quota_v2"
+  },
+  "g01_search_version": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+  "g01_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "passed": true,
+  "planned_actions": [
+    "select 2"
+  ],
+  "process_id": 2175855,
+  "producer_module": "src.envs.pair_v2_g01_shard",
+  "raw_evidence": {
+    "bytes": 5338,
+    "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/evidence_index.json",
+    "sha256": "431e8ab10b7d053d48a7fb431d31986ac4cd1e360488127c1c694a5b874fe8b4"
+  },
+  "restoration": {
+    "agent_pose_exact": true,
+    "agent_realized": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": 0.25,
+        "y": 0.9009991884231567,
+        "z": -0.25
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 180.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "agent_requested": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": 0.25,
+        "y": 0.9009991884231567,
+        "z": -0.25
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 180.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "executed_agent_setup_arguments": {
+      "forceAction": false,
+      "horizon": 30,
+      "position": {
+        "x": 0.25,
+        "y": 0.9009991884231567,
+        "z": -0.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 180,
+        "z": 0
+      },
+      "standing": true
+    },
+    "frozen_pose_readback": {
+      "all_pose_components_exact": false,
+      "max_position_delta_m": 0.0,
+      "max_rotation_component_abs_diff_degrees": 1.52587890625e-05,
+      "max_rotation_shortest_component_diff_degrees": 1.52587890625e-05,
+      "objects": {
+        "Apple_49b8e66c": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 5.820766091346741e-11,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 5.820766091346741e-11,
+            "z": 0.0
+          }
+        },
+        "Book_91b86493": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 4.656612873077393e-10,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 4.656612873077393e-10,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Bowl_18cec588": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Bread_8ad171c7": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "ButterKnife_3ca125f1": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Chair_d7b645d2": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Chair_dabdd983": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 1.52587890625e-05,
+            "z": 1.30385160446167e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 1.52587890625e-05,
+            "z": 1.30385160446167e-08
+          }
+        },
+        "Chair_e93c4fa9": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          }
+        },
+        "CoffeeMachine_311e18a7": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 9.094947017729282e-13,
+            "y": 3.637978807091713e-12,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 9.094947017729282e-13,
+            "y": 3.637978807091713e-12,
+            "z": 0.0
+          }
+        },
+        "Cup_57f41452": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 9.313225746154785e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 9.313225746154785e-10,
+            "z": 0.0
+          }
+        },
+        "DiningTable_97938e96": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "DishSponge_d3c85ec8": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 5.820766091346741e-11,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 5.820766091346741e-11,
+            "z": 0.0
+          }
+        },
+        "Egg_ff6ff408": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 3.814697265625e-06,
+            "y": 3.814697265625e-06,
+            "z": 7.62939453125e-06
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 3.814697265625e-06,
+            "y": 3.814697265625e-06,
+            "z": 7.62939453125e-06
+          }
+        },
+        "Fork_46120132": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "GarbageCan_4fb88d6e": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "HousePlant_143aa2a6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Kettle_072e7645": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Knife_f0da43a5": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Lettuce_7369c905": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.1350570023059845e-07,
+            "y": 0.0,
+            "z": 4.76837158203125e-07
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.1350570023059845e-07,
+            "y": 0.0,
+            "z": 4.76837158203125e-07
+          }
+        },
+        "Microwave_9de4a72a": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Mug_12ee7ca3": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Pan_d972b8ec": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "PepperShaker_b2e24385": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Plate_6648128f": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 5.960464477539063e-08,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 5.960464477539063e-08,
+            "z": 0.0
+          }
+        },
+        "Pot_7258e29a": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9103830456733704e-11,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Potato_e3144c38": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SaltShaker_4f6d6b98": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "ShelvingUnit_2cd71b5c": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SoapBottle_21961ebf": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Spatula_4c1f12e7": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          }
+        },
+        "Spoon_363cf7fd": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Statue_4e0d8c38": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Statue_984e4573": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 4.656612873077393e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 4.656612873077393e-10,
+            "z": 0.0
+          }
+        },
+        "Stool_1bfb95ce": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Stool_265b5d5c": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Toaster_788e4e66": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Tomato_126ea78d": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Vase_3fbc5f8b": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Vase_77165de0": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "WineBottle_557e3ec0": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "scope": "actual metadata versus requested pose values; diagnostic, not a new acceptance threshold"
+    },
+    "frozen_pose_readback_reference": {
+      "bytes": 11471,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/frozen_restore_readback_000003.json",
+      "sha256": "ecf7a9df135544a7f4a0413d5fa12fb83e95558db24437726a6c09619a2d0f59"
+    },
+    "pose_measurements": {
+      "added": [],
+      "editable_inventory_exact": true,
+      "inventory_exact": true,
+      "missing": [],
+      "objects": {
+        "Apple_49b8e66c": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.00027531859814189374,
+            "y": -0.0006384629523381591,
+            "z": 300.9880065917969
+          },
+          "rotation_before": {
+            "x": -0.0002753185690380633,
+            "y": -0.0006384628941304982,
+            "z": 300.9880065917969
+          },
+          "rotation_exact": false
+        },
+        "Book_91b86493": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0036498878616839647,
+            "y": 179.99691772460938,
+            "z": 0.04599514603614807
+          },
+          "rotation_before": {
+            "x": 0.003649888327345252,
+            "y": 179.99691772460938,
+            "z": 0.04599514603614807
+          },
+          "rotation_exact": false
+        },
+        "Bowl_18cec588": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -4.311834345571697e-06,
+            "y": -0.0006245182594284415,
+            "z": -2.4177443265216425e-05
+          },
+          "rotation_before": {
+            "x": -4.311834345571697e-06,
+            "y": -0.0006245182594284415,
+            "z": -2.4177443265216425e-05
+          },
+          "rotation_exact": true
+        },
+        "Bread_8ad171c7": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0006392028881236911,
+            "y": 334.88897705078125,
+            "z": -0.0014912448823451996
+          },
+          "rotation_before": {
+            "x": -0.0006392028881236911,
+            "y": 334.88897705078125,
+            "z": -0.0014912448823451996
+          },
+          "rotation_exact": true
+        },
+        "ButterKnife_3ca125f1": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.95220947265625,
+            "y": 314.9971618652344,
+            "z": 269.9541015625
+          },
+          "rotation_before": {
+            "x": 359.95220947265625,
+            "y": 314.9971618652344,
+            "z": 269.9541015625
+          },
+          "rotation_exact": true
+        },
+        "Chair_d7b645d2": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9253234863281,
+            "y": 105.73436737060547,
+            "z": 0.11255292594432831
+          },
+          "rotation_before": {
+            "x": 359.9253234863281,
+            "y": 105.73436737060547,
+            "z": 0.11255292594432831
+          },
+          "rotation_exact": true
+        },
+        "Chair_dabdd983": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.85369873046875,
+            "y": 245.2035369873047,
+            "z": 0.028780942782759666
+          },
+          "rotation_before": {
+            "x": 359.85369873046875,
+            "y": 245.20355224609375,
+            "z": 0.028780929744243622
+          },
+          "rotation_exact": false
+        },
+        "Chair_e93c4fa9": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.8520812988281,
+            "y": 28.530614852905273,
+            "z": 0.027778133749961853
+          },
+          "rotation_before": {
+            "x": 359.8520812988281,
+            "y": 28.530614852905273,
+            "z": 0.027778131887316704
+          },
+          "rotation_exact": false
+        },
+        "CoffeeMachine_311e18a7": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -1.0276682587573305e-05,
+            "y": -5.5952263210201636e-05,
+            "z": 359.9356994628906
+          },
+          "rotation_before": {
+            "x": -1.0276681678078603e-05,
+            "y": -5.595226684818044e-05,
+            "z": 359.9356994628906
+          },
+          "rotation_exact": false
+        },
+        "Cup_57f41452": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.8764953613281,
+            "y": 0.01330579724162817,
+            "z": 359.8350830078125
+          },
+          "rotation_before": {
+            "x": 359.8764953613281,
+            "y": 0.013305796310305595,
+            "z": 359.8350830078125
+          },
+          "rotation_exact": false
+        },
+        "DiningTable_97938e96": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -6.340349500533193e-05,
+            "y": 0.0014130492927506566,
+            "z": -0.001287064515054226
+          },
+          "rotation_before": {
+            "x": -6.340349500533193e-05,
+            "y": 0.0014130492927506566,
+            "z": -0.001287064515054226
+          },
+          "rotation_exact": true
+        },
+        "DishSponge_d3c85ec8": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -9.223294910043478e-05,
+            "y": 0.0006305202841758728,
+            "z": 359.9359436035156
+          },
+          "rotation_before": {
+            "x": -9.223294910043478e-05,
+            "y": 0.0006305202259682119,
+            "z": 359.9359436035156
+          },
+          "rotation_exact": false
+        },
+        "Egg_ff6ff408": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 31.990509033203125,
+            "y": 32.69164276123047,
+            "z": 91.05921936035156
+          },
+          "rotation_before": {
+            "x": 31.99050521850586,
+            "y": 32.6916389465332,
+            "z": 91.0592269897461
+          },
+          "rotation_exact": false
+        },
+        "Fork_46120132": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.3003314137458801,
+            "y": 38.63636016845703,
+            "z": 359.5707092285156
+          },
+          "rotation_before": {
+            "x": 0.30033138394355774,
+            "y": 38.63636016845703,
+            "z": 359.5707092285156
+          },
+          "rotation_exact": false
+        },
+        "GarbageCan_4fb88d6e": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.00012343100388534367,
+            "y": 89.99837493896484,
+            "z": -0.00018915535474661738
+          },
+          "rotation_before": {
+            "x": -0.00012343097478151321,
+            "y": 89.99837493896484,
+            "z": -0.00018915535474661738
+          },
+          "rotation_exact": false
+        },
+        "HousePlant_143aa2a6": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.006328036077320576,
+            "y": 0.007280583027750254,
+            "z": 359.9927978515625
+          },
+          "rotation_before": {
+            "x": 0.006328036077320576,
+            "y": 0.007280583027750254,
+            "z": 359.9927978515625
+          },
+          "rotation_exact": true
+        },
+        "Kettle_072e7645": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0004178329254500568,
+            "y": 0.007405928801745176,
+            "z": 359.9356689453125
+          },
+          "rotation_before": {
+            "x": -0.00041783289634622633,
+            "y": 0.007405928801745176,
+            "z": 359.9356689453125
+          },
+          "rotation_exact": false
+        },
+        "Knife_f0da43a5": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.94989013671875,
+            "y": 300.00689697265625,
+            "z": 269.9420166015625
+          },
+          "rotation_before": {
+            "x": 359.94989013671875,
+            "y": 300.00689697265625,
+            "z": 269.9420166015625
+          },
+          "rotation_exact": true
+        },
+        "Lettuce_7369c905": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0016661393456161022,
+            "y": 117.90056610107422,
+            "z": 4.1368303298950195
+          },
+          "rotation_before": {
+            "x": -0.0016659258399158716,
+            "y": 117.90056610107422,
+            "z": 4.136829853057861
+          },
+          "rotation_exact": false
+        },
+        "Microwave_9de4a72a": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0029624036978930235,
+            "y": 0.009289703331887722,
+            "z": 0.00025834658299572766
+          },
+          "rotation_before": {
+            "x": 0.0029624036978930235,
+            "y": 0.009289703331887722,
+            "z": 0.00025834658299572766
+          },
+          "rotation_exact": true
+        },
+        "Mug_12ee7ca3": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0005045610014349222,
+            "y": 0.002019042382016778,
+            "z": -0.0003297329240012914
+          },
+          "rotation_before": {
+            "x": -0.0005045610014349222,
+            "y": 0.002019042382016778,
+            "z": -0.0003297329240012914
+          },
+          "rotation_exact": true
+        },
+        "Pan_d972b8ec": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9733581542969,
+            "y": 0.00086350052151829,
+            "z": 0.0228327177464962
+          },
+          "rotation_before": {
+            "x": 359.9733581542969,
+            "y": 0.00086350052151829,
+            "z": 0.0228327177464962
+          },
+          "rotation_exact": true
+        },
+        "PepperShaker_b2e24385": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.99420166015625,
+            "y": 0.0005533033981919289,
+            "z": -0.001146849012002349
+          },
+          "rotation_before": {
+            "x": 359.99420166015625,
+            "y": 0.0005533033981919289,
+            "z": -0.001146849012002349
+          },
+          "rotation_exact": true
+        },
+        "Plate_6648128f": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0020414991304278374,
+            "y": 0.7430389523506165,
+            "z": 359.9363098144531
+          },
+          "rotation_before": {
+            "x": 0.0020414991304278374,
+            "y": 0.7430390119552612,
+            "z": 359.9363098144531
+          },
+          "rotation_exact": false
+        },
+        "Pot_7258e29a": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0002163293829653412,
+            "y": 308.13232421875,
+            "z": 0.0002383158716838807
+          },
+          "rotation_before": {
+            "x": -0.00021632935386151075,
+            "y": 308.13232421875,
+            "z": 0.0002383158716838807
+          },
+          "rotation_exact": false
+        },
+        "Potato_e3144c38": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.12160953134298325,
+            "y": 92.28841400146484,
+            "z": 0.017026200890541077
+          },
+          "rotation_before": {
+            "x": 0.12160953134298325,
+            "y": 92.28841400146484,
+            "z": 0.017026200890541077
+          },
+          "rotation_exact": true
+        },
+        "SaltShaker_4f6d6b98": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.004554979968816042,
+            "y": 0.000121319193567615,
+            "z": -0.002097018528729677
+          },
+          "rotation_before": {
+            "x": -0.004554979968816042,
+            "y": 0.000121319193567615,
+            "z": -0.002097018528729677
+          },
+          "rotation_exact": true
+        },
+        "ShelvingUnit_2cd71b5c": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0006417070981115103,
+            "y": 89.99864196777344,
+            "z": -0.00021639496844727546
+          },
+          "rotation_before": {
+            "x": 0.0006417070981115103,
+            "y": 89.99864196777344,
+            "z": -0.00021639496844727546
+          },
+          "rotation_exact": true
+        },
+        "SoapBottle_21961ebf": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9037170410156,
+            "y": 309.8626708984375,
+            "z": 0.000727442791685462
+          },
+          "rotation_before": {
+            "x": 359.9037170410156,
+            "y": 309.8626708984375,
+            "z": 0.000727442791685462
+          },
+          "rotation_exact": true
+        },
+        "Spatula_4c1f12e7": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.33203125,
+            "y": 110.08946228027344,
+            "z": 359.7178649902344
+          },
+          "rotation_before": {
+            "x": 359.33203125,
+            "y": 110.08946990966797,
+            "z": 359.7178649902344
+          },
+          "rotation_exact": false
+        },
+        "Spoon_363cf7fd": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.08678343147039413,
+            "y": 359.9872741699219,
+            "z": 359.87982177734375
+          },
+          "rotation_before": {
+            "x": 0.08678343147039413,
+            "y": 359.9872741699219,
+            "z": 359.87982177734375
+          },
+          "rotation_exact": true
+        },
+        "Statue_4e0d8c38": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 72.53755950927734,
+            "y": 320.8736267089844,
+            "z": 350.2869873046875
+          },
+          "rotation_before": {
+            "x": 72.53755950927734,
+            "y": 320.8736267089844,
+            "z": 350.2869873046875
+          },
+          "rotation_exact": true
+        },
+        "Statue_984e4573": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0030316547490656376,
+            "y": 0.003519350429996848,
+            "z": 359.87347412109375
+          },
+          "rotation_before": {
+            "x": -0.0030316547490656376,
+            "y": 0.003519349964335561,
+            "z": 359.87347412109375
+          },
+          "rotation_exact": false
+        },
+        "Stool_1bfb95ce": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 1.2318707704544067,
+            "y": 69.80928802490234,
+            "z": 359.8657531738281
+          },
+          "rotation_before": {
+            "x": 1.2318706512451172,
+            "y": 69.80928802490234,
+            "z": 359.8657531738281
+          },
+          "rotation_exact": false
+        },
+        "Stool_265b5d5c": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 1.2322099208831787,
+            "y": 91.24439239501953,
+            "z": 359.865966796875
+          },
+          "rotation_before": {
+            "x": 1.2322099208831787,
+            "y": 91.24439239501953,
+            "z": 359.865966796875
+          },
+          "rotation_exact": true
+        },
+        "Toaster_788e4e66": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 6.163211764942389e-06,
+            "y": -0.0002600274165160954,
+            "z": 1.4924347851774655e-05
+          },
+          "rotation_before": {
+            "x": 6.163211764942389e-06,
+            "y": -0.0002600274165160954,
+            "z": 1.4924347851774655e-05
+          },
+          "rotation_exact": true
+        },
+        "Tomato_126ea78d": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.020847540348768234,
+            "y": -0.0047195241786539555,
+            "z": 359.9817199707031
+          },
+          "rotation_before": {
+            "x": 0.020847540348768234,
+            "y": -0.0047195241786539555,
+            "z": 359.9817199707031
+          },
+          "rotation_exact": true
+        },
+        "Vase_3fbc5f8b": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0032780382316559553,
+            "y": 0.0032069978769868612,
+            "z": 359.9934387207031
+          },
+          "rotation_before": {
+            "x": 0.0032780382316559553,
+            "y": 0.0032069978769868612,
+            "z": 359.9934387207031
+          },
+          "rotation_exact": true
+        },
+        "Vase_77165de0": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0027006755117326975,
+            "y": -0.0012850970961153507,
+            "z": 0.0008106675813905895
+          },
+          "rotation_before": {
+            "x": -0.0027006755117326975,
+            "y": -0.0012850970961153507,
+            "z": 0.0008106675813905895
+          },
+          "rotation_exact": true
+        },
+        "WineBottle_557e3ec0": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.92645263671875,
+            "y": -0.002478975336998701,
+            "z": 359.9768981933594
+          },
+          "rotation_before": {
+            "x": 359.92645263671875,
+            "y": -0.002478975336998701,
+            "z": 359.9768981933594
+          },
+          "rotation_exact": true
+        }
+      }
+    },
+    "restore_deterministic": true,
+    "restore_max_abs_diff": 2,
+    "restore_rgb_exact": false,
+    "restored_positions_within_1cm": true,
+    "restored_snapshot_reference": {
+      "bytes": 173899,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/floorplan7_00018_trial000025/replay_w0/snapshot_000000.json",
+      "sha256": "4e2b4201c4d28c0da394173a05dda9fdd5301e3ab4e0057da5105d630f9620b6"
+    },
+    "scope": "state restore: all movable/pickupable positions <=1cm and exact full agent pose; RGB separate"
+  },
+  "restore_deterministic": true,
+  "restore_max_abs_diff": 2,
+  "selected_distance_m": 1.3818564266091633,
+  "selected_mask_pixels": 562,
+  "selected_name": "Pan_d972b8ec",
+  "snapshot_restored": true,
+  "spawn_token_storage_policy": {
+    "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+    "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+    "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+    "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+    "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes",
+    "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+    "version": "native_token_shared_json_exact_sha256_v1"
+  },
+  "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+  "status": "completed",
+  "success": true,
+  "unity_pid": 2222211,
+  "worker_pid": 2175855
+}

@@ -1,0 +1,29 @@
+{
+  "name": "diag_look_census_extension_plan_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_census_extension_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,importlib.util\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd(); p=r/'logs/review/diag_look_census_plan_01/census_plan.json'\nassert sha_file(p)=='25a5024eb00ba3f2104413ab61ac418600cdb6a51b70237c53ac60d6f2c0ca34'\nbase=json.loads(p.read_text()); old=next(g for g in base['groups'] if g['inner_name']=='t02_look_table_b01')\nsource,ref=audited_result(r/'results/t02_look_table_b01_retry2.json')\nm=source['metrics']; assert not m['black_frame_detected'] and m['cleanup_errors']==[]\nrow=next(e for e in m['exports'] if e['pair_id']=='floorplan204_00038')\nassert row['status']=='error' and not row['table_complete'] and row['rejection_reasons']==[] and row['cleanup_errors']==[]\nassert row['error']['type']=='TimeoutError'\ni=old['pair_ids'].index(row['pair_id'])\ng={**old,'inner_name':'t02_look_table_fp204_extension01','outer_name':'pilot_pairs_v2_look_table_fp204_extension01','pair_ids':[row['pair_id']],'pair_references':[old['pair_references'][i]],'timeout_seconds':840,'pair_timeout_seconds':600,'gate_timeout_seconds':180,'wall_seconds':900}\nspec=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase);b=phase.budget_state(r)\nassert b['accounted_or_reserved_by_subbudget']['T01v2']+.25<=16 and b['accounted_or_reserved_total']+.25<=60\nplan={'base_plan':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'groups':[g],'original_timeout':{'result':ref,'report':row},'budget_before':b['accounted_or_reserved_by_subbudget'],'reserved_gpu_hours_upper_bound':.25,'scope':'single unresolved original-inventory pair only; preserve original timeout; runtime bound extension, no scientific rule or denominator changes'}\nout=r/'logs/review/diag_look_census_extension_plan_01';out.mkdir(parents=True,exist_ok=False)\nwith (out/'extension_plan.json').open('x') as f:json.dump(plan,f,indent=2,sort_keys=True);f.write('\\n')\nprint('CENSUS_EXTENSION_PLAN_JSON: '+json.dumps(plan,sort_keys=True,allow_nan=False))\ncp,cr=audited_result(r/'results/t01v2_checkpoint_g01_metadata_01.json')\nassert cp['_meta']['exit_code']==0\ns=r/'STATUS.md';s.write_text(s.read_text()+'\\n### Look census final-pair timeout extension and G01 metadata revalidation\\n\\nOriginal frozen17 diagnostic now has14 observed non_anchor_divergent triggers,2 complete no-trigger exports, and1 unknown (floorplan204_00038 reached the300s worker limit; error/2279 recorded frames retained). Only this unresolved pair will get600s worker time inside900s PBS allocation, +0.25GPUh reserved; unchanged D4 rules and fixed denominator. Plan: logs/review/diag_look_census_extension_plan_01/extension_plan.json. G01 metadata revalidation independent checkpoint completed exit0/errors=[] with39 construction-accepted pairs (DF5, DS16, LF14, LS4); these remain separate from original17 diagnostic pending dedup and complete table export.39 review images: logs/review/t01v2_checkpoint_g01_metadata_01. G01708126 actual0.3283333333GPUh/123s queue; Look708146 actual0.3311111111GPUh/42s queue. Full source failures and deadline/reserve records retained.\\n')\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T18:02:27",
+  "log_path": "logs/runs/diag_look_census_extension_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "6689409063abd6c1037a77b29413acfd3681865a",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_look_census_extension_plan_01.diff",
+  "end": "2026-11-09T18:02:29",
+  "duration_sec": 0.6,
+  "exit_code": 1,
+  "metrics_sha256": "5b709ab624136d6144ed739b33a40b108780c3ad144398700b12d47caf887150"
+}
