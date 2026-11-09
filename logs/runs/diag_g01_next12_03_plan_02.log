@@ -1,0 +1,131 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_next12_03_plan_02 -- python3 -c import datetime,json,os,re
+from pathlib import Path
+from src.tools.t01_partition import audited_result,sha_file
+from src.tools import g01_collect_parallel as collect
+from src.envs import pair_v2_g01_policy as policy
+ROOT=Path.cwd().resolve()
+NAME="diag_g01_next12_03_plan_02"
+assert os.environ["CVPR_RUN_NAME"]==NAME
+scenes=[f"FloorPlan{i}" for i in (*range(14,20),*range(214,220))]
+collect.validate_selection(scenes,6)
+errors=[]
+matches={scene:[] for scene in scenes}
+source_index=[]
+for path in sorted((ROOT/"results").rglob("*")):
+ if not path.is_file() or not (path.name.endswith(".json") or path.name.endswith(".json.gz")):
+  continue
+ if not path.name.startswith(("pilot_pairs_","gen_train_")):
+  continue
+ m=re.search(r"floorplan([0-9]+)(?=[_.]|$)",path.name)
+ if not m or "FloorPlan"+m[1] not in matches:
+  continue
+ scene="FloorPlan"+m[1]
+ entry={"file":str(path.relative_to(ROOT)),"sha256":sha_file(path)}
+ matches[scene].append(entry)
+ source_index.append(entry)
+records=[]
+modern=[]
+for scene,paths in matches.items():
+ for item in paths:
+  try:
+   data,reference=audited_result(ROOT/item["file"])
+   assert data["config"].get("scene")==scene and data["_meta"].get("end")
+   cfg,met=data["config"],data["metrics"]
+   command=data["_meta"]["command"]
+   module=command[command.index("-m")+1] if "-m" in command else None
+   is_modern=module=="src.envs.pair_v2_g01_shard" or "pair_v2" in str(module)
+   if is_modern: modern.append(reference)
+   visits=[]
+   for visit in met.get("controller_visits",[]):
+    visits.append({k:visit.get(k) for k in ("controller_id","preflight_passed","preflight_reference","preflight_measurements")})
+   records.append({"scene":scene,"source":reference,"producer_module":module,
+     "source_policy":cfg.get("policy"),"field_of_view":cfg.get("field_of_view"),
+     "source_family":"v2_or_G01" if is_modern else "legacy_v1",
+     "metrics":{k:met.get(k) for k in ("status","attempts","scene_excluded","scene_failures","error","discard_reason_counts","counts_by_class","passed_by_class","black_frame_detected")},
+     "controller_preflight_records":visits})
+  except Exception as exc:
+   errors.append({"source":item,"error":type(exc).__name__+": "+str(exc)})
+prior,prior_ref=audited_result(ROOT/"results/diag_g01_next_scene_plan_01.json")
+assert prior["_meta"]["exit_code"]==0
+prefix="G01_NEXT_SCENE_RECOMMENDATION_JSON: "
+lines=[line[len(prefix):] for line in (ROOT/prior["_meta"]["log_path"]).read_text().splitlines() if line.startswith(prefix)]
+assert len(lines)==1
+previous_plan=json.loads(lines[0])
+known_exclusions=previous_plan["known_prior_exclusions"]
+known_baseline_errors=previous_plan["known_prior_baseline_errors_not_selected"]
+assert not set(scenes)&set(known_exclusions+known_baseline_errors)
+old,old_ref=audited_result(ROOT/"results/gen_train_next12_60_01_retry1.json")
+assert old["_meta"].get("end")
+cfg=old["config"]
+assert cfg["gpus"]==1 and cfg["concurrencies"]==[6] and cfg["field_of_view"]==60
+assert cfg["cpu_cores_per_gpu"]==12 and cfg["scene_timeout_seconds"]==1200
+assert cfg["timeout_seconds"]==2860 and cfg["required_timeout_seconds"]==2860
+assert cfg["submission"]["requested_wall_seconds"]==2890
+assert cfg["benchmark_selection"]["concurrency"]==6
+benchmark,benchmark_ref=audited_result(ROOT/cfg["benchmark_source"])
+for key in ("file","sha256","metrics_sha256","git_commit","exit_code"):
+ assert benchmark_ref[key]==cfg["benchmark_selection"]["source"][key]
+assert [s for s in benchmark["metrics"]["stages"] if s["concurrency"]==6][0]["completed"] is True
+payload_path=ROOT/cfg["submission"]["file"]
+assert sha_file(payload_path)==cfg["submission"]["sha256"]
+payload=json.loads(payload_path.read_bytes())
+assert payload["requested_host"] is None and payload["requested_gpu_count"]==1
+assert payload["requested_wall_seconds"]==2890 and payload["queue"]=="autox"
+parent_timeout=collect.required_timeout(scenes,6)
+assert parent_timeout==2860 and collect.parent.capacity(6)==2
+prior_requests=[]
+for path in sorted((ROOT/"logs/pbs").glob("*/payload.json")):
+ data=json.loads(path.read_bytes())
+ if data.get("dry_run"): continue
+ command=data.get("command",[])
+ if not isinstance(command,list): continue
+ overlap=[scene for scene in scenes if scene in command]
+ if overlap and data.get("name","").startswith(("pilot_pairs_","gen_train_")):
+  prior_requests.append({"file":str(path.relative_to(ROOT)),"sha256":sha_file(path),
+    "name":data.get("name"),"matching_scenes":overlap,"command":command,
+    "scope":"recorded historical request only; no scheduler state queried"})
+newer_exclusions=[r for r in records if r["source_family"]=="v2_or_G01" and
+ (r["metrics"]["scene_excluded"] is not None or any(v["preflight_passed"] is False for v in r["controller_preflight_records"]))]
+recommendation_ready=not errors and not modern and not newer_exclusions
+out={"at_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ "name":NAME,"scope":"Fixed bounded next training-exploration batch; no scheduler/budget-state query, GPU submission, outcome estimate, threshold or source mutation",
+ "proposed_run_name":"gen_train_next12_60_03","proposed_scenes":scenes,
+ "training_split":{"declared_policy_version":policy.VERSION,"all_proposed_in_fixed_train80":True,
+ "training_ranges":["1-20","201-220","301-320","401-420"],"evaluation_scenes_selected":[]},
+ "rule_and_code_references":[{"file":file,"sha256":sha_file(ROOT/file)} for file in
+ ("AGENTS.md","tasks/G01.md","tasks/T01v2.md","src/envs/pair_v2_g01_policy.py","src/tools/g01_collect_parallel.py","src/tools/g01_parallel.py","src/tools/g01_admission.py")],
+ "matching_scene_source_search":matches,
+ "search_scope":"all results/ and archived results/ filenames beginning pilot_pairs_ or gen_train_ containing the exact floorplan number, including .json/.json.gz; absence is absence from this recorded per-scene source catalog, not proof the scene is viable",
+ "historical_evidence":records,"historical_v2_or_G01_sources":modern,
+ "known_prior_scene_recommendation":prior_ref,
+ "known_prior_exclusions_not_selected":known_exclusions,
+ "known_prior_baseline_errors_not_selected":known_baseline_errors,
+ "known_current_preflight_exclusions_in_selected_scenes":newer_exclusions,
+ "recorded_payload_scene_overlap":prior_requests,
+ "interpretation":{"kitchens":"No source means unmeasured scene preflight/candidate viability, not known-good.",
+ "legacy_living":"Legacy v1 rejection reasons are retained verbatim. Its baseline_not_settled_or_native_collision test is the superseded collision/original-baseline method, not an independent current settled-baseline preflight exclusion. Do not silently call these scenes never attempted.",
+ "selection":"Fixed human-specified training scene ranges, not selected by evaluation or predicted pair yield; no replacements without explicit current preflight evidence.",
+ "current_collection":"No modern source is inferred from missing artifacts; each original current preflight and science gate still runs."},
+ "settings_source":old_ref,"benchmark_source":benchmark_ref,
+ "launch_settings":{"gpus":1,"cpu_cores_per_gpu":12,"concurrency":6,"max_shared_witnesses":2,
+ "max_Unity_instances":8,"field_of_view":60,"seed":0,"scene_timeout_seconds":1200,
+ "parent_timeout_seconds":parent_timeout,"PBS_wall_seconds":2890,
+ "rate1_requested_allocation_GPUh_upper_bound":2890/3600,
+ "rounded_up_requested_ceiling_GPUh":0.803,"queue":"autox","project":"CFP04-SF-125","requested_host":None,
+ "producer_module":policy.PRODUCER,"entry_module":collect.MODULE,"benchmark_source_file":cfg["benchmark_source"]},
+ "proposed_command":["python3","-u","-m",collect.MODULE,"--name","gen_train_next12_60_03","--scenes",*scenes,
+ "--concurrency","6","--benchmark-source",cfg["benchmark_source"],"--timeout-seconds","2860"],
+ "ready_for_root_budget_check":recommendation_ready,"errors":errors,
+ "submission_conditions":["Root must run existing measured-plus-reserved charged budget guard before submission.",
+ "Night GPU cap stays20; no cumulative budget conclusion is made here.",
+ "No host constraint; original per-allocation render gate and confirmed cleanup remain mandatory.",
+ "All original failed sources retained; construct qualification remains separate from T02/cache/training acceptance."],
+ "night_cap_GPUh_unchanged":20,"full1700_goal_authorized_or_promised":False,
+ "GPU_submitted":False,"budget_state_queried":False,"code_changed":False,"STATUS_changed":False}
+print("G01_NEXT12_03_PLAN_JSON: "+json.dumps(out,sort_keys=True,allow_nan=False),flush=True)
+assert recommendation_ready, "Historical source/eligibility ambiguity: root must inspect before submission"
+
+# start: 2026-11-09T20:18:33
+G01_NEXT12_03_PLAN_JSON: {"GPU_submitted": false, "STATUS_changed": false, "at_utc": "2026-11-09T12:18:37.488620+00:00", "benchmark_source": {"audit": {"fail": [], "file": "results/gen_train_concurrency_s15_02.json", "warn": ["P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/gen_train_concurrency_s15_02.json", "git_commit": "47b8afb99847bf08977197a65cdd9b7af315bcfe", "metrics_sha256": "7ce21b8032bdcf7f5bfaec2918bd13e09cae8576b29dd853461b4c06e2b05f8c", "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729"}, "budget_state_queried": false, "code_changed": false, "errors": [], "full1700_goal_authorized_or_promised": false, "historical_evidence": [{"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan214", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan214.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan214.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "d3c51b2c20df016acbeca6f387a5efaa0cc31c7f2ed867b86f747b07fde1e481", "sha256": "505a3040120b26f74afc6439d8c7dfdcdc34268169cc5ed4df97777d1ad57cc5"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}, {"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan215", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan215.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan215.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "be6c4a1be18ab9539bdfc35d6c0e69308377fc3d323f7ff73d398549185703de", "sha256": "6e35260b4e8e71a6b11860f4b89e9b3f18a07a73f95e1f423653d1512f9e792a"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}, {"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan216", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g1_floorplan216.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g1_floorplan216.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "a3ea3f8bc6a955835f4b46ea85783450a31c829e4b8565d3acb839a3479d6491", "sha256": "902cbca2039c9cbeb637c4f7e21a67e9b23e4cb0bf20077e573acffef33b2d1e"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}, {"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan217", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g2_floorplan217.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g2_floorplan217.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "2620ab930efb78117e0920592b3e5dc0a3c8032431f00f8513b6274b48a62597", "sha256": "ff1d96b1a3dfa6e368257742a00e4ac883e95158946cbe9b316fbb8a010ec07b"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}, {"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan218", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan218.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan218.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "4c22f41dc3fbe0f0c693005a99aaa163d8d6ff96aaf05a772c5813030fb3b7e3", "sha256": "79892faee5b3fe4175428b4b7c1ab1538153cf441245f631849770e59306c10d"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}, {"controller_preflight_records": [], "field_of_view": 100, "metrics": {"attempts": 40, "black_frame_detected": false, "counts_by_class": {"direct_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "direct_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_flip": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}, "look_stay": {"collected": 0, "passed": 0, "pending_review": 0, "rejected": 10}}, "discard_reason_counts": {"direct_flip": {"baseline_not_settled_or_native_collision": 10}, "direct_stay": {"baseline_not_settled_or_native_collision": 10}, "look_flip": {"baseline_not_settled_or_native_collision": 10}, "look_stay": {"baseline_not_settled_or_native_collision": 10}}, "error": null, "passed_by_class": null, "scene_excluded": null, "scene_failures": [], "status": "completed_search"}, "producer_module": "src.envs.pair_shard_approved", "scene": "FloorPlan219", "source": {"audit": {"fail": [], "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan219.json", "warn": []}, "exit_code": 0, "file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan219.json", "git_commit": "3f5f65c779bcebee3c13ddab8553cef56d92df31", "metrics_sha256": "4954e8b7c32dc761da839a571837c0939c1073740151c0eaa8048a5996583ae6", "sha256": "2212660e57bb1fbcc9b3cb04a2315c33aa6807fa55b6424b58242075180dd9dc"}, "source_family": "legacy_v1", "source_policy": "t01_human_20261108"}], "historical_v2_or_G01_sources": [], "interpretation": {"current_collection": "No modern source is inferred from missing artifacts; each original current preflight and science gate still runs.", "kitchens": "No source means unmeasured scene preflight/candidate viability, not known-good.", "legacy_living": "Legacy v1 rejection reasons are retained verbatim. Its baseline_not_settled_or_native_collision test is the superseded collision/original-baseline method, not an independent current settled-baseline preflight exclusion. Do not silently call these scenes never attempted.", "selection": "Fixed human-specified training scene ranges, not selected by evaluation or predicted pair yield; no replacements without explicit current preflight evidence."}, "known_current_preflight_exclusions_in_selected_scenes": [], "known_prior_baseline_errors_not_selected": ["FloorPlan3", "FloorPlan4", "FloorPlan212"], "known_prior_exclusions_not_selected": ["FloorPlan8", "FloorPlan9", "FloorPlan205"], "known_prior_scene_recommendation": {"audit": {"fail": [], "file": "results/diag_g01_next_scene_plan_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_g01_next_scene_plan_01.diff"]}, "exit_code": 0, "file": "results/diag_g01_next_scene_plan_01.json", "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368", "metrics_sha256": "4e09dabb80738cbc9c012b098dfd556b1a51d636e746c255aea0c56ccfba448c", "sha256": "006ef3f0393a3fb38e7566cd7f54fde0470584fa0b8f8fc1b63c5effdda39948"}, "launch_settings": {"PBS_wall_seconds": 2890, "benchmark_source_file": "results/gen_train_concurrency_s15_02.json", "concurrency": 6, "cpu_cores_per_gpu": 12, "entry_module": "src.tools.g01_collect_parallel", "field_of_view": 60, "gpus": 1, "max_Unity_instances": 8, "max_shared_witnesses": 2, "parent_timeout_seconds": 2860, "producer_module": "src.envs.pair_v2_g01_shard", "project": "CFP04-SF-125", "queue": "autox", "rate1_requested_allocation_GPUh_upper_bound": 0.8027777777777778, "requested_host": null, "rounded_up_requested_ceiling_GPUh": 0.803, "scene_timeout_seconds": 1200, "seed": 0}, "matching_scene_source_search": {"FloorPlan14": [], "FloorPlan15": [], "FloorPlan16": [], "FloorPlan17": [], "FloorPlan18": [], "FloorPlan19": [], "FloorPlan214": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan214.json", "sha256": "505a3040120b26f74afc6439d8c7dfdcdc34268169cc5ed4df97777d1ad57cc5"}], "FloorPlan215": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan215.json", "sha256": "6e35260b4e8e71a6b11860f4b89e9b3f18a07a73f95e1f423653d1512f9e792a"}], "FloorPlan216": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g1_floorplan216.json", "sha256": "902cbca2039c9cbeb637c4f7e21a67e9b23e4cb0bf20077e573acffef33b2d1e"}], "FloorPlan217": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g2_floorplan217.json", "sha256": "ff1d96b1a3dfa6e368257742a00e4ac883e95158946cbe9b316fbb8a010ec07b"}], "FloorPlan218": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g3_floorplan218.json", "sha256": "79892faee5b3fe4175428b4b7c1ab1538153cf441245f631849770e59306c10d"}], "FloorPlan219": [{"file": "results/pilot_pairs_parallel_b_02_j706728_hopper_m_02_g0_floorplan219.json", "sha256": "2212660e57bb1fbcc9b3cb04a2315c33aa6807fa55b6424b58242075180dd9dc"}]}, "name": "diag_g01_next12_03_plan_02", "night_cap_GPUh_unchanged": 20, "proposed_command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_next12_60_03", "--scenes", "FloorPlan14", "FloorPlan15", "FloorPlan16", "FloorPlan17", "FloorPlan18", "FloorPlan19", "FloorPlan214", "FloorPlan215", "FloorPlan216", "FloorPlan217", "FloorPlan218", "FloorPlan219", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "2860"], "proposed_run_name": "gen_train_next12_60_03", "proposed_scenes": ["FloorPlan14", "FloorPlan15", "FloorPlan16", "FloorPlan17", "FloorPlan18", "FloorPlan19", "FloorPlan214", "FloorPlan215", "FloorPlan216", "FloorPlan217", "FloorPlan218", "FloorPlan219"], "ready_for_root_budget_check": true, "recorded_payload_scene_overlap": [], "rule_and_code_references": [{"file": "AGENTS.md", "sha256": "b4be8333dc311466446011f57aa63e43703311fa06d17711c1b08c41a5acff6b"}, {"file": "tasks/G01.md", "sha256": "5da33f057e6508d2345829073328d04da5dee539f20506c35d66888153f13136"}, {"file": "tasks/T01v2.md", "sha256": "d5337c12e6e66c88bc84da8abeb72fb3bd6aa4b01827f287d1600614d3139458"}, {"file": "src/envs/pair_v2_g01_policy.py", "sha256": "3f1e88b6d6c2a67ac706b861ce7e877f584299eb412304d4a5748a644eb97d2e"}, {"file": "src/tools/g01_collect_parallel.py", "sha256": "77e2b18ab36c7b93e65b3c9678822ff66ee05203767a2581ed4cb898871387ea"}, {"file": "src/tools/g01_parallel.py", "sha256": "930a710e5d42b04bec3d75ae802851235a9c65c2b6b6840550c82c6e5ccb846c"}, {"file": "src/tools/g01_admission.py", "sha256": "9a709f241934d37309b82b4c5c1166a03795c0362c768b5ab1071c74c0eb2b99"}], "scope": "Fixed bounded next training-exploration batch; no scheduler/budget-state query, GPU submission, outcome estimate, threshold or source mutation", "search_scope": "all results/ and archived results/ filenames beginning pilot_pairs_ or gen_train_ containing the exact floorplan number, including .json/.json.gz; absence is absence from this recorded per-scene source catalog, not proof the scene is viable", "settings_source": {"audit": {"fail": [], "file": "results/gen_train_next12_60_01_retry1.json", "warn": ["P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/gen_train_next12_60_01_retry1.json", "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368", "metrics_sha256": "68e06efcb78de27aaa6369880641df443d075f6d1aff566accbf115ba5075f39", "sha256": "cfbec7e780af116f73591f653ce996e82ab7bd128ca725b1936355d319b4b209"}, "submission_conditions": ["Root must run existing measured-plus-reserved charged budget guard before submission.", "Night GPU cap stays20; no cumulative budget conclusion is made here.", "No host constraint; original per-allocation render gate and confirmed cleanup remain mandatory.", "All original failed sources retained; construct qualification remains separate from T02/cache/training acceptance."], "training_split": {"all_proposed_in_fixed_train80": true, "declared_policy_version": "g01_mixed_train80_complete_look_geometry_selected60_v2", "evaluation_scenes_selected": [], "training_ranges": ["1-20", "201-220", "301-320", "401-420"]}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 2.5491139839868993}
+# exit_code: 0

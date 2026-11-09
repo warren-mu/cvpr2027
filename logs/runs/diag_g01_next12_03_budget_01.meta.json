@@ -1,0 +1,28 @@
+{
+  "name": "diag_g01_next12_03_budget_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_next12_03_budget_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,importlib.util,datetime\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd()\np,ref=audited_result(r/\"results/diag_g01_next12_03_plan_02.json\");assert p[\"_meta\"][\"exit_code\"]==0\nv=json.loads(next(x.split(\": \",1)[1] for x in (r/p[\"_meta\"][\"log_path\"]).read_text().splitlines() if x.startswith(\"G01_NEXT12_03_PLAN_JSON: \")))\nassert v[\"ready_for_root_budget_check\"] and v[\"errors\"]==[] and v[\"night_cap_GPUh_unchanged\"]==20\nspec=importlib.util.spec_from_file_location(\"phase_budget\",r/\"scripts/pbs/submit_phase.py\");b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)\ns=b.budget_state(r);b.validate_request(\"T01\",1,2890,\"gen_train_next12_60_03\",s,\"G01\")\nout={\"at_utc\":datetime.datetime.now(datetime.timezone.utc).isoformat(),\"plan\":ref,\"budget_guard_passed\":True,\"budget\":s,\"additional_requested_charged_GPUh\":2890/3600*s[\"charge_policy\"][\"rates\"][\"smallx\"],\"proposed_command\":v[\"proposed_command\"],\"GPU_submitted\":False}\nprint(\"G01_NEXT12_03_BUDGET_JSON: \"+json.dumps(out,sort_keys=True))\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\nAdditional bounded night training exploration: \"+\", \".join(v[\"proposed_scenes\"])+\", existing60degree generator, oneGPU/concurrency6/12CPU/max8Unity,1200s scene2860s parent2890s PBS,autox,no host. All are fixed training scenes; old v1 collision/baseline failures for214–219 remain in diag_g01_next12_03_plan_02, not treated as current settled-baseline exclusions or evidence of usability. No threshold or method change.\\n\\n\")\n f.write(\"Pre-submission live measured-plus-reserved chargedGPUh: \"+json.dumps(s[\"accounted_or_reserved_by_subbudget\"],sort_keys=True)+\"; shared\"+str(s[\"accounted_or_reserved_total\"])+\"/60. Proposed extra ceiling\"+str(out[\"additional_requested_charged_GPUh\"])+\"GPUh, original20GPUh G01 cap preserved; guard passed. This uses a third single-GPU slot while existing collection and Look diagnosis continue; no full1700-target promise. The missing-CVPR_RUN_NAME CPU plan01 failure remains, corrected environment plan02 succeeds.\\n\")\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T20:20:45",
+  "log_path": "logs/runs/diag_g01_next12_03_budget_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "4390ee1660af0e742967cf346d7f68b25f049602",
+  "git_dirty": false,
+  "end": "2026-11-09T20:21:43",
+  "duration_sec": 57.4,
+  "exit_code": 0,
+  "metrics_sha256": "e9236b55989c06a3da5977c7ca99cd1803b657c814843b7344b29056d21be945"
+}
