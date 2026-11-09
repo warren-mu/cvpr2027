@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 23.614855777006596
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest,sys\nloader=unittest.TestLoader()\npatterns=['test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2_marked_integration.py','test_pair_table*.py','test_t02*.py','test_smoke_e2e*.py']\nsuite=unittest.TestSuite(loader.discover('tests',pattern=p) for p in patterns)\nresult=unittest.TextTestRunner(verbosity=1).run(suite)\nsys.exit(not result.wasSuccessful())"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_fov_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t01v2_fov_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest,sys\nloader=unittest.TestLoader()\npatterns=['test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2_marked_integration.py','test_pair_table*.py','test_t02*.py','test_smoke_e2e*.py']\nsuite=unittest.TestSuite(loader.discover('tests',pattern=p) for p in patterns)\nresult=unittest.TextTestRunner(verbosity=1).run(suite)\nsys.exit(not result.wasSuccessful())"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T09:09:47",
+    "log_path": "logs/runs/t01v2_fov_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d1b91e63a7038bdc7a7acc994bf3be070d07e004",
+    "git_dirty": false,
+    "end": "2026-11-09T09:10:11",
+    "duration_sec": 23.7,
+    "exit_code": 0,
+    "metrics_sha256": "bad9168f796fa3b033804288aecec62fa212d5baf263f1d2815c6906b981f9f2"
+  }
+}
