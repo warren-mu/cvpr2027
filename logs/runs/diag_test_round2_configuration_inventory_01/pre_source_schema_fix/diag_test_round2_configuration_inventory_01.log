@@ -1,0 +1,21 @@
+# run_logged: python3 -c import json,hashlib,signal,time
+from pathlib import Path
+from src.tools.g01_quota_plan import reconstruct_test_inventory, RECEIPT_AUTHORITY
+name='diag_test_round2_configuration_inventory_01'
+sources=[{'file':'results/t01v2_checkpoint_test_'+letter+'_full_01.json','sha256':hashlib.sha256(Path('results/t01v2_checkpoint_test_'+letter+'_full_01.json').read_bytes()).hexdigest()} for letter in ('a','b')]
+def deadline(*args):raise TimeoutError('Lightweight quota receipt inventory deadline exceeded')
+signal.signal(signal.SIGALRM,deadline);signal.alarm(12)
+start=time.monotonic()
+try:
+ inventory=reconstruct_test_inventory(sources,configuration=True,authority=RECEIPT_AUTHORITY)
+ metrics={'status':'passed','elapsed_seconds':time.monotonic()-start,'inventory':inventory}
+except Exception as e:
+ metrics={'status':'failed','elapsed_seconds':time.monotonic()-start,'error':type(e).__name__+': '+str(e)}
+finally:signal.alarm(0)
+Path('results/'+name+'.json').write_text(json.dumps({'config':{'name':name,'scope':'quota counting only using original independent receipts; no native/T02 rerun','deadline_seconds':12},'metrics':metrics,'sources':sources},indent=2)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+if metrics['status']!='passed':raise SystemExit(1)
+
+# start: 2026-11-10T02:31:01
+FINAL_METRICS_JSON: {"elapsed_seconds": 12.052928696968593, "error": "TimeoutError: Lightweight quota receipt inventory deadline exceeded", "status": "failed"}
+# exit_code: 1

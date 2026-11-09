@@ -1158,3 +1158,12 @@ Remaining155 train units are frozen in9 explicit manifests,18 per full batch, si
 
 
 Human superseded the unsubmitted18-unit plan: remaining155 train units are now frozen in26 explicit manifests,6 per job except the final5, singleGPU/six processes. Previous18-unit manifests are preserved as unsubmitted plans, not executed. Submit multiple short train-export jobs alongside formal cache validation while preserving priority test generation. The first6 result rows establish4LookFlip+1LookStay export checks, not5LookFlip. Full T02 cache counts remain0 until measured validation.
+
+
+## 2026-11-09 13:39 ET — 六对导出与测试第二轮实现
+
+已合并 002d747c；测试配置去重和 LS→LF→DF→DS 优先级代码已推送，相关正式 CPU 测试见 diag_test_round2_receipt_cpu_01–07，全部通过。旧原始88对不改写，不把其当成去重后数量。实际完整收据清点触发登录节点轻量检查的硬截止，失败保留；完整清点与首轮 Look→Stay 漏斗改放受 PBS 时限约束的 CPU 阶段，不延长登录节点扫描。
+
+剩余155次训练导出尝试已固定为26个独立清单（每批6，最后5），旧18对计划未提交且保留。首两批709028/709029均在逐卡出图检查发现纯黑帧，未进入任何导出单元；按原严格规则保留并重提。固定首5张有效表的200 paired states/seed0缓存复核709024同样黑帧止损，原样重提为709034；尚未形成缓存通过证书，不能提前计入训练可用数。
+
+E2E第6步15文件实现已推送5bc907a8，真实Torch梯度与固定版本PPO接线、T4归约、原信用分配回归均已正式CPU测试通过（diag_e2e_pilot_frozen_cpu_01–06，无依赖跳过）。使用获批的整场景留出、任务奖励、看到锚点率和等权逐更新窗口；恰好0.05边界用math.fsum消除普通求和舍入误触发，阈值不变。仍等待≥80对完整T02检查及原平衡检查，不声称已经训练。

@@ -1,0 +1,203 @@
+{
+  "metrics": {
+    "passed": false,
+    "exit_code": 1,
+    "black_frame_detected": false,
+    "devices": [
+      {
+        "observation": {
+          "logical_index": 0,
+          "gpu_identity": {
+            "logical_index": 0,
+            "gpu_index": 0,
+            "gpu_uuid": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957",
+            "gpu_name": "NVIDIA H200",
+            "vulkan_device_index": 0,
+            "mig_mode": "Disabled"
+          },
+          "node": "hopper-19",
+          "valid": false,
+          "captures": [],
+          "wire_packets": [
+            {
+              "stage": "constructor",
+              "sequence_id": 0,
+              "fresh_main_rgb_payloads": 1,
+              "cached_metadata": false,
+              "payload_sha256": [
+                "e1038a405281e3a4ba6a65048621871508e751e77f2289c359b50edd90be6914"
+              ],
+              "payload_bytes": [
+                360000
+              ],
+              "screen_width": 300,
+              "screen_height": 300
+            },
+            {
+              "stage": "constructor",
+              "sequence_id": 1,
+              "fresh_main_rgb_payloads": 1,
+              "cached_metadata": false,
+              "payload_sha256": [
+                "0e1b5b73c7ae869dacb41fd060742278b689482fb832d013503dc2d72d1e9068"
+              ],
+              "payload_bytes": [
+                260100
+              ],
+              "screen_width": 255,
+              "screen_height": 255
+            },
+            {
+              "stage": "constructor",
+              "sequence_id": 2,
+              "fresh_main_rgb_payloads": 1,
+              "cached_metadata": false,
+              "payload_sha256": [
+                "0e1b5b73c7ae869dacb41fd060742278b689482fb832d013503dc2d72d1e9068"
+              ],
+              "payload_bytes": [
+                260100
+              ],
+              "screen_width": 255,
+              "screen_height": 255
+            },
+            {
+              "stage": "constructor",
+              "sequence_id": 0,
+              "fresh_main_rgb_payloads": 1,
+              "cached_metadata": false,
+              "payload_sha256": [
+                "0e1b5b73c7ae869dacb41fd060742278b689482fb832d013503dc2d72d1e9068"
+              ],
+              "payload_bytes": [
+                260100
+              ],
+              "screen_width": 255,
+              "screen_height": 255
+            },
+            {
+              "stage": "constructor",
+              "sequence_id": 1,
+              "fresh_main_rgb_payloads": 1,
+              "cached_metadata": false,
+              "payload_sha256": [
+                "0e1b5b73c7ae869dacb41fd060742278b689482fb832d013503dc2d72d1e9068"
+              ],
+              "payload_bytes": [
+                260100
+              ],
+              "screen_width": 255,
+              "screen_height": 255
+            }
+          ],
+          "error": "TimeoutError: Error encountered when running action {'action': 'Initialize', 'agentMode': 'default', 'gridSize': 0.1, 'visibilityDistance': 10, 'renderDepthImage': False, 'renderInstanceSegmentation': True, 'fieldOfView': 100, 'sequenceId': 2} in scene FloorPlan1_physics."
+        },
+        "worker_error": null,
+        "worker_identity": {
+          "pid": 3014434,
+          "start_ticks": 83750306,
+          "pgid": 3013632,
+          "sid": 3013632
+        },
+        "unity_identity": null
+      }
+    ],
+    "errors": [],
+    "cleanup_errors": [],
+    "expected_gpu_count": 1,
+    "completed_gpu_count": 1
+  },
+  "config": {
+    "name": "t02_export_cache_first5_01_retry1_gate",
+    "allocation": {
+      "name": "t02_export_cache_first5_01_retry1_gate",
+      "pbs_jobid": "709034.hopper-m-02",
+      "cuda_visible_devices": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957",
+      "devices": [
+        {
+          "logical_index": 0,
+          "gpu_index": 0,
+          "gpu_uuid": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957",
+          "gpu_name": "NVIDIA H200",
+          "vulkan_device_index": 0,
+          "mig_mode": "Disabled"
+        }
+      ],
+      "cuda_driver_uuids": [
+        "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957"
+      ],
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t02_export_cache_first5_01_retry1_gate",
+      "ai2thor_version": "5.0.0",
+      "cpu_affinity": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23
+      ]
+    },
+    "node": "hopper-19",
+    "pbs_jobid": "709034.hopper-m-02",
+    "resolution": 255,
+    "segmentation": true,
+    "timeout_seconds": 180.0,
+    "fifo_source_sha256": "434d4eac1647c2acb32542c7c513a66fca40022fcdc1d23d119f2fd4ffa6ecc3",
+    "camera": {
+      "scene": "FloorPlan1",
+      "fieldOfView": 100,
+      "gridSize": 0.1,
+      "visibilityDistance": 10,
+      "agentMode": "default",
+      "platform": "CloudRendering"
+    },
+    "scope": "render_validity_preflight_not_training_frames",
+    "notes": [
+      "Nonzero RGB is necessary, not proof of semantic image correctness.",
+      "Wire counts include constructor frames; cached metadata responses are excluded.",
+      "Startup wire frames may be 300px; returned captures must match requested resolution.",
+      "Parent and worker CUDA masks remain exactly the original PBS allocation."
+    ]
+  },
+  "_meta": {
+    "name": "t02_export_cache_first5_01_retry1_gate",
+    "command": [
+      "/scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3",
+      "-u",
+      "-m",
+      "src.tools.render_gate",
+      "--name",
+      "t02_export_cache_first5_01_retry1_gate",
+      "--gpus",
+      "1",
+      "--resolution",
+      "255",
+      "--segmentation",
+      "--timeout-seconds",
+      "180.0"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-19",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-10T02:37:15",
+    "log_path": "logs/runs/t02_export_cache_first5_01_retry1_gate.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "5bc907a86150490ce0304a61afb0992234fc2448",
+    "git_dirty": false,
+    "end": "2026-11-10T02:38:03",
+    "duration_sec": 48.3,
+    "exit_code": 1,
+    "metrics_sha256": "cff3bfd6562f38115829d2d2bc49aa1daecad8fc5ed26e0a7257f669e079efab"
+  }
+}

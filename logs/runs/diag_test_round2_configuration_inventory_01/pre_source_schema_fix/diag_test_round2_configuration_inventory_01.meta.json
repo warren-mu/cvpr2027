@@ -1,0 +1,22 @@
+{
+  "name": "diag_test_round2_configuration_inventory_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib,signal,time\nfrom pathlib import Path\nfrom src.tools.g01_quota_plan import reconstruct_test_inventory, RECEIPT_AUTHORITY\nname='diag_test_round2_configuration_inventory_01'\nsources=[{'file':'results/t01v2_checkpoint_test_'+letter+'_full_01.json','sha256':hashlib.sha256(Path('results/t01v2_checkpoint_test_'+letter+'_full_01.json').read_bytes()).hexdigest()} for letter in ('a','b')]\ndef deadline(*args):raise TimeoutError('Lightweight quota receipt inventory deadline exceeded')\nsignal.signal(signal.SIGALRM,deadline);signal.alarm(12)\nstart=time.monotonic()\ntry:\n inventory=reconstruct_test_inventory(sources,configuration=True,authority=RECEIPT_AUTHORITY)\n metrics={'status':'passed','elapsed_seconds':time.monotonic()-start,'inventory':inventory}\nexcept Exception as e:\n metrics={'status':'failed','elapsed_seconds':time.monotonic()-start,'error':type(e).__name__+': '+str(e)}\nfinally:signal.alarm(0)\nPath('results/'+name+'.json').write_text(json.dumps({'config':{'name':name,'scope':'quota counting only using original independent receipts; no native/T02 rerun','deadline_seconds':12},'metrics':metrics,'sources':sources},indent=2)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))\nif metrics['status']!='passed':raise SystemExit(1)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T02:31:01",
+  "log_path": "logs/runs/diag_test_round2_configuration_inventory_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "3b301a45243bba8ae4d6e891c672d922e33d42ec",
+  "git_dirty": false,
+  "end": "2026-11-10T02:31:14",
+  "duration_sec": 12.8,
+  "exit_code": 1,
+  "metrics_sha256": "9d7e4f64366e371e81aee496a4ec4f0ee0adb53b7aef2453b4f348bbcbdd2629"
+}

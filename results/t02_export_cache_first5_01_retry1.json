@@ -1,0 +1,150 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794250635.0497665,
+    "cpu_affinity": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23
+    ],
+    "cuda_visible_devices": "GPU-fada6ee4-7bfa-e117-fcff-6187a038c957",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "max_raw_mib": 2048,
+    "max_raw_mib_scope": "per owned fresh pair worker, not whole job",
+    "name": "t02_export_cache_first5_01_retry1",
+    "node": "hopper-19",
+    "pair_timeout_seconds": 180.0,
+    "pbs_jobid": "709034.hopper-m-02",
+    "policy": {
+      "clean_subset": "Look tables with zero shadow-divergent states; diagnostic subset only, not a cache acceptance gate",
+      "either_positive_requires_iou": true,
+      "failure_scope": "whole_downstream_pipeline",
+      "fresh_pair_render_process": "one_new_process_same_exact_camera_pose",
+      "mask_count_absolute_tolerance_pixels": 10,
+      "mask_count_reference": "cached_count",
+      "mask_count_relative_tolerance": 0.02,
+      "minimum_distinct_pair_states": 200,
+      "minimum_mask_iou": 0.9,
+      "non_anchor_divergence": "Both Look and Direct fork with own world RGB; record shadow counts; never exclude by this predicate",
+      "resolution": 255,
+      "rgb_difference": "diagnostic_only_except_existing_shared_state_definition"
+    },
+    "resolution": 255,
+    "sample_count_scope": "native-authenticated complete paired captures; unverified worker diagnostics retained separately",
+    "sample_size": 200,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_cache/t02_export_cache_first5_01_retry1/709034.hopper-m-02",
+    "seed": 0,
+    "source": [
+      "results/t02_export_first6_01_retry2_u0000.json",
+      "results/t02_export_first6_01_retry2_u0001.json",
+      "results/t02_export_first6_01_retry2_u0002.json",
+      "results/t02_export_first6_01_retry2_u0004.json",
+      "results/t02_export_first6_01_retry2_u0005.json"
+    ],
+    "timeout_seconds": 1200.0,
+    "version": "t02_formal_fresh_cache_dataset_v3"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cache_matches_live": null,
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_first5_01_retry1_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 1,
+      "file": "results/t02_export_cache_first5_01_retry1_gate.json",
+      "git_commit": "5bc907a86150490ce0304a61afb0992234fc2448",
+      "metrics_sha256": "cff3bfd6562f38115829d2d2bc49aa1daecad8fc5ed26e0a7257f669e079efab",
+      "sha256": "dd3813159eb48d2c72a18519dcbe9ce44f25b1d6697ffffdc10d7b250e9c1ee5"
+    },
+    "kind": "t02_formal_cache_check",
+    "population_ledger": [],
+    "producer_exit_code": 1,
+    "sampling_plan": null,
+    "status": "blocked_by_render_gate",
+    "stop_downstream": true,
+    "task_acceptance": null,
+    "validation_report": null,
+    "worker_runs": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_first5_01_retry1_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 1,
+      "file": "results/t02_export_cache_first5_01_retry1_gate.json",
+      "git_commit": "5bc907a86150490ce0304a61afb0992234fc2448",
+      "metrics_sha256": "cff3bfd6562f38115829d2d2bc49aa1daecad8fc5ed26e0a7257f669e079efab",
+      "sha256": "dd3813159eb48d2c72a18519dcbe9ce44f25b1d6697ffffdc10d7b250e9c1ee5"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_cache_first5_01_retry1",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_cache_check",
+      "--name",
+      "t02_export_cache_first5_01_retry1",
+      "--source",
+      "results/t02_export_first6_01_retry2_u0000.json",
+      "--source",
+      "results/t02_export_first6_01_retry2_u0001.json",
+      "--source",
+      "results/t02_export_first6_01_retry2_u0002.json",
+      "--source",
+      "results/t02_export_first6_01_retry2_u0004.json",
+      "--source",
+      "results/t02_export_first6_01_retry2_u0005.json",
+      "--sample-size",
+      "200",
+      "--seed",
+      "0",
+      "--timeout-seconds",
+      "1200",
+      "--pair-timeout-seconds",
+      "180",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-19",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-10T02:37:13",
+    "log_path": "logs/runs/t02_export_cache_first5_01_retry1.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "5bc907a86150490ce0304a61afb0992234fc2448",
+    "git_dirty": false,
+    "end": "2026-11-10T02:38:03",
+    "duration_sec": 48.9,
+    "exit_code": 1,
+    "metrics_sha256": "5929842fe146427ff0f2e6aaf96b751682913775d77eb32eaf51f601c99bfc00"
+  }
+}
