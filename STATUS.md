@@ -534,3 +534,9 @@ Two 60-degree, one-GPU twenty-minute pilots were submitted after code and CPU te
 The existing submit_phase guard now includes the human-approved20 chargedGPUh G01 training-expansion subbudget inside the shared60-hour ceiling, retaining full reservations until authenticated final accounting. This is budget preparation only: no G01 GPU work is allowed until new-version independent LookFlip>=1 and Look total>=3. CPU boundary checks follow this code commit.
 
 The G01 budget addition passed7 focused boundary tests and65 existing scheduler/budget regression tests; no GPU work was used for these checks. Expanded collection remains gated by independent new-version Look counts.
+
+
+### 2026-11-09 04:25 UTC — fixed-label Flip first progress
+Archived journal prefix t01v2_flip_progress_01 at04:25:24.002019UTC reports6 actual FP203 attempts,0 producer-passed pairs. Rejections: w0_physical3, v0_candidates_visibility1, anchor_visible_at_v0 1, one_action_evidence_unavailable1. w0 passes by anchor: Boots0/3, Box1/1, CellPhone1/1, CreditCard1/1. These are observed running-source counts, not final independent acceptance. New Flip proposals have reached real physics; later gates remain controlling.
+The strictly verified black-gate job707653 was automatically retried as707668 / pilot_pairs_v2_flip60_fp204_r01_retry1, same one-GPU23-minute allocation and20-minute scene, no host pin; retry_of is recorded in immutable submission payload. The original failed source and exact new-version black proof diag_flip_black_retry_707653 are retained.
+T3 job707642 completed five actual updates, saved checkpoints, exit0 with errors[]/cleanup_errors[]. PBS records0.2961111111111111 GPUh at rate1 and queue161s; exact split timing/parse report is smoke_e2e_training_report_01. All examples areDirect/tau0: evidence-before-seeing logic and prefix sampling deduplication remain uncovered.
