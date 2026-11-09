@@ -121,6 +121,14 @@ class TableEpisode:
 
 
 class TableRollouts(QwenVLRolloutManager):
+    # Defaults preserve the original 5-step adapter. The separate pilot uses
+    # the same actual tokenization/generation paths with explicit extra arms.
+    paired_arms = ('T3',)
+    q_commit_arms = ('T3',)
+    expected_episode_count = 64
+    generation_metadata = {}
+    sample_prefix = None
+
     def begin(self, *, tables, checks, report, identities, certificate, plan, arm, update,
               format_policy, journal, pipeline="legacy_direct"):
         self.envs, self.recorder, self.env_states = {}, defaultdict(list), {}
@@ -147,9 +155,10 @@ class TableRollouts(QwenVLRolloutManager):
                 row = self._generate_input_for_rollout(self.recorder[index], turn, None)
                 exact, sha, proof = prompt_identity(row['raw_prompt_ids'], row.get('multi_modal_data', {}).get('image', []))
                 rows.append(row); identities.append(exact); proofs.append({'input_sha256': sha, **proof})
-            groups = generation_groups([self.plan[i] for i in active], identities, paired=self.arm == 'T3')
+            groups = generation_groups([self.plan[i] for i in active], identities, paired=self.arm in self.paired_arms)
             selected = [rows[group[0]] for group in groups]
             batch = DataProto.from_single_dict(collate_fn(selected))
+            batch.meta_info.update(self.generation_metadata)
             raw = np.empty(len(selected), dtype=object)
             for i, row in enumerate(selected):
                 raw[i] = list(row['raw_prompt_ids'])
@@ -164,7 +173,7 @@ class TableRollouts(QwenVLRolloutManager):
                 raw_response = self.tokenizer.decode(ids, skip_special_tokens=True)
                 # Upstream removes special tokens before inserting responses
                 # into subsequent public history. Never repair invalid actions.
-                sample_id = f'{self.arm}_u{self.update}_sample{self.sample_count:06d}'
+                sample_id = f'{self.sample_prefix or self.arm}_u{self.update}_sample{self.sample_count:06d}'
                 self.sample_count += 1; self.generated_tokens += len(ids)
                 for local in group:
                     index = active[local]
@@ -177,10 +186,10 @@ class TableRollouts(QwenVLRolloutManager):
                     except ValueError:
                         parsed = None
                     is_pre = pre_evidence(turn, before['tau'])
-                    if self.arm == 'T3' and is_pre and len(group) != 2:
+                    if self.arm in self.paired_arms and is_pre and len(group) != 2:
                         raise ValueError('Paired pre-evidence prompts were not exactly shared')
                     choices = [text for text in available_actions(env.observation.text) if text.startswith('select ')]
-                    needs_score = self.arm == 'T3' and (self.pipeline == 'legacy_direct' or (is_pre and parsed is not None and choices))
+                    needs_score = self.arm in self.q_commit_arms and (self.pipeline == 'legacy_direct' or (is_pre and parsed is not None and choices))
                     if needs_score:
                         choices = [text for text in available_actions(env.observation.text) if text.startswith('select ')]
                         names = {f'select {row.mark_label}': row.object_name for row in env.env.frame.candidates
@@ -203,8 +212,8 @@ class TableRollouts(QwenVLRolloutManager):
                     self.decisions[index].append(trace)
                     self.logical_tokens += len(ids)
                     self.journal(trace)
-        if len(self.envs) != 64 or any(not state['done'] for state in self.env_states.values()):
-            raise ValueError('Every actual batch must finish 64 episodes within five decisions')
+        if len(self.envs) != self.expected_episode_count or any(not state['done'] for state in self.env_states.values()):
+            raise ValueError('Every actual batch must finish its declared episode count within five decisions')
 
     def score_commit(self, policy_id):
         """Teacher-force complete candidate action + EOS under the real actor."""
