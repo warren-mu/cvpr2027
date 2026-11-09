@@ -1,0 +1,28 @@
+{
+  "name": "t01v2_fov_progress_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_fov_progress_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,datetime\nfrom src.tools.t01v2_live_progress import ROOT,read_prefix,archive,observed_counts,expected_identity\nname=\"t01v2_fov_progress_01\"\ndirectory=ROOT/'logs/runs'/name/'evidence';directory.mkdir(parents=True,exist_ok=False)\nrows=[]\nfor source in [\"pilot_pairs_v2_fov100_living201_01_j707493_hopper_m_02_g0_floorplan201\",\"pilot_pairs_v2_fov60_living202_01_j707495_hopper_m_02_g0_floorplan202\"]:\n expected=expected_identity(source)\n raw,extent=read_prefix(ROOT/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\n rows.append({'source_run':source,'scene':expected['scene'],'snapshot':archive(raw,directory,source+'_journal.prefix'),'extent':extent,'counts':observed_counts(raw,expected['scene'])})\nprint('OBSERVED_FOV_PROGRESS: '+json.dumps({'snapshot_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'source-reported complete journal prefixes only; running source not finally audited and passes not independently accepted','rows':rows},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T09:26:14",
+  "log_path": "logs/runs/t01v2_fov_progress_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "a0988675003361d37df95c33029cfa41f8278498",
+  "git_dirty": false,
+  "end": "2026-11-09T09:26:15",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "1a4c38e9e7719d5784d876f442ea153de0ba528ad972277a760629bd8aeb3321"
+}
