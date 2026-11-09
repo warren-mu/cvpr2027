@@ -1,0 +1,28 @@
+{
+  "name": "diag_look_flip_existing_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_flip_existing_01",
+    "--",
+    "python3",
+    "-c",
+    "import json\nfrom pathlib import Path\nfrom collections import Counter, defaultdict\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01v2_look_unit_review_checkpoint import source_support\nfrom src.tools.t01v2_posthoc_solvability import verified_passed_rows\nfrom src.tools.t01v2_look_funnel import summarize\nsources = [\n \"pilot_pairs_v2_look100_seq_01_j707546_hopper_m_02_g0_floorplan203\",\n \"pilot_pairs_v2_look100_seq_01_j707546_hopper_m_02_g0_floorplan204\",\n \"pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203\",\n \"pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan204\"]\nfor name in sources:\n with source_support():\n  data, source = merge.load_source(merge.ROOT / \"results\" / (name + \".json\"))\n cfg, metrics = data[\"config\"], data[\"metrics\"]\n eligibility, journal_ref, passed = verified_passed_rows(data)\n if journal_ref is None:\n  print(json.dumps({\"source\": source, \"journal\": None, \"diagnostic\": \"unknown\"})); continue\n rows = [json.loads(line) for line in merge.reference_path(journal_ref, within=merge.ROOT / \"data/world_pairs/v2\").read_text().splitlines() if line.strip()]\n raw_rows, modes, reasons, targets, target_missing = [], Counter(), defaultdict(Counter), Counter(), 0\n for row in rows:\n  raw = merge.read_reference(row[\"raw_attempt\"], within=cfg[\"raw_evidence_dir\"])\n  if any(raw.get(key) != row.get(key) for key in (\"pair_id\", \"scene\", \"status\", \"discard_reasons\")):\n   raise ValueError(\"Raw/journal identity mismatch\")\n  mode = raw.get(\"mode\", \"unknown\")\n  modes[mode] += 1\n  reasons[mode].update(raw.get(\"discard_reasons\") or [])\n  raw_rows.append({**raw, \"source_file\": source[\"file\"], \"raw_attempt\": row[\"raw_attempt\"]})\n  if mode == \"flip\" and \"target_uniqueness_or_ratio\" in (raw.get(\"discard_reasons\") or []):\n   if isinstance(raw.get(\"target_measurements\"), list):\n    targets.update(reason for target in raw[\"target_measurements\"] for reason in target.get(\"reasons\", []))\n   else: target_missing += 1\n native_modes, native_reasons = Counter(), defaultdict(Counter)\n for failure in metrics.get(\"placement_point_failures\") or []:\n  raw = merge.read_reference(failure[\"raw_attempt\"], within=cfg[\"raw_evidence_dir\"])\n  mode = raw.get(\"mode\", \"unknown\")\n  native_modes[mode] += 1\n  native_reasons[mode].update(raw.get(\"discard_reasons\") or [])\n views = {}\n for catalog in metrics.get(\"pool_catalogs\") or []:\n  key = json.dumps(catalog[\"view\"], sort_keys=True)\n  cell = views.setdefault(key, {\"view\": catalog[\"view\"], \"catalogs\": [], \"retained_A_B_distribution\": Counter(), \"before_cap_A_B_distribution\": Counter()})\n  counts = catalog.get(\"counts\") or {}\n  a, b = [(counts.get(side) or {}).get(\"look\") or {} for side in (\"A\", \"B\")]\n  retained, before = [a.get(\"retained\"), b.get(\"retained\")], [a.get(\"before_cap\"), b.get(\"before_cap\")]\n  cell[\"retained_A_B_distribution\"][str(retained)] += 1\n  cell[\"before_cap_A_B_distribution\"][str(before)] += 1\n  cell[\"catalogs\"].append({\"identity\": catalog.get(\"identity\"), \"retained_A_B\": retained, \"before_cap_A_B\": before,\n    \"flip_domain_nonempty\": all(type(v) is int and v > 0 for v in retained) if all(type(v) is int for v in retained) else None,\n    \"reference\": catalog.get(\"reference\")})\n result = {\"source\": source, \"eligibility\": eligibility, \"journal\": journal_ref, \"counted_attempts_by_mode\": dict(modes),\n  \"counted_rejections_by_mode\": {key: dict(value) for key, value in reasons.items()},\n  \"native_placement_failures_not_counted_by_mode\": dict(native_modes),\n  \"native_failure_reasons_by_mode\": {key: dict(value) for key, value in native_reasons.items()},\n  \"target_reasons_in_retained_flip_measurements\": dict(targets), \"flip_ratio_rejections_with_omitted_target_measurements\": target_missing,\n  \"pool_counts_by_view\": list(views.values()),\n  \"flip_funnel\": summarize([row for row in raw_rows if row.get(\"mode\") == \"flip\"]),\n  \"scope\": \"existing authenticated source-recorded pools/attempts only; no new rendering or physics; missing compact target measurements remain unknown\"}\n print(\"FLIP_EXISTING_DIAGNOSTIC_JSON: \" + json.dumps(result, sort_keys=True, allow_nan=False), flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T11:39:40",
+  "log_path": "logs/runs/diag_look_flip_existing_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "64e59ca1dc701a732846cc125615f41da2bc169a",
+  "git_dirty": false,
+  "end": "2026-11-09T11:39:45",
+  "duration_sec": 4.9,
+  "exit_code": 0,
+  "metrics_sha256": "7e912938c68dc57a32a3747386274785cca60b2a2d783105fcf9b6eac39391b9"
+}

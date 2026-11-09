@@ -1,0 +1,28 @@
+{
+  "name": "diag_look_flip_summary_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_flip_summary_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,collections\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nsource,ref=audited_result(Path('results/diag_look_flip_existing_01.json'))\nrecords=[]\nfor line in Path(source['_meta']['log_path']).read_text().splitlines():\n if line.startswith('FLIP_EXISTING_DIAGNOSTIC_JSON: '):\n  records.append(json.loads(line.split(': ',1)[1]))\nassert len(records)==4\nrows=[]\nfor d in records:\n pools=collections.Counter(str(c['flip_domain_nonempty']) for v in d['pool_counts_by_view'] for c in v['catalogs'])\n distribution=collections.Counter()\n for v in d['pool_counts_by_view']:distribution.update(v['retained_A_B_distribution'])\n row={'source':d['source']['file'],'attempts':d['counted_attempts_by_mode'],'rejections':d['counted_rejections_by_mode'],'native_failures_not_counted':d['native_placement_failures_not_counted_by_mode'],'pool_catalogs_by_flip_domain':dict(pools),'A_B_retained_pool_distribution':dict(distribution),'flip_ratio_records_without_detailed_target_measurements':d['flip_ratio_rejections_with_omitted_target_measurements'],'flip_funnel':d['flip_funnel']}\n rows.append(row)\nout=Path('logs/review/diag_look_flip_existing_01');out.mkdir(exist_ok=False)\n(out/'summary.json').write_text(json.dumps({'scope':'existing authenticated diagnostics only; full per-view distributions in source log; missing measurements remain unknown','source':ref,'rows':rows},indent=2,sort_keys=True)+'\\n')\nlines=['# Existing Look Flip diagnosis','',\n'The100-degree FloorPlan203 source has no recorded catalog with nonempty Look pools on both sides; all its72 catalogs therefore lack a Flip domain. At60 degrees only1 of76 recorded catalogs has both sides; no Flip was counted, and the exact scheduling/deadline cause for that one catalog still needs tracing. FloorPlan204 Flip attempts fail before any measured hidden-prefix gate: physical validity, target ratio or realized target mode. Retained detailed target measurements explicitly include closest_ratio_below_1_5; compact rejected records without those details remain unknown. The existing proposal code uses horizontal side distance and a12-point near-pool cap, while acceptance checks3D center distance. Next pilot changes only proposal order/domain and attempt allocation; final thresholds remain unchanged.','',\n'| FOV / scene | Counted Flip / Stay | Catalogs with both Look sides / all | Uncounted native placement failures Flip / Stay | Flip rejection counts |',\n'|---|---:|---:|---:|---|']\nfor d,r in zip(records,rows):\n cfg=d['source']['file'];fov='100' if 'look100' in cfg else '60';scene='203' if cfg.endswith('203.json') else '204'\n a=r['attempts'];p=r['pool_catalogs_by_flip_domain'];n=r['native_failures_not_counted']\n lines.append('| '+fov+' / '+scene+' | '+str(a.get('flip',0))+' / '+str(a.get('stay',0))+' | '+str(p.get('True',0))+' / '+str(sum(p.values()))+' | '+str(n.get('flip',0))+' / '+str(n.get('stay',0))+' | '+json.dumps(r['rejections'].get('flip',{}),sort_keys=True)+' |')\nlines+=['','The existing per-unit funnel reports contain gate-level counts and up to three recorded rejection examples. Full per-view A/B distributions and source references are retained in logs/runs/diag_look_flip_existing_01.log; this table does not infer missing scenes or outcomes.']\n(out/'report.md').write_text('\\n'.join(lines)+'\\n')\nprint(json.dumps({'report':str(out/'report.md'),'rows':rows},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T11:42:25",
+  "log_path": "logs/runs/diag_look_flip_summary_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "64e59ca1dc701a732846cc125615f41da2bc169a",
+  "git_dirty": false,
+  "end": "2026-11-09T11:42:26",
+  "duration_sec": 0.2,
+  "exit_code": 0,
+  "metrics_sha256": "ef52f8ebdacc5e5b8e97f2c543ad723d542049632ac9ac5eaa0b7c37ab77f210"
+}
