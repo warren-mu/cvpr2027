@@ -1198,3 +1198,10 @@ results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pai
 ## 2026-11-09 14:47 ET — 已结束的CPU请求按实际GPU分配补账
 
 709137的原始ngpus=0请求、interactive实际分配1GPU以及3秒终态均保留；预算器只为这个已结束的直接qsub记录添加显式登记，恰一次计入G01/T01/shared，不伪造submit_phase payload，也不把它记为premium作业。8项新增和14项当前预算回归均通过（diag_external_gpu_fee_cpu_01/02）。已有3项旧60小时断言在未改代码上亦失败，没有修改断言或宣称全套旧测试通过。后续恢复原Express提交路径。
+
+
+## 2026-11-09 14:53 ET — 测试第二轮固定配置已就绪
+
+首轮A/B独立验收原88对经原配置定义复核，去重数与Claude一致。按DF/DS/LF/LS顺序，配置数为[13, 22, 12, 4]，场景数为[8, 11, 7, 3]。这里只核对已有独立验收回执，不等同于T02通过。
+
+第二轮覆盖全部40个测试场景，1GPU、6并发，继承已有配置占用，按LS→LF→DF→DS提议，每类总60、每场景每类6；配置已冻结在 configs/gen_test_round2_prepare_01_retry3_inventory_quota.json。申请walltime 02:33:10，上限 2.5527777777777776 GPU·小时属于预留而非实际用量。首轮LookStay漏斗仍在同一准备作业中扫描，未完数字不补齐。

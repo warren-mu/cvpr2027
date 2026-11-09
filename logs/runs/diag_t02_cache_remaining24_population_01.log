@@ -1,0 +1,361 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_remaining24_population_01 -- python3 -c """DRAFT, not executed. One fixed-cutoff ledger; run via run_logged/record_command.
+
+Input: the complete JSON object as argv[1], embedded in the logged command.
+Only after all four fixed batches end, fill explicit retry histories and set ready.
+This reads original receipts/results and small table metadata, not the native image
+tree. It never runs a renderer, submits a job, authorizes a cache or edits sources.
+Original t02_cache_check will repeat ALL source/native science on the fixed inputs.
+"""
+import signal
+
+
+def metadata_deadline(signum, frame):
+    raise TimeoutError('Fixed-cutoff metadata scan exceeded the authorized 12-second login-node limit; preserve failure and use PBS')
+
+
+# This one-off is executed in its own recorded Python process. Include imports
+# and original auditing in the bound; no extended or unbounded login-node retry.
+signal.signal(signal.SIGALRM, metadata_deadline)
+signal.setitimer(signal.ITIMER_REAL, 12)
+
+import copy
+import json
+import math
+import os
+from pathlib import Path
+import re
+import shlex
+import sys
+
+from src.envs.pair_table_identity import identity_fields
+from src.tools import t02_export_parallel as parallel
+from src.tools import t02_cache_check as cache
+from src.tools.t01_partition import audited_result, sha_file
+
+ROOT = Path.cwd().resolve()
+FIXED_MANIFEST_SHAS = (
+    '7a26df905a3bda89d8b7d977ab41b1c2d66d08078eb7cfd6107b5ff2de4565fc',
+    'cc565e9a4d65a5737d150f4d819acd86bce2c16d93e97f30439b68d7b307bd1e',
+    '673235db67a89f75fb44555a9b8b78abc257cd0e91439dd499638fce4a8c1624',
+    '04fb41ba28c66a4345eccd8438f7a76de582e50580a11db63b3e16eb21e9a2e8',
+    '2e5e4ebca8d8adae8dbb1bf7eda02bc4b585f9ea9282ceab1423af3885ecb184',
+    '3bb13e739668c9e2162d647f389cdc8bc6036ace185c61dfbd8773752671b864',
+    'f97f1da3b710c6b490ad7fa6afd89faf0b9cf5c7f2247e74c41e7fb21d426952',
+    'db97e7536699f788d8718455d8664e1fd727606de292ba3b9f6f0c6ebba6eb81',
+    'f97c07e8bdbdd6e4bd9e095d0c92dd902ef7c45a06724221b7caee708b8a155e',
+    '2e0a380f75ff892c05fd6f413d985bd00baefd70a95055dd9818b8bc6ab580c1',
+    '285400dc44bba685740a80703ae679ffd1e0b90343eec7a7d2b2bce0670f802a',
+    'b7f154f894426b736da7bfdaf31da5e2c6a5a2fa8c2960455bed52919471bac2')
+BENCHMARK_SHA = '0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187'
+
+
+def require(value, message):
+    if not value:
+        raise ValueError(message)
+
+
+def ref(path):
+    path = Path(path).resolve()
+    return {'file': str(path.relative_to(ROOT)), 'sha256': sha_file(path), 'bytes': path.stat().st_size}
+
+
+def same_ref(a, b):
+    return (isinstance(a, dict) and isinstance(b, dict)
+            and Path(a.get('file', a.get('path', ''))).resolve() == Path(b.get('file', b.get('path', ''))).resolve()
+            and a.get('sha256') == b.get('sha256'))
+
+
+def ended(path):
+    data, reference = audited_result(path)
+    require(isinstance(data['_meta'].get('end'), str) and bool(data['_meta']['end']),
+            'Original source has not ended: ' + str(path))
+    return data, reference
+
+
+def original_receipt(name, job, previous_job, command):
+    candidates = list((ROOT / 'logs/pbs').glob(name + '-*/payload.json'))
+    require(len(candidates) == 1, 'Submission receipt is missing or ambiguous: ' + name)
+    path = candidates[0]
+    payload = json.loads(path.read_text())
+    receipt_path = path.parent / 'submission.json'
+    receipt = json.loads(receipt_path.read_text())
+    require(payload.get('name') == name and payload.get('repo') == str(ROOT)
+            and payload.get('command') == command and payload.get('retry_of') == previous_job
+            and payload.get('task_id') == 'T01' and payload.get('budget_group') == 'T02'
+            and payload.get('requested_gpu_count') == 1 and payload.get('requested_host') is None
+            and payload.get('queue') == 'autox' and payload.get('dry_run') is False
+            and receipt.get('returncode') == 0 and receipt.get('stdout', '').strip() == job
+            and not receipt.get('stderr'), 'Original one-GPU submission/retry identity changed')
+    return {'payload': ref(path), 'submission': ref(receipt_path), 'job_id': job,
+            'retry_of': previous_job, 'requested_wall_seconds': payload['requested_wall_seconds']}
+
+
+def parent_attempt(item, group, entries, previous_job):
+    name, job = item['name'], item['job_id']
+    data, reference = ended('results/' + name + '.json')
+    cfg, metrics, meta = data['config'], data['metrics'], data['_meta']
+    expected = [meta['command'][0], '-u', '-m', 'src.tools.t02_export_parallel', '--name', name,
+                '--manifest', group['manifest']['file'], '--manifest-sha256', group['manifest']['sha256'],
+                '--concurrency', '6', '--timeout-seconds', '1200', '--unit-timeout-seconds', '900',
+                '--pair-timeout-seconds', '660', '--gate-timeout-seconds', '180']
+    require(meta['command'] == expected and meta.get('name') == name and cfg.get('name') == name
+            and cfg.get('version') == parallel.VERSION and cfg.get('gpus') == 1
+            and cfg.get('pbs_jobid') == job and cfg.get('cpu_cores_per_gpu') == 12
+            and cfg.get('concurrency') == 6 and cfg.get('planned_units') == entries
+            and [cfg.get(k) for k in ('timeout_seconds', 'unit_timeout_seconds', 'pair_timeout_seconds',
+                                     'gate_timeout_seconds')] == [1200, 900, 660, 180]
+            and cfg.get('partition') == 'train' and same_ref(cfg.get('manifest_reference'), group['manifest'])
+            and metrics.get('kind') == 't02_parallel_export'
+            and metrics.get('producer_exit_code') == meta['exit_code'], 'Parent command/config/identity mismatch')
+    receipt = original_receipt(name, job, previous_job, expected)
+    gate, gate_ref = ended('results/' + name + '_gate.json')
+    require(same_ref(metrics.get('gate'), gate_ref), 'Parent names different original gate bytes')
+    history = {'source': reference, 'receipt': receipt, 'gate': gate_ref,
+               'original_metrics': copy.deepcopy(metrics), 'black_guard': None}
+    if item.get('black_guard') is not None:
+        proof, proof_ref = ended(item['black_guard'])
+        pm = proof['metrics']
+        require(meta['exit_code'] == 86 and gate['_meta']['exit_code'] == 86
+                and metrics.get('black_frame_detected') is True and metrics.get('units') == []
+                and metrics.get('cleanup_errors') == [] and metrics.get('errors') == []
+                and metrics.get('unstarted_unit_indices') == list(range(6))
+                and proof['_meta']['exit_code'] == 0 and pm.get('eligible_for_same_manifest_retry') is True
+                and pm.get('job_id') == job and pm.get('units_started') == 0
+                and pm.get('node') == cfg['node'] and pm.get('gpu_uuid') == cfg['cuda_visible_devices']
+                and any(same_ref(s, reference) for s in proof.get('sources', []))
+                and any(same_ref(s, gate_ref) for s in proof.get('sources', [])),
+                'Earlier attempt is not the original authenticated zero-start black retry')
+        verified_guard_sources = []
+        for original in proof['sources']:
+            _, actual = ended(original['file'])
+            require(same_ref(original, actual) and original.get('metrics_sha256') == actual['metrics_sha256'],
+                    'Original black-guard evidence changed')
+            verified_guard_sources.append(actual)
+        history['black_guard'] = proof_ref
+        history['black_guard_sources'] = verified_guard_sources
+    else:
+        require(meta['exit_code'] in (0, 1) and gate['_meta']['exit_code'] == 0
+                and metrics.get('black_frame_detected') is False
+                and metrics.get('all_units_ended') is True and metrics.get('unstarted_unit_indices') == []
+                and metrics.get('cleanup_errors') == [] and metrics.get('errors') == []
+                and sorted(x.get('unit_index') for x in metrics.get('units', [])) == list(range(6)),
+                'First nonblack attempt is not a complete six-unit terminal allocation; stop, do not choose another result')
+        identity = {k: cfg[k] for k in ('pbs_jobid', 'cuda_visible_devices', 'cpu_affinity', 'scratch', 'node')}
+        parallel.export.gate_runtime(gate, identity, cfg['node'], Path(cfg['scratch_directory']) / 'unused_parent_unity')
+    return data, reference, history
+
+
+def unit_row(parent, parent_ref, record, entry):
+    index = record['unit_index']
+    cfg = parent['config']
+    name = cfg['name'] + '_u%04d' % index
+    data, reference = ended('results/' + name + '.json')
+    command = parallel.unit_command(name, entry, cfg['unit_timeout_seconds'],
+                                    cfg['pair_timeout_seconds'], cfg['gate_timeout_seconds'])
+    command[0] = data['_meta']['command'][0]  # Preserve actual authenticated Python path.
+    require(re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(command[0]).name)
+            and record.get('run_name') == name and record.get('entry') == entry
+            and record.get('command') == command and same_ref(record.get('source'), reference)
+            and any(same_ref(s, reference) for s in parent.get('sources', [])), 'Parent/child source binding changed')
+    identity = {k: cfg[k] for k in ('pbs_jobid', 'cuda_visible_devices', 'cpu_affinity', 'scratch', 'node')}
+    measured = parallel.child_outcome(record, data, identity, command, entry)
+    require(all(record.get(k) == v for k, v in measured.items()), 'Saved outcome differs from unchanged original child verifier')
+    rows = measured['original_pairs']
+    row = rows[0] if rows else None
+    result = {'entry': copy.deepcopy(entry), 'parent': parent_ref, 'source': reference,
+              'unit_index': index, 'original_outcome': measured, 'membership': 'unknown',
+              'cache_matches_live': None, 'full_T02_acceptance': None, 'training_authorized': False}
+    if measured['export_checks_complete'] and row and row['status'] == 'rejected':
+        require(bool(row.get('rejection_reasons')), 'Rejected export lacks original reasons')
+        result['membership'] = 'measured_export_rejection_before_fixed_cache_population'
+    elif (measured['export_checks_complete'] and row and row['status'] == 'exported'
+          and row.get('table_complete') is True and row.get('native_evidence_verified') is True
+          and row.get('pair_checks_passed') is True and row.get('error') is None
+          and not row.get('raw_index_error') and row.get('cleanup_errors') == []):
+        pair_dir = Path(row['scratch_directory']).resolve()
+        table = cache.read_json_ref(row['table_manifest'], pair_dir, expected=pair_dir / 'table/table.json')
+        details = cache.read_json_ref(row['detail'], pair_dir, expected=pair_dir / 'checks.json')
+        require(details.get('table_manifest') == row['table_manifest']
+                and table.get('dataset_identity') == identity_fields(entry['pair_id'], entry['pair'])
+                and table.get('pair_id') == entry['pair_id'] and table.get('scene') == entry['scene']
+                and isinstance(table.get('states'), dict) and table['states'], 'Exact original table identity differs')
+        result.update(membership='export_complete_pending_formal_cache_reverification',
+                      table_manifest=row['table_manifest'], details=row['detail'],
+                      dataset_identity=table['dataset_identity'], stored_state_count=len(table['states']))
+    return result
+
+
+def main():
+    spec = json.loads(sys.argv[1])
+    require(spec.get('ready_to_freeze') is True, 'Draft: fill all actual terminal histories before executing')
+    first_batch = spec.get('first_batch', 1)
+    require(type(first_batch) is int and first_batch in (1, 5, 9), 'Only the three explicitly planned fixed cutoffs are supported')
+    suffix = 'remaining24' if first_batch == 1 else 'train_%02d_%02d' % (first_batch, first_batch + 3)
+    require(spec.get('ledger_name') == 'diag_t02_cache_' + suffix + '_population_01'
+            and spec.get('cache_name') == 't02_export_cache_' + suffix + '_01'
+            and os.environ.get('CVPR_RUN_NAME') == spec['ledger_name'], 'Use the exact unique logged operation')
+    benchmark, benchmark_ref = ended(spec['benchmark']['file'])
+    require(same_ref(spec['benchmark'], benchmark_ref) and benchmark_ref['sha256'] == BENCHMARK_SHA
+            and benchmark['_meta']['exit_code'] == 0 and benchmark['_meta']['duration_sec'] == 686.2
+            and benchmark['metrics']['cache_matches_live'] is True,
+            'The measured first-five baseline result changed')
+    certified = benchmark['metrics']['population_ledger']
+    require(len(certified) == 5, 'Unexpected original baseline population')
+    excluded_keys = {x['dataset_key'] for x in certified}
+    require(len(excluded_keys) == 5, 'Ambiguous baseline source namespace')
+    rows, histories, proposal_ids, keys = [], [], set(), set()
+    require(len(spec['groups']) == 4, 'Exactly the fixed four named remaining manifests are required')
+    for group_index, group in enumerate(spec['groups'], first_batch):
+        base = 't02_export_train_six_%02d' % group_index
+        require(group['base_name'] == base and group['manifest'] == {
+            'file': 'configs/' + base + '.json', 'sha256': FIXED_MANIFEST_SHAS[group_index - 1]}, 'Fixed cutoff changed')
+        manifest, _ = parallel.read_manifest(group['manifest']['file'], group['manifest']['sha256'])
+        entries = manifest['entries']
+        require(len(entries) == 6 and manifest['partition'] == 'train', 'Expected six original train attempts per batch')
+        for entry in entries:
+            key = identity_fields(entry['pair_id'], entry['pair'])['dataset_key']
+            require(key == entry.get('dataset_key') and key not in excluded_keys and key not in keys
+                    and entry['proposal_identity'] not in proposal_ids, 'Repeated source/proposal or overlap with certified first-five')
+            keys.add(key)
+            proposal_ids.add(entry['proposal_identity'])
+        attempts = group['attempts']
+        require(attempts and attempts[-1]['name'] == group.get('first_complete_nonblack_name')
+                and attempts[-1].get('black_guard') is None, 'No explicit first complete nonblack endpoint')
+        previous_job, group_history = None, []
+        for attempt_index, item in enumerate(attempts):
+            expected_name = base + ('_retry%d' % attempt_index if attempt_index else '')
+            require(item['name'] == expected_name and (attempt_index == len(attempts) - 1
+                    or item.get('black_guard') is not None), 'Retry chain omitted or replaced an earlier attempt')
+            parent, parent_ref, history = parent_attempt(item, group, entries, previous_job)
+            group_history.append(history)
+            previous_job = item['job_id']
+        histories.append({'manifest': group['manifest'], 'attempts': group_history})
+        require(same_ref(group.get('first_complete_nonblack_reference'), parent_ref),
+                'Explicit first complete nonblack result bytes changed')
+        for record in sorted(parent['metrics']['units'], key=lambda x: x['unit_index']):
+            rows.append(unit_row(parent, parent_ref, record, entries[record['unit_index']]))
+    require(len(rows) == 24, 'Full attempted cutoff was not accounted for')
+    usable = [row for row in rows if row['membership'] == 'export_complete_pending_formal_cache_reverification']
+    classes = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+    require(all(row['entry'].get('kind') in classes for row in rows), 'Unexpected source class')
+    seconds = math.ceil(686.2 * 1.3 * len(usable) / 5)
+    requested_states = sum(row['stored_state_count'] for row in usable)
+    blocked = []
+    if not usable or requested_states < 200:
+        blocked.append('fewer_than_200_original_population_states; no resampling/replacement planned')
+    if seconds <= 240 or 180 > seconds - 30:
+        blocked.append('linear_request_bound_below_original_CLI_minimum; require an explicit resource decision')
+    command = ['python3', '-u', '-m', 'src.tools.t02_cache_check', '--name', spec['cache_name']]
+    for row in usable:
+        command += ['--source', row['source']['file']]
+    command += ['--sample-size', '200', '--seed', '0', '--timeout-seconds', str(seconds),
+                '--pair-timeout-seconds', '180', '--gate-timeout-seconds', '180']
+    wall = seconds + 30
+    walltext = '%02d:%02d:%02d' % (wall // 3600, (wall % 3600) // 60, wall % 60)
+    submit = ['python3', 'scripts/pbs/submit_phase.py', '--name', spec['cache_name'], '--task', 'T01',
+              '--gpus', '1', '--walltime', walltext, '--budget-group', 'T02', '--', *command]
+    output = {'version': 'fixed_remaining24_cache_population_ledger_v1', 'spec': spec,
+              'scope': 'Export-input freeze only; all original full science is rechecked by formal cache. No training or whole-pool acceptance.',
+              'first5_benchmark': benchmark_ref, 'excluded_already_certified': certified,
+              'batch_retry_histories': histories, 'attempts': rows,
+              'attempt_count': len(rows), 'usable_table_count': len(usable),
+              'attempted_by_class': {kind: sum(row['entry']['kind'] == kind for row in rows) for kind in classes},
+              'export_complete_by_class_pending_cache': {kind: sum(row['entry']['kind'] == kind for row in usable) for kind in classes},
+              'stored_population_state_count_pending_reverification': requested_states,
+              'fixed_cache_sources': [row['source'] for row in usable], 'sample_size': 200, 'seed': 0,
+              'blocked_reasons': blocked, 'cache_command': command if not blocked else None,
+              'submission_command_not_executed': submit if not blocked else None,
+              'resource_request': {'measured_baseline_tables': 5, 'measured_baseline_total_seconds': 686.2,
+                  'formula': 'ceil(686.2 * 1.3 * actual_usable_table_count / 5)',
+                  'timeout_seconds': seconds, 'gate_timeout_seconds': 180, 'pair_timeout_seconds': 180,
+                  'pbs_wall_seconds': wall, 'gpus': 1, 'cpu_cores': 12, 'requested_host': None,
+                  'interpretation': 'Initial conservative request bound, not predicted speedup, actual runtime or actual charged GPU hours.'},
+              'cache_matches_live': None, 'full_T02_acceptance': None, 'training_authorized': False,
+              'failure_policy': 'Keep this exact population/seed/sample. Cache failure cannot remove a table or redraw samples.'}
+    directory = ROOT / 'logs/review' / spec['ledger_name']
+    directory.mkdir(exist_ok=False)
+    path = directory / 'ledger.json'
+    with path.open('x') as stream:
+        json.dump(output, stream, indent=2, sort_keys=True, allow_nan=False)
+        stream.write('\n')
+    with (directory / 'commands.txt').open('x') as stream:
+        stream.write('NOT EXECUTED. Original submit_phase must perform the live T02/shared budget check.\n')
+        stream.write(shlex.join(submit) + '\n' if not blocked else '\n'.join(blocked) + '\n')
+    print('T02_REMAINING24_CACHE_POPULATION_JSON: ' + json.dumps({
+        'ledger': ref(path), 'attempt_count': len(rows), 'usable_table_count': len(usable),
+        'blocked_reasons': blocked, 'cache_matches_live': None, 'training_authorized': False}, sort_keys=True), flush=True)
+
+
+if __name__ == '__main__':
+    main()
+ {
+  "ready_to_freeze": true,
+  "ledger_name": "diag_t02_cache_remaining24_population_01",
+  "cache_name": "t02_export_cache_remaining24_01",
+  "benchmark": {
+    "file": "results/t02_export_cache_first5_01_retry2.json",
+    "sha256": "0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"
+  },
+  "groups": [
+    {
+      "base_name": "t02_export_train_six_01",
+      "manifest": {"file": "configs/t02_export_train_six_01.json", "sha256": "7a26df905a3bda89d8b7d977ab41b1c2d66d08078eb7cfd6107b5ff2de4565fc"},
+      "attempts": [
+        {"name": "t02_export_train_six_01", "job_id": "709028.hopper-m-02", "black_guard": "results/diag_t02_train_six_black_guard_709028_01.json"},
+        {"name": "t02_export_train_six_01_retry1", "job_id": "709049.hopper-m-02", "black_guard": "results/diag_t02_train_six_black_guard_709049_01.json"},
+        {"name": "t02_export_train_six_01_retry2", "job_id": "709074.hopper-m-02", "black_guard": "results/diag_t02_train_six_black_guard_709074_01.json"},
+        {"name": "t02_export_train_six_01_retry3", "job_id": "709115.hopper-m-02", "black_guard": null}
+      ],
+      "first_complete_nonblack_name": "t02_export_train_six_01_retry3",
+      "first_complete_nonblack_reference": {"file": "results/t02_export_train_six_01_retry3.json", "sha256": "e39560f697a9edc505fee1a1638e4fa7dae9fe253ad04b6ac913d4f878fe4eb2"}
+    },
+    {
+      "base_name": "t02_export_train_six_02",
+      "manifest": {"file": "configs/t02_export_train_six_02.json", "sha256": "cc565e9a4d65a5737d150f4d819acd86bce2c16d93e97f30439b68d7b307bd1e"},
+      "attempts": [
+        {"name": "t02_export_train_six_02", "job_id": "709029.hopper-m-02", "black_guard": "results/diag_t02_train_six_black_guard_709029_01.json"},
+        {"name": "t02_export_train_six_02_retry1", "job_id": "709051.hopper-m-02", "black_guard": "results/diag_t02_train_six_black_guard_709051_01.json"},
+        {"name": "t02_export_train_six_02_retry2", "job_id": "709089.hopper-m-02", "black_guard": null}
+      ],
+      "first_complete_nonblack_name": "t02_export_train_six_02_retry2",
+      "first_complete_nonblack_reference": {"file": "results/t02_export_train_six_02_retry2.json", "sha256": "feb885c114b21e4dfec88987036f72babee59eb3f72ebf52450e41ed286a282f"}
+    },
+    {
+      "base_name": "t02_export_train_six_03",
+      "manifest": {"file": "configs/t02_export_train_six_03.json", "sha256": "673235db67a89f75fb44555a9b8b78abc257cd0e91439dd499638fce4a8c1624"},
+      "attempts": [
+        {"name": "t02_export_train_six_03", "job_id": "709124.hopper-m-02", "black_guard": null}
+      ],
+      "first_complete_nonblack_name": "t02_export_train_six_03",
+      "first_complete_nonblack_reference": {"file": "results/t02_export_train_six_03.json", "sha256": "f36ff485af72c1aebb3f3161ffc8e1f2553f6ee262bbcabe7bfe57a8a443d199"}
+    },
+    {
+      "base_name": "t02_export_train_six_04",
+      "manifest": {"file": "configs/t02_export_train_six_04.json", "sha256": "04fb41ba28c66a4345eccd8438f7a76de582e50580a11db63b3e16eb21e9a2e8"},
+      "attempts": [
+        {"name": "t02_export_train_six_04", "job_id": "709164.hopper-m-02", "black_guard": null}
+      ],
+      "first_complete_nonblack_name": "t02_export_train_six_04",
+      "first_complete_nonblack_reference": {"file": "results/t02_export_train_six_04.json", "sha256": "5066d6a8956c542016caa8fe42179b8e1d49bf4db5753acc214abea7bb656c44"}
+    }
+  ]
+}
+
+# start: 2026-11-10T03:52:40
+Traceback (most recent call last):
+  File "<string>", line 290, in <module>
+  File "<string>", line 236, in main
+  File "<string>", line 152, in unit_row
+  File "<string>", line 69, in ended
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01_partition.py", line 86, in audited_result
+    final = re.findall(r"^FINAL_METRICS_JSON:\s*(.+?)\s*$", log.read_text(errors="replace"), re.M)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1134, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/codecs.py", line 309, in __init__
+    def __init__(self, errors='strict'):
+  File "<string>", line 13, in metadata_deadline
+TimeoutError: Fixed-cutoff metadata scan exceeded the authorized 12-second login-node limit; preserve failure and use PBS
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 12.164896556001622}
+# exit_code: 1
