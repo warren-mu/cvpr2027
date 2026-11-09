@@ -1205,3 +1205,10 @@ results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pai
 首轮A/B独立验收原88对经原配置定义复核，去重数与Claude一致。按DF/DS/LF/LS顺序，配置数为[13, 22, 12, 4]，场景数为[8, 11, 7, 3]。这里只核对已有独立验收回执，不等同于T02通过。
 
 第二轮覆盖全部40个测试场景，1GPU、6并发，继承已有配置占用，按LS→LF→DF→DS提议，每类总60、每场景每类6；配置已冻结在 configs/gen_test_round2_prepare_01_retry3_inventory_quota.json。申请walltime 02:33:10，上限 2.5527777777777776 GPU·小时属于预留而非实际用量。首轮LookStay漏斗仍在同一准备作业中扫描，未完数字不补齐。
+
+
+## 2026-11-09 14:57 ET — 首轮LookStay漏斗与固定24对缓存复核
+
+原24场景完整尝试日志已扫完，A/B实际LookStay提议371/130次；物理失败208(56.06%)/73(56.15%)是最大的已观测拒因。B有14次两世界隐藏及前缀通过，但这14次的首步证据均不足；大量后续关卡没有执行，仍记unknown，不能相加成互斥串行漏斗。原表和样例：logs/review/gen_test_round2_prepare_01_retry3_funnel/report.md；原结果审计PASS。第二轮首批会与这份基线一起报告。
+
+额外的24对准备性账本在登录节点12秒时限退出，失败记录保留；不新增元数据PBS工具。正式复核直接使用已全部结束的首四批固定24个原导出来源，由原t02_cache_check重建全人口并执行全部原检查，再seed0统一抽200状态。科学检查、来源集合、阈值和抽样均未改变。范围和工程walltime上限见configs/t02_cache_remaining24_fixed.json；第05批失败的Bread碰撞对不混入这份原定范围，仍保留unknown。
