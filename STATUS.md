@@ -655,3 +655,28 @@ Published 3 generator-reported Look→Flip candidates from the running FP203/FP2
 ### T02 supplement15 source loading CPU check
 
 The opt-in T02 loader now binds ranked v2 checkpoints to the exact authenticated scene and per-pair Controller baseline, retains all scientific checks, and verifies fixed candidate labels. The original source path is unchanged. All 69 pair-table CPU tests passed (t02_ranked_source_cpu_01). No new GPU was used; actual Look table export awaits independent pair acceptance.
+
+### Supplement15 sealed pilot funnels
+
+Both sources ended at their bounded deadlines with clean cleanup. Complete source journals and the first recorded failed examples are preserved. Independent pair acceptance is separate; the table below is source-reported, and each gate is pass/fail/unknown.
+
+| Scene | Mode | Counted | Reported Look | Hidden | Prefix | Evidence | Solvable | Physical | Witness |
+|---|---|---:|---:|---|---|---|---|---|---|
+| FloorPlan203 | flip | 55 | 16 | 28/0/27 | 28/0/27 | 16/12/27 | 16/12/27 | 40/15/0 | 16/0/39 |
+| FloorPlan203 | stay | 55 | 0 | 4/20/31 | 2/22/31 | 0/2/53 | 0/2/53 | 35/19/1 | 0/0/55 |
+| FloorPlan204 | flip | 52 | 1 | 4/0/48 | 2/2/48 | 1/1/50 | 1/1/50 | 7/44/1 | 1/0/51 |
+| FloorPlan204 | stay | 51 | 0 | 16/15/20 | 15/16/20 | 0/15/36 | 0/15/36 | 32/19/0 | 0/0/51 |
+
+Detailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp203_s15_r01.md.
+Detailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp204_s15_r01.md.
+
+### Supplement15 allocation accounting
+
+| Job | GPUs | Queue wait (minutes) | Allocation GPU-hours | Recorded billing multiplier | Charged GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| 707737.hopper-m-02 | 1 | 3.183333333333333 | 0.3263888888888889 | 1.0 | 0.3263888888888889 |
+| 707740.hopper-m-02 | 1 | 2.3333333333333335 | 0.32666666666666666 | 1.0 | 0.32666666666666666 |
+
+This round consumed 0.6530555555555555 scheduler-charged GPU-hours. Current accounted-or-reserved ledger: {"E2E": 1.3611111111111112, "G01": 0.0, "T01v2": 9.427777777777777}, shared T00b+T01 22.47222222222222/60. Source: results/t01v2_flip_s15_accounting_01.json. Billing uses the scheduler multiplier, not an independent project-credit reconciliation.
+
+2026-11-09 补充15独立检查：`results/t01v2_checkpoint_flip_geometry_01.json` 已 exit 0、errors=[]；213 次原始尝试中的已完成候选经原始 Controller/基线/native query、实际初选与成功点、全部重试、物理/像素/见证/固定标签完整重验，去重后发布 14 对 LookFlip（FloorPlan203 13 对、FloorPlan204 1 对）及 `logs/review/t01v2_checkpoint_flip_geometry_01/` 下 14 张图。源报告的 17 条候选中，`floorplan203_00060`、`floorplan203_00082`、`floorplan203_00106` 被原 `proposal_identity` 规则列入 duplicate_pairs：身份依据是场景、稳定候选/锚点名、v0 视角和有序 w0/w1 的原生 receptacle/selected_position，非图像相似度或结果筛选；重复原记录全部保留。两源超时 exit 1 的失败记录仍保留，接受仅限已封存、清理正常且完整证据通过的对。按人类批准的补充14夜间推进条件，独立 LookFlip 门槛已达到，G01 准备启动；这是 construction + 补充4(a) checkpoint，不是正式 T01 或 T02 全任务验收，P 表/BFS/缓存检查和相应审查仍另行完成。本次独立检查仅用 CPU，新增 GPU 用量 0；采集作业 707737/707740 的用量按另行 PBS 实账记录。审计 973 files、0 FAIL。
