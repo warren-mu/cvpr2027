@@ -1212,3 +1212,10 @@ results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pai
 原24场景完整尝试日志已扫完，A/B实际LookStay提议371/130次；物理失败208(56.06%)/73(56.15%)是最大的已观测拒因。B有14次两世界隐藏及前缀通过，但这14次的首步证据均不足；大量后续关卡没有执行，仍记unknown，不能相加成互斥串行漏斗。原表和样例：logs/review/gen_test_round2_prepare_01_retry3_funnel/report.md；原结果审计PASS。第二轮首批会与这份基线一起报告。
 
 额外的24对准备性账本在登录节点12秒时限退出，失败记录保留；不新增元数据PBS工具。正式复核直接使用已全部结束的首四批固定24个原导出来源，由原t02_cache_check重建全人口并执行全部原检查，再seed0统一抽200状态。科学检查、来源集合、阈值和抽样均未改变。范围和工程walltime上限见configs/t02_cache_remaining24_fixed.json；第05批失败的Bread碰撞对不混入这份原定范围，仍保留unknown。
+
+
+## 2026-11-09 15:12 ET — 全40测试场景改按原顺序短分片执行
+
+709182和709190都在开头被同一hopper-20 GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310黑帧拦下，均无场景采集；旧记录和未提交的长retry2计划全部保留。为缩短单作业并尽早得到首批结果，将原40 assignments按6/6/6/6/6/6/4顺序执行，首片21、221、321、421、22、222，原producer的六并发和每场景1200秒均不变，原函数给出PBS00:27:10。不是删去后34场景。每片结束、独立验收后更新原配置库存，再排下一片；没有同时在途的测试分片或未经认证reservation。
+
+原quota/scene选择/timeout校验全部通过，生成器代码、阈值、seed、LS优先序及全局60/每场景6上限均未改变；只调整作业分片。首片与原计划除parent_run_name及原前6assignments外逐值相同。证据：results/diag_g01_test_round2_slice01_plan_01.json。
