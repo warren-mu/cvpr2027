@@ -1,0 +1,29 @@
+{
+  "name": "diag_look_morning_accounting_report_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_morning_accounting_report_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,math,datetime,importlib.util\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd();name=\"diag_look_morning_accounting_report_01\"\nd,censusref=audited_result(r/\"results/diag_look_table_census_morning_01.json\");assert d[\"_meta\"][\"exit_code\"]==0\ncensuspath=r/\"logs/review/diag_look_table_census_morning_01/report.json\";census=json.loads(censuspath.read_text())\nassert census[\"cohorts\"][\"morning36\"][\"denominator\"]==36\nassert not any(x[\"authentication_error\"] for x in census[\"morning_runs\"])\nspec=importlib.util.spec_from_file_location(\"phase_budget\",r/\"scripts/pbs/submit_phase.py\");b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)\nstate=b.budget_state(r)\nprefixes=(\"pilot_pairs_v2_look_table_\",\"pilot_pairs_v2_look_additional_\",\"pilot_pairs_v2_look_morning_\")\nselected=[x for x in state[\"submissions\"] if x[\"name\"].startswith(prefixes)]\nexpected={str(x)+\".hopper-m-02\" for x in (708051,708054,708071,708121,708146,708196,708217,708235,708258,708290,708241,708242,708245,708293,708299,708358,708386)}\nassert {x[\"job_id\"] for x in selected}==expected and len(selected)==len(expected)\ndef row(s):\n assert s[\"basis\"]==\"final_accounting\"\n a,ref=audited_result(r/s[\"accounting_result\"]);assert a[\"_meta\"][\"exit_code\"]==0 and a[\"metrics\"][\"complete_allocation_accounting\"]\n matches=[j for j in a[\"config\"][\"jobs\"] if j[\"job_id\"]==s[\"job_id\"]];assert len(matches)==1\n f=matches[0][\"fields\"];assert f[\"job_state\"]==\"F\" and f[\"project\"]==\"CFP04-SF-125\"\n allocation=a[\"metrics\"][\"allocation_gpu_hours_by_job\"][s[\"job_id\"]];rate=float(f[\"Resource_List.queue_charge_rate\"])\n assert math.isclose(allocation*rate,s[\"accounted_or_reserved_gpu_hours\"],abs_tol=1e-12)\n p=json.loads((r/s[\"payload\"]).read_text())\n return {\"job_id\":s[\"job_id\"],\"name\":s[\"name\"],\"gpus\":int(f[\"Resource_List.ngpus\"]),\"queue_wait_seconds\":a[\"metrics\"][\"queue_wait_seconds_by_job\"][s[\"job_id\"]],\"allocated_GPUh\":allocation,\"charge_rate\":rate,\"charged_GPUh\":allocation*rate,\"walltime\":f[\"resources_used.walltime\"],\"Exit_status\":f[\"Exit_status\"],\"exec_host\":f.get(\"exec_host\"),\"retry_of\":p.get(\"retry_of\"),\"accounting_result\":ref}\nrows=sorted((row(x) for x in selected),key=lambda x:int(x[\"job_id\"].split(\".\")[0]))\nreused=[x for x in state[\"submissions\"] if x[\"job_id\"]==\"707904.hopper-m-02\"];assert len(reused)==1\nreport={\"created_at_utc\":datetime.datetime.now(datetime.timezone.utc).isoformat(),\"scope\":\"Exact17 PBS export allocations for the frozen36 diagnostic, including all black-gate retries; excludes later Look cohorts and G01 generation.\",\"census\":censusref,\"census_report\":{\"file\":str(censuspath.relative_to(r)),\"sha256\":sha_file(censuspath)},\"counts\":census[\"cohorts\"][\"morning36\"],\"jobs\":rows,\"new_diagnostic_charged_GPUh\":math.fsum(x[\"charged_GPUh\"] for x in rows),\"reused_first_E2E_job_not_in_new_cost\":row(reused[0]),\"budget_snapshot\":state,\"thresholds_changed\":False,\"charge_basis\":state[\"charge_policy\"][\"charge_basis\"]}\nout=r/\"logs/review\"/name;out.mkdir(exist_ok=False)\n(out/\"report.json\").write_text(json.dumps(report,indent=2,sort_keys=True)+\"\\n\")\nlines=[\"# Frozen36 diagnostic PBS usage\",\"\",report[\"scope\"],\"\",f\"New diagnostic allocations: {report['new_diagnostic_charged_GPUh']} charged GPU-hours. The original707904 E2E failure is reused evidence and is listed separately in report.json, not charged again here.\",\"\",report[\"charge_basis\"],\"\",\"| PBS job | GPUs | Queue wait (minutes) | Allocated walltime | Charge rate | Charged GPUh | Retry of |\",\"|---|---:|---:|---|---:|---:|---|\"]\nfor x in rows:lines.append(f\"| {x['job_id']} | {x['gpus']} | {x['queue_wait_seconds']/60:.3f} | {x['walltime']} | {x['charge_rate']:g} | {x['charged_GPUh']:.9f} | {x['retry_of'] or ''} |\")\nlines+=[\"\",\"Exact queue seconds, terminal PBS fields, original accounting references and failed-job status are retained in report.json.\",\"\",\"Actual-or-reserved phase totals (unfinished allocations retain full requested ceilings): \"+json.dumps(state[\"accounted_or_reserved_by_subbudget\"],sort_keys=True)+f\"; shared {state['accounted_or_reserved_total']}/60.\",\"\"]\n(out/\"report.md\").write_text(\"\\n\".join(lines))\nprint(\"LOOK_MORNING_ACCOUNTING_SUMMARY_JSON: \"+json.dumps({\"report\":{\"file\":str((out/\"report.json\").relative_to(r)),\"sha256\":sha_file(out/\"report.json\")},\"new_diagnostic_charged_GPUh\":report[\"new_diagnostic_charged_GPUh\"],\"job_count\":len(rows),\"budget\":state[\"accounted_or_reserved_by_subbudget\"],\"shared_actual_or_reserved\":state[\"accounted_or_reserved_total\"]},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T20:44:40",
+  "log_path": "logs/runs/diag_look_morning_accounting_report_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5ab3a72dc69827ab9e34edb5165b24dec68cd75a",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_look_morning_accounting_report_01.diff",
+  "end": "2026-11-09T20:45:55",
+  "duration_sec": 71.3,
+  "exit_code": 0,
+  "metrics_sha256": "d7418812cfd22dfa26d5a8dd99a8b5bb45a235cfb14fc5861321cdc4859ea89c"
+}
