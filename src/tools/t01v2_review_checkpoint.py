@@ -111,7 +111,9 @@ def collect_sources(paths):
                         search_clone_source=(ledger or {}).get('successful_source_name'),
                         solvability_version=cfg.get('solvability_version'), solvability_policy=cfg.get('solvability_policy'),
                         generation_version=cfg.get('generation_version'), generation_policy=cfg.get('generation_policy'),
-                        attempt_setup_version=cfg.get('attempt_setup_version'), attempt_setup_policy=cfg.get('attempt_setup_policy'))
+                        attempt_setup_version=cfg.get('attempt_setup_version'), attempt_setup_policy=cfg.get('attempt_setup_policy'),
+                        candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
+                        projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'))
                     qualified.append({'pair_id': pair['pair_id'], 'scene': pair['scene'], 'kind': pair['kind'],
                         'target_w0': pair['target_w0'], 'target_w1': pair['target_w1'],
                         'source_file': reference['file'], 'source_metrics_sha256': reference['metrics_sha256'],

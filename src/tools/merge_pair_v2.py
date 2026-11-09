@@ -105,8 +105,36 @@ def producer_arguments(command, module):
     return command[position + 2:]
 
 
+def marked_policy_configuration(config):
+    """Explicit human-approved supplement 6/7 producer; old sources stay old."""
+    from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SPEC
+    from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
+    from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY
+    from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY
+    from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
+    from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
+    expected = {'candidate_policy': CANDIDATE_POLICY, 'candidate_policy_spec': CANDIDATE_POLICY_SPEC,
+        'projection_pool_version': POOL_VERSION, 'projection_pool_policy': POOL_POLICY,
+        'preflight_version': PREFLIGHT_VERSION, 'preflight_policy': PREFLIGHT_POLICY,
+        'evidence_version': 'anchor_union_look_v1', 'enable_candidate_clone': False,
+        'solvability_version': SOLVABILITY_VERSION, 'solvability_policy': SOLVABILITY_POLICY,
+        'generation_version': ROLE_VERSION, 'generation_policy': ROLE_POLICY,
+        'attempt_setup_version': ATTEMPT_SETUP_VERSION, 'attempt_setup_policy': ATTEMPT_SETUP_POLICY,
+        'producer_module': 'src.envs.pair_v2_marked_shard'}
+    if any(config.get(key) != value for key, value in expected.items()):
+        raise ValueError('Unknown marked candidate producer or altered supplement 6/7 policy')
+    if config.get('enable_candidate_clone') is not False or any(config.get(key) is not None for key in
+            ('search_version', 'search_policy', 'proposal_order_version', 'proposal_order_policy')):
+        raise ValueError('Marked natural producer cannot claim old cloning/search/order policies')
+    return expected
+
+
 def shard_producer(command, config):
     """Clone evidence requires its separate, explicitly enabled producer."""
+    if any(config.get(key) is not None for key in ('candidate_policy', 'candidate_policy_spec',
+                                                  'projection_pool_version', 'projection_pool_policy')):
+        marked_policy_configuration(config)
+        return producer_arguments(command, 'src.envs.pair_v2_marked_shard'), False
     enabled = config.get("enable_candidate_clone")
     version = config.get("preflight_version")
     if version is not None:
@@ -273,6 +301,11 @@ def load_source(path):
            ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy",
             "attempt_setup_version", "attempt_setup_policy")):
         raise ValueError("Hashed metrics search configuration differs from source config")
+    marked_keys = ('candidate_policy', 'candidate_policy_spec', 'projection_pool_version', 'projection_pool_policy')
+    if any(key in config or key in data['metrics'] for key in marked_keys):
+        if any(key not in config or key not in data['metrics'] or data['metrics'][key] != config[key]
+               for key in marked_keys):
+            raise ValueError('Hashed marked/pool policy differs from source configuration')
     order_keys = ("proposal_order_version", "proposal_order_policy")
     if any(key in config or key in data["metrics"] for key in order_keys):
         if any(key not in config or key not in data["metrics"] or data["metrics"][key] != config[key]
@@ -330,7 +363,7 @@ def proposal_identity(row):
         "points": points, "view": {key: view[key] for key in ("position", "yaw", "horizon")}})
 
 
-def verify_stable_preflight(preflight, read):
+def verify_stable_preflight(preflight, read, *, canonical_setup=False):
     """Recompute both phases from original action metadata and snapshot hashes."""
     from src.envs.pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY, position_step, exceeded
     if (preflight.get("preflight_version") != PREFLIGHT_VERSION or preflight.get("policy") != PREFLIGHT_POLICY
@@ -356,7 +389,10 @@ def verify_stable_preflight(preflight, read):
     diagnostics = preflight["diagnostics"]
     source = snapshot(diagnostics["source_snapshot"])
     pause = action(diagnostics["pause_action_reference"], "PausePhysicsAutoSim", source, {})
-    if pause["index"] != 0:
+    if canonical_setup:
+        from src.envs.pair_v2_marked_verify import verify_canonical_preflight_prefix
+        verify_canonical_preflight_prefix(preflight, pause, read)
+    elif pause["index"] != 0 or preflight.get('initial_agent_setup_reference') is not None:
         raise ValueError("Original-scene stable preflight was not the first backend operation")
     previous = pause["after_metadata"]["objects"]
     measured = position_step(source, previous, source)
@@ -411,12 +447,12 @@ def verify_stable_preflight(preflight, read):
             "window_max_displacement_m_by_name": window_maxima, "baseline": "snapshot at initial settling; window_end kept separately"}
 
 
-def verify_preflight(preflight, read=None):
+def verify_preflight(preflight, read=None, *, canonical_setup=False):
     """Compare the original scene with its final rest; no extra transient bound."""
     if preflight.get("preflight_version") is not None:
         if read is None:
             raise ValueError("Versioned preflight requires authenticated native action evidence")
-        return verify_stable_preflight(preflight, read)
+        return verify_stable_preflight(preflight, read, canonical_setup=canonical_setup)
     before = preflight["diagnostics"]["source_snapshot"]["objects"]
     after = preflight["snapshot"]["objects"]
     old, new = {o["name"]: o for o in before}, {o["name"]: o for o in after}
@@ -743,12 +779,30 @@ def final_pair_eligible(kind, solvability_version):
 def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None,
                evidence_version=None, search_version=None, search_policy=None, search_clone_source=None,
                solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None,
-               attempt_setup_version=None, attempt_setup_policy=None):
+               attempt_setup_version=None, attempt_setup_policy=None, candidate_policy=None, candidate_policy_spec=None,
+               projection_pool_version=None, projection_pool_policy=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
         mark_observation, physical_check, prefix_check, public_copy, public_exact,
         restore_state_check, single_edit_check, witness_check)
+    marked = candidate_policy is not None
+    if marked:
+        from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SPEC, closest_target
+        from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
+        if (candidate_policy != CANDIDATE_POLICY or candidate_policy_spec != CANDIDATE_POLICY_SPEC
+                or projection_pool_version != POOL_VERSION or projection_pool_policy != POOL_POLICY
+                or clone_enabled or search_version is not None or search_policy is not None
+                or preflight_version != 'settled_baseline_window_v1' or solvability_version is None
+                or attempt_setup_version is None or row.get('enable_candidate_clone') is not False):
+            raise ValueError('Marked pair differs from approved no-clone source policy')
+        for key, value in (('candidate_policy', candidate_policy), ('candidate_policy_spec', candidate_policy_spec),
+                           ('projection_pool_version', projection_pool_version), ('projection_pool_policy', projection_pool_policy)):
+            if row.get(key) != value:
+                raise ValueError('Marked pair is missing its explicit candidate/pool contract')
+    elif any(value is not None for value in (candidate_policy_spec, projection_pool_version, projection_pool_policy)) or any(
+            row.get(key) is not None for key in ('candidate_policy', 'candidate_policy_spec', 'projection_pool_version', 'projection_pool_policy')):
+        raise ValueError('Historical pair cannot silently use marked candidate semantics')
     if preflight_version == "settled_baseline_window_v1":
         from src.envs.pair_v2_stable_policy import EVIDENCE_VERSION, look_evidence, classify_pair
         if evidence_version != EVIDENCE_VERSION:
@@ -767,7 +821,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
         from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY, classify_pair
         from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
         if (solvability_version != SOLVABILITY_VERSION or solvability_policy != SOLVABILITY_POLICY
-                or search_version is None or row.get("solvability_version") != solvability_version
+                or (search_version is None and not marked) or row.get("solvability_version") != solvability_version
                 or row.get("solvability_policy") != solvability_policy
                 or generation_version != ROLE_VERSION or generation_policy != ROLE_POLICY
                 or row.get("generation_version") != generation_version or row.get("generation_policy") != generation_policy):
@@ -814,7 +868,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     raw_preflight = json.loads(preflight_path.read_text())
     if raw_preflight.get("preflight_version") != preflight_version:
         raise ValueError("Pair preflight version differs from its explicit source producer")
-    preflight = verify_preflight(raw_preflight, lambda ref: read_reference(ref, root=root, within=raw_root))
+    preflight = verify_preflight(raw_preflight, lambda ref: read_reference(ref, root=root, within=raw_root), canonical_setup=marked)
     clone = None
     if (any(world.get("clone_context") is not None for world in worlds)
             or any(row.get(key) is not None for key in ("clone_evidence", "clone_pair_check", "clone_evidence_files"))):
@@ -839,6 +893,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
         verify_search_identity(row, raw_preflight["snapshot"]["objects"])
         for world in worlds:
             verify_search_identity(row, world["objects"])
+    if marked:
+        original_names = {o['name'] for o in raw_preflight['snapshot']['objects']}
+        if any(world.get('clone_context') is not None or {o['name'] for o in world['objects']} != original_names for world in worlds):
+            raise ValueError('Marked natural pair changed the settled inventory')
     record = read("observations.json")
     if set(record) != {"prefix", "after"} or any(len(record[key]) != 2 for key in record):
         raise ValueError("Require two actual prefix and two post-observation captures")
@@ -849,6 +907,14 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     instruction = f"Select the {identities['target_type']} closest to the {identities['anchor_type']}."
     if row.get("instruction") != instruction:
         raise ValueError("Instruction does not match the recorded category-only task")
+    if marked:
+        from src.envs.pair_v2_marked_policy import identity_sets_at_view
+        # Re-evaluate actual v0 masks, complete inventory, nonrolling unique anchor and both distances.
+        for observation in prefix:
+            if identities not in identity_sets_at_view(observation):
+                raise ValueError('Marked identities do not meet actual v0 candidate/anchor requirements')
+        if identities.get('target_type') != 'marked object':
+            raise ValueError('Marked instruction changed')
     for obs in (*prefix, *after):
         rebuilt = mark_observation(obs, candidates, instruction,
             public_context="Actions: move <index>; turn_left; turn_right; select <mark>.", history=())
@@ -888,7 +954,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             physical[index] = augment_physical_result(physical[index], construction)
     attempt_setup = None
     if attempt_setup_version is not None:
-        from src.envs.pair_v2_isolated_verify import verify_attempt_setup
+        if marked:
+            from src.envs.pair_v2_marked_verify import verify_attempt_setup
+        else:
+            from src.envs.pair_v2_isolated_verify import verify_attempt_setup
         attempt_setup = verify_attempt_setup(row, worlds, constructions, common_objects,
             lambda ref: read_reference(ref, root=root, within=raw_root))
     for c in constructions:
@@ -925,6 +994,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     if generation_version is not None:
         from src.envs.pair_v2_role_policy import verify_proposal_role
         role = verify_proposal_role(row, {obj["name"]: obj["position"] for obj in common_objects})
+    if marked and row['mode'] == 'stay':
+        from src.envs.pair_v2_marked_policy import stay_horizontal_displacement
+        if row.get('stay_horizontal_displacement') != stay_horizontal_displacement(worlds, anchor):
+            raise ValueError('Stay displacement diagnostic differs from actual two-world anchor positions')
     single = single_edit_check(worlds[0]["poses"], constructions[1]["requested_poses"], anchor)
     look = row["kind"].startswith("look")
     shared0 = shared1 = None
@@ -1226,7 +1299,9 @@ def main(argv=None):
                                              generation_version=cfg.get("generation_version"),
                                              generation_policy=cfg.get("generation_policy"),
                                              attempt_setup_version=cfg.get("attempt_setup_version"),
-                                             attempt_setup_policy=cfg.get("attempt_setup_policy"))
+                                             attempt_setup_policy=cfg.get("attempt_setup_policy"),
+                                             candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
+                                             projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],

@@ -31,7 +31,8 @@ ENTRYPOINTS = {"experiments/t00b_scale_smoke.sh": "scale",
                "experiments/t01v2_stable_pairs.sh": "t01v2_stable",
                "experiments/t01v2_search_pairs.sh": "t01v2_search",
                "experiments/t01v2_solvable_pairs.sh": "t01v2_solvable",
-               "experiments/t01v2_isolated_pairs.sh": "t01v2_isolated"}
+               "experiments/t01v2_isolated_pairs.sh": "t01v2_isolated",
+               "experiments/t01v2_marked_pairs.sh": "t01v2_marked"}
 
 
 def load_module(name, path):
@@ -89,6 +90,13 @@ def entrypoint(command, name, repo):
         if argv[2:5] != ["--name", name, "--"]:
             raise ValueError("Outer record_command name/shape differs")
         argv = argv[5:]
+    start = 2 if argv[1:2] == ['-u'] else 1
+    if (argv and re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(argv[0]).name)
+            and argv[start:start + 2] == ['-m', 'src.tools.smoke_e2e_views']):
+        if (argv.count('--name') != 1 or argv.index('--name') + 1 >= len(argv)
+                or argv[argv.index('--name') + 1] != name or not name.startswith('smoke_e2e_')):
+            raise ValueError('E2E producer identity mismatch')
+        return 'e2e_views'
     if len(argv) < 4 or argv[0] != "bash":
         raise ValueError("Not an authorized new phase entrypoint")
     script = str((repo / argv[1]).resolve().relative_to(repo))
@@ -191,6 +199,12 @@ def effective_kind(kind, outer):
     Already running old outers have neither new key and remain old producers.
     """
     config, metrics = outer.get('config', {}), outer.get('metrics', {})
+    marked_present = any(key in row for row in (config, metrics) for key in ('candidate_policy', 'projection_pool_version'))
+    if kind == 't01v2_marked' or marked_present:
+        from src.tools.t01v2_marked_parallel import marked_tags
+        if kind != 't01v2_marked' or any(row.get(key) != value for row in (config, metrics) for key, value in marked_tags().items()):
+            raise ValueError('Marked dispatch requires its exact explicit source/pool contract')
+        return kind
     setup_present = any(key in row for row in (config, metrics)
                         for key in ('attempt_setup_version', 'attempt_setup_policy'))
     if kind == 't01v2_isolated' or setup_present:
@@ -214,7 +228,7 @@ def effective_kind(kind, outer):
     return 't01v2_solvable'
 
 
-def authorized_shard_command(command, v2=False, clone=False, stable=False, search=False, solvable=False, isolated=False):
+def authorized_shard_command(command, v2=False, clone=False, stable=False, search=False, solvable=False, isolated=False, marked=False):
     """Allow the real unbuffered Python launcher, not a module name in argv data."""
     if (not isinstance(command, list) or len(command) < 3
             or not all(isinstance(part, str) for part in command)
@@ -223,6 +237,8 @@ def authorized_shard_command(command, v2=False, clone=False, stable=False, searc
     arguments = command[1:]
     if arguments[:1] == ["-u"]:
         arguments = arguments[1:]
+    if marked:
+        return v2 and not (clone or stable or search or solvable or isolated) and arguments[:2] == ['-m', 'src.envs.pair_v2_marked_shard']
     if isolated:
         return v2 and not (clone or stable or search or solvable) and arguments[:2] == ["-m", "src.envs.pair_v2_isolated_shard"]
     if solvable:
@@ -252,11 +268,11 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
     if outer_job != job_id:
         raise ValueError("Outer result belongs to another PBS job")
     expected = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") else payload["name"] + "_gate")
+                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated", "t01v2_marked") else payload["name"] + "_gate")
     metrics, gate_config, meta = gate.get("metrics", {}), gate.get("config", {}), gate.get("_meta", {})
     allocation = gate_config.get("allocation") or {}
-    child_failure = kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and child is not None
-    v2 = kind in ("t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated")
+    child_failure = kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated", "t01v2_marked") and child is not None
+    v2 = kind in ("t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated", "t01v2_marked")
     gate_code = 0 if child_failure else 86
     count = payload["requested_gpu_count"]
     devices = allocation.get("devices", [])
@@ -311,7 +327,7 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                 or stop.get("stage") not in ("source", "capture")
                 or measurement.get("shape") != ([255, 255, 3] if v2 else [224, 224, 3]) or measurement.get("dtype") != "uint8"
                 or measurement.get("nonzero_values") != 0 or measurement.get("min") != 0 or measurement.get("max") != 0
-                or not authorized_shard_command(meta.get("command"), v2=v2, clone=kind == "t01v2_clone", stable=kind == "t01v2_stable", search=kind == "t01v2_search", solvable=kind == "t01v2_solvable", isolated=kind == "t01v2_isolated")
+                or not authorized_shard_command(meta.get("command"), v2=v2, clone=kind == "t01v2_clone", stable=kind == "t01v2_stable", search=kind == "t01v2_search", solvable=kind == "t01v2_solvable", isolated=kind == "t01v2_isolated", marked=kind == "t01v2_marked")
                 or (kind in ("t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and cc.get("enable_candidate_clone") is not True)
                 or (kind in ("t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and cc.get("preflight_version") != "settled_baseline_window_v1")
                 or (kind in ("t01v2_search", "t01v2_solvable", "t01v2_isolated") and (cc.get("search_version") != "natural_union_clone_search_v1"
@@ -321,6 +337,11 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                     or cm.get("solvability_version") != cc.get("solvability_version")))
                 or (v2 and (cm.get("cleanup_errors") != [] or shard.get("node") != gate_config.get("node")))):
             raise ValueError("T01 child black capture, cleanup, or allocation evidence is inconsistent")
+        if kind == 't01v2_marked':
+            from src.tools.merge_pair_v2 import marked_policy_configuration
+            expected_marked = marked_policy_configuration(cc)
+            if any(cm.get(key) != value for key, value in expected_marked.items() if key != 'producer_module'):
+                raise ValueError('Marked child lacks its exact hashed candidate/pool policies')
         if kind == "t01v2_isolated":
             from src.tools.t01v2_isolated_parallel import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY, SCENE_MODULE
             if (cc.get('producer_module') != SCENE_MODULE
@@ -336,6 +357,68 @@ def validate_black_retry(payload, job_id, fields, outer, gate, gate_name, kind, 
                and capture.get("nonzero_rgb_values") == 0 for capture in captures):
         raise ValueError("No correctly shaped, actually measured black capture")
     return "render_gate_black_capture"
+
+
+def validate_e2e_black_retry(repo, payload, job_id, fields, outer, gate, gate_name):
+    """Same real black-frame stop rule for the approved dedicated E2E entry."""
+    from src.tools.smoke_e2e_scope import VERSION, POLICY
+    from src.tools.t02_export import gate_runtime, black_only_failure
+    from src.tools.t01v2_black_evidence import checked_reference
+    import io
+    from PIL import Image
+    cfg, measured, meta = outer['config'], outer['metrics'], outer['_meta']
+    if (payload.get('budget_group') != 'E2E' or payload.get('task_id') != 'T01'
+            or payload.get('requested_gpu_count') != 1 or payload.get('requested_host') is not None
+            or cfg.get('version') != VERSION or cfg.get('policy') != POLICY or cfg.get('gpus') != 1
+            or cfg.get('pbs_jobid') != job_id or cfg.get('depth') != 4
+            or meta.get('name') != payload['name'] or meta.get('command') != payload['command']
+            or meta.get('exit_code') != 86 or measured.get('producer_exit_code') != 86
+            or measured.get('kind') != 'smoke_e2e_views' or measured.get('step1_passed') is not False
+            or measured.get('errors') != [] or measured.get('cleanup_errors') != []
+            or measured.get('black_frame_detected') is not True
+            or gate_name != payload['name'] + '_gate'
+            or gate['config'].get('resolution') != 255 or gate['config'].get('segmentation') is not True):
+        raise ValueError('E2E black stop is not a complete clean approved one-GPU run')
+    if gate['_meta'].get('exit_code') == 86:
+        return validate_black_retry(payload, job_id, fields, outer, gate, gate_name, 'e2e_views')
+    identity = {key: cfg[key] for key in ('pbs_jobid', 'cuda_visible_devices', 'scratch', 'cpu_affinity')}
+    runtime = gate_runtime(gate, identity, cfg['node'], Path(cfg['scratch_directory']) / 'unity_logs')
+    if {part.split('/')[0] for part in fields.get('exec_host', '').split('+') if part} != {cfg['node']}:
+        raise ValueError('E2E native black stop belongs to another scheduler node')
+    rows = [*measured.get('exports', []), *measured.get('fresh_runs', [])]
+    failed = [row for row in rows if row.get('black_frame_reference')]
+    if len(failed) != 1 or not black_only_failure(failed[0]):
+        raise ValueError('Require one actual black worker and no uncertain cleanup/finalization')
+    for row in rows:
+        if row is not failed[0] and (row.get('status') not in ('exported', 'captured')
+                or row.get('cleanup_errors') != [] or row.get('error') is not None):
+            raise ValueError('Another failure prevents automatic E2E black retry')
+    row = failed[0]
+    proof = row['portable_black_evidence']
+    if (proof.get('pbs_jobid') != job_id or proof.get('node') != cfg['node']
+            or proof.get('gpu_uuid') != runtime['gpu_uuid'] or proof.get('rgb_shape') != [255,255,3]
+            or proof.get('black') is not True):
+        raise ValueError('E2E black proof GPU identity mismatch')
+    directory = repo / 'logs/runs' / payload['name']
+    files = {Path(ref['file']).name: ref for ref in proof.get('files', [])}
+    if len(files) != 3 or set(files) != {'failure.json', 'black.png', 'metadata.json'}:
+        raise ValueError('E2E black proof is incomplete')
+    blobs = {name: checked_reference({**ref, 'file': str(repo / ref['file'])}, directory, 8*1024*1024)[1]
+             for name,ref in files.items()}
+    capture, metadata = json.loads(blobs['failure.json']), json.loads(blobs['metadata.json'])
+    if (files['failure.json']['sha256'] != row['black_frame_reference']['sha256']
+            or files['black.png']['sha256'] != capture['files']['rgb']['sha256']
+            or files['metadata.json']['sha256'] != capture['files']['metadata']['sha256']
+            or capture.get('black') is not True or capture.get('valid') is not True
+            or capture.get('rgb_shape') != [255,255,3]
+            or metadata.get('sceneName') not in (proof['scene'], proof['scene']+'_physics')
+            or metadata.get('sequenceId') != capture.get('sequence_id')):
+        raise ValueError('E2E portable black source/scene/sequence differs')
+    with Image.open(io.BytesIO(blobs['black.png'])) as picture:
+        if (picture.mode != 'RGB' or picture.size != (255,255) or picture.getextrema() != ((0,0),)*3
+                or hashlib.sha256(picture.tobytes()).hexdigest() != capture.get('rgb_sha256')):
+            raise ValueError('E2E black PNG is not actual all-zero RGB')
+    return 'e2e_native_black_capture'
 
 
 def child_black_evidence(repo, payload, outer, gate_evidence, auditor):
@@ -448,12 +531,14 @@ def main():
                 outer, outer_evidence = load_logged(ROOT, ROOT / "results" / f"{payload['name']}.json", auditor)
                 kind = effective_kind(kind, outer)
                 gate_name = (payload["name"] + "_j" + re.sub(r"[^A-Za-z0-9]", "_", job_id) + "_gate"
-                             if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") else payload["name"] + "_gate")
+                             if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated", "t01v2_marked") else payload["name"] + "_gate")
                 gate, gate_evidence = load_logged(ROOT, ROOT / "results" / f"{gate_name}.json", auditor)
                 child = child_record = child_evidence = None
-                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated") and gate.get("_meta", {}).get("exit_code") == 0:
+                if kind in ("t01", "t01v2", "t01v2_clone", "t01v2_stable", "t01v2_search", "t01v2_solvable", "t01v2_isolated", "t01v2_marked") and gate.get("_meta", {}).get("exit_code") == 0:
                     child, child_record, child_evidence = child_black_evidence(ROOT, payload, outer, gate_evidence, auditor)
-                if kind == "probe_pack":
+                if kind == 'e2e_views':
+                    reason = validate_e2e_black_retry(ROOT, payload, job_id, fields, outer, gate, gate_name)
+                elif kind == "probe_pack":
                     from src.tools.probe_pack_retry import validate_probe_pack_retry
                     reason, child_evidence = validate_probe_pack_retry(
                         ROOT, payload, job_id, fields, outer, gate, gate_evidence, auditor)
