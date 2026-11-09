@@ -40,3 +40,21 @@ Step2 is next; steps3–5 remain unrun. T0/T3 reward confirmed by human: select 
 ## Step2 PASS; original-model evaluation next
 
 The CPU witness replay passed for both worlds of all five approved Direct pairs (results/smoke_e2e_replay_01.json). The canonical table interface suite passed64 tests (results/smoke_e2e_contract_cpu_02.json). This used no GPU. All selected pairs remain tau0: 证据前逻辑未覆盖. Next is step3 original Qwen2.5-VL-3B with obs_never/obs_always/diag_base, one episode per pair/world.
+
+## Step3 PASS; T0/T3 training smoke next
+
+PBS 707555 on hopper-27 completed the original Qwen/Qwen2.5-VL-3B-Instruct evaluation with exit 0. The fixed five approved 100-degree Direct pairs were evaluated in both worlds: obs_never, obs_always and diag_base each completed 10 episodes, 30 episodes in total. All episodes contain the selected object and success outcome; the retained decision traces include public observations, generated actions/token IDs, rewards, state transitions and table temporal proofs. No execution or cleanup errors were recorded. Model loading took 58.24130738002714 seconds; the run_logged interval was 372.1 seconds.
+
+The source is results/smoke_e2e_eval_03.json, with detailed records in logs/runs/smoke_e2e_eval_03/episodes.jsonl and the matching run log/meta. This is an end-to-end smoke check, not a formal T03 acceptance or paper result. All selected pairs have tau=0: **证据前逻辑未覆盖**. Pre-evidence credit and paired-generation deduplication remain unmeasured; no T3 correctness claim is made. Steps4–5 had not started when this section was written.
+
+Two prior attempts stopped at the black-frame gate before model evaluation; their failure records are retained. The successful attempt and both failures have complete final PBS allocation accounting:
+
+| PBS job | Outcome | Queue wait (seconds) | Allocated GPUs | PBS walltime | PBS allocation GPU-hours |
+|---|---|---:|---:|---|---:|
+| 707539.hopper-m-02 | black-frame gate, exit86 | 244 | 1 | 00:00:19 | 0.005277777777777778 |
+| 707548.hopper-m-02 | black-frame gate, exit86 | 525 | 1 | 00:00:21 | 0.005833333333333334 |
+| 707555.hopper-m-02 | step3 PASS, exit0 | 106 | 1 | 00:06:14 | 0.10388888888888889 |
+
+Accounting sources: results/smoke_e2e_eval_black_accounting_01.json, results/smoke_e2e_eval_black_accounting_02.json and results/smoke_e2e_eval_accounting_03_retry1.json. These report allocated GPUs multiplied by measured PBS walltime, not an independently reconciled project credit bill. The first accounting command, smoke_e2e_eval_accounting_03, failed on the login node because its non-login PATH did not contain qstat; its failed log/meta are retained, and the retry loaded the established PBS PATH. This accounting failure used no GPU.
+
+Next: step4 T0, then step5 T3, with the human-confirmed explicit_task_zero reward policy. The current Direct-only step5 cannot cover pre-evidence logic; a later Look-pair run remains required.
