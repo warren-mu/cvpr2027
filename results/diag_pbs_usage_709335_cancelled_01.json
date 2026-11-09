@@ -1,0 +1,148 @@
+{
+  "metrics": {
+    "allocation_gpu_hours_by_job": {
+      "709335.hopper-m-02": 0.0
+    },
+    "complete_allocation_accounting": true,
+    "queue_wait_seconds_by_job": {
+      "709335.hopper-m-02": null
+    },
+    "eligible_wait_seconds_by_job": {
+      "709335.hopper-m-02": null
+    },
+    "verified_never_started_cancelled_jobs": [
+      "709335.hopper-m-02"
+    ],
+    "total_allocation_gpu_hours": 0.0
+  },
+  "config": {
+    "formula": "allocated Resource_List.ngpus * resources_used.walltime_seconds / 3600",
+    "queue_wait_formula": "stime - qtime, in seconds; only final jobs with run_count=1",
+    "eligible_wait_formula": "stime - etime, in seconds; only final jobs with run_count=1",
+    "timestamp_timezone": "Asia/Singapore (+08:00)",
+    "queue_wait_scope": "Recorded intervals only; transfers/requeues may hide earlier waiting. Missing, invalid, or multi-run history remains null.",
+    "scope": "PBS allocation GPU-hours, not an independently reconciled project credit charge",
+    "jobs": [
+      {
+        "job_id": "709335.hopper-m-02",
+        "qstat_exit": 0,
+        "fields": {
+          "Job_Name": "cvpr27_4e1d794e",
+          "Job_Owner": "e1583364@hopper-l-01.cm.cluster",
+          "job_state": "F",
+          "queue": "smallx",
+          "server": "hopper-m-02.cm.cluster",
+          "Checkpoint": "u",
+          "ctime": "Tue Nov 10 06:35:06 2026",
+          "Error_Path": "hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cvpr27_4e1d794e.e709335",
+          "Hold_Types": "n",
+          "Join_Path": "oe",
+          "Keep_Files": "oed",
+          "Mail_Points": "a",
+          "mtime": "Tue Nov 10 06:56:36 2026",
+          "Output_Path": "hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/t02_export_cache_six05_08_01_retry1-20261109T223421Z-4e1d794e/pbs.out",
+          "Priority": "0",
+          "qtime": "Tue Nov 10 06:35:06 2026",
+          "Rerunable": "True",
+          "Resource_List.am_job_cache": "{\"job.ngpus\": 1.0, \"job.walltime\": 5327,\"job.ncpus\": 12.0, \"job.queue_charge_rate\": 0,\"formula_constants\": \"\", \"am_cloud_enabled\": false}",
+          "Resource_List.mem": "225gb",
+          "Resource_List.ncpus": "12",
+          "Resource_List.ngpus": "1",
+          "Resource_List.nodect": "1",
+          "Resource_List.nodes": "1",
+          "Resource_List.place": "free",
+          "Resource_List.queue_charge_rate": "1",
+          "Resource_List.select": "1:ngpus=1:host=hopper-30:ncpus=12:mem=225GB",
+          "Resource_List.walltime": "01:28:47",
+          "substate": "91",
+          "Variable_List": "PBS_O_HOME=/home/svu/e1583364,PBS_O_LANG=C.UTF-8,PBS_O_LOGNAME=e1583364,PBS_O_PATH=/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr2027/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/python/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin,PBS_O_SHELL=/bin/bash,PBS_O_HOST=hopper-l-01.cm.cluster,PBS_O_WORKDIR=/home/svu/e1583364/CVPR2027/cvpr2027,PBS_O_SYSTEM=Linux,PBS_O_QUEUE=autox",
+          "comment": "Not Running: Insufficient amount of resource: ngpus  and terminated",
+          "etime": "Tue Nov 10 06:35:06 2026",
+          "Submit_arguments": "-N cvpr27_4e1d794e -l walltime=01:28:47 -o /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/t02_export_cache_six05_08_01_retry1-20261109T223421Z-4e1d794e/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/t02_export_cache_six05_08_01_retry1-20261109T223421Z-4e1d794e/job.pbs",
+          "history_timestamp": "1794264996",
+          "project": "CFP04-SF-125",
+          "Submit_Host": "hopper-l-01.cm.cluster"
+        },
+        "queue_wait_seconds": null,
+        "eligible_wait_seconds": null,
+        "queue_wait_unavailable_reason": "run_count_not_one_total_wait_unknown",
+        "eligible_wait_unavailable_reason": "run_count_not_one_total_wait_unknown",
+        "pbs_timestamp_timezone": "Asia/Singapore",
+        "pbs_timestamp_utc_offset": "+08:00",
+        "pbs_timestamps_raw": {
+          "qtime": "Tue Nov 10 06:35:06 2026",
+          "etime": "Tue Nov 10 06:35:06 2026",
+          "stime": null
+        },
+        "pbs_timestamps_iso8601": {
+          "qtime": "2026-11-10T06:35:06+08:00",
+          "etime": "2026-11-10T06:35:06+08:00",
+          "stime": null
+        },
+        "queue_wait_scope": "recorded_queue_entry_to_start_for_single_run_job_not_cumulative_queue_history",
+        "allocation_accounting_basis": "verified_logged_queued_cancellation"
+      }
+    ],
+    "errors": [],
+    "cancelled_evidence": [
+      "results/diag_cache709335_20min_preflight_01.json",
+      "results/diag_cache709335_20min_qdel_01.json",
+      "results/diag_cache709335_20min_postflight_01.json"
+    ],
+    "cancellation_basis": "Only a verified logged Q/no-allocation -> qdel exit0 -> F/no-allocation chain may supply zero when run_count is absent; raw fields remain unchanged"
+  },
+  "sources": [
+    {
+      "path": "results/diag_cache709335_20min_preflight_01.json",
+      "sha256": "cdf9395341cb5937a49f13de436ca955bda99e834de53c2101a57477a73a9753",
+      "log_path": "logs/runs/diag_cache709335_20min_preflight_01.log",
+      "log_sha256": "e2e5f4fe30f13e5d0f88cfc1e49bb160bc48ae4a043a7d9957de3fd43ff76842",
+      "file": "results/diag_cache709335_20min_preflight_01.json",
+      "metrics_sha256": "0250ff865dbf1395d79d60f3d51f761bc623660b58fbe98acdca5e279a9b3369"
+    },
+    {
+      "path": "results/diag_cache709335_20min_qdel_01.json",
+      "sha256": "32b8d7b3aed89da3f2f8dba97c4fcfe40278f9d27085b03b616b88b1da3cab20",
+      "log_path": "logs/runs/diag_cache709335_20min_qdel_01.log",
+      "log_sha256": "a787e3277d552d41d16c76103ad7a6f2c93bb5e4aa37227eb9c3018ba1677b37",
+      "file": "results/diag_cache709335_20min_qdel_01.json",
+      "metrics_sha256": "bb7af66d3dc0ea13cbfff41d5a549b1ac3a8fd69ab069da5fc42d63142bcdf20"
+    },
+    {
+      "path": "results/diag_cache709335_20min_postflight_01.json",
+      "sha256": "b922b22b119e3336cc730865f759e2a5886cc344804a299e25024a3d80d8afd7",
+      "log_path": "logs/runs/diag_cache709335_20min_postflight_01.log",
+      "log_sha256": "04a42f97cae14af0cb149f9216c2275f6e9e2e1568a346908ea73428b4ce209e",
+      "file": "results/diag_cache709335_20min_postflight_01.json",
+      "metrics_sha256": "748b96be2e34dd71ed062831541059d99ce92aa05ef5d129e80f01774b26291b"
+    }
+  ],
+  "_meta": {
+    "name": "diag_pbs_usage_709335_cancelled_01",
+    "command": [
+      "python3",
+      "src/tools/pbs_usage.py",
+      "--name",
+      "diag_pbs_usage_709335_cancelled_01",
+      "--cancelled-evidence",
+      "results/diag_cache709335_20min_preflight_01.json",
+      "results/diag_cache709335_20min_qdel_01.json",
+      "results/diag_cache709335_20min_postflight_01.json",
+      "709335.hopper-m-02"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T06:57:07",
+    "log_path": "logs/runs/diag_pbs_usage_709335_cancelled_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "f2b8bf7cc9f1a833eaca4759f03d0a6488f5d525",
+    "git_dirty": false,
+    "end": "2026-11-10T06:57:30",
+    "duration_sec": 20.3,
+    "exit_code": 0,
+    "metrics_sha256": "236bcd6722d531e3e4b4f5b4d9ee21b45bd73aa7885a293d4d9b4abcc22b3897"
+  }
+}
