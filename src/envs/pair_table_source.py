@@ -203,7 +203,8 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
         attempt_setup_version=cfg.get('attempt_setup_version'), attempt_setup_policy=cfg.get('attempt_setup_policy'),
         candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
         projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'),
-        frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'))
+        frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'),
+        field_of_view=cfg.get('field_of_view', 100))
     if checked['proposal_identity'] != entry['proposal_identity']:
         raise ValueError('Published proposal identity differs from independent reconstruction')
     portable = {Path(ref['file']).name: ref for ref in row['portable_files']}

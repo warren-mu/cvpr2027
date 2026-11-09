@@ -113,6 +113,8 @@ def marked_policy_configuration(config):
     from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION, SOLVABILITY_POLICY
     from src.envs.pair_v2_role_policy import ROLE_VERSION, ROLE_POLICY
     from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
+    from src.envs.pair_v2_fov import declared_fields
+    declared_fields(config)
     expected = {'candidate_policy': CANDIDATE_POLICY, 'candidate_policy_spec': CANDIDATE_POLICY_SPEC,
         'projection_pool_version': POOL_VERSION, 'projection_pool_policy': POOL_POLICY,
         'preflight_version': PREFLIGHT_VERSION, 'preflight_policy': PREFLIGHT_POLICY,
@@ -212,6 +214,8 @@ def verify_source_identity(data, gate, *, logged_runtime=None, logged_allocation
     from src.tools.render_gate import gate_exit_code
     config, meta = data["config"], data["_meta"]
     shard, runtime = config["shard"], config.get("runtime")
+    from src.envs.pair_v2_fov import bind_source_fields
+    bind_source_fields(config, shard)
     allocation = gate["config"]["allocation"]
     device = shard["gpu_identity"]
     logical = shard["logical_index"]
@@ -289,6 +293,11 @@ def publication_eligible(counts, sources, source_errors, pair_errors):
 def load_source(path):
     data, ref = audited_result(path)  # P1-P8, plus mandatory exact FINAL/P6.
     meta, config = data["_meta"], data["config"]
+    from src.envs.pair_v2_fov import CONTRAST_KEYS, declared_fields
+    if any(key in config or key in data['metrics'] for key in CONTRAST_KEYS):
+        fields = declared_fields(config)
+        if any(data['metrics'].get(key) != value for key, value in fields.items()):
+            raise ValueError('Hashed FOV contrast metrics differ from source configuration')
     expected_name = Path(ref["file"]).stem
     if meta.get("name") != expected_name or config.get("name") != expected_name:
         raise ValueError("Source filename/meta/config name mismatch")
@@ -786,7 +795,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None,
                attempt_setup_version=None, attempt_setup_policy=None, candidate_policy=None, candidate_policy_spec=None,
                projection_pool_version=None, projection_pool_policy=None,
-               frozen_render_version=None, frozen_render_policy=None):
+               frozen_render_version=None, frozen_render_policy=None, field_of_view=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
@@ -923,6 +932,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
         raise ValueError("Require two actual prefix and two post-observation captures")
     prefix = [load_observation(r, portable, directory, root=root) for r in record["prefix"]]
     after = [load_observation(r, portable, directory, root=root) for r in record["after"]]
+    if field_of_view is not None:
+        from src.envs.pair_v2_fov import verify_native_fov
+        for observation in (*prefix, *after):
+            verify_native_fov(observation['metadata'], field_of_view)
     identities = row["identities"]
     candidates, anchor = identities["candidate_names"], identities["anchor_name"]
     instruction = f"Select the {identities['target_type']} closest to the {identities['anchor_type']}."
@@ -1328,7 +1341,8 @@ def main(argv=None):
                                              attempt_setup_policy=cfg.get("attempt_setup_policy"),
                                              candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
                                              projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'),
-                                             frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'))
+                                             frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'),
+                                             field_of_view=cfg.get('field_of_view', 100))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],

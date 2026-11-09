@@ -191,6 +191,9 @@ class V2Simulator:
         self.frame_count += 1
         metadata = copy.deepcopy(event.metadata)
         reference = self.store.save_json(prefix + "_metadata.json", metadata)
+        if self.config.get('fov_contrast_version') is not None:
+            from .pair_v2_fov import declared_fields, verify_native_fov
+            verify_native_fov(metadata, declared_fields(self.config)['field_of_view'])
         frame = getattr(event, "frame", None)
         rgb = None if frame is None else np.asarray(frame).copy()
         files = {"metadata": reference}

@@ -30,6 +30,7 @@ from .pair_v2_coverage_order import view_index_order
 from .thor_common import process_identity
 from .pair_v2_native_retry import (NATIVE_RETRY_VERSION, FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY,
                                    record_restore_readback)
+from .pair_v2_fov import declared_fields, bind_source_fields
 
 PRODUCER_MODULE = 'src.envs.pair_v2_marked_shard'
 SAFE_RETRY_VERSION = NATIVE_RETRY_VERSION
@@ -40,6 +41,12 @@ _BASE_WRITE = base.write_json
 
 
 def enable_config(config):
+    shard = config.get('shard', {})
+    fields = declared_fields(shard)
+    if config.get('field_of_view', 100) != fields['field_of_view']:
+        raise ValueError('Marked source camera differs from its immutable shard')
+    config.update(fields)
+    bind_source_fields(config, shard)
     old_solvable.enable_config(config)
     for key in ('clone_rule', 'clone_adapter_source', 'clone_portable_archive',
                 'proposal_order_version', 'proposal_order_policy'):
@@ -354,6 +361,7 @@ def compact_attempt(row):
 def summary(state, config):
     result = base.summarize(state['rows'], state['excluded'], state['status'], config)
     result.update(tags())
+    result.update(declared_fields(config))
     for key in ('w0_by_anchor', 'controller_visits', 'selected_controller_id', 'search_stop_reason',
                 'pool_catalogs', 'placement_exhausted_proposals', 'placement_point_failures',
                 'controller_restarts', 'discovery_failures', 'proposal_trials', 'failed_native_point_count'):
@@ -711,8 +719,10 @@ def main():
         active.append(instance); return instance
     def writer(name, metrics, config):
         enable_config(config); metrics.update(tags())
+        metrics.update(declared_fields(config))
         final, verified = terminal.final_metrics(metrics, config, active[0] if len(active) == 1 else None)
         final.update(tags())
+        final.update(declared_fields(config))
         publication['verified'] = verified
         return previous[2](name, final, config)
     try:

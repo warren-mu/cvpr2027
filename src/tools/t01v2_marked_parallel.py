@@ -8,6 +8,7 @@ from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SP
 from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
 from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
 from src.envs.pair_v2_native_retry import FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY
+from src.envs.pair_v2_fov import contrast_fields, declared_fields
 
 SCENE_MODULE = 'src.envs.pair_v2_marked_shard'
 
@@ -40,21 +41,34 @@ def validate_plan(argv):
     allowed = {f'FloorPlan{i}' for i in (*range(1, 21), *range(201, 221))}
     if not scenes or len(scenes) != len(set(scenes)) or not set(scenes) <= allowed:
         raise ValueError('Supplement 7 is restricted to the fixed forty training scenes')
+    if '--field-of-view' not in argv:
+        return {}  # Historical call shape retains the original camera and no contrast claim.
+    if argv.count('--field-of-view') != 1 or argv.index('--field-of-view') + 1 >= len(argv):
+        raise ValueError('Require one explicit FOV contrast argument')
+    fields = contrast_fields(int(argv[argv.index('--field-of-view') + 1]))
+    declared_fields({**fields, 'pilot_scenes': scenes})
+    return fields
 
 
 def main():
-    validate_plan(sys.argv[1:])
-    prior_launch, prior_write = original.launch_logged, original.write_result
+    camera = validate_plan(sys.argv[1:])
+    prior_launch, prior_write, prior_shard = original.launch_logged, original.write_result, original.shard_configuration
     def launch(name, command, environment, directory):
         return prior_launch(name, marked_scene_command(name, command), environment, directory)
     def write(name, metrics, config):
         config.update(marked_tags()); metrics.update(marked_tags())
+        config.update(copy.deepcopy(camera)); metrics.update(copy.deepcopy(camera))
         return prior_write(name, metrics, config)
-    original.launch_logged, original.write_result = launch, write
+    def shard(*args, **kwargs):
+        value = prior_shard(*args, **kwargs)
+        value.update(copy.deepcopy(camera))
+        declared_fields(value)
+        return value
+    original.launch_logged, original.write_result, original.shard_configuration = launch, write, shard
     try:
         return original.main()
     finally:
-        original.launch_logged, original.write_result = prior_launch, prior_write
+        original.launch_logged, original.write_result, original.shard_configuration = prior_launch, prior_write, prior_shard
 
 
 if __name__ == '__main__':

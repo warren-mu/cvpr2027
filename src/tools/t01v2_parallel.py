@@ -61,10 +61,13 @@ def submission_identity(repo, name, job, gpus, timeout):
     return matches[0]
 
 
-def shard_configuration(name, scene, logical, cpu_set, gate, gate_ref, gate_path, scenes, raw):
+def shard_configuration(name, scene, logical, cpu_set, gate, gate_ref, gate_path, scenes, raw, *, field_of_view=100):
+    if type(field_of_view) is not int or field_of_view not in (60, 100):
+        raise ValueError('Require an explicit 60/100 camera field of view')
     allocation = gate["config"]["allocation"]
     device = allocation["devices"][logical]
     return {"schema_version": 1, "name": name, "scene": scene, "seed": 0, "resolution": 255,
+            "field_of_view": field_of_view,
             "logical_index": logical, "gpu_identity": device, "pbs_jobid": allocation["pbs_jobid"],
             "node": gate["config"]["node"], "parent_cuda_visible_devices": allocation["cuda_visible_devices"],
             "child_cuda_visible_devices": device["gpu_uuid"], "cpu_affinity": cpu_set,
@@ -76,6 +79,10 @@ def verify_shard_result(record, data, expected):
     if data is None or record.get("provenance_error"):
         raise ValueError("Shard result has no complete audited source")
     meta, metrics, shard = data.get("_meta", {}), data.get("metrics", {}), data.get("config", {}).get("shard", {})
+    from src.envs.pair_v2_fov import bind_source_fields, declared_fields
+    actual_fov = bind_source_fields(data.get('config', {}), shard)
+    if actual_fov != declared_fields(expected):
+        raise ValueError('Shard camera differs from the planned FOV assignment')
     keys = ("name", "scene", "seed", "resolution", "logical_index", "gpu_identity", "pbs_jobid", "node",
             "parent_cuda_visible_devices", "child_cuda_visible_devices", "cpu_affinity", "gate_source")
     if (meta.get("name") != expected["name"] or meta.get("exit_code") != record["exit_code"]
@@ -93,6 +100,7 @@ def main():
     parser.add_argument("--timeout-seconds", type=float, required=True)
     parser.add_argument("--scene-timeout-seconds", type=float, required=True)
     parser.add_argument("--gate-timeout-seconds", type=float, default=180)
+    parser.add_argument("--field-of-view", type=int, choices=(60, 100), default=100)
     args = parser.parse_args()
     if not re.fullmatch(r"pilot_pairs_v2_[A-Za-z0-9_]+", args.name):
         parser.error("Use a new pilot_pairs_v2_ name; final pilot aggregation has its own name")
@@ -109,6 +117,7 @@ def main():
     config = {"name": args.name, "pbs_jobid": os.environ.get("PBS_JOBID"), "node": socket.gethostname(),
               "budget_group": "T01v2", "budget_limit_charged_gpu_hours": 8, "phase_limit_charged_gpu_hours": 60,
               "resolution": 255, "seed": 0, "pilot_scenes": args.scenes, "scene_shards": queues,
+              "field_of_view": args.field_of_view,
               "gpus": args.gpus, "cpu_cores_per_gpu": 12, "scene_shard_processes_per_gpu": 1,
               "instances_per_gpu": 2, "instance_scope": "one construction controller plus one sequential independent replay; never two replay workers concurrently",
               "timeout_seconds": args.timeout_seconds, "scene_timeout_seconds": args.scene_timeout_seconds,
@@ -197,7 +206,7 @@ def main():
                         raw = scratch / scene
                         raw.mkdir(exist_ok=False)
                         shard = shard_configuration(name, scene, logical, cpus[logical], gate, record["source"],
-                                                    record["result_path"], args.scenes, raw)
+                                                    record["result_path"], args.scenes, raw, field_of_view=args.field_of_view)
                         path = raw / "shard_config.json"
                         with path.open("x") as stream:
                             json.dump(shard, stream, indent=2, allow_nan=False)

@@ -114,7 +114,8 @@ def collect_sources(paths):
                         attempt_setup_version=cfg.get('attempt_setup_version'), attempt_setup_policy=cfg.get('attempt_setup_policy'),
                         candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
                         projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'),
-                        frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'))
+                                      frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'),
+                                      field_of_view=cfg.get('field_of_view', 100))
                     qualified.append({'pair_id': pair['pair_id'], 'scene': pair['scene'], 'kind': pair['kind'],
                         'target_w0': pair['target_w0'], 'target_w1': pair['target_w1'],
                         'source_file': reference['file'], 'source_metrics_sha256': reference['metrics_sha256'],

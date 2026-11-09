@@ -125,6 +125,7 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
             "export_version": VERSION, "reachable_scope": catalog_scope, "reachable_reference": reference,
             "frozen_render_version": FROZEN_RENDER_VERSION,
             "candidate_policy": package['source_config'].get('candidate_policy'),
+            "field_of_view": package['source_config'].get('field_of_view', 100),
             "render_source_worlds": [world["reference"] for world in worlds]})
     table.export_measurements['frozen_pose_readbacks'] = {}
     for scope, stages in (('requested_vs_actual', {'setup', 'capture'}),

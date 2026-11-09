@@ -288,6 +288,9 @@ def verify_render_sources(table, *, evidence_roots):
                     or not identity.get('worker') or not identity.get('unity')):
                 raise ValueError('Originating exporter/Unity process identity proof is missing')
             metadata = json.loads(read(capture['files']['metadata']))
+            if 'field_of_view' in table.source:
+                from .pair_v2_fov import verify_native_fov
+                verify_native_fov(metadata, table.source['field_of_view'])
             with Image.open(io.BytesIO(read(capture['files']['rgb']))) as image:
                 rgb = np.asarray(image).copy()
             if (rgb.dtype != np.uint8 or rgb.shape != (255, 255, 3) or not np.any(rgb)

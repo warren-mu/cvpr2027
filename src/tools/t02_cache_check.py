@@ -135,6 +135,7 @@ def load_exports(paths, scratch):
                     or table.source.get("frozen_render_version") != FROZEN_RENDER_VERSION
                     or table.source.get("render_source_worlds") != [world["reference"] for world in package["worlds"]]
                     or table.source.get('candidate_policy') != package['source_config'].get('candidate_policy')
+                    or table.source.get('field_of_view', 100) != package['source_config'].get('field_of_view', 100)
                     or table.source.get("t01") != stored["source_provenance"]
                     or any(getattr(table, key) != package[key] for key in ("scene", "kind", "instruction", "anchor_name"))
                     or tuple(table.candidate_names) != tuple(package["candidate_names"])

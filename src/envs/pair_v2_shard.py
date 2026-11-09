@@ -477,7 +477,7 @@ def main():
     args=parser.parse_args()
     shard=json.loads(args.shard_config.read_text())
     config={'name':args.name,'scene':args.scene,'shard':shard,'seed':0,'resolution':255,
-        'grid_size':.25,'visibility_distance':10,'field_of_view':100,
+        'grid_size':.25,'visibility_distance':10,'field_of_view':shard.get('field_of_view',100),
         'settle_max_steps':50,'physics_time_step':.02,'physics_seconds_per_step':.1,
         'max_attempts':160,'max_identity_sets':8,'max_receptacles':4,'max_points_per_side':6,
         'max_view_positions':8,'scene_pairs_per_class':5,'max_raw_bytes':512*1024*1024,
