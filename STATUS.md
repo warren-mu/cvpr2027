@@ -651,3 +651,7 @@ Published 3 generator-reported Look→Flip candidates from the running FP203/FP2
 |---|---:|---:|---:|---|
 | FloorPlan203 | 60 | 9 | 0 | anchor_visible_at_v0=10; one_action_evidence_unavailable=5; target_uniqueness_or_ratio=14; w0_physical=20; w1_physical=2 |
 | FloorPlan204 | 55 | 1 | 0 | anchor_hidden_but_prefix_rgb_diff_gt3=2; anchor_visible_at_v0=12; one_action_evidence_unavailable=4; target_uniqueness_or_ratio=1; w0_physical=28; w1_physical=7 |
+
+### T02 supplement15 source loading CPU check
+
+The opt-in T02 loader now binds ranked v2 checkpoints to the exact authenticated scene and per-pair Controller baseline, retains all scientific checks, and verifies fixed candidate labels. The original source path is unchanged. All 69 pair-table CPU tests passed (t02_ranked_source_cpu_01). No new GPU was used; actual Look table export awaits independent pair acceptance.
