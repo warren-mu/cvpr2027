@@ -31,7 +31,7 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 from src.tools.t02_export import (VERSION as EXPORT_VERSION, save_json, execution_environment,
                                   gate_runtime, logged_gate, preserve_black, black_only_failure, pair_runtime)
 
-VERSION = "t02_formal_fresh_cache_shadow_v2"
+VERSION = "t02_formal_fresh_cache_dataset_v3"
 
 
 def exact_export_command(command, name):
@@ -90,8 +90,6 @@ def load_exports(paths, scratch):
             raise ValueError("Export did not account for every requested pair exactly once")
         for index, row in enumerate(rows):
             pair_id = row["pair_id"]
-            if pair_id in packages or any(item["pair_id"] == pair_id for item in ledger):
-                raise ValueError("Duplicate pair across export sources; never choose a preferred retry")
             pair_dir = directory / f"pair_{index:04d}"
             if Path(row["scratch_directory"]).resolve() != pair_dir or row.get("cleanup_errors") != []:
                 raise ValueError("Pair ownership or cleanup is unknown")
@@ -130,6 +128,9 @@ def load_exports(paths, scratch):
             if details.get("table_manifest") != manifest or Path(manifest["file"]).resolve() != pair_dir / "table/table.json":
                 raise ValueError("Pair and export-check record name different table bytes")
             table = load_table(manifest["file"], expected_sha256=manifest["sha256"])
+            dataset_key = table.dataset_key
+            if dataset_key in tables:
+                raise ValueError('Duplicate pair source across exports; never choose a preferred retry')
             from src.envs.pair_table_export import FROZEN_RENDER_VERSION
             if (table.pair_id != pair_id or table.source.get("export_version") != EXPORT_VERSION
                     or table.source.get("frozen_render_version") != FROZEN_RENDER_VERSION
@@ -155,8 +156,10 @@ def load_exports(paths, scratch):
                 verify_shadow_metadata(table, declared)
             package["cache_evidence_roots"] = roots
             package["cached_table_manifest"] = manifest
-            tables[pair_id], packages[pair_id], pair_checks[pair_id] = table, package, checks
+            tables[dataset_key], packages[dataset_key], pair_checks[dataset_key] = table, package, checks
             entry["population_membership"] = "complete_independently_verified_table"
+            entry.update(dataset_key=dataset_key, original_pair_id=pair_id,
+                         dataset_identity=copy.deepcopy(table.dataset_identity))
             entry.update(table.shadow_metadata)
     if not tables:
         raise ValueError("No complete usable table in the explicit export population")
@@ -177,11 +180,12 @@ def labels(view, table):
     return {name: assignment[name] for name in eligible_names(view, table.candidate_names)}
 
 
-def make_sample(table, state_id, fresh):
+def make_sample(table, state_id, fresh, *, use_dataset_key=False):
     cached = tuple(table.states[state_id].captures)
     return CacheSample(table.pair_id, state_id, table.anchor_name, tuple(table.candidate_names),
                        cached, tuple(fresh), tuple(labels(view, table) for view in cached),
-                       tuple(labels(view, table) for view in fresh), kind=table.kind)
+                       tuple(labels(view, table) for view in fresh), kind=table.kind,
+                       dataset_key=table.dataset_key if use_dataset_key else None)
 
 
 def describe_view(view):
@@ -231,8 +235,13 @@ def fresh_worker(config, connection):
     directory, package = Path(config["directory"]), config["package"]
     manifest = package["cached_table_manifest"]
     table = load_table(manifest["file"], expected_sha256=manifest["sha256"])
+    use_dataset_key = config.get('dataset_key') is not None
+    if use_dataset_key and config['dataset_key'] != table.dataset_key:
+        raise ValueError('Fresh worker dataset key differs from its immutable table')
     report = {"pair_id": table.pair_id, "scene": table.scene, "status": "error", "states": [],
               "requested_states": config["state_ids"], "error": None, "cleanup_errors": [], "black_frame_reference": None}
+    if use_dataset_key:
+        report.update(dataset_key=table.dataset_key, original_pair_id=table.pair_id)
     sim, body_finished = None, False
     try:
         with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
@@ -256,7 +265,7 @@ def fresh_worker(config, connection):
                     # Diagnostics happen only after both actual source captures
                     # were retained. Native authentication is independently run
                     # again in the parent before any live certificate is issued.
-                    comparison = check_cached_state(make_sample(table, state_id, fresh))
+                    comparison = check_cached_state(make_sample(table, state_id, fresh, use_dataset_key=use_dataset_key))
                     diagnostic = save_json(directory / f"comparison_{index:04d}.json", comparison)
                     report["states"].append({"state_id": state_id, "capture_descriptor": ref,
                         "comparison": diagnostic, "checks_passed": comparison["checks_passed"],
@@ -292,9 +301,12 @@ def fresh_worker(config, connection):
     return report
 
 
-def load_samples(table, report, directory, roots, state_ids):
+def load_samples(table, report, directory, roots, state_ids, *, use_dataset_key=False):
     if report.get("pair_id") != table.pair_id or report.get("requested_states") != state_ids:
         raise ValueError("Worker result belongs to another pair/sample plan")
+    if use_dataset_key and (report.get('dataset_key') != table.dataset_key
+                           or report.get('original_pair_id') != table.pair_id):
+        raise ValueError('Worker result belongs to another dataset source')
     rows = report.get("states")
     if not isinstance(rows, list) or [row.get("state_id") for row in rows] != state_ids[:len(rows)]:
         raise ValueError("Fresh observations are not the declared state sequence")
@@ -304,7 +316,7 @@ def load_samples(table, report, directory, roots, state_ids):
         if descriptor.get("pair_id") != table.pair_id or descriptor.get("state_id") != row["state_id"] or len(descriptor.get("worlds", [])) != 2:
             raise ValueError("Fresh capture descriptor identity mismatch")
         fresh = tuple(decode_view(item, roots) for item in descriptor["worlds"])
-        sample = make_sample(table, row["state_id"], fresh)
+        sample = make_sample(table, row["state_id"], fresh, use_dataset_key=use_dataset_key)
         actual = check_cached_state(sample)
         original = read_json_ref(row["comparison"], directory, expected=directory / f"comparison_{index:04d}.json")
         if canonical_hash(actual) != canonical_hash(original) or row.get("checks_passed") != actual["checks_passed"] or row.get("reasons") != actual["reasons"]:
@@ -382,6 +394,7 @@ def main():
                 package, pair_dir = packages[pair_id], directory / f"pair_{index:04d}"
                 pair_dir.mkdir(exist_ok=False)
                 child = {"name": f"{args.name}_p{index:04d}", "scene": package["scene"], "resolution": 255,
+                    "dataset_key": pair_id,
                     "runtime": pair_runtime(runtime, pair_dir),
                     "package": package, "directory": str(pair_dir), "state_ids": state_ids,
                     "deadline": min(deadline - 15, time.time() + args.pair_timeout_seconds),
@@ -393,7 +406,7 @@ def main():
                     worker.receive()
                     time.sleep(.05)
                 worker.receive()
-                row = worker.result or {**worker.latest, "pair_id": pair_id, "status": "error",
+                row = worker.result or {**worker.latest, "pair_id": package['pair_id'], "dataset_key": pair_id, "status": "error",
                     "error": worker.error or {"type": "TimeoutError", "message": "Fresh worker did not complete"}, "cleanup_errors": []}
                 row.update(worker_identity=worker.identity, unity_identity=worker.unity_identity,
                            scratch_directory=str(pair_dir))
@@ -410,7 +423,7 @@ def main():
                 if row["cleanup_errors"]:
                     break
                 roots = [*package["cache_evidence_roots"], str(pair_dir)]
-                observed = load_samples(tables[pair_id], row, pair_dir, roots, state_ids)
+                observed = load_samples(tables[pair_id], row, pair_dir, roots, state_ids, use_dataset_key=True)
                 if any(view.process_id in all_cached_processes for sample in observed for view in sample.fresh):
                     raise ValueError("Fresh process is also an export process in the complete population")
                 try:

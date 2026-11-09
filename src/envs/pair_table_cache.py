@@ -69,6 +69,11 @@ class CacheSample:
     cached_labels: tuple  # per world: {stable candidate name: public numeric label}
     fresh_labels: tuple
     kind: str  # bound to the source table before cache authorization
+    dataset_key: str = None
+
+    @property
+    def population_key(self):
+        return self.dataset_key or self.pair_id
 
 
 def _labels(view, actual, pair_id, candidates):
@@ -176,6 +181,7 @@ def check_cached_state(sample):
         reasons.append('shared_fork_classification_changed')
     passed, synthetic = not reasons, views[0].synthetic
     return {'pair_id': sample.pair_id, 'state_id': sample.state_id, 'kind': sample.kind, 'version': CACHE_VERSION,
+            **({'dataset_key': sample.dataset_key, 'original_pair_id': sample.pair_id} if sample.dataset_key is not None else {}),
             'synthetic': synthetic, 'checks_passed': passed,
             'cache_matches_live': None if synthetic else passed,
             'reasons': reasons, 'worlds': worlds,
@@ -199,7 +205,7 @@ def validate_cache_sample(samples, *, population, sampling_plan):
     if sampling_plan != expected:
         raise ValueError('Sampling plan does not reproduce the declared population/seed')
     records = list(samples)
-    keys = [_key((sample.pair_id, sample.state_id)) for sample in records]
+    keys = [_key((sample.population_key, sample.state_id)) for sample in records]
     if len(keys) != len(set(keys)):
         raise ValueError('Duplicate pair/state records cannot increase the sample size')
     requested = {_key(key) for key in expected['selected_keys']}
@@ -217,6 +223,7 @@ def validate_cache_sample(samples, *, population, sampling_plan):
             result = check_cached_state(sample)
         except (ValueError, TypeError, KeyError) as error:
             result = {'pair_id': sample.pair_id, 'state_id': sample.state_id,
+                      **({'dataset_key': sample.dataset_key, 'original_pair_id': sample.pair_id} if sample.dataset_key is not None else {}),
                       'checks_passed': False, 'cache_matches_live': None,
                       'synthetic': any(view.synthetic for view in (*sample.cached, *sample.fresh)),
                       'reasons': ['missing_or_invalid_evidence'],

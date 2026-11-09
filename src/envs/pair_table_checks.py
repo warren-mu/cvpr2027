@@ -10,6 +10,7 @@ from pathlib import Path
 import time
 
 from .pair_table import encoded, eligible_names, classify_views, verify_shadow_metadata
+from .pair_table_identity import population_key, resolve_table
 
 
 def minimum_world_turns(table, state_id, world, *, already_seen=False, max_turns=5):
@@ -222,6 +223,9 @@ def verify_cached_binding(table, row):
     """Bind a cache report's reference pixels, masks and labels to this table."""
     if row['pair_id'] != table.pair_id or row.get('kind') != table.kind:
         raise ValueError('Cache report names another table or pair kind')
+    if row.get('dataset_key') is not None and (row['dataset_key'] != table.dataset_key
+            or row.get('original_pair_id') != table.pair_id):
+        raise ValueError('Cache dataset key differs from its original source identity')
     state = table.states[row['state_id']]
     measured = classify_views(state.captures, table.anchor_name, kind=table.kind)
     declared = row.get('cached_classification', {})
@@ -495,28 +499,30 @@ def authorize_tables(tables, *, pair_checks, cache_report, authenticated_cache_s
         raise ValueError('cache_validation_failed_or_pending: stop all downstream use') from error
     from .pair_table_cache import sample_state_keys
     tables = list(tables)
-    population = [(table.pair_id, key) for table in tables for key in table.states]
+    population = [(table.dataset_key, key) for table in tables for key in table.states]
     plan = cache_report['sampling_plan']
     if sample_state_keys(population, seed=plan['seed'], sample_size=plan['sample_size']) != plan:
         raise ValueError('Cache validation belongs to another table population')
     # The pure cache helper intentionally does not read raw files. Its caller
     # must first authenticate all fresh captures; IDs must cover the exact set.
-    required_sources = {(row['pair_id'], row['state_id'], world,
+    required_sources = {(population_key(row), row['state_id'], world,
                          row['worlds'][world]['fresh_source']['render_id'])
                         for row in cache_report['states'] for world in ('w0', 'w1')}
     if authenticated_cache_source_ids is None or set(authenticated_cache_source_ids) != required_sources:
         raise ValueError('Fresh cache capture source authentication is missing')
-    indexed = {table.pair_id: table for table in tables}
+    indexed = {table.dataset_key: table for table in tables}
+    if len(indexed) != len(tables):
+        raise ValueError('Duplicate original source identity in table population')
     for row in cache_report['states']:
-        table = indexed[row['pair_id']]
+        table = indexed[population_key(row)]
         verify_cached_binding(table, row)
     for table in tables:
-        check = pair_checks.get(table.pair_id)
+        check = pair_checks.get(table.dataset_key)
         if (table.synthetic or not table.export_verified or not isinstance(check, dict)
                 or check.get('passed') is not True or check.get('synthetic_only') is not False):
             raise ValueError('Table remains unverified for production rollout')
         verify_shadow_metadata(table, check)
-        verify_shadow_metadata(table, cache_report.get('table_shadow_metadata', {}).get(table.pair_id))
+        verify_shadow_metadata(table, cache_report.get('table_shadow_metadata', {}).get(table.dataset_key))
     for table in tables:
         table.cache_verified = True
 
@@ -527,19 +533,21 @@ def authenticate_cache_sources(tables, samples, *, evidence_roots):
     Existing native graph evidence is retained: this is a fresh capture check,
     not a claim that a new-process navigation graph was re-enumerated.
     """
-    indexed = {table.pair_id: table for table in tables}
+    tables = list(tables)
     grouped, identities = {}, set()
     for sample in samples:
-        table = indexed[sample.pair_id]
+        table = resolve_table(tables, sample.population_key)
+        if sample.pair_id != table.pair_id:
+            raise ValueError('Sample original pair ID differs from its dataset source')
         state = table.states[sample.state_id]
         if tuple(sample.cached) != tuple(state.captures) or sample.kind != table.kind:
             raise ValueError('Sample cached captures or pair kind differ from the explicit table')
-        key = (sample.pair_id, sample.state_id)
+        key = (sample.population_key, sample.state_id)
         if key in grouped:
             raise ValueError('Duplicate fresh paired-state source')
         grouped[key] = sample
     for pair_id in sorted({key[0] for key in grouped}):
-        checked = copy.copy(indexed[pair_id])
+        checked = copy.copy(resolve_table(tables, pair_id))
         checked.states = dict(checked.states)
         for (source_pair, state_id), sample in grouped.items():
             if source_pair != pair_id:

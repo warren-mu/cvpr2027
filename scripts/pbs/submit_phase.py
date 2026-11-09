@@ -39,13 +39,15 @@ def budget_group(task, name, command, declared=None):
     e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
         or arg in ("src.tools.e2e_export", "src.tools.smoke_e2e_views")) for arg in (command or []))
     g01 = isinstance(name, str) and name.startswith(("gen_train_", "gen_test_"))
-    t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel") for arg in (command or []))
+    t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel", "src.tools.t02_cache_check") for arg in (command or []))
     t02 = isinstance(name, str) and name.startswith("t02_export_")
     if t02 or declared == "T02":
         if task != "T01" or not t02 or declared != "T02" or named or launched or e2e or e2e_launch or g01:
             raise ValueError("T02 export requires task T01, explicit T02 budget and its own t02_export_ name")
         if command and not t02_launch:
             raise ValueError("T02 export must use its declared single or parallel exporter")
+        if "src.tools.t02_cache_check" in (command or []) and not name.startswith("t02_export_cache_"):
+            raise ValueError("Fresh T02 cache validation requires its isolated t02_export_cache_ name")
         return "T02"
     if g01 or declared == "G01":
         if task != "T01" or not g01 or named or launched or e2e or e2e_launch or t02_launch or declared not in (None, "G01"):

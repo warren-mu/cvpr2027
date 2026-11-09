@@ -10,6 +10,7 @@ import copy
 import hashlib
 import json
 from collections import Counter, defaultdict
+from .pair_table_identity import population_key
 
 VERSION = 't02_pair_id_flip_scene_stay_balance_v1'
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
@@ -53,6 +54,8 @@ def normalize_table(table):
     measurements = [left_half_from_mask(views[index].masks.get(target),
         views[index].rgb.width, views[index].rgb.height) for index, target in enumerate(table.target_names)]
     value = {'pair_id': table.pair_id, 'scene': table.scene, 'kind': table.kind,
+        'dataset_key': table.dataset_key, 'original_pair_id': table.pair_id,
+        'dataset_identity': copy.deepcopy(table.dataset_identity),
         'candidate_names': list(table.candidate_names), 'target_names': list(table.target_names),
         's0_target_left': [item['left'] for item in measurements], 's0_left_measurements': measurements,
         'synthetic': table.synthetic, 'source': copy.deepcopy(table.source)}
@@ -73,7 +76,7 @@ def checked_rows(rows):
     for row in rows:
         value = copy.deepcopy(row)
         names, targets, left = value.get('candidate_names'), value.get('target_names'), value.get('s0_target_left')
-        if (not isinstance(value.get('pair_id'), str) or not value['pair_id'] or value['pair_id'] in seen
+        if (not isinstance(value.get('pair_id'), str) or not value['pair_id'] or population_key(value) in seen
                 or not isinstance(value.get('scene'), str) or not value['scene'] or value.get('kind') not in KINDS
                 or not isinstance(names, list) or len(names) != 2
                 or not all(isinstance(name, str) and name for name in names) or names != sorted(set(names))
@@ -83,7 +86,18 @@ def checked_rows(rows):
             raise ValueError('Require unique pair IDs and explicit actual A/B targets and nullable left-half measurements')
         if (targets[0] != targets[1]) is not value['kind'].endswith('flip'):
             raise ValueError('Recorded actual targets disagree with Flip/Stay class')
-        seen.add(value['pair_id'])
+        if value.get('dataset_key') is not None:
+            from .pair_table_identity import identity_fields
+            identity = value.get('dataset_identity')
+            # Synthetic legacy fixtures have no authenticated source identity.
+            if identity is None:
+                if value.get('synthetic') is not True or value['dataset_key'] != value['pair_id']:
+                    raise ValueError('Dataset balance identity is missing')
+            elif (identity != identity_fields(value['pair_id'], identity.get('pair_reference'))
+                  or identity['dataset_key'] != value['dataset_key']
+                  or value.get('original_pair_id') != value['pair_id']):
+                raise ValueError('Dataset balance identity changed')
+        seen.add(population_key(value))
         result.append(value)
     return result
 
@@ -138,7 +152,7 @@ def balance_pairs(rows, *, seed=0):
     retain = set()
     for row in original:
         if row['kind'].endswith('flip'):
-            retain.add(row['pair_id'])
+            retain.add(population_key(row))
         else:
             side = 'a' if row['target_names'][0] == row['candidate_names'][0] else 'b'
             stay[row['scene']][side].append(row)
@@ -147,14 +161,16 @@ def balance_pairs(rows, *, seed=0):
         limit = min(len(sides['a']), len(sides['b']))
         for side in ('a', 'b'):
             ordered = sorted(sides[side], key=lambda row: (
-                seeded_digest(row['pair_id'], seed, 'stay_downsample', scene=scene), row['pair_id']))
-            retain.update(row['pair_id'] for row in ordered[:limit])
+                seeded_digest(row['pair_id'], seed, 'stay_downsample', scene=scene), population_key(row)))
+            retain.update(population_key(row) for row in ordered[:limit])
         strata.append({'scene': scene, 'input_a': len(sides['a']), 'input_b': len(sides['b']),
                        'retained_per_side': limit, 'grouping': 'both Stay classes pooled'})
     selected, dropped, measured = [], [], []
-    for row in sorted(original, key=lambda value: (value['scene'], value['kind'], value['pair_id'])):
-        if row['pair_id'] not in retain:
+    for row in sorted(original, key=lambda value: (value['scene'], value['kind'], population_key(value))):
+        identity = {key: copy.deepcopy(row[key]) for key in ('dataset_key', 'original_pair_id', 'dataset_identity') if key in row}
+        if population_key(row) not in retain:
             dropped.append({'pair_id': row['pair_id'], 'scene': row['scene'], 'kind': row['kind'],
+                            **identity,
                             'reason': 'stay_scene_majority_downsample', 'target_name': row['target_names'][0]})
             continue
         assignment_sha = seeded_digest(row['pair_id'], seed, 'flip_world_swap') if row['kind'].endswith('flip') else None
@@ -164,6 +180,7 @@ def balance_pairs(rows, *, seed=0):
                   's0_target_left': [row['s0_target_left'][index] for index in order]}
         measured.append(mapped)
         selected.append({'pair_id': row['pair_id'], 'scene': row['scene'], 'kind': row['kind'],
+            **identity,
             'world_order': order, 'swapped': swapped, 'assignment_sha256': assignment_sha,
             'candidate_names': copy.deepcopy(row['candidate_names']),
             'original_target_names': copy.deepcopy(row['target_names']), 'target_names': mapped['target_names'],

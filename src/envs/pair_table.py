@@ -190,6 +190,23 @@ class PairTable:
         return eligible_names(state.captures[0 if state.shared else world], self.candidate_names)
 
     @property
+    def original_pair_id(self):
+        return self.pair_id
+
+    @property
+    def dataset_identity(self):
+        from .pair_table_identity import identity_fields
+        reference = self.source.get('t01', {}).get('pair')
+        if reference is None and self.synthetic:
+            return None  # Old CPU fixtures are not authenticated dataset members.
+        return identity_fields(self.pair_id, reference)
+
+    @property
+    def dataset_key(self):
+        identity = self.dataset_identity
+        return self.pair_id if identity is None else identity['dataset_key']
+
+    @property
     def shadow_divergent_states(self):
         return sum(state.shadow_divergent for state in self.states.values())
 
@@ -223,8 +240,14 @@ class TableObservationBackend:
         if set(self.world_orders) - set(self.tables) or any(
                 list(order) not in ([0, 1], [1, 0]) for order in self.world_orders.values()):
             raise ValueError('World label assignment must be an explicit original-world permutation')
-        if not self.tables or any(key != table.pair_id for key, table in self.tables.items()):
+        if not self.tables or any(key not in (table.pair_id, table.dataset_key) for key, table in self.tables.items()):
             raise ValueError('Explicit pair table mapping required')
+        identities = [table.dataset_key for table in self.tables.values()]
+        if len(set(identities)) != len(identities):
+            raise ValueError('Duplicate source identity in table mapping')
+        for key, table in self.tables.items():
+            if key == table.pair_id and sum(t.pair_id == key for t in self.tables.values()) != 1:
+                raise ValueError('Ambiguous original pair ID requires dataset keys')
         for table in self.tables.values():
             if table.synthetic:
                 if not allow_synthetic:
@@ -239,8 +262,15 @@ class TableObservationBackend:
     def reset(self, pair_id, world):
         if world not in ('w0', 'w1'):
             raise ValueError('Unknown world')
-        self.table, self.requested_world = self.tables[pair_id], int(world[-1])
-        self.world_order = tuple(self.world_orders.get(pair_id, (0, 1)))
+        if pair_id not in self.tables:
+            from .pair_table_identity import resolve_table
+            selected = resolve_table(self.tables.values(), pair_id)
+        else:
+            selected = self.tables[pair_id]
+        self.table, self.requested_world = selected, int(world[-1])
+        self.requested_pair_id = pair_id
+        lookup_key = next(key for key, value in self.tables.items() if value is selected)
+        self.world_order = tuple(self.world_orders.get(lookup_key, (0, 1)))
         self.world = self.world_order[self.requested_world]
         self.state_id = self.table.initial_state
         self.active = True
@@ -250,7 +280,7 @@ class TableObservationBackend:
         self.serial += 1
         table, state = self.table, self.table.states[self.state_id]
         capture = state.captures[0 if state.shared else self.world]
-        cache_key = (table.pair_id, self.state_id, 0 if state.shared else self.world)
+        cache_key = (self.requested_pair_id, self.state_id, 0 if state.shared else self.world)
         if cache_key not in self.public_cache:
             self.public_cache[cache_key] = mark_view(capture, table.labels, table.candidate_names)
         marked, marks = self.public_cache[cache_key]
@@ -258,7 +288,7 @@ class TableObservationBackend:
         candidates = tuple(Candidate(name, table.labels[name] if name in allowed else None,
             capture.count(name), capture.distances.get(name), True, True) for name in table.candidate_names)
         proof = CaptureEvidence(f'{table.pair_id}:{self.world}:{self.serial}:{uuid.uuid4().hex}',
-            table.pair_id, f'w{self.requested_world}', self.state_id, 'mock' if table.synthetic else 'P',
+            self.requested_pair_id, f'w{self.requested_world}', self.state_id, 'mock' if table.synthetic else 'P',
             capture.render_id, capture.rgb.sha256, marked.sha256, table.synthetic)
         return BackendFrame(capture.rgb, marked, table.instruction,
             tuple((n[0], n[1]) for n in state.neighbors),
@@ -274,8 +304,9 @@ class TableObservationBackend:
     def verify_capture(self, frame):
         state = self.table.states[self.state_id]
         capture = state.captures[0 if state.shared else self.world]
-        marked, _ = self.public_cache[(self.table.pair_id, self.state_id, 0 if state.shared else self.world)]
+        marked, _ = self.public_cache[(self.requested_pair_id, self.state_id, 0 if state.shared else self.world)]
         return (self.table.export_verified and self.table.cache_verified
+                and frame.capture.pair_id == self.requested_pair_id
                 and frame.raw_rgb == capture.rgb and frame.marked_rgb == marked
                 and frame.capture.state_id == self.state_id and frame.capture.source_id == capture.render_id)
 
@@ -308,6 +339,7 @@ class TableEnvironment(PairEnvironment):
         self.evidence_entered = self.tau is not None
         self.evidence_status = 'entered' if self.evidence_entered else 'not_entered_verified'
         self.evidence_proofs.append({'version': TABLE_VERSION, 'state_id': state.state_id,
+            'dataset_key': self.backend.table.dataset_key, 'original_pair_id': self.backend.table.pair_id,
             'decision_index': self.steps, 'shared': state.shared, 'tau': self.tau,
             'shadow_divergent': state.shadow_divergent, **self.backend.table.shadow_metadata,
             'x_seen_step': self.x_seen_step, 'original_world_index': self.backend.world,
@@ -322,6 +354,7 @@ class TableEnvironment(PairEnvironment):
     def info(self):
         state = self.backend.table.states[self.backend.state_id]
         return {**super().info, 'backend_version': TABLE_VERSION, 'state_id': state.state_id,
+            'dataset_key': self.backend.table.dataset_key, 'original_pair_id': self.backend.table.pair_id,
             'shared': state.shared, 'tau': self.tau, 'x_seen_step': self.x_seen_step,
             'shadow_divergent': state.shadow_divergent, **self.backend.table.shadow_metadata,
             'anchor_pixels_w0': state.anchor_pixels[self.backend.world_order[0]],

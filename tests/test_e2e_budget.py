@@ -95,6 +95,18 @@ class T02BudgetTests(unittest.TestCase):
         self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
         self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'G01': 40.0, 'T02': 40.0})
 
+    def test_fresh_cache_validation_uses_t02_budget_and_exact_cache_namespace(self):
+        command = ['python3', '-m', 'src.tools.t02_cache_check']
+        self.assertEqual(submit.budget_group('T01', 't02_export_cache_fixture', command, 'T02'), 'T02')
+        submit.validate_request('T01', 1, 1800, 't02_export_cache_fixture', state(t02=39.5), 'T02')
+        for name, group in (('t02_export_fixture', 'T02'), ('gen_test_cache', 'G01'),
+                            ('t02_export_cache_fixture', None), ('pilot_pairs_v2_cache', 'T02')):
+            with self.assertRaises(ValueError): submit.budget_group('T01', name, command, group)
+        with self.assertRaises(ValueError):
+            submit.validate_request('T01', 2, 1800, 't02_export_cache_fixture', state(), 'T02')
+        with self.assertRaises(ValueError):
+            submit.validate_request('T01', 1, 1800, 't02_export_cache_fixture', state(t02=39.501), 'T02')
+
     def test_explicit_route_cannot_reclassify_old_diagnostics(self):
         for module in ('src.tools.t02_export', 'src.tools.t02_export_parallel'):
             self.assertEqual(submit.budget_group('T01', 't02_export_fixture', ['python3', '-m', module], 'T02'), 'T02')

@@ -87,6 +87,7 @@ class CacheProducerTests(unittest.TestCase):
             "metrics": {"kind": "t02_table_export", "export_checks_complete": True, "cleanup_errors": [],
                         "errors": [], "unstarted_pair_ids": [], "pairs": [row]}}
         value = SimpleNamespace(**{key: package[key] for key in ("pair_id", "scene", "kind", "instruction", "anchor_name", "candidate_names", "target_names")},
+            dataset_key='p', dataset_identity=None,
             shadow_metadata={'shadow_divergent_states': 1, 'non_anchor_divergent_states': 1, 'in_clean_subset': False},
             synthetic=False, source={"export_version": cache.EXPORT_VERSION, "t01": package["source_provenance"],
                 "frozen_render_version": "w0_nonanchor_frozen_table_v1", "render_source_worlds": [world["reference"] for world in package["worlds"]]},
@@ -131,6 +132,43 @@ class CacheProducerTests(unittest.TestCase):
                 data['metrics']['pairs'][0].update(change)
                 with self.assertRaisesRegex(ValueError, 'Shadow diagnostics'):
                     self.load_fixture(data, package, value, manifest, scratch)
+
+    def test_same_original_id_from_two_authenticated_sources_is_not_filtered(self):
+        from src.envs.pair_table_identity import identity_fields
+        with tempfile.TemporaryDirectory() as scratch:
+            inputs, native_tables, packages, details = {}, {}, {}, {}
+            for suffix in ('a', 'b'):
+                data, package, value, manifest = self.export_fixture(scratch)
+                rename = lambda item: json.loads(json.dumps(item).replace('t02_export_fixture', 't02_export_fixture_' + suffix))
+                data, manifest = rename(data), rename(manifest)
+                package['source_provenance']['pair'] = {'file': f'data/{suffix}/pair.json', 'sha256': suffix * 64}
+                value.source['t01'] = copy.deepcopy(package['source_provenance'])
+                value.dataset_identity = identity_fields(value.pair_id, package['source_provenance']['pair'])
+                value.dataset_key = value.dataset_identity['dataset_key']
+                path = f'results/{suffix}.json'
+                inputs[path] = data
+                native_tables[manifest['file']] = value
+                row = data['metrics']['pairs'][0]
+                packages[row['source_package']['file']] = package
+                details[row['detail']['file']] = {'table_manifest': manifest, **value.shadow_metadata,
+                    'pair_checks': dict(value.shadow_metadata), 'native_checks': dict(value.shadow_metadata),
+                    'export_measurements': dict(value.shadow_metadata)}
+            def read(reference, root, *, expected=None):
+                return copy.deepcopy({**packages, **details}[reference['file']])
+            def load_source(path, pair_id, *, pair_file):
+                return copy.deepcopy(next(p for p in packages.values() if p['source_provenance']['pair']['file'] == pair_file))
+            with patch.object(cache, 'audited_result', side_effect=lambda path: (inputs[path], {'file': path})), \
+                 patch('src.envs.pair_table_source.load_reviewed_pair', side_effect=load_source), \
+                 patch.object(cache, 'read_json_ref', side_effect=read), \
+                 patch.object(cache, 'load_table', side_effect=lambda path, **_: native_tables[path]), \
+                 patch.object(cache, 'verify_render_sources', return_value={'passed': True}), \
+                 patch.object(cache, 'check_pair', return_value={'passed': True, 'synthetic_only': False}):
+                tables, actual_packages, checks, _, ledger = cache.load_exports(list(inputs), scratch)
+            self.assertEqual(len(tables), 2)
+            self.assertEqual(set(tables), set(actual_packages))
+            self.assertEqual(set(tables), set(checks))
+            self.assertEqual({row['dataset_key'] for row in ledger}, set(tables))
+            self.assertEqual([row['pair_id'] for row in ledger], ['p', 'p'])
 
     def test_unfinished_error_or_duplicate_pair_is_not_filtered_to_success(self):
         with tempfile.TemporaryDirectory() as scratch:

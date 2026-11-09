@@ -360,6 +360,7 @@ def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_b
     manifest = {key: getattr(table, key) for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
     manifest.update(version=TABLE_VERSION, states=rows, files=list(written.values()),
+        dataset_identity=table.dataset_identity,
         **table.shadow_metadata,
         export_verified=False, cache_verified=False,
         status='exported_evidence_pending_independent_checks', stored_payload_bytes=total)
@@ -411,6 +412,11 @@ def load_table(path, *, expected_sha256):
     args = {key: manifest[key] for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
     table = PairTable(**args, states=states, export_verified=False, cache_verified=False)
+    # Earlier shadow-v2 manifests derive this from the already authenticated
+    # source reference in memory. Do not rewrite or claim it was serialized.
+    if 'dataset_identity' in manifest and manifest['dataset_identity'] != table.dataset_identity:
+        raise ValueError('Table dataset identity differs from its original pair source')
+    table.dataset_identity_serialized = 'dataset_identity' in manifest
     verify_shadow_metadata(table, manifest)
     table.export_measurements = manifest.get('export_measurements')
     if table.export_measurements is not None:
