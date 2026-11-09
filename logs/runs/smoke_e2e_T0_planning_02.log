@@ -1,0 +1,32 @@
+# run_logged: python3 -c import json
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+name='smoke_e2e_T0_planning_02'
+train,tr=audited_result(Path('results/smoke_e2e_T0_02.json'))
+report,rr=audited_result(Path('results/smoke_e2e_T0_report_02.json'))
+acct,ar=audited_result(Path('results/smoke_e2e_T0_accounting_02.json'))
+m=train['metrics'];u=m['updates']
+assert train['_meta']['exit_code']==0 and m['step4_passed'] is True and m['actual_completed_updates']==5 and len(u)==5
+mean=sum(x['total_seconds'] for x in u)/len(u)
+metrics={'measured_update_count':len(u),'measured_mean_update_seconds':mean,'planning_projection_200_update_hours':mean*200/3600,'projection_is_measured_result':False,'assumptions':'same Direct/tau0 short episodes and observed throughput; excludes setup/authentication/model initialization/checkpoint; actual main-training Look trajectories may differ','actual_allocation_gpu_hours':acct['metrics']['total_allocation_gpu_hours']}
+p=Path('tasks/E2E.report.md');old=p.read_text();heading='## Step4 T0 PASS after colocated-worker compatibility repair'
+if heading in old:raise ValueError('Preserve existing report section')
+lines=['',heading,'','The first T0 allocation707594 failed before any update because pinned verl required the same immediate base class for colocated actor/ref and critic wrappers. The shared seed/observation-hook base fixed that interface; upstream actor/critic update implementations and training settings were preserved. The failed run remains recorded (0.08361111111111111GPUh). The real pinned-worker CPU regression passed before retry.',
+'','Retry707612 onhopper-21 passed all5updates,64episodes per update, critic_offload=false, explicit_task_zero rewards, no format bonus. Final checkpoint is on scratch; producer/run_logged exit0,errors[],cleanup_errors[]. Actual PBS allocation0.3675GPUh,queue206s. Model initialization'+str(m['model_initialization_seconds'])+'seconds is separate from the update timings below.','',
+'| Update | Generation s | Scoring s | Critic update s | Actor update s | Total s | Syntax parse failures / physical outputs |',
+'|---:|---:|---:|---:|---:|---:|---:|']
+summ=report['metrics']['training_by_run_and_update']['smoke_e2e_T0_02']['updates']
+for row in u:
+ n=row['update'];s=summ[str(n)]
+ lines.append('|'+str(n)+'|'+'|'.join(str(row[k]) for k in ('generation_seconds','scoring_seconds','critic_update_seconds','actor_update_seconds','total_seconds'))+'|'+str(s['physical_syntax_parse_failures'])+'/'+str(s['physical_model_outputs'])+'|')
+lines+=['','The original model step3 separately recorded0/10 syntax parse failures under each of obs_never,obs_always anddiag_base;40 forced observations inobs_always are excluded from the model-output denominator. Every T0 update recorded0/64 syntax parse failures and0 syntactically valid-but-unavailable actions. Rates use the actual raw response with parse_action; they are not inferred from reward or success. Sources: results/smoke_e2e_T0_report_02.json and its authenticated original journals.',
+'','Largest recorded CUDA allocator peak allocated142252924416bytes; peak reserved163231825920bytes. These are the colocated PPO worker allocator statistics, not sampled whole-device nvidia-smi occupancy. The reserved statistic exceeds physical capacity and must not be interpreted as physical GPU consumption. This smoke succeeded with the critic on GPU; it does not prove all main-training settings fit.',
+'','Planning only: the five measured updates average'+str(mean)+'seconds; multiplying that mean by200 gives'+str(metrics['planning_projection_200_update_hours'])+'hours, excluding all setup and checkpoint overhead. This extrapolation assumes the same Direct/tau0 short trajectories and is not a measured200-step run or a reliable bound for Look training. Each training uses one GPU; independent repeats can be packed only after their actual memory/concurrency and budget checks.',
+'','All current pairs areDirect/tau0: **证据前逻辑未覆盖**. T3 next uses the same reviewed100-degree smoke pool and common config, adding paired sampling and Q_commit scoring. It cannot certify pre-evidence credit until a separately authorized Look smoke is implemented and run.']
+p.write_text(old+'\n'.join(lines)+'\n')
+Path('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'purpose':'explicit E2E task planning projection only; not paper result'},'sources':[tr,rr,ar]},indent=2)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-09T11:58:34
+FINAL_METRICS_JSON: {"actual_allocation_gpu_hours": 0.3675, "assumptions": "same Direct/tau0 short episodes and observed throughput; excludes setup/authentication/model initialization/checkpoint; actual main-training Look trajectories may differ", "measured_mean_update_seconds": 131.5465668162098, "measured_update_count": 5, "planning_projection_200_update_hours": 7.308142600900545, "projection_is_measured_result": false}
+# exit_code: 0

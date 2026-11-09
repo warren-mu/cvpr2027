@@ -58,3 +58,25 @@ Two prior attempts stopped at the black-frame gate before model evaluation; thei
 Accounting sources: results/smoke_e2e_eval_black_accounting_01.json, results/smoke_e2e_eval_black_accounting_02.json and results/smoke_e2e_eval_accounting_03_retry1.json. These report allocated GPUs multiplied by measured PBS walltime, not an independently reconciled project credit bill. The first accounting command, smoke_e2e_eval_accounting_03, failed on the login node because its non-login PATH did not contain qstat; its failed log/meta are retained, and the retry loaded the established PBS PATH. This accounting failure used no GPU.
 
 Next: step4 T0, then step5 T3, with the human-confirmed explicit_task_zero reward policy. The current Direct-only step5 cannot cover pre-evidence logic; a later Look-pair run remains required.
+
+## Step4 T0 PASS after colocated-worker compatibility repair
+
+The first T0 allocation707594 failed before any update because pinned verl required the same immediate base class for colocated actor/ref and critic wrappers. The shared seed/observation-hook base fixed that interface; upstream actor/critic update implementations and training settings were preserved. The failed run remains recorded (0.08361111111111111GPUh). The real pinned-worker CPU regression passed before retry.
+
+Retry707612 onhopper-21 passed all5updates,64episodes per update, critic_offload=false, explicit_task_zero rewards, no format bonus. Final checkpoint is on scratch; producer/run_logged exit0,errors[],cleanup_errors[]. Actual PBS allocation0.3675GPUh,queue206s. Model initialization115.94174984202255seconds is separate from the update timings below.
+
+| Update | Generation s | Scoring s | Critic update s | Actor update s | Total s | Syntax parse failures / physical outputs |
+|---:|---:|---:|---:|---:|---:|---:|
+|1|20.95697337493766|61.86384365800768|33.788221759023145|60.68973210698459|177.29877089895308|0/64|
+|2|10.03317175898701|33.341926231049|36.998113421024755|38.78125666594133|119.1544680770021|0/64|
+|3|8.911296078003943|34.50496250006836|41.01187270495575|39.00891356705688|123.43704485008493|0/64|
+|4|8.629455079091713|31.69141386600677|40.93558763200417|39.66004744300153|120.91650402010418|0/64|
+|5|8.747530417982489|33.540992914000526|36.28870978101622|38.34881312190555|116.92604623490479|0/64|
+
+The original model step3 separately recorded0/10 syntax parse failures under each of obs_never,obs_always anddiag_base;40 forced observations inobs_always are excluded from the model-output denominator. Every T0 update recorded0/64 syntax parse failures and0 syntactically valid-but-unavailable actions. Rates use the actual raw response with parse_action; they are not inferred from reward or success. Sources: results/smoke_e2e_T0_report_02.json and its authenticated original journals.
+
+Largest recorded CUDA allocator peak allocated142252924416bytes; peak reserved163231825920bytes. These are the colocated PPO worker allocator statistics, not sampled whole-device nvidia-smi occupancy. The reserved statistic exceeds physical capacity and must not be interpreted as physical GPU consumption. This smoke succeeded with the critic on GPU; it does not prove all main-training settings fit.
+
+Planning only: the five measured updates average131.5465668162098seconds; multiplying that mean by200 gives7.308142600900545hours, excluding all setup and checkpoint overhead. This extrapolation assumes the same Direct/tau0 short trajectories and is not a measured200-step run or a reliable bound for Look training. Each training uses one GPU; independent repeats can be packed only after their actual memory/concurrency and budget checks.
+
+All current pairs areDirect/tau0: **证据前逻辑未覆盖**. T3 next uses the same reviewed100-degree smoke pool and common config, adding paired sampling and Q_commit scoring. It cannot certify pre-evidence credit until a separately authorized Look smoke is implemented and run.
