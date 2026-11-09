@@ -39,7 +39,7 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
     raw = merge.read_reference(raw_ref, root=root, within=raw_root)
     for value in (pair, raw):
         if (value.get('producer_module') != policy.PRODUCER
-                or any(value.get(key) != item for key, item in policy.fields().items())):
+                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition']).items())):
             raise ValueError('Pair/raw differs from its authenticated G01 source policy')
         search.validate_fields(value)
     pool = pair.get('proposed_pool')

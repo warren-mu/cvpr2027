@@ -78,7 +78,7 @@ def verify_collection(data):
             raise ValueError('G01 collection claim lacks an authenticated attempt journal')
         return None
     journal = merge.reference_path(journal_ref, within=merge.ROOT / 'data/world_pairs/v2')
-    quota = search.SceneQuota()
+    quota = search.SceneQuota(policy.class_cap(config['g01_partition']))
     for line in journal.read_text().splitlines():
         if not line.strip():
             continue
@@ -90,10 +90,10 @@ def verify_collection(data):
         search.validate_fields(raw)
         if raw.get('collection_quota_skip') is not None:
             kind = raw.get('kind')
-            expected = {'kind': kind, 'per_scene_class_cap': search.PER_CLASS,
+            expected = {'kind': kind, 'per_scene_class_cap': quota.per_class,
                 'acceptance_passed_before_collection': True,
                 'scope': 'collection capacity only; original scientific validity remains unchanged'}
-            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != search.PER_CLASS
+            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != quota.per_class
                     or raw.get('status') != 'rejected' or raw.get('discard_reasons') != ['collection_quota_full']
                     or raw.get('validity', {}).get('acceptance_passed') is not True
                     or raw.get('pair_file') is not None or raw.get('pair_sha256') is not None):
@@ -110,6 +110,7 @@ def source_support():
         previous_producer, previous_load = merge.shard_producer, merge.load_source
         previous_check, previous_role = merge.check_pair, roles.verify_proposal_role
         loaded = {}
+        loaded_partitions = set()
         def producer(command, config):
             if not is_g01_source(config):
                 return previous_producer(command, config)
@@ -129,6 +130,10 @@ def source_support():
                 policy.validate_source(data['config'], data['metrics'])
                 verify_collection(data)
                 verify_admission(data)
+                partition = data['config']['g01_partition']
+                if loaded_partitions and partition not in loaded_partitions:
+                    raise ValueError('Training and evaluation sources cannot share a checkpoint/export context')
+                loaded_partitions.add(partition)
                 raw = data['config']['raw_evidence_dir']
                 if raw in loaded and loaded[raw][0]['config'] != data['config']:
                     raise ValueError('Different authenticated configurations claim one raw source directory')
@@ -151,7 +156,7 @@ def source_support():
             data, reference = source
             config = data['config']
             if (row.get('producer_module') != policy.PRODUCER
-                    or any(row.get(key) != item for key, item in policy.fields().items())
+                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition']).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')
@@ -182,7 +187,7 @@ def source_support():
                 checked = labels.checked_pair(previous_check, row, path, declared_source=config, **kwargs)
             finally:
                 roles.verify_proposal_role = active_role
-            return {**checked, 'g01_proposal_verification': binding,
+            return {**checked, 'g01_partition': config['g01_partition'], 'g01_proposal_verification': binding,
                 'controller_preflight_association': associated, 'complete_flip_geometry_verification': proof}
         try:
             merge.shard_producer, merge.load_source, merge.check_pair = producer, load, check

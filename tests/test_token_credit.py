@@ -129,6 +129,23 @@ class FrozenTokenCredit(unittest.TestCase):
                 self.assertEqual(result['decision_records'][0]['credit_mode'],
                                  'prior_weighted_same_position_token_gae_fallback')
 
+    def test_shadow_fork_without_anchor_seen_uses_post_tau_original_token_gae(self):
+        data = fixture(self.torch)
+        for row in data['decisions']:
+            row['x_seen_step'] = None  # No anchor seen even though inputs fork at tau=1.
+            if row['decision_index'] == 1:
+                row['Q_commit'] = None
+                row['temporal_proof']['shadow_divergent'] = True
+        result = credit.credit_pipeline(arm='T3', **data)
+        for row in result['decision_records']:
+            indices = (row['row_index'], row['token_indices'])
+            self.assertEqual(row['pre_evidence'], row['decision_index'] == 0)
+            if row['decision_index'] == 1:
+                self.assertEqual(row['credit_mode'], 'original_token_gae')
+                self.assertTrue(self.torch.equal(result['replaced_advantages'][indices],
+                                                result['raw_advantages'][indices]))
+        self.assertTrue(self.torch.equal(result['returns'], self.upstream_result(data)[1]))
+
     def test_single_world_fallback_and_semantic_unavailable_action_are_distinct(self):
         t = self.torch
         data = fixture(t)

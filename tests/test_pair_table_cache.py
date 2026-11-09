@@ -80,14 +80,15 @@ class CacheStateTests(unittest.TestCase):
         self.assertTrue(result['checks_passed'])
         self.assertEqual(result['worlds']['w0']['cache_max_abs_diff'], 190)
 
-    def test_same_process_classification_still_rejects_nonanchor_divergence(self):
+    def test_cached_shared_to_shadow_fork_still_fails_classification_match(self):
         item = change_view(sample(), 'fresh', 1, rgb=RGBFrame(bytes([14]) * (PIXELS * 3), 255, 255))
         result = check_cached_state(item)
         self.assertFalse(result['checks_passed'])
-        self.assertIn('fresh_non_anchor_divergent', result['reasons'])
+        self.assertIn('shared_fork_classification_changed', result['reasons'])
+        self.assertNotIn('fresh_non_anchor_divergent', result['reasons'])
 
-    def test_direct_hidden_divergence_is_a_counted_fork_in_cache_and_fresh(self):
-        for kind in ('direct_flip', 'direct_stay'):
+    def test_both_kinds_hidden_divergence_is_a_counted_fork_in_cache_and_fresh(self):
+        for kind in ('direct_flip', 'direct_stay', 'look_flip', 'look_stay'):
             item = replace(sample(), kind=kind)
             for which in ('cached', 'fresh'):
                 item = change_view(item, which, 1, rgb=RGBFrame(bytes([14]) * (PIXELS * 3), 255, 255))
@@ -97,6 +98,7 @@ class CacheStateTests(unittest.TestCase):
             for stage in ('cached_classification', 'fresh_classification'):
                 self.assertFalse(result[stage]['shared'])
                 self.assertTrue(result[stage]['non_anchor_divergent'])
+                self.assertTrue(result[stage]['shadow_divergent'])
             self.assertNotIn('fresh_non_anchor_divergent', result['reasons'])
             # Direct relaxation does not relax cross-process classification.
             changed = change_view(item, 'fresh', 1, rgb=BASE_RGB)

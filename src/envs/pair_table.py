@@ -16,7 +16,7 @@ from .paired_env import (BackendFrame, Candidate, CaptureEvidence, EpisodeBudget
                          PairEnvironment, PublicMark, RGBFrame, RewardSpec,
                          parse_action, public_observation)
 
-TABLE_VERSION = 'paired_view_table_d4_v1'
+TABLE_VERSION = 'paired_view_table_d4_shadow_v2'
 DEPTH = 4
 SEEN_PIXELS = 250
 RESOLUTION = 255
@@ -56,7 +56,7 @@ class RenderedView:
 
 
 def classify_views(views, anchor_name, *, kind):
-    """Apply the human-approved Look-only no-anchor-leak rule (supplement 8)."""
+    """Both kinds retain hidden-anchor RGB divergence as a measured shadow fork."""
     if kind not in ('look_flip', 'look_stay', 'direct_flip', 'direct_stay'):
         raise ValueError('Explicit registered pair kind is required for state classification')
     if len(views) != 2 or any(not isinstance(view, RenderedView) for view in views):
@@ -68,10 +68,9 @@ def classify_views(views, anchor_name, *, kind):
     pixels = (a.count(anchor_name), b.count(anchor_name))
     difference = max(abs(x - y) for x, y in zip(a.rgb.data, b.rgb.data))
     divergent = pixels == (0, 0) and difference > 3
-    if divergent and kind.startswith('look_'):
-        raise ValueError('non_anchor_divergent')
     return {'shared': pixels == (0, 0) and difference <= 3, 'anchor_pixels': pixels,
-            'frame_max_abs_diff': difference, 'non_anchor_divergent': divergent}
+            'frame_max_abs_diff': difference, 'shadow_divergent': divergent,
+            'non_anchor_divergent': divergent}  # Historical diagnostic alias, not a rejection.
 
 
 def label_assignment(pair_id, candidate_names):
@@ -131,6 +130,10 @@ class TableState:
     frame_max_abs_diff: int
     anchor_pixels: tuple
 
+    @property
+    def shadow_divergent(self):
+        return self.anchor_pixels == (0, 0) and self.frame_max_abs_diff > 3
+
 
 class PairTable:
     def __init__(self, *, pair_id, scene, kind, instruction, anchor_name, candidate_names,
@@ -185,6 +188,31 @@ class PairTable:
     def selectable_names(self, state_id, world):
         state = self.states[state_id]
         return eligible_names(state.captures[0 if state.shared else world], self.candidate_names)
+
+    @property
+    def shadow_divergent_states(self):
+        return sum(state.shadow_divergent for state in self.states.values())
+
+    @property
+    def in_clean_subset(self):
+        """Preregistered Look-only subset; never a model observation or acceptance gate."""
+        return self.kind.startswith('look_') and self.shadow_divergent_states == 0
+
+    @property
+    def shadow_metadata(self):
+        return {'shadow_divergent_states': self.shadow_divergent_states,
+                'in_clean_subset': self.in_clean_subset,
+                'non_anchor_divergent_states': self.shadow_divergent_states}
+
+
+def verify_shadow_metadata(table, value):
+    """Bind declared diagnostics to the complete table, without filtering it."""
+    expected = table.shadow_metadata
+    if not isinstance(value, dict) or any(
+            type(value.get(key)) is not type(actual) or value[key] != actual
+            for key, actual in expected.items()):
+        raise ValueError('Shadow diagnostics differ from the complete table')
+    return expected
 
 
 class TableObservationBackend:
@@ -281,6 +309,7 @@ class TableEnvironment(PairEnvironment):
         self.evidence_status = 'entered' if self.evidence_entered else 'not_entered_verified'
         self.evidence_proofs.append({'version': TABLE_VERSION, 'state_id': state.state_id,
             'decision_index': self.steps, 'shared': state.shared, 'tau': self.tau,
+            'shadow_divergent': state.shadow_divergent, **self.backend.table.shadow_metadata,
             'x_seen_step': self.x_seen_step, 'original_world_index': self.backend.world,
             'anchor_pixels': state.anchor_pixels, 'frame_max_abs_diff': state.frame_max_abs_diff,
             'table_manifest': copy.deepcopy(self.backend.table.manifest_reference),
@@ -294,6 +323,7 @@ class TableEnvironment(PairEnvironment):
         state = self.backend.table.states[self.backend.state_id]
         return {**super().info, 'backend_version': TABLE_VERSION, 'state_id': state.state_id,
             'shared': state.shared, 'tau': self.tau, 'x_seen_step': self.x_seen_step,
+            'shadow_divergent': state.shadow_divergent, **self.backend.table.shadow_metadata,
             'anchor_pixels_w0': state.anchor_pixels[self.backend.world_order[0]],
             'anchor_pixels_w1': state.anchor_pixels[self.backend.world_order[1]],
             'world_order': self.backend.world_order, 'original_world_id': f'w{self.backend.world}',

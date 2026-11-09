@@ -28,6 +28,7 @@ from src.tools.t01v2_parallel import shard_configuration, validate_mask, verify_
 
 SCENES = ('FloorPlan1', 'FloorPlan7', 'FloorPlan203', 'FloorPlan204', 'FloorPlan301', 'FloorPlan401')
 CONCURRENCIES = (2, 4, 6)
+PARTITION = 'train'  # collection wrapper explicitly binds test; benchmark stays training-only
 SCENE_SECONDS = 1200
 CHILD_FINALIZATION_SECONDS = 60
 GATE_SECONDS = 120
@@ -38,8 +39,8 @@ PARENT_CLEANUP_SECONDS = 60
 
 def launch_logged(name, command, environment, directory):
     """Same logged child contract in G01's separate, non-overwriting namespace."""
-    if re.fullmatch(r'gen_train_[A-Za-z0-9_]+', name) is None:
-        raise ValueError('Require an explicit unique gen_train_ child name')
+    if re.fullmatch(r'gen_(?:train|test)_[A-Za-z0-9_]+', name) is None:
+        raise ValueError('Require an explicit unique gen_train_/gen_test_ child name')
     paths = [ROOT / 'results' / (name + '.json'), ROOT / 'logs/runs' / name]
     paths += [ROOT / 'logs/runs' / (name + suffix) for suffix in ('.log', '.meta.json', '.diff')]
     if any(path.exists() or path.is_symlink() for path in paths):
@@ -111,7 +112,8 @@ def make_shard(name, scene, cpus, gate, record, raw, plan, reference):
         raise ValueError('Every lane must retain all twelve original allocated CPUs')
     shard = shard_configuration(name, scene, 0, list(cpus), gate, record['source'], record['result_path'],
                                 list(SCENES), raw, field_of_view=60)
-    shard.update(policy.declared(scene), **stay.fields(), producer_module=policy.PRODUCER,
+    partition = plan.get('g01_partition', 'train')
+    shard.update(policy.declared(scene, partition), **stay.fields(), producer_module=policy.PRODUCER,
                  g01_admission=child_assignment(plan, reference, scene))
     return shard
 
@@ -148,8 +150,8 @@ def main():
     parser.add_argument('--name', required=True)
     parser.add_argument('--timeout-seconds', type=int, default=required_timeout())
     args = parser.parse_args()
-    if not re.fullmatch(r'gen_train_[A-Za-z0-9_]+', args.name):
-        parser.error('Use a unique gen_train_ benchmark name')
+    if not re.fullmatch(r'gen_' + PARTITION + r'_[A-Za-z0-9_]+', args.name):
+        parser.error('Use the unique gen_train_/gen_test_ name for the declared partition')
     if args.timeout_seconds != required_timeout():
         parser.error(f'This fixed benchmark requires its declared {required_timeout()}-second execution cap')
     output = ROOT / 'results' / f'{args.name}.json'
@@ -158,6 +160,7 @@ def main():
     config = {'name': args.name, 'pbs_jobid': os.environ.get('PBS_JOBID'), 'node': socket.gethostname(),
         'budget_group': 'G01', 'gpus': 1, 'seed': 0, 'resolution': 255, 'field_of_view': 60,
         'scenes': list(SCENES), 'concurrencies': list(CONCURRENCIES), 'cpu_cores_per_gpu': 12,
+        'g01_partition': PARTITION, 'per_scene_class_cap': policy.class_cap(PARTITION),
         'scene_timeout_seconds': SCENE_SECONDS, 'child_finalization_seconds': CHILD_FINALIZATION_SECONDS,
         'gate_timeout_seconds': GATE_SECONDS, 'gate_wrapper_seconds': GATE_WRAPPER_SECONDS,
         'stage_finalization_seconds': STAGE_FINALIZATION_SECONDS, 'parent_cleanup_seconds': PARENT_CLEANUP_SECONDS,
@@ -234,7 +237,7 @@ def main():
                 rows = assignments(args.name, stage_index, concurrency)
                 plan, reference = create_plan(stage_dir, parent_run_name=args.name, stage_index=stage_index,
                     concurrency=concurrency, assignments=rows, pbs_jobid=config['pbs_jobid'],
-                    node=config['node'], gpu_uuid=mask, cpu_affinity=cpus, scenes=list(SCENES))
+                    node=config['node'], gpu_uuid=mask, cpu_affinity=cpus, scenes=list(SCENES), partition=PARTITION)
                 config['stage_plans'].append({**reference, 'plan': plan})
                 pool = AdmissionPool(child_assignment(plan, reference, SCENES[0]))
                 pools.append(pool)

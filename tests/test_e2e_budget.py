@@ -8,17 +8,17 @@ submit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(submit)
 
 
-def state(cost=0, total=0, rate=1, g01=0):
+def state(cost=0, total=0, rate=1, g01=0, t02=0):
     return {'submissions': [], 'charge_policy': {'rates': {'smallx': rate, 'mediumx': rate}},
             'accounted_or_reserved_by_task': {'T00b': 0, 'T01': 0},
             'accounted_or_reserved_total': total,
-            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'G01': g01}}
+            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'G01': g01, 'T02': t02}}
 
 
 class E2EBudgetTests(unittest.TestCase):
     def test_four_hour_boundary_and_shared_ceiling(self):
-        submit.validate_request('T01', 1, 1800, 'smoke_e2e_export', state(3.5, 59.5))
-        for observed in (state(3.501), state(0, 59.501), state(3.1, rate=2)):
+        submit.validate_request('T01', 1, 1800, 'smoke_e2e_export', state(3.5, 119.5))
+        for observed in (state(3.501), state(0, 119.501), state(3.1, rate=2)):
             with self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 'smoke_e2e_export', observed)
 
@@ -44,33 +44,38 @@ class E2EBudgetTests(unittest.TestCase):
 
 
 class G01BudgetTests(unittest.TestCase):
-    def test_twenty_charged_hours_and_shared_ceiling(self):
-        submit.validate_request('T01', 1, 1800, 'gen_train_probe', state(g01=19.5, total=59.5))
-        for observed in (state(g01=19.501), state(g01=19.1, rate=2), state(total=59.501)):
+    def test_forty_charged_hours_and_shared_ceiling(self):
+        submit.validate_request('T01', 1, 1800, 'gen_train_probe', state(g01=39.5, total=119.5))
+        for observed in (state(g01=39.501), state(g01=39.1, rate=2), state(total=119.501)):
             with self.subTest(state=observed), self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 'gen_train_probe', observed)
 
     def test_medium_pack_reserves_every_gpu_at_billing_rate(self):
-        submit.validate_request('T01', 4, 1800, 'gen_train_pack', state(g01=16, rate=2))
+        submit.validate_request('T01', 4, 1800, 'gen_train_pack', state(g01=36, rate=2))
         with self.assertRaises(ValueError):
-            submit.validate_request('T01', 4, 1800, 'gen_train_pack', state(g01=16.001, rate=2))
+            submit.validate_request('T01', 4, 1800, 'gen_train_pack', state(g01=36.001, rate=2))
 
-    def test_cross_budget_aliases_and_test_generation_not_authorized(self):
+    def test_cross_budget_aliases_and_disjoint_generation_names(self):
         for task, name, command, group in (
             ('T00b', 'gen_train_x', [], None),
-            ('T01', 'gen_test_x', [], 'G01'),
+            ('T00b', 'gen_test_x', [], 'G01'),
+            ('T01', 'gen_test_x', [], 'T02'),
             ('T01', 'gen_train_x', [], 'E2E'),
             ('T01', 'gen_train_x', [], 'T01v2'),
             ('T01', 'smoke_e2e_x', [], 'G01'),
             ('T01', 'pilot_pairs_v2_x', [], 'G01'),
             ('T01', 'gen_train_x', ['bash', 'experiments/e2e_export.sh'], None),
             ('T01', 'gen_train_x', ['bash', 'experiments/t01v2_marked_pairs.sh'], None),
+            ('T01', 'gen_test_x', ['python3', '-m', 'src.tools.t02_export_parallel'], 'G01'),
         ):
             with self.subTest(name=name, group=group), self.assertRaises(ValueError):
                 submit.budget_group(task, name, command, group)
         self.assertEqual(submit.budget_group('T01', 'gen_train_x', []), 'G01')
-        with self.assertRaises(ValueError):
-            submit.validate_request('T01', 1, 1800, 'gen_test_x', state())
+        self.assertEqual(submit.budget_group('T01', 'gen_test_x', []), 'G01')
+        submit.validate_request('T01', 1, 1800, 'gen_test_x', state())
+        for count in (2, 3, 4):
+            with self.assertRaises(ValueError):
+                submit.validate_request('T01', count, 1800, 'gen_test_x', state())
 
     def test_unknown_cost_and_two_gpu_request_rejected(self):
         observed = state()
@@ -79,6 +84,32 @@ class G01BudgetTests(unittest.TestCase):
             submit.validate_request('T01', 1, 300, 'gen_train_x', observed)
         with self.assertRaises(ValueError):
             submit.validate_request('T01', 2, 300, 'gen_train_x', state())
+
+
+class T02BudgetTests(unittest.TestCase):
+    def test_export_subbudget_full_reservation_and_shared_120_ceiling(self):
+        submit.validate_request('T01', 1, 1800, 't02_export_fixture', state(t02=39.5, total=119.5), 'T02')
+        for observed in (state(t02=39.501), state(t02=39.1, rate=2), state(total=119.501)):
+            with self.assertRaises(ValueError):
+                submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
+        self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
+        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'G01': 40.0, 'T02': 40.0})
+
+    def test_explicit_route_cannot_reclassify_old_diagnostics(self):
+        for module in ('src.tools.t02_export', 'src.tools.t02_export_parallel'):
+            self.assertEqual(submit.budget_group('T01', 't02_export_fixture', ['python3', '-m', module], 'T02'), 'T02')
+            self.assertEqual(submit.budget_group('T01', 'pilot_pairs_v2_old', ['python3', '-m', module], 'T01v2'), 'T01v2')
+        for task, name, group in (('T01', 't02_export_fixture', None), ('T00b', 't02_export_fixture', 'T02'),
+                ('T01', 'gen_test_fixture', 'T02'), ('T01', 'pilot_pairs_v2_old', 'T02'),
+                ('T01', 'smoke_e2e_fixture', 'T02'), ('T01', 't02_export_fixture', 'G01')):
+            with self.assertRaises(ValueError): submit.budget_group(task, name, [], group)
+        with self.assertRaises(ValueError):
+            submit.budget_group('T01', 't02_export_fixture', ['python3', '-m', 'src.tools.g01_collect_parallel'], 'T02')
+        with self.assertRaises(ValueError):
+            submit.validate_request('T01', 2, 1800, 't02_export_fixture', state(), 'T02')
+        observed = state(); del observed['accounted_or_reserved_by_subbudget']['T02']
+        with self.assertRaises(ValueError):
+            submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
 
 
 if __name__ == '__main__':

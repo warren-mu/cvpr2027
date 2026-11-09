@@ -205,6 +205,20 @@ class MergePairV2Tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             specification_provenance('0' * 64, 'HEAD', documents.__getitem__)
 
+    def test_approved_shadow_revision_keeps_exact_source_document_binding(self):
+        commit = 'a' * 40
+        documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
+        self.assertEqual(CURRENT_SPEC_REFERENCE, '6ca87ceb')
+        documents[commit] = documents['6ca87ceb']
+        checked = specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit,
+                                           documents.__getitem__)
+        self.assertFalse(checked['historical_spec'])
+        self.assertEqual(checked['compatible_references'], ['6ca87ceb'])
+        documents[commit] += b' unapproved changes'
+        with self.assertRaises(ValueError):
+            specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit,
+                                     documents.__getitem__)
+
     def test_legacy_look_requires_new_or_separate_posthoc_evidence_not_fabricated_sets(self):
         from src.envs.pair_v2_solvable_policy import SOLVABILITY_VERSION
         self.assertFalse(final_pair_eligible('look_flip', None))

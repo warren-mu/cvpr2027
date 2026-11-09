@@ -22,7 +22,9 @@ class LauncherTests(unittest.TestCase):
             process = SimpleNamespace(pid=123)
             for name, module in (
                     ('gen_train_fixture_j700000_hopper_m_02_gate', 'src.tools.render_gate'),
-                    ('gen_train_fixture_c2_floorplan203', parent.policy.PRODUCER)):
+                    ('gen_train_fixture_c2_floorplan203', parent.policy.PRODUCER),
+                    ('gen_test_fixture_j700001_hopper_m_02_gate', 'src.tools.render_gate'),
+                    ('gen_test_fixture_c6_floorplan221', parent.policy.PRODUCER)):
                 command = ['python3', '-u', '-m', module, '--name', name]
                 with patch.object(parent, 'ROOT', root), patch.object(parent.subprocess, 'Popen', return_value=process) as popen:
                     running = parent.launch_logged(name, command, {'CUDA_VISIBLE_DEVICES': GPU}, root)

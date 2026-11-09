@@ -8,7 +8,7 @@ import hashlib
 import json
 import random
 
-from src.envs.pair_table import TableEnvironment, TableObservationBackend
+from src.envs.pair_table import TableEnvironment, TableObservationBackend, verify_shadow_metadata
 from src.envs.pair_table_cache import CACHE_POLICY, check_cached_state
 from src.envs.pair_table_checks import verify_cached_binding
 
@@ -101,6 +101,7 @@ def authorize_smoke(tables, *, pair_checks, report, authenticated_ids):
                 or any(row.get("passed") is not True for row in check.get("witness_replay", []))
                 or len(check.get("witness_replay", [])) != 2):
             raise ValueError("Every selected pair needs native export and T02 checks 1–4")
+        verify_shadow_metadata(table, check)
     return {"version": VERSION, "policy": copy.deepcopy(POLICY), "cache_report_sha256": digest(report),
             "tables": {key: copy.deepcopy(value.manifest_reference) for key, value in indexed.items()},
             "smoke_only": True, "formal_cache_matches_live": None, "full_T02_acceptance": None,
@@ -134,9 +135,22 @@ class SmokeTableEnvironment(TableEnvironment):
                 "authorization_scope": VERSION, "formal_T02_acceptance": None, "paper_result": False}
 
 
+def shadow_summary(tables):
+    """Report the complete authenticated pool; the clean subset never filters it."""
+    counts, clean = {}, {}
+    for table in tables:
+        count, eligible = table.shadow_divergent_states, table.in_clean_subset
+        if (table.pair_id in counts or type(count) is not int or count < 0
+                or type(eligible) is not bool
+                or eligible != (table.kind.startswith('look_') and count == 0)):
+            raise ValueError('Invalid per-pair shadow/clean-subset metadata')
+        counts[table.pair_id], clean[table.pair_id] = count, eligible
+    return {'shadow_divergent_states_by_pair': counts, 'in_clean_subset_by_pair': clean}
+
+
 def coverage(tables):
     tau0 = all(not table.states[table.initial_state].shared for table in tables)
-    return {"all_selected_pairs_tau0": tau0,
+    return {**shadow_summary(tables), "all_selected_pairs_tau0": tau0,
             "pre_evidence_credit_coverage": "unmeasured" if tau0 else "not_tested_in_steps_1_2",
             "paired_generation_dedup_coverage": "unmeasured",
             "T3_correctness_claim": None,

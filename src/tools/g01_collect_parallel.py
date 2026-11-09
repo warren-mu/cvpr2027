@@ -1,7 +1,7 @@
 """Ordinary G01 collection at an explicitly selected, measured concurrency.
 
 Reuse the existing single-GPU scheduler and owned cleanup. This is one stage
-over explicit training scenes, not another 2/4/6 throughput benchmark. No speed
+over explicit disjoint train/test scenes, not another 2/4/6 throughput benchmark. No speed
 estimate or automatic choice of the fastest setting is made here.
 """
 import argparse
@@ -29,23 +29,25 @@ SCOPE = ('one collection stage; explicit training scenes once each; aggregate ac
          'deduplication and total8 per scene/class remain required before training-pool freeze')
 
 
-def validate_selection(scenes, concurrency):
+def validate_selection(scenes, concurrency, partition='train'):
     parent.capacity(concurrency)
     if (not isinstance(scenes, (list, tuple)) or not scenes or len(set(scenes)) != len(scenes)
-            or any(scene not in parent.policy.TRAIN_SCENES for scene in scenes)):
-        raise ValueError('Require a nonempty unique explicit subset of the fixed80 training scenes')
+            or any(scene not in parent.policy.split_scenes(partition) for scene in scenes)):
+        raise ValueError('Require a nonempty unique explicit subset of the declared fixed train/test scene partition')
+    if partition == 'test' and concurrency != 6:
+        raise ValueError('Evaluation collection uses the frozen six-scene concurrency, never test tuning')
     return tuple(scenes)
 
 
-def runner_timeout(scenes, concurrency):
-    scenes = validate_selection(scenes, concurrency)
+def runner_timeout(scenes, concurrency, partition='train'):
+    scenes = validate_selection(scenes, concurrency, partition)
     return (parent.GATE_SECONDS + parent.GATE_WRAPPER_SECONDS
             + math.ceil(len(scenes) / concurrency) * (parent.SCENE_SECONDS + parent.CHILD_FINALIZATION_SECONDS)
             + parent.STAGE_FINALIZATION_SECONDS + parent.PARENT_CLEANUP_SECONDS)
 
 
-def required_timeout(scenes, concurrency):
-    return BENCHMARK_VALIDATION_SECONDS + runner_timeout(scenes, concurrency)
+def required_timeout(scenes, concurrency, partition='train'):
+    return BENCHMARK_VALIDATION_SECONDS + runner_timeout(scenes, concurrency, partition)
 
 
 def python_arguments(command, module):
@@ -184,9 +186,16 @@ def benchmark_stage(path, concurrency):
         'scope': 'completed workload and known resource cleanup only; no scientific pair acceptance'}
 
 
-def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark):
+def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False):
     expected = ['--name', name, '--scenes', *scenes, '--concurrency', str(concurrency),
                 '--benchmark-source', str(benchmark), '--timeout-seconds', str(timeout)]
+    validate_selection(scenes, concurrency, partition)
+    if not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', name):
+        raise ValueError('Collection name differs from its train/test partition')
+    if explicit_partition:
+        expected += ['--partition', partition]
+    elif partition != 'train':
+        raise ValueError('Evaluation collection requires explicit --partition test')
     matches = []
     for path in (repo / 'logs/pbs').glob('*/payload.json'):
         data = json.loads(path.read_text())
@@ -209,30 +218,32 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
 
 
 @contextmanager
-def installed(*, scenes, concurrency, benchmark, proof):
+def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False):
     """Reuse the original scheduler; every binding is process-local and restored."""
-    scenes = validate_selection(scenes, concurrency)
+    scenes = validate_selection(scenes, concurrency, partition)
     previous = {key: getattr(parent, key) for key in
-                ('SCENES', 'CONCURRENCIES', 'submission_identity', 'write_result', 'finish_logged')}
+                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged')}
     def reservation(repo, name, job, timeout):
-        if timeout != runner_timeout(scenes, concurrency):
+        if timeout != runner_timeout(scenes, concurrency, partition):
             raise ValueError('Scheduler must retain its complete full-grant deadline')
         return submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
-                                   concurrency=concurrency, benchmark=benchmark)
+                                   concurrency=concurrency, benchmark=benchmark, partition=partition, explicit_partition=explicit_partition)
     def finish(running, sources):
         if proof['source'] not in sources:
             sources.append(copy.deepcopy(proof['source']))
         return previous['finish_logged'](running, sources)
     def write(name, metrics, config):
         metrics['kind'] = 'g01_parallel_collection'
-        config.update(collection_version=VERSION, pool_scope=SCOPE,
+        config.update(collection_version=VERSION,
+                      g01_partition=partition, per_scene_class_cap=parent.policy.class_cap(partition),
+                      pool_scope=SCOPE if partition == 'train' else 'fixed evaluation scenes only; no training or tuning; aggregate cap6 per scene/class; freeze manifest before evaluation',
                       benchmark_source=str(benchmark), benchmark_selection=copy.deepcopy(proof),
                       runner_timeout_seconds=config['timeout_seconds'],
-                      timeout_seconds=required_timeout(scenes, concurrency),
-                      required_timeout_seconds=required_timeout(scenes, concurrency),
+                      timeout_seconds=required_timeout(scenes, concurrency, partition),
+                      required_timeout_seconds=required_timeout(scenes, concurrency, partition),
                       benchmark_validation_timeout_seconds=BENCHMARK_VALIDATION_SECONDS)
         return previous['write_result'](name, metrics, config)
-    parent.SCENES, parent.CONCURRENCIES = scenes, (concurrency,)
+    parent.SCENES, parent.CONCURRENCIES, parent.PARTITION = scenes, (concurrency,), partition
     parent.submission_identity, parent.write_result, parent.finish_logged = reservation, write, finish
     try:
         yield
@@ -244,15 +255,17 @@ def installed(*, scenes, concurrency, benchmark, proof):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--name', required=True)
+    parser.add_argument('--partition', choices=('train', 'test'), default=None)
     parser.add_argument('--scenes', nargs='+', required=True)
     parser.add_argument('--concurrency', type=int, choices=BENCHMARK_CONCURRENCIES, required=True)
     parser.add_argument('--benchmark-source', type=Path, required=True)
     parser.add_argument('--timeout-seconds', type=int, required=True)
     args = parser.parse_args(argv)
-    scenes = validate_selection(args.scenes, args.concurrency)
-    if (not re.fullmatch(r'gen_train_[A-Za-z0-9_]+', args.name)
-            or args.timeout_seconds != required_timeout(scenes, args.concurrency)):
-        parser.error('Require gen_train_ name and exact full-scene-grant collection deadline')
+    partition = args.partition or 'train'
+    scenes = validate_selection(args.scenes, args.concurrency, partition)
+    if (not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', args.name)
+            or args.timeout_seconds != required_timeout(scenes, args.concurrency, partition)):
+        parser.error('Require the matching train/test name and exact full-scene-grant deadline')
     output = ROOT / 'results' / f'{args.name}.json'
     if output.exists() or output.is_symlink():
         raise FileExistsError('Existing results are preserved; choose a new collection name')
@@ -280,8 +293,9 @@ def main(argv=None):
     original_argv = sys.argv
     handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
     try:
-        with installed(scenes=scenes, concurrency=args.concurrency, benchmark=args.benchmark_source, proof=proof):
-            sys.argv = [MODULE, '--name', args.name, '--timeout-seconds', str(runner_timeout(scenes, args.concurrency))]
+        with installed(scenes=scenes, concurrency=args.concurrency, benchmark=args.benchmark_source, proof=proof,
+                       partition=partition, explicit_partition=args.partition is not None):
+            sys.argv = [MODULE, '--name', args.name, '--timeout-seconds', str(runner_timeout(scenes, args.concurrency, partition))]
             code = parent.main()
     finally:
         sys.argv = original_argv

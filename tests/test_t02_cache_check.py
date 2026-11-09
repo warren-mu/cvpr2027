@@ -77,6 +77,7 @@ class CacheProducerTests(unittest.TestCase):
             "reachable_positions": [], "reachable_reference": {}, "evidence_roots": [str(scratch)],
             "source_provenance": {"container": {"file": "results/pilot.json"}, "pair": {"file": "data/pair.json"}}}
         row = {"pair_id": "p", "status": "exported", "scratch_directory": str(pair_dir), "cleanup_errors": [],
+            'shadow_divergent_states': 1, 'non_anchor_divergent_states': 1, 'in_clean_subset': False,
             "table_complete": True, "native_evidence_verified": True, "pair_checks_passed": True,
             "source_package": {"file": str(pair_dir / "authenticated_source.json")},
             "detail": {"file": str(pair_dir / "checks.json")}, "table_manifest": manifest}
@@ -86,6 +87,7 @@ class CacheProducerTests(unittest.TestCase):
             "metrics": {"kind": "t02_table_export", "export_checks_complete": True, "cleanup_errors": [],
                         "errors": [], "unstarted_pair_ids": [], "pairs": [row]}}
         value = SimpleNamespace(**{key: package[key] for key in ("pair_id", "scene", "kind", "instruction", "anchor_name", "candidate_names", "target_names")},
+            shadow_metadata={'shadow_divergent_states': 1, 'non_anchor_divergent_states': 1, 'in_clean_subset': False},
             synthetic=False, source={"export_version": cache.EXPORT_VERSION, "t01": package["source_provenance"],
                 "frozen_render_version": "w0_nonanchor_frozen_table_v1", "render_source_worlds": [world["reference"] for world in package["worlds"]]},
             initial_state="s0", states={"s0": SimpleNamespace(view=ViewState("v", 0))}, positions={"v": package["initial_position"]})
@@ -93,7 +95,10 @@ class CacheProducerTests(unittest.TestCase):
 
     def load_fixture(self, data, package, value, manifest, scratch, paths=None):
         def read(reference, root, *, expected=None):
-            return copy.deepcopy(package) if Path(reference["file"]).name == "authenticated_source.json" else {"table_manifest": manifest}
+            return copy.deepcopy(package) if Path(reference["file"]).name == "authenticated_source.json" else {
+                "table_manifest": manifest, **value.shadow_metadata,
+                'pair_checks': dict(value.shadow_metadata), 'native_checks': dict(value.shadow_metadata),
+                'export_measurements': dict(value.shadow_metadata)}
         with patch.object(cache, "audited_result", side_effect=lambda path: (data, {"file": str(path)})), \
              patch("src.envs.pair_table_source.load_reviewed_pair", return_value=copy.deepcopy(package)), \
              patch.object(cache, "read_json_ref", side_effect=read), \
@@ -112,8 +117,20 @@ class CacheProducerTests(unittest.TestCase):
             data["config"]["pair_id"].append("rejected")
             tables, _, _, _, ledger = self.load_fixture(data, package, value, manifest, scratch)
             self.assertEqual(set(tables), {"p"})
+            self.assertEqual(ledger[0]['shadow_divergent_states'], 1)
+            self.assertFalse(ledger[0]['in_clean_subset'])
             self.assertEqual(ledger[1]["population_membership"], "excluded_before_cache_by_export_checks")
             self.assertEqual(ledger[1]["export_rejection_reasons"], ["graph_mismatch"])
+
+    def test_changed_clean_subset_or_shadow_count_is_not_trusted_from_export(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            original, package, value, manifest = self.export_fixture(scratch)
+            for change in ({'in_clean_subset': True}, {'shadow_divergent_states': 0},
+                           {'shadow_divergent_states': True}, {'non_anchor_divergent_states': 0}):
+                data = copy.deepcopy(original)
+                data['metrics']['pairs'][0].update(change)
+                with self.assertRaisesRegex(ValueError, 'Shadow diagnostics'):
+                    self.load_fixture(data, package, value, manifest, scratch)
 
     def test_unfinished_error_or_duplicate_pair_is_not_filtered_to_success(self):
         with tempfile.TemporaryDirectory() as scratch:

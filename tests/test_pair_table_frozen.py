@@ -2,8 +2,11 @@
 import copy
 import json
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from src.envs.pair_table_export import frozen_w1_request, verify_frozen_world_request, frozen_target_measurement
+from src.envs.pair_table_export import SimulatorTableRenderer, point_id, build_table
 from src.envs.pair_table_checks import (world_metadata_matches, pose_restore_measurements,
     frozen_non_anchor_measurements, verify_paused_setup)
 
@@ -24,6 +27,32 @@ def worlds():
 
 
 class FrozenTableTests(unittest.TestCase):
+    def test_native_teleport_collision_stops_complete_graph_without_force_or_skip(self):
+        originals = worlds()
+        position = {'x': 0., 'y': 1., 'z': 0.}
+        for snapshot in originals:
+            snapshot['agent_setup_command'] = {'position': position, 'rotation': {'x': 0., 'y': 0., 'z': 0.},
+                'horizon': 0., 'standing': True, 'forceAction': False}
+        actions = []
+        sim = SimpleNamespace(controller=SimpleNamespace(last_event=SimpleNamespace(metadata={
+            'objects': originals[0]['objects']})), query_log=[], last_action_reference={})
+        def action(name, **arguments):
+            actions.append((name, arguments))
+            if name == 'TeleportFull':
+                raise RuntimeError('TeleportFull: InvalidOperationException: Collided with: Box')
+        sim.action = action
+        renderer = object.__new__(SimulatorTableRenderer)
+        renderer.sim, renderer.worlds, renderer.positions = sim, originals, {point_id(position): position}
+        with patch('src.envs.pair_table_checks.world_metadata_matches', return_value={}), \
+                self.assertRaisesRegex(RuntimeError, 'Collided with: Box'):
+            build_table(renderer, pair_id='collision', scene='FloorPlan1', kind='look_flip',
+                instruction='Select the marked object closest to the anchor.', anchor_name='X',
+                candidate_names=('A', 'B'), target_names=('A', 'B'),
+                initial_position=position, initial_heading=0)
+        self.assertEqual([name for name, _ in actions],
+                         ['PausePhysicsAutoSim', 'SetObjectPoses', 'PhysicsSyncTransforms', 'TeleportFull'])
+        self.assertIs(actions[-1][1]['forceAction'], False)
+
     def test_actual_restore_rechecks_target_and_original_ratio_without_new_tolerance(self):
         objects = copy.deepcopy(worlds()[0]['objects'])
         for obj, category, x in zip(objects, ('Mug', 'Mug', 'Bowl'), (0., 1.25, .5)):

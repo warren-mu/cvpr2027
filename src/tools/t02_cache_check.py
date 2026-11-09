@@ -21,7 +21,7 @@ import traceback
 
 from src.envs.thor_common import ROOT, Worker, controller_session, deadline_after, install_signals, stop_workers
 from src.envs.paired_env import RGBFrame
-from src.envs.pair_table import RenderedView, eligible_names, label_assignment
+from src.envs.pair_table import RenderedView, eligible_names, label_assignment, verify_shadow_metadata
 from src.envs.pair_table_export import load_table, SimulatorTableRenderer
 from src.envs.pair_table_checks import (authenticate_cache_sources, authorize_tables, check_pair,
                                         verify_render_sources, verified_read)
@@ -31,7 +31,7 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 from src.tools.t02_export import (VERSION as EXPORT_VERSION, save_json, execution_environment,
                                   gate_runtime, logged_gate, preserve_black, black_only_failure, pair_runtime)
 
-VERSION = "t02_formal_fresh_cache_v1"
+VERSION = "t02_formal_fresh_cache_shadow_v2"
 
 
 def exact_export_command(command, name):
@@ -150,10 +150,14 @@ def load_exports(paths, scratch):
             checks = check_pair(table, package["t01"])
             if native.get("passed") is not True or checks.get("passed") is not True or table.synthetic:
                 raise ValueError("Previously usable export fails independent source checks")
+            for declared in (row, details, details.get('pair_checks'), details.get('native_checks'),
+                             details.get('export_measurements')):
+                verify_shadow_metadata(table, declared)
             package["cache_evidence_roots"] = roots
             package["cached_table_manifest"] = manifest
             tables[pair_id], packages[pair_id], pair_checks[pair_id] = table, package, checks
             entry["population_membership"] = "complete_independently_verified_table"
+            entry.update(table.shadow_metadata)
     if not tables:
         raise ValueError("No complete usable table in the explicit export population")
     return tables, packages, pair_checks, sources, ledger
@@ -360,6 +364,7 @@ def main():
             tables, packages, pair_checks, export_sources, ledger = load_exports(args.source, identity["scratch"])
             sources.extend(export_sources)
             metrics["population_ledger"] = ledger
+            metrics["table_shadow_metadata"] = {pair_id: table.shadow_metadata for pair_id, table in tables.items()}
             population = [(pair_id, state_id) for pair_id, table in tables.items() for state_id in table.states]
             plan = sample_state_keys(population, seed=args.seed, sample_size=args.sample_size)
             metrics["sampling_plan"] = save_json(directory / "sampling_plan.json", plan)
@@ -420,6 +425,7 @@ def main():
                     metrics["errors"].append("fresh_capture_incomplete_or_mismatched:" + pair_id)
                     break
             report = validate_cache_sample(samples, population=population, sampling_plan=plan)
+            report["table_shadow_metadata"] = copy.deepcopy(metrics["table_shadow_metadata"])
             report["native_authenticated_render_ids"] = [list(key) for key in sorted(authenticated)]
             report["producer_cleanup_errors"] = list(metrics["cleanup_errors"])
             report["producer_errors"] = list(metrics["errors"])
@@ -440,6 +446,7 @@ def main():
             if complete:
                 metrics["authorization_manifest"] = save_json(directory / "cache_authorization.json", {
                     "version": VERSION, "tables": {key: table.manifest_reference for key, table in tables.items()},
+                    "table_shadow_metadata": copy.deepcopy(metrics["table_shadow_metadata"]),
                     "cache_validation": metrics["validation_report"], "sampling_plan": metrics["sampling_plan"],
                     "scope": "native export, pair checks and formal cache only; T02 balance/throughput/human review not certified",
                     "full_T02_acceptance": None})

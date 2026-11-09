@@ -16,12 +16,13 @@ from src.tools.t01v2_posthoc_solvability import verified_passed_rows
 RANKED_CHECKPOINT_MODULE = 'src.tools.t01v2_flip_ranked_review_checkpoint'
 STAY_CHECKPOINT_MODULE = 'src.tools.t01v2_stay_priority_review_checkpoint'
 G01_CHECKPOINT_MODULE = 'src.tools.t01v2_g01_review_checkpoint'
+CONTROLLER_CHECKPOINT_MODULE = 'src.tools.t01v2_controller_review_checkpoint'
 
 
 def _checkpoint_module(command):
     """Only explicit independently checked producers, never an argument hint."""
     for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE,
-                   STAY_CHECKPOINT_MODULE, G01_CHECKPOINT_MODULE):
+                   STAY_CHECKPOINT_MODULE, G01_CHECKPOINT_MODULE, CONTROLLER_CHECKPOINT_MODULE):
         try:
             merge.producer_arguments(command, module)
         except ValueError:
@@ -312,6 +313,12 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
     container, reference, entries = _container(source_result)
     module = (_checkpoint_module(container['_meta'].get('command'))
               if container.get('metrics', {}).get('kind') == 't01v2_review_checkpoint' else None)
+    if module == CONTROLLER_CHECKPOINT_MODULE:
+        from src.tools.t01v2_controller_review_checkpoint import source_support
+        from . import pair_v2_look_unit_policy as source_policy
+        with source_support():
+            return _load_reviewed_pair(container, reference, entries, pair_id,
+                pair_file=pair_file, ranked=True, source_policy=source_policy)
     if module == G01_CHECKPOINT_MODULE:
         from src.tools.t01v2_g01_review_checkpoint import source_support
         with source_support():

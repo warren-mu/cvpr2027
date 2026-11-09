@@ -205,7 +205,9 @@ class ExportTests(unittest.TestCase):
     def export_mocks(self, package_value, *, native_pass=True):
         sim, order = FakeSim(), []
         original = SimpleNamespace(export_measurements={"fixture": True})
-        loaded = SimpleNamespace(export_verified=False, cache_verified=False, synthetic=False)
+        loaded = SimpleNamespace(export_verified=False, cache_verified=False, synthetic=False,
+            shadow_metadata={'shadow_divergent_states': 1, 'non_anchor_divergent_states': 1,
+                             'in_clean_subset': False})
         manifest = {"file": "/scratch/table/table.json", "sha256": "d" * 64}
         def native(table, *, evidence_roots):
             self.assertIs(table, loaded)
@@ -224,6 +226,8 @@ class ExportTests(unittest.TestCase):
                 self.assertIs(check.call_args.args[0], loaded)
                 self.assertIsNone(result["cache_matches_live"])
                 self.assertFalse(result["downstream_allowed"])
+                self.assertEqual(result['shadow_divergent_states'], 1)
+                self.assertFalse(result['in_clean_subset'])
                 load.assert_called_once_with(manifest["file"], expected_sha256=manifest["sha256"])
             else:
                 with self.assertRaisesRegex(ValueError, "native_evidence_verification_failed"):
@@ -302,7 +306,7 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(error["rejection_reasons"], [])
 
     def test_cleanup_uncertainty_overrides_a_scientific_rejection(self):
-        report = self.worker_failure(ValueError("non_anchor_divergent"), cleanup=True)
+        report = self.worker_failure(ValueError("graph_mismatch"), cleanup=True)
         self.assertEqual(report["status"], "error")
         self.assertTrue(report["cleanup_errors"])
 

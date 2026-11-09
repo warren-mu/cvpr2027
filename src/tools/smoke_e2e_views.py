@@ -20,13 +20,14 @@ import traceback
 
 from src.envs.thor_common import ROOT, Worker, deadline_after, install_signals, stop_workers
 from src.envs.pair_table_export import load_table
+from src.envs.pair_table import verify_shadow_metadata
 from src.envs.pair_table_checks import check_pair, verify_render_sources, authenticate_cache_sources
 from src.envs.pair_table_source import load_reviewed_pair
 from src.tools.t01_partition import audited_result
 from src.tools.t02_export import (VERSION as EXPORT_VERSION, save_json, execution_environment, gate_runtime,
     logged_gate, pair_worker, pair_runtime, preserve_black, black_only_failure)
 from src.tools.t02_cache_check import fresh_worker, load_samples, read_json_ref
-from src.tools.smoke_e2e_scope import VERSION, POLICY, digest, sample_plan, validate_sample, authorize_smoke, coverage
+from src.tools.smoke_e2e_scope import VERSION, POLICY, digest, sample_plan, validate_sample, authorize_smoke, coverage, shadow_summary
 
 MODULE = "src.tools.smoke_e2e_views"
 APPROVED_PAIRS = ("floorplan203_00038", "floorplan203_00039", "floorplan203_00041",
@@ -235,9 +236,12 @@ def load_success(path):
     for index, package in enumerate(packages):
         table, checked, checks = reload_export(rows[index], package, directory / f"export_{index:04d}")
         tables[table.pair_id], checked_packages[table.pair_id], pair_checks[table.pair_id] = table, checked, checks
-    counts = {pair: checks["non_anchor_divergent_states"] for pair, checks in pair_checks.items()}
-    if metrics.get("non_anchor_divergent_states_by_pair") != counts:
-        raise ValueError("Saved Direct hidden-divergence counts differ from the actual table states")
+    shadows = shadow_summary(list(tables.values()))
+    for pair, checks in pair_checks.items():
+        verify_shadow_metadata(tables[pair], checks)
+    if (any(metrics.get(key) != value for key, value in shadows.items())
+            or metrics.get('non_anchor_divergent_states_by_pair') != shadows['shadow_divergent_states_by_pair']):
+        raise ValueError('Saved shadow/clean-subset metadata differs from the actual complete pool')
     population = [(pair, state) for pair, table in tables.items() for state in table.states]
     sampling = read_json_ref(metrics["sampling_plan"], directory, expected=directory / "sampling_plan.json")
     if sampling != sample_plan(population):
@@ -275,10 +279,12 @@ def main():
         raise FileExistsError("Preserve earlier smoke results; choose a unique name")
     config = {**vars(args), "version": VERSION, "policy": copy.deepcopy(POLICY), "gpus": 1,
               "depth": 4, "resolution": 255, "node": socket.gethostname(),
+              "approved_pair_ids": [],
               "raw_cap_scope": "per owned export/fresh worker; not a whole-job cap",
               "budget_scope": "root must enforce cumulative 4 charged GPUh across ALL E2E jobs/retries"}
     metrics = {"kind": "smoke_e2e_views", "status": "incomplete", "step1_passed": False,
                "non_anchor_divergent_states_by_pair": {},
+               "shadow_divergent_states_by_pair": {}, "in_clean_subset_by_pair": {},
                "exports": [], "fresh_runs": [], "errors": [], "cleanup_errors": [], "gate": None,
                "black_frame_detected": False, "formal_T02_acceptance": None, "formal_cache_matches_live": None,
                "paper_result": False, "steps_3_to_5_started": False}
@@ -293,9 +299,6 @@ def main():
         directory = Path(identity["scratch"]) / "smoke_e2e" / args.name / identity["pbs_jobid"]
         directory.mkdir(parents=True, exist_ok=False)
         config["scratch_directory"] = str(directory)
-        plan, reference, images, packages, sources = review_packages(ROOT / args.review_plan)
-        config.update(review_plan_reference=reference, review_images=images,
-                      approved_pair_ids=[package["pair_id"] for package in packages])
         gate, gate_ref, cleanup = logged_gate(args.name + "_gate", args.gate_timeout_seconds, directory, deadline, sources)
         metrics["gate"], metrics["cleanup_errors"] = gate_ref, cleanup
         if gate["_meta"]["exit_code"] != 0:
@@ -306,6 +309,10 @@ def main():
             config["runtime"] = runtime
             if cleanup:
                 raise RuntimeError("Gate cleanup uncertain")
+            plan, reference, images, packages, package_sources = review_packages(ROOT / args.review_plan)
+            sources.extend(source for source in package_sources if source not in sources)
+            config.update(review_plan_reference=reference, review_images=images,
+                          approved_pair_ids=[package["pair_id"] for package in packages])
             tables, checked_packages, checks = {}, {}, {}
             for index, package in enumerate(packages):
                 if time.time() >= deadline - 30:
@@ -328,6 +335,7 @@ def main():
                 table, checked, pair_checks = reload_export(row, package, target)
                 tables[table.pair_id], checked_packages[table.pair_id], checks[table.pair_id] = table, checked, pair_checks
                 metrics["non_anchor_divergent_states_by_pair"][table.pair_id] = pair_checks["non_anchor_divergent_states"]
+                metrics.update(shadow_summary(list(tables.values())))
             if not metrics["black_frame_detected"]:
                 population = [(pair, state) for pair, table in tables.items() for state in table.states]
                 sampling = sample_plan(population)

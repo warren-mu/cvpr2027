@@ -21,15 +21,15 @@ import sys
 import uuid
 
 BATCH = "t00b_t01_20261108"
-LIMITS = {"T00b": 60.0, "T01": 60.0}
-TOTAL_LIMIT = 60.0
-BUDGET_REVISION = "20261108_premium_charged_60_t01v2_16_e2e_4_g01_20"
-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "G01": 20.0}
+LIMITS = {"T00b": 60.0, "T01": 120.0}
+TOTAL_LIMIT = 120.0
+BUDGET_REVISION = "20261109_premium_charged_120_t01v2_16_e2e_4_g01_40_t02_40"
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "G01": 40.0, "T02": 40.0}
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 
 
 def budget_group(task, name, command, declared=None):
-    """v2 is a subset of T01/60, never an alternative ledger or a new allowance."""
+    """Subbudgets share the approved120 total; historical diagnostic routes are retained."""
     named = isinstance(name, str) and (name == "pilot_pairs_v2" or name.startswith("pilot_pairs_v2_"))
     launched = any(isinstance(arg, str) and
                    (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh", "/t01v2_search_pairs.sh", "/t01v2_solvable_pairs.sh", "/t01v2_isolated_pairs.sh", "/t01v2_marked_pairs.sh"))
@@ -38,10 +38,18 @@ def budget_group(task, name, command, declared=None):
     e2e = isinstance(name, str) and name.startswith("smoke_e2e_")
     e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
         or arg in ("src.tools.e2e_export", "src.tools.smoke_e2e_views")) for arg in (command or []))
-    g01 = isinstance(name, str) and name.startswith("gen_train_")
+    g01 = isinstance(name, str) and name.startswith(("gen_train_", "gen_test_"))
+    t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel") for arg in (command or []))
+    t02 = isinstance(name, str) and name.startswith("t02_export_")
+    if t02 or declared == "T02":
+        if task != "T01" or not t02 or declared != "T02" or named or launched or e2e or e2e_launch or g01:
+            raise ValueError("T02 export requires task T01, explicit T02 budget and its own t02_export_ name")
+        if command and not t02_launch:
+            raise ValueError("T02 export must use its declared single or parallel exporter")
+        return "T02"
     if g01 or declared == "G01":
-        if task != "T01" or not g01 or named or launched or e2e or e2e_launch or declared not in (None, "G01"):
-            raise ValueError("G01 overnight expansion requires task T01 and a unique gen_train name")
+        if task != "T01" or not g01 or named or launched or e2e or e2e_launch or t02_launch or declared not in (None, "G01"):
+            raise ValueError("G01 overnight expansion requires task T01 and a unique gen_train_/gen_test_ name")
         return "G01"
     if e2e or e2e_launch or declared == "E2E":
         if task != "T01" or not e2e or named or launched or declared not in (None, "E2E"):
@@ -292,7 +300,7 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
-    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_train_[A-Za-z0-9_]+)"
+    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
     if any(row["name"] == name for row in state["submissions"]):
@@ -307,10 +315,12 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     if state["accounted_or_reserved_by_task"][task] + proposed > LIMITS[task] + 1e-12:
         raise ValueError("Request would exceed the task's measured-plus-reserved GPU budget")
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
-        raise ValueError("Request would exceed the combined 60 GPU-hour budget")
+        raise ValueError("Request would exceed the combined 120 GPU-hour budget")
     group = budget_group(task, name, [], group)
-    if group == "E2E" and gpus != 1:
-        raise ValueError("E2E uses exactly one GPU per job")
+    if group in ("E2E", "T02") and gpus != 1:
+        raise ValueError("E2E/T02 use exactly one GPU per job")
+    if group == "G01" and name.startswith("gen_test_") and gpus != 1:
+        raise ValueError("Evaluation generation retains the frozen single-GPU collection plan")
     if group == "G01" and gpus == 2:
         raise ValueError("G01 follows the approved one-GPU or packed mediumx queue plan, never two GPUs")
     if group:

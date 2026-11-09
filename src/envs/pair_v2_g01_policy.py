@@ -1,5 +1,6 @@
-"""Explicit G01 mixed source policy; no evaluation scene or clone fallback."""
+"""Explicit G01 mixed source policy; explicit isolated training/evaluation partitions; no clone fallback."""
 import copy
+import re
 from contextlib import contextmanager
 from . import pair_v2_fov as fov
 from . import pair_v2_stay_order as stay
@@ -11,8 +12,10 @@ from . import pair_v2_bbox_rank as rank
 from . import pair_v2_flip_geometry as geometry
 
 VERSION = 'g01_mixed_train80_complete_look_geometry_selected60_v2'
+TEST_VERSION = 'g01_mixed_test40_frozen_generator_selected60_v1'
 PRODUCER = 'src.envs.pair_v2_g01_shard'
 TRAIN_SCENES = frozenset(f'FloorPlan{i}' for start in (1, 201, 301, 401) for i in range(start, start + 20))
+TEST_SCENES = frozenset(f'FloorPlan{i}' for start in (21, 221, 321, 421) for i in range(start, start + 10))
 POLICY = {
     'version': VERSION, 'task': 'G01', 'approval': 'supplement14; execution still requires the separate observed gate and budget check',
     'partition': 'training only:1–20/201–220/301–320/401–420', 'field_of_view': 60,
@@ -31,24 +34,46 @@ FIELDS = ('g01_version', 'g01_policy', 'g01_partition')
 _ORIGINAL_DECLARED = fov.declared_fields
 
 
-def fields():
-    return {'g01_version': VERSION, 'g01_policy': copy.deepcopy(POLICY), 'g01_partition': 'train'}
+def split_scenes(partition):
+    if partition not in ('train', 'test'):
+        raise ValueError('Require explicit train/test partition')
+    if TRAIN_SCENES & TEST_SCENES:
+        raise ValueError('Training and evaluation scene inventories overlap')
+    return TRAIN_SCENES if partition == 'train' else TEST_SCENES
 
 
-def declared(scene):
-    if scene not in TRAIN_SCENES:
-        raise ValueError('G01 mixed producer is restricted to the fixed80 training scenes')
-    return {'field_of_view': 60, 'fov_contrast_version': VERSION,
-        'fov_contrast_policy': copy.deepcopy(POLICY), 'fov_contrast_group': 'g01_selected60',
-        **fields(),
+def class_cap(partition):
+    split_scenes(partition)
+    return 8 if partition == 'train' else 6
+
+
+def fields(partition='train'):
+    split_scenes(partition)
+    spec = copy.deepcopy(POLICY)
+    if partition == 'test':
+        spec.update(version=TEST_VERSION,
+            approval='human G01/T03 revision 2026-11-09; fixed generator, no evaluation-driven tuning',
+            partition='evaluation only:21–30/221–230/321–330/421–430',
+            per_scene_class_cap=6,
+            purpose='frozen evaluation collection only; never training, tuning or generator pilots')
+    return {'g01_version': spec['version'], 'g01_policy': spec, 'g01_partition': partition}
+
+
+def declared(scene, partition='train'):
+    if scene not in split_scenes(partition):
+        raise ValueError('G01 scene is outside its explicitly declared train/test partition')
+    values = fields(partition)
+    return {'field_of_view': 60, 'fov_contrast_version': values['g01_version'],
+        'fov_contrast_policy': copy.deepcopy(values['g01_policy']), 'fov_contrast_group': 'g01_selected60',
+        **values,
         **search.fields(), **labels.fields(), **cadence.fields(),
         **sharing.fields(), **rank.fields(), **geometry.fields()}
 
 
 def declared_fields(config):
-    if config.get('fov_contrast_version') != VERSION and not any(key in config for key in FIELDS):
+    if config.get('fov_contrast_version') not in (VERSION, TEST_VERSION) and not any(key in config for key in FIELDS):
         return _ORIGINAL_DECLARED(config)
-    expected = declared(config.get('scene'))
+    expected = declared(config.get('scene'), config.get('g01_partition'))
     if any(config.get(key) != item for key, item in expected.items()):
         raise ValueError('Missing/altered explicit G01 camera/partition/search policy')
     return expected
@@ -56,11 +81,15 @@ def declared_fields(config):
 
 def validate_source(config, metrics=None):
     expected, shard = declared_fields(config), declared_fields(config['shard'])
-    if (expected.get('g01_version') != VERSION or expected != shard or config['scene'] != config['shard']['scene']
+    if (expected.get('g01_version') not in (VERSION, TEST_VERSION) or expected != shard or config['scene'] != config['shard']['scene']
             or config.get('producer_module') != PRODUCER or config['shard'].get('producer_module') != PRODUCER):
-        raise ValueError('G01 source differs from its immutable training scene/producer policy')
-    if config.get('enable_candidate_clone') is not False or config.get('scene_pairs_per_class') != search.PER_CLASS:
-        raise ValueError('G01 source must retain natural candidates and the task scene/class cap8')
+        raise ValueError('G01 source differs from its immutable train/test scene/producer policy')
+    if config.get('enable_candidate_clone') is not False or config.get('scene_pairs_per_class') != class_cap(expected['g01_partition']):
+        raise ValueError('G01 source must retain natural candidates and the declared partition scene/class cap')
+    if expected['g01_partition'] == 'test':
+        if (not re.fullmatch(r'gen_test_[A-Za-z0-9_]+', config.get('name', ''))
+                or config['shard'].get('name') != config['name']):
+            raise ValueError('Evaluation source requires its isolated gen_test_ namespace')
     for value in (config, config['shard']):
         stay.validate_fields(value); labels.validate_fields(value); search.validate_fields(value)
         for module in (cadence, sharing, rank, geometry):

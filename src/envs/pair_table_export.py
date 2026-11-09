@@ -17,7 +17,7 @@ from typing import Protocol
 from .pair_core import ViewState
 from .paired_env import RGBFrame
 from .pair_table import (PairTable, RenderedView, TableState, TABLE_VERSION,
-                         classify_views, encoded)
+                         classify_views, encoded, verify_shadow_metadata)
 
 FROZEN_RENDER_VERSION = 'w0_nonanchor_frozen_table_v1'
 
@@ -172,8 +172,7 @@ def build_table(renderer, *, pair_id, scene, kind, instruction, anchor_name,
         initial_state=state_id(initial), positions=positions, states=states, source=source,
         export_verified=False, cache_verified=False)
     table.export_measurements = {'state_count': len(states), 'elapsed_seconds': time.perf_counter() - started,
-        'non_anchor_divergent_states': sum(state.anchor_pixels == (0, 0) and state.frame_max_abs_diff > 3
-                                          for state in states.values()),
+        **table.shadow_metadata,
         'includes': 'native graph queries and paired capture construction; excludes caller startup and serialization',
         'synthetic_only': table.synthetic}
     return table
@@ -356,10 +355,12 @@ def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_b
         rows[key] = {'view': vars(state.view), 'captures': captures, 'transitions': dict(state.transitions),
             'neighbors': state.neighbors, 'graph_evidence': state.graph_evidence, 'shared': state.shared,
             'frame_max_abs_diff': state.frame_max_abs_diff, 'anchor_pixels': state.anchor_pixels,
+            'shadow_divergent': state.shadow_divergent,
             'public_rgb': [captures[0]['rgb'], captures[0 if state.shared else 1]['rgb']]}
     manifest = {key: getattr(table, key) for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
     manifest.update(version=TABLE_VERSION, states=rows, files=list(written.values()),
+        **table.shadow_metadata,
         export_verified=False, cache_verified=False,
         status='exported_evidence_pending_independent_checks', stored_payload_bytes=total)
     manifest['export_measurements'] = copy.deepcopy(getattr(table, 'export_measurements', None))
@@ -405,9 +406,14 @@ def load_table(path, *, expected_sha256):
         states[key] = TableState(key, view, captures, row['transitions'],
             tuple(tuple(n) for n in row['neighbors']), tuple(row['graph_evidence']), row['shared'],
             row['frame_max_abs_diff'], tuple(row['anchor_pixels']))
+        if row.get('shadow_divergent') is not states[key].shadow_divergent:
+            raise ValueError('Stored state shadow classification differs from its measurements')
     args = {key: manifest[key] for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
     table = PairTable(**args, states=states, export_verified=False, cache_verified=False)
+    verify_shadow_metadata(table, manifest)
     table.export_measurements = manifest.get('export_measurements')
+    if table.export_measurements is not None:
+        verify_shadow_metadata(table, table.export_measurements)
     table.manifest_reference = {'file': str(path), 'sha256': expected_sha256, 'bytes': len(raw)}
     return table

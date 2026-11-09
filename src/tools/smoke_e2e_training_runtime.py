@@ -26,7 +26,7 @@ from vagen.trainer.ppo.ray_trainer import RayPPOTrainer, apply_kl_penalty, compu
 
 from src.rl.credit import ActionScores, CandidateScore, q_commit
 from src.tools.smoke_e2e_eval import SYSTEM
-from src.tools.smoke_e2e_scope import SmokeTableBackend, SmokeTableEnvironment
+from src.tools.smoke_e2e_scope import SmokeTableBackend, SmokeTableEnvironment, coverage
 from src.tools.smoke_e2e_training_contract import (VERSION, episode_plan, prompt_identity,
     generation_groups, decision_token_spans, require_training_pool, task_reward, digest, available_actions,
     FROZEN_PIPELINE, FROZEN_VERSION, pre_evidence)
@@ -435,6 +435,7 @@ class SmokeTrainer(RayPPOTrainer):
         self.actor_rollout_wg.save_checkpoint(str(checkpoint / 'actor'), None, 5, remove_previous_ckpt=False)
         self.critic_wg.save_checkpoint(str(checkpoint / 'critic'), None, 5, remove_previous_ckpt=False)
         return {'actual_completed_updates': len(updates), 'updates': updates,
+            'coverage': coverage(list(tables.values())),
             'critic_offload': bool(self.config.critic.model.fsdp_config.param_offload),
             'critic_offload_needed': None,
             'critic_offload_interpretation': 'this run records only its explicit setting; necessity requires a retained failed nonoffload run',

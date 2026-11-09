@@ -10,6 +10,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import time
 import uuid
@@ -36,7 +37,7 @@ def digest(raw):
 
 
 def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignments,
-                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes):
+                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train'):
     directory = Path(directory).resolve()
     if len(cpu_affinity) != 12 or len(set(cpu_affinity)) != 12:
         raise ValueError('All scene lanes must share exactly the allocated twelve CPUs')
@@ -52,6 +53,12 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
         'max_unity_instances': concurrency + capacity(concurrency), 'pbs_jobid': pbs_jobid,
         'node': node, 'gpu_uuid': gpu_uuid, 'cpu_affinity': list(cpu_affinity), 'scenes': list(scenes),
         'assignments': copy.deepcopy(assignments)}
+    if partition == 'test':
+        plan.update(g01_partition='test', per_scene_class_cap=6,
+                    collection_purpose='evaluation only; never training or tuning')
+    elif partition != 'train':
+        raise ValueError('Require the approved train/test partition')
+    validate_partition_plan(plan)
     path = directory / 'admission_plan.json'
     with path.open('x') as stream:
         json.dump(plan, stream, sort_keys=True, indent=2, allow_nan=False)
@@ -65,6 +72,28 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
         json.dump(state, stream, sort_keys=True, allow_nan=False)
     (directory / 'admission.lock').touch(exist_ok=False)
     return plan, reference
+
+
+def validate_partition_plan(plan):
+    """Old immutable train plans remain valid; test requires its explicit namespace."""
+    from src.envs import pair_v2_g01_policy as policy
+    partition = plan.get('g01_partition', 'train')
+    allowed = policy.split_scenes(partition)
+    scenes = plan.get('scenes', [])
+    if (not scenes or len(set(scenes)) != len(scenes) or any(scene not in allowed for scene in scenes)
+            or len(plan.get('assignments', [])) != len(scenes)
+            or {row.get('scene') for row in plan['assignments']} != set(scenes)):
+        raise ValueError('Immutable admission plan mixes or changes the declared scene partition')
+    if partition == 'test':
+        if (plan.get('per_scene_class_cap') != 6 or plan.get('concurrency') != 6
+                or plan.get('collection_purpose') != 'evaluation only; never training or tuning'
+                or not re.fullmatch(r'gen_test_[A-Za-z0-9_]+', plan.get('parent_run_name', ''))
+                or any(not re.fullmatch(r'gen_test_[A-Za-z0-9_]+', row.get('child_run_name', ''))
+                       for row in plan['assignments'])):
+            raise ValueError('Test collection requires an explicit isolated six-lane evaluation plan')
+    elif plan.get('parent_run_name', '').startswith('gen_test_'):
+        raise ValueError('A test namespace cannot disguise a training admission plan')
+    return partition
 
 
 def child_assignment(plan, reference, scene):
@@ -87,6 +116,7 @@ def load_plan(assignment):
     if digest(raw) != assignment['plan_sha256']:
         raise ValueError('G01 admission plan bytes changed')
     plan = json.loads(raw)
+    validate_partition_plan(plan)
     if (plan.get('version') != VERSION or plan.get('nonce') != assignment['nonce']
             or plan.get('witness_capacity') != capacity(assignment['concurrency'])
             or plan.get('max_unity_instances') != assignment['concurrency'] + capacity(assignment['concurrency'])
@@ -104,6 +134,10 @@ def validate_source_admission(config, metrics=None):
     shard = config['shard']
     assignment = shard['g01_admission']
     plan = load_plan(assignment)
+    partition = plan.get('g01_partition', 'train')
+    if (shard.get('g01_partition', 'train') != partition
+            or config.get('g01_partition', 'train') != partition):
+        raise ValueError('Source partition differs from its immutable admission plan')
     if (assignment['scene'] != config['scene'] or assignment['scene'] != shard['scene']
             or assignment['child_run_name'] != config['name'] or assignment['child_run_name'] != shard['name']
             or shard['logical_index'] != 0 or shard['gpu_identity']['gpu_uuid'] != plan['gpu_uuid']

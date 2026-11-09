@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 import time
 
-from .pair_table import encoded, eligible_names, classify_views
+from .pair_table import encoded, eligible_names, classify_views, verify_shadow_metadata
 
 
 def minimum_world_turns(table, state_id, world, *, already_seen=False, max_turns=5):
@@ -132,8 +132,7 @@ def check_pair(table, t01):
     if any(row['passed'] is False for row in replays):
         reasons.append('witness_replay_failed')
     return {'passed': not reasons, 'reasons': reasons, 'min_solution_turns': minimum,
-            'non_anchor_divergent_states': sum(state.anchor_pixels == (0, 0) and state.frame_max_abs_diff > 3
-                                              for state in table.states.values()),
+            **table.shadow_metadata,
             'first_step_visible_actions': observations, 'witness_replay': replays,
             'prefix_verified_identical': table.export_verified and all(
                 state.frame_max_abs_diff <= 3 and state.anchor_pixels == (0, 0)
@@ -212,6 +211,7 @@ def verify_agent_setup(action, state, table):
     arguments = action.get('arguments', {})
     if (action.get('action') != 'TeleportFull' or action.get('exception') is not None
             or action['after_metadata'].get('lastActionSuccess') is not True
+            or arguments.get('forceAction') is not False
             or arguments.get('position') != table.positions[state.view.viewpoint_id]
             or arguments.get('rotation', {}).get('y') != state.view.heading_index * 45):
         raise ValueError('Native camera setup does not execute the declared discrete viewpoint/heading')
@@ -223,6 +223,11 @@ def verify_cached_binding(table, row):
     if row['pair_id'] != table.pair_id or row.get('kind') != table.kind:
         raise ValueError('Cache report names another table or pair kind')
     state = table.states[row['state_id']]
+    measured = classify_views(state.captures, table.anchor_name, kind=table.kind)
+    declared = row.get('cached_classification', {})
+    for key in ('shared', 'shadow_divergent', 'non_anchor_divergent', 'frame_max_abs_diff'):
+        if type(declared.get(key)) is not type(measured[key]) or declared[key] != measured[key]:
+            raise ValueError('Cache report changed its cached shadow/shared classification')
     from .pair_table import label_assignment
     assignments = label_assignment(table.pair_id, table.candidate_names)
     for world in (0, 1):
@@ -255,6 +260,15 @@ def verify_paused_setup(evidence, read):
             or sequence[-1]['reference'] != evidence.get('agent_setup_action')):
         raise ValueError('Pause/camera source is not the declared setup chain')
     return native
+
+
+def verify_candidate_distances(declared, agent_position, objects):
+    """Use the producer's exact finite xyz arithmetic; retain strict equality."""
+    from .pair_v2_simulator import distance
+    for name, measured in declared.items():
+        actual = distance(agent_position, objects[name]['position'])
+        if measured != actual:
+            raise ValueError('Candidate selectability distance differs from metadata')
 
 
 def verify_render_sources(table, *, evidence_roots):
@@ -314,10 +328,7 @@ def verify_render_sources(table, *, evidence_roots):
             camera = {k: metadata.get(k) for k in ('cameraPosition', 'fov', 'screenWidth', 'screenHeight')}
             if encoded(view.agent) != encoded({'agent': pose, 'camera': camera}):
                 raise ValueError('Camera proof differs from raw metadata')
-            for name, distance in view.distances.items():
-                actual = sum((pose['position'][k] - objects[name]['position'][k]) ** 2 for k in ('x', 'y', 'z')) ** .5
-                if distance != actual:
-                    raise ValueError('Candidate selectability distance differs from metadata')
+            verify_candidate_distances(view.distances, pose['position'], objects)
             action = json.loads(read(src['render_action']))
             if (action.get('action') != 'Pass' or action.get('exception') is not None
                     or action.get('after_metadata') != metadata or action.get('capture') != capture):
@@ -471,6 +482,7 @@ def verify_render_sources(table, *, evidence_roots):
         raise ValueError('Table includes states outside the fixed D4 graph')
     table.export_verified = True
     return {'passed': True, 'render_count': len(seen), 'prefix_verified_identical': True,
+            **table.shadow_metadata,
             'scope': 'raw export only; cache and solvability checks remain required'}
 
 
@@ -503,6 +515,8 @@ def authorize_tables(tables, *, pair_checks, cache_report, authenticated_cache_s
         if (table.synthetic or not table.export_verified or not isinstance(check, dict)
                 or check.get('passed') is not True or check.get('synthetic_only') is not False):
             raise ValueError('Table remains unverified for production rollout')
+        verify_shadow_metadata(table, check)
+        verify_shadow_metadata(table, cache_report.get('table_shadow_metadata', {}).get(table.pair_id))
     for table in tables:
         table.cache_verified = True
 

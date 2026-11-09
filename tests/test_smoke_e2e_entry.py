@@ -57,7 +57,7 @@ class EntryTests(unittest.TestCase):
 
     def test_rejected_selected_pair_stops_instead_of_filtering(self):
         row = {"pair_id": views.APPROVED_PAIRS[0], "status": "rejected", "cleanup_errors": [],
-               "error": None, "rejection_reasons": ["non_anchor_divergent"]}
+               "error": None, "rejection_reasons": ["graph_mismatch"]}
         with tempfile.TemporaryDirectory() as temporary:
             code, saved, count = self.run_main(Path(temporary), row=row)
         self.assertEqual((code, count), (1, 1))

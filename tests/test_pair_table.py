@@ -2,6 +2,8 @@
 from dataclasses import replace
 import copy
 import hashlib
+import json
+import math
 import tempfile
 from pathlib import Path
 import unittest
@@ -14,6 +16,7 @@ from src.envs.pair_table_export import build_table, load_table, save_table
 from src.envs.pair_table_checks import (authorize_tables, check_pair, min_solution_turns,
                                       replay_witness, visible_first_actions, export_cost_estimate)
 from src.envs.pair_table_checks import verify_cached_binding, world_metadata_matches, verify_agent_setup
+from src.envs.pair_table_checks import verify_candidate_distances
 
 
 def mask(count, start=0):
@@ -142,8 +145,8 @@ class TableTests(unittest.TestCase):
         value.states = altered
         self.assertIsNone(min_solution_turns(value))
 
-    def test_export_rejects_graph_mismatch_leak_and_missing_mask(self):
-        for option, error in [('mismatch', 'graph_mismatch'), ('leak', 'non_anchor_divergent'), ('missing', 'Missing mask')]:
+    def test_export_rejects_graph_mismatch_and_missing_mask(self):
+        for option, error in [('mismatch', 'graph_mismatch'), ('missing', 'Missing mask')]:
             with self.subTest(option=option), self.assertRaisesRegex(ValueError, error):
                 table(**{option: True})
 
@@ -181,11 +184,95 @@ class TableTests(unittest.TestCase):
             self.assertEqual(left.info['anchor_pixels_w1'], 0)
             self.assertNotEqual(observation0.image, observation1.image)
             self.assertEqual((left.info['tau'], right.info['tau']), (0, 0))
-        # Identical captures remain forbidden for Look regardless of Flip/Stay.
+        # The same hidden-X divergence is a fork for either Look class too.
         hidden = next(state for state in value.states.values() if state.anchor_pixels == (0, 0))
         for kind in ('look_flip', 'look_stay'):
-            with self.assertRaisesRegex(ValueError, 'non_anchor_divergent'):
-                classify_views(hidden.captures, 'X', kind=kind)
+            measured = classify_views(hidden.captures, 'X', kind=kind)
+            self.assertTrue(measured['shadow_divergent'])
+            self.assertFalse(measured['shared'])
+        self.assertFalse(value.in_clean_subset)
+
+    def test_look_shadow_forks_before_seen_retains_own_rgb_and_private_diagnostics(self):
+        class ShadowRenderer(FixtureRenderer):
+            def render_pair(self, state):
+                captures = super().render_pair(state)
+                if state.heading_index == 1:
+                    captures = tuple(replace(view, masks={**view.masks, 'X': mask(0)}) for view in captures)
+                elif state.heading_index in (2, 7):
+                    captures = tuple(replace(view, masks={**view.masks, 'X': mask(250, 1000)}) for view in captures)
+                return captures
+        value = build_table(ShadowRenderer(), pair_id='shadow_look', scene='FloorPlan1',
+            kind='look_flip', instruction='Select the marked object closest to the kettle.',
+            anchor_name='X', candidate_names=('A', 'B'), target_names=('A', 'B'),
+            initial_position={'x': 0, 'y': 0, 'z': 0}, initial_heading=0, source={'synthetic': True})
+        checked = check_pair(value, {'pair_id': value.pair_id, 'selected_action': 'turn_left',
+            'anchor_visible_actions_w0': ['turn_left'], 'anchor_visible_actions_w1': ['turn_left'],
+            'witnesses': [{'actions': [{'kind': 'turn_left'}, {'kind': 'select', 'target_name': name}]}
+                          for name in ('A', 'B')]})
+        self.assertTrue(checked['passed'])
+        self.assertEqual(checked['shadow_divergent_states'], 1)
+        self.assertFalse(checked['in_clean_subset'])
+        left, right = self.env(value), self.env(value)
+        self.assertEqual(left.reset(value.pair_id, 'w0'), right.reset(value.pair_id, 'w1'))
+        a, _, _, info = left.step('turn_right')
+        b, _, _, _ = right.step('turn_right')
+        self.assertNotEqual(a.image, b.image)
+        self.assertEqual(info['tau'], 1)
+        self.assertIsNone(info['x_seen_step'])
+        self.assertTrue(info['shadow_divergent'])
+        self.assertEqual(info['table_temporal_proof']['shadow_divergent_states'], 1)
+        for key in ('shadow_divergent', 'in_clean_subset', 'shadow_divergent_states'):
+            self.assertNotIn(key, a.text)
+            self.assertNotIn(key, b.text)
+        left.step('turn_right')
+        self.assertEqual((left.info['tau'], left.info['x_seen_step']), (1, 2))
+        left.step('turn_left'); left.step('turn_left')
+        self.assertTrue(left.info['shared'])
+        self.assertEqual((left.info['tau'], left.info['x_seen_step']), (1, 2))
+
+    def test_shadow_boundary_and_clean_subset_are_not_acceptance_filters(self):
+        captures = FixtureRenderer().render_pair(ViewState('v', 0))
+        for kind in ('look_flip', 'look_stay', 'direct_flip', 'direct_stay'):
+            self.assertTrue(classify_views(captures, 'X', kind=kind)['shared'])
+            changed = (captures[0], replace(captures[1], rgb=RGBFrame(bytes([34, 40, 50]) * (255 * 255), 255, 255)))
+            measured = classify_views(changed, 'X', kind=kind)
+            self.assertTrue(measured['shadow_divergent'])
+            self.assertFalse(measured['shared'])
+        self.assertTrue(table().in_clean_subset)
+        self.assertFalse(table(leak=True).in_clean_subset)
+        # An unshared initial Look state remains invalid under the unchanged rule.
+        value = table(leak=True)
+        checked = check_pair(value, {'pair_id': value.pair_id, 'selected_action': 'turn_right',
+            'anchor_visible_actions_w0': ['turn_right'], 'anchor_visible_actions_w1': ['turn_left'],
+            'witnesses': [{'actions': [{'kind': 'select', 'target_name': name}]} for name in ('A', 'B')]})
+        self.assertIn('look_start_not_shared', checked['reasons'])
+
+    def test_shadow_manifest_cannot_claim_clean_or_change_counts(self):
+        value = table(leak=True)
+        with tempfile.TemporaryDirectory() as temporary:
+            reference = save_table(value, Path(temporary) / 'table')
+            loaded = load_table(reference['file'], expected_sha256=reference['sha256'])
+            self.assertEqual(loaded.shadow_metadata, value.shadow_metadata)
+            path = Path(reference['file']); original = json.loads(path.read_text())
+            changes = [lambda m: m.update(in_clean_subset=True),
+                       lambda m: m.update(shadow_divergent_states=0),
+                       lambda m: m['export_measurements'].update(in_clean_subset=True),
+                       lambda m: next(iter(m['states'].values())).update(shadow_divergent=False)]
+            for change in changes:
+                manifest = copy.deepcopy(original); change(manifest)
+                raw = json.dumps(manifest).encode(); path.write_bytes(raw)
+                with self.assertRaisesRegex(ValueError, '[Ss]hadow'):
+                    load_table(path, expected_sha256=hashlib.sha256(raw).hexdigest())
+
+    def test_candidate_distance_uses_producer_arithmetic_with_no_ulp_tolerance(self):
+        from src.envs.pair_v2_simulator import distance
+        agent = {'x': .123456789, 'y': .9070531, 'z': -2.312346}
+        objects = {'A': {'position': {'x': -.812342, 'y': .301112, 'z': .4378991}}}
+        actual = distance(agent, objects['A']['position'])
+        verify_candidate_distances({'A': actual}, agent, objects)
+        for altered in (math.nextafter(actual, math.inf), math.nextafter(actual, -math.inf)):
+            with self.assertRaisesRegex(ValueError, 'distance differs'):
+                verify_candidate_distances({'A': altered}, agent, objects)
 
     def test_kind_is_explicit_and_direct_noise_boundary_still_shares(self):
         captures = FixtureRenderer().render_pair(ViewState('v', 0))
@@ -298,13 +385,18 @@ class TableTests(unittest.TestCase):
         state = replace(state, captures=tuple(replace(c, source={'snapshot_sha256': str(w) * 64})
                                               for w, c in enumerate(state.captures)))
         value.states[value.initial_state] = state
-        row = {'pair_id': value.pair_id, 'kind': value.kind, 'state_id': value.initial_state, 'worlds': {}}
+        row = {'pair_id': value.pair_id, 'kind': value.kind, 'state_id': value.initial_state, 'worlds': {},
+               'cached_classification': classify_views(state.captures, value.anchor_name, kind=value.kind)}
         for world, capture in enumerate(state.captures):
             row['worlds'][f'w{world}'] = {'cached_source': {'rgb_sha256': capture.rgb.sha256,
                 'render_id': capture.render_id, 'snapshot_sha256': capture.source['snapshot_sha256']},
                 'cached_labels': dict(value.labels), 'masks': {name: {'cached_mask_sha256': hashlib.sha256(mask).hexdigest()}
                     for name, mask in capture.masks.items()}}
         verify_cached_binding(value, row)
+        altered = copy.deepcopy(row)
+        altered['cached_classification']['shadow_divergent'] = True
+        with self.assertRaisesRegex(ValueError, 'shadow/shared classification'):
+            verify_cached_binding(value, altered)
         with self.assertRaisesRegex(ValueError, 'pair kind'):
             verify_cached_binding(value, {**row, 'kind': 'direct_flip'})
         altered = copy.deepcopy(row)
@@ -329,9 +421,13 @@ class TableTests(unittest.TestCase):
         value = table()
         state = value.states[value.initial_state]
         action = {'action': 'TeleportFull', 'exception': None,
-            'arguments': {'position': value.positions[state.view.viewpoint_id], 'rotation': {'y': 0}},
+            'arguments': {'position': value.positions[state.view.viewpoint_id], 'rotation': {'y': 0}, 'forceAction': False},
             'after_metadata': {'lastActionSuccess': True, 'agent': {'actual': True}}}
         self.assertEqual(verify_agent_setup(action, state, value), {'actual': True})
+        action['arguments']['forceAction'] = True
+        with self.assertRaisesRegex(ValueError, 'declared discrete'):
+            verify_agent_setup(action, state, value)
+        action['arguments']['forceAction'] = False
         action['arguments']['rotation']['y'] = 45
         with self.assertRaisesRegex(ValueError, 'declared discrete'):
             verify_agent_setup(action, state, value)

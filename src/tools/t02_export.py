@@ -27,8 +27,8 @@ from src.tools.t01_partition import audited_result, cpu_shards, sha_file
 from src.tools.t01_parallel_approved import stop_logged
 
 
-VERSION = "t02_single_gpu_export_v1"
-REJECTIONS = frozenset(("graph_mismatch", "non_anchor_divergent", "source_world_restore_failed"))
+VERSION = "t02_single_gpu_export_shadow_v2"
+REJECTIONS = frozenset(("graph_mismatch", "source_world_restore_failed"))
 
 
 def save_json(path, value):
@@ -148,6 +148,7 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
         raise ValueError("native_evidence_verification_failed")
     checks = check_pair(loaded, package["t01"])
     return {"table_manifest": manifest, "table_complete": True, "native_checks": native,
+            **loaded.shadow_metadata,
             "pair_checks": checks, "restoration": restoration, "reachable_scope": catalog_scope,
             "reachable_reference": reference, "export_measurements": table.export_measurements,
             "frozen_restore_readbacks": renderer.restore_checks,
@@ -177,6 +178,9 @@ def pair_worker(config, connection):
                     [*package["evidence_roots"], str(directory)], config["max_table_bytes"])
                 report["detail"] = save_json(directory / "checks.json", detail)
                 report.update(table_complete=True, table_manifest=detail["table_manifest"],
+                    shadow_divergent_states=detail["shadow_divergent_states"],
+                    non_anchor_divergent_states=detail["non_anchor_divergent_states"],
+                    in_clean_subset=detail["in_clean_subset"],
                     native_evidence_verified=detail["native_checks"]["passed"],
                     pair_checks_passed=detail["pair_checks"]["passed"],
                     rejection_reasons=detail["pair_checks"]["reasons"],

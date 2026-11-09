@@ -12,7 +12,7 @@ import re
 
 from .pair_table import RenderedView, classify_views, eligible_names, label_assignment
 
-CACHE_VERSION = 'paired_cache_reference_count_v1'
+CACHE_VERSION = 'paired_cache_reference_count_shadow_v2'
 CACHE_POLICY = {
     'minimum_distinct_pair_states': 200,
     'resolution': 255,
@@ -23,7 +23,8 @@ CACHE_POLICY = {
     'either_positive_requires_iou': True,
     'fresh_pair_render_process': 'one_new_process_same_exact_camera_pose',
     'rgb_difference': 'diagnostic_only_except_existing_shared_state_definition',
-    'non_anchor_divergence': 'Look rejects; Direct forks with own world RGB and records a count (supplement 8)',
+    'non_anchor_divergence': 'Both Look and Direct fork with own world RGB; record shadow counts; never exclude by this predicate',
+    'clean_subset': 'Look tables with zero shadow-divergent states; diagnostic subset only, not a cache acceptance gate',
     'failure_scope': 'whole_downstream_pipeline',
 }
 
@@ -171,8 +172,6 @@ def check_cached_state(sample):
                          'cache_max_abs_diff': max(abs(a - b) for a, b in zip(cached.rgb.data, fresh.rgb.data)),
                          'agent_pose_exact_diagnostic': _encoded(cached.agent) == _encoded(fresh.agent),
                          'cached_source': cached_source, 'fresh_source': fresh_source}
-    if fresh_divergent and sample.kind.startswith('look_'):
-        reasons.append('fresh_non_anchor_divergent')
     if cached_class['shared'] != fresh_shared:
         reasons.append('shared_fork_classification_changed')
     passed, synthetic = not reasons, views[0].synthetic
@@ -181,9 +180,11 @@ def check_cached_state(sample):
             'cache_matches_live': None if synthetic else passed,
             'reasons': reasons, 'worlds': worlds,
             'cached_classification': {'shared': cached_class['shared'],
+                                      'shadow_divergent': cached_class['shadow_divergent'],
                                       'non_anchor_divergent': cached_class['non_anchor_divergent'],
                                       'frame_max_abs_diff': cached_class['frame_max_abs_diff']},
             'fresh_classification': {'shared': fresh_shared, 'non_anchor_divergent': fresh_divergent,
+                                     'shadow_divergent': fresh_divergent,
                                      'anchor_pixels': fresh_pixels, 'frame_max_abs_diff': fresh_difference}}
 
 

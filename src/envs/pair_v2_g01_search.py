@@ -42,30 +42,33 @@ class CollectionQuotaFull(RuntimeError):
 
 
 class SceneQuota:
-    def __init__(self):
+    def __init__(self, per_class=PER_CLASS):
+        if type(per_class) is not int or per_class not in (6, 8):
+            raise ValueError('Require the approved train8/test6 scene-class cap')
+        self.per_class = per_class
         self.passed = {kind: 0 for kind in KINDS}
         self.attempts = {kind: 0 for kind in KINDS}
         self.saved = set()
 
     def complete(self):
-        return all(value == PER_CLASS for value in self.passed.values())
+        return all(value == self.per_class for value in self.passed.values())
 
     def desired_modes(self, pool, preferred):
         if pool == 'look':
-            if self.passed['look_flip'] == self.passed['look_stay'] == PER_CLASS:
+            if self.passed['look_flip'] == self.passed['look_stay'] == self.per_class:
                 return []
             required = 'flip' if self.attempts['look_flip'] <= self.attempts['look_stay'] else 'stay'
             if required == 'flip':
                 return ['flip']  # required balance never falls back to Stay
-            return [mode for mode in ('stay', 'flip') if self.passed[f'look_{mode}'] < PER_CLASS]
+            return [mode for mode in ('stay', 'flip') if self.passed[f'look_{mode}'] < self.per_class]
         return [mode for mode in (preferred, 'stay' if preferred == 'flip' else 'flip')
-                if self.passed[f'direct_{mode}'] < PER_CLASS]
+                if self.passed[f'direct_{mode}'] < self.per_class]
 
     def before_export(self, row):
         kind = row.get('kind')
         if kind not in self.passed:
             raise ValueError('Unknown actual output class')
-        if self.passed[kind] >= PER_CLASS:
+        if self.passed[kind] >= self.per_class:
             raise CollectionQuotaFull(kind)
 
     def record(self, path, row):
@@ -85,7 +88,7 @@ class SceneQuota:
     def summary(self):
         return {'version': VERSION, 'accepted_by_actual_class': dict(self.passed),
                 'counted_by_proposed_pool_mode': dict(self.attempts),
-                'per_scene_class_cap': PER_CLASS, 'all_class_caps_reached': self.complete(),
+                'per_scene_class_cap': self.per_class, 'all_class_caps_reached': self.complete(),
                 'acceptance_scope': 'producer output counts; independent scientific verification still required'}
 
 

@@ -28,14 +28,15 @@ def enable_config(config):
     stay._ORIGINAL_CONFIG(config)
     config.update(declared, **flip.look.stay_order.fields(), producer_module=policy.PRODUCER,
         minimum_eligible_attempts=None, max_attempts=1000000, max_receptacles=1000000,
-        scene_pairs_per_class=search.PER_CLASS,
+        scene_pairs_per_class=policy.class_cap(declared['g01_partition']),
         proposal_order='G01 mixed; complete LookFlip bbox geometry; historical Direct/Stay domains; shared native tokens; full-active-round cadence; fixed labels; actual per-class cap',
         attempt_limit_scope='infrastructure guard; collection caps and explicit scene deadline are authoritative')
     return config
 
 
-def tags():
-    return {**stay.tags(), **policy.fields(), **search.fields(), **labels.fields(),
+def tags(config=None):
+    partition = 'train' if config is None else config['g01_partition']
+    return {**stay.tags(), **policy.fields(partition), **search.fields(), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
 
@@ -59,7 +60,7 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
         except search.CollectionQuotaFull as error:
             if row.get('validity', {}).get('acceptance_passed') is not True or row.get('kind') != str(error):
                 raise ValueError('Quota skip lacks an unchanged positive scientific verdict') from error
-            row['collection_quota_skip'] = {'kind': row['kind'], 'per_scene_class_cap': search.PER_CLASS,
+            row['collection_quota_skip'] = {'kind': row['kind'], 'per_scene_class_cap': policy.class_cap(config['g01_partition']),
                 'acceptance_passed_before_collection': True,
                 'scope': 'collection capacity only; original scientific validity remains unchanged'}
             row.update(status='rejected', discard_reasons=['collection_quota_full'])
@@ -98,7 +99,7 @@ def replay_worker(config, connection):
 
 @contextmanager
 def installed(config=None):
-    quota = search.SceneQuota()
+    quota = search.SceneQuota(policy.class_cap(config['g01_partition']) if config is not None else 8)
     check = ranked.deadline_check(config) if config is not None else None
     with stay.installed(), policy.camera_support(), labels.installed(), sharing.installed():
         original_write, original_summary = marked._BASE_WRITE, marked.summary
@@ -136,7 +137,7 @@ def installed(config=None):
                 result['search_stop_reason'] = 'g01_all_scene_class_caps_reached'
             return result
         targets = [
-            (marked, 'enable_config', enable_config), (marked, 'tags', tags),
+            (marked, 'enable_config', enable_config), (marked, 'tags', lambda: tags(config)),
             (marked, 'measured_build', measured_build), (marked, 'compact_attempt', compact_attempt),
             (marked, 'existing_views', flip.existing_views),
             (marked.candidates, 'identity_sets_at_view', flip.identity_sets_at_view),

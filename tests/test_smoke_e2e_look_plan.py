@@ -1,5 +1,6 @@
 """CPU-only plan/provenance and real synthetic Look table integration fixtures."""
 from contextlib import ExitStack, redirect_stdout
+from dataclasses import replace
 import copy
 import io
 import json
@@ -87,14 +88,47 @@ class LookRenderer:
         return tuple(result)
 
 
-def look_table():
-    return build_table(LookRenderer(), pair_id='synthetic_look', scene='FloorPlan203', kind='look_flip',
+def look_table(renderer=None):
+    return build_table(renderer or LookRenderer(), pair_id='synthetic_look', scene='FloorPlan203', kind='look_flip',
         instruction='Select the marked object closest to the Box.', anchor_name='X',
         candidate_names=('A', 'B'), target_names=('A', 'B'),
         initial_position={'x': 0, 'y': 0, 'z': 0}, initial_heading=0, source={'synthetic': True})
 
 
 class LookPlanTests(unittest.TestCase):
+    def test_shadow_fork_precedes_anchor_seen_without_filtering_original_pool(self):
+        class ShadowRenderer(LookRenderer):
+            def render_pair(self, state):
+                views = super().render_pair(state)
+                if state.heading_index == 1:
+                    return tuple(replace(view, masks={**view.masks, 'X': mask(0)}) for view in views)
+                return views
+        table = look_table(ShadowRenderer())
+        certificate = {'tables': {table.pair_id: table.manifest_reference}}
+        with patch.object(scope, 'authorize_smoke', return_value=certificate):
+            backend = scope.SmokeTableBackend({table.pair_id: table}, certificate=certificate,
+                pair_checks={}, report={}, authenticated_ids=set())
+        try:
+            observations = []
+            for world in ('w0', 'w1'):
+                env = scope.SmokeTableEnvironment(backend)
+                env.reset(table.pair_id, world)
+                observation, _, _, info = env.step('turn_right')
+                self.assertEqual(info['tau'], 1)
+                self.assertIsNone(info['x_seen_step'])
+                observations.append(observation)
+                _, _, _, info = env.step('turn_right')
+                self.assertEqual((info['tau'], info['x_seen_step']), (1, 2))
+                env.close()
+            self.assertNotEqual(observations[0].image.data, observations[1].image.data)
+            coverage = scope.coverage([table])
+            self.assertGreater(coverage['shadow_divergent_states_by_pair'][table.pair_id], 0)
+            self.assertEqual(coverage['in_clean_subset_by_pair'], {table.pair_id: False})
+            clean = look_table()
+            self.assertEqual(scope.shadow_summary([clean])['in_clean_subset_by_pair'], {clean.pair_id: True})
+        finally:
+            backend.close()
+
     def test_frozen_plan_loads_exact_first_five_without_claiming_review(self):
         fixture = PlanFixture()
         plan, _, images, packages, sources = fixture.run()
@@ -160,15 +194,17 @@ class LookPlanTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     views.review_packages(path)
 
-    def test_entry_records_actual_look_ids_before_gate_and_starts_no_export_on_black(self):
+    def test_black_gate_precedes_source_loading_and_starts_no_export(self):
         with tempfile.TemporaryDirectory() as temporary, ExitStack() as stack, redirect_stdout(io.StringIO()):
             root = Path(temporary)
             packages = [{'pair_id': pair} for pair in look.PAIR_IDS]
             identity = {'pbs_jobid': '123.hopper-m-02', 'scratch': str(root / 'scratch'),
                         'cpu_affinity': list(range(12)), 'cuda_visible_devices': 'fixture-only'}
             for name, value in (('ROOT', root), ('execution_environment', lambda *_: identity),
-                ('review_packages', lambda *_: ({}, {}, [], packages, [])), ('install_signals', lambda: None)):
+                ('install_signals', lambda: None)):
                 stack.enter_context(patch.object(views, name, value))
+            loader = stack.enter_context(patch.object(views, 'review_packages',
+                return_value=({}, {}, [], packages, [])))
             stack.enter_context(patch.object(views.os, 'sched_getaffinity', return_value=set(range(12)), create=True))
             stack.enter_context(patch.object(views.signal, 'setitimer'))
             stack.enter_context(patch.object(views.sys, 'argv', ['fixture', '--name', 'smoke_e2e_look_fixture',
@@ -179,8 +215,9 @@ class LookPlanTests(unittest.TestCase):
             worker = stack.enter_context(patch.object(views, 'worker_result'))
             self.assertEqual(views.main(), 86)
             worker.assert_not_called()
+            loader.assert_not_called()
             saved = json.loads((root / 'results/smoke_e2e_look_fixture.json').read_text())
-            self.assertEqual(saved['config']['approved_pair_ids'], list(look.PAIR_IDS))
+            self.assertEqual(saved['config']['approved_pair_ids'], [])
             self.assertFalse(saved['metrics']['step1_passed'])
 
     def test_real_synthetic_look_table_replay_records_late_tau_without_formal_certificate(self):

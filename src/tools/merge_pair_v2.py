@@ -25,8 +25,8 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
 PER_CLASS = 20
 REVIEWS_PER_CLASS = 10
-CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611", "4e010a3")
-CURRENT_SPEC_REFERENCE = "4e010a3"
+CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611", "4e010a3", "6ca87ceb")
+CURRENT_SPEC_REFERENCE = "6ca87ceb"
 
 
 @lru_cache(maxsize=64)
