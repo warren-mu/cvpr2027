@@ -1,0 +1,15 @@
+# run_logged: python3 -m src.tools.record_command --name t01v2_flip_progress_04 -- python3 -c import json,datetime
+from src.tools.t01v2_live_progress import ROOT,read_prefix,archive,observed_counts,expected_identity
+name="t01v2_flip_progress_04"
+directory=ROOT/'logs/runs'/name/'evidence';directory.mkdir(parents=True,exist_ok=False)
+rows=[]
+for source in ["pilot_pairs_v2_flip60_fp203_r02_j707691_hopper_m_02_g0_floorplan203"]:
+ expected=expected_identity(source)
+ raw,extent=read_prefix(ROOT/'data/world_pairs/v2'/(source+'_attempts.jsonl'))
+ rows.append({'source_run':source,'scene':expected['scene'],'snapshot':archive(raw,directory,source+'_journal.prefix'),'extent':extent,'counts':observed_counts(raw,expected['scene'])})
+print('OBSERVED_FOV_PROGRESS: '+json.dumps({'snapshot_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'source-reported complete journal prefixes only; running source not finally audited and passes not independently accepted','rows':rows},sort_keys=True))
+
+# start: 2026-11-09T13:01:32
+OBSERVED_FOV_PROGRESS: {"rows": [{"counts": {"discard_reason_counts": {"anchor_visible_at_v0": 6, "one_action_evidence_unavailable": 1, "target_uniqueness_or_ratio": 1, "v0_candidates_visibility": 1, "w0_physical": 8}, "observed_complete_attempts": 17, "observed_reported_passed_by_class": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "w0_by_anchor": {"Boots": {"measured_attempts": 6, "measurement_unavailable": 0, "passed": 0, "rejected": 6}, "Box": {"measured_attempts": 2, "measurement_unavailable": 0, "passed": 2, "rejected": 0}, "CellPhone": {"measured_attempts": 4, "measurement_unavailable": 0, "passed": 4, "rejected": 0}, "CreditCard": {"measured_attempts": 3, "measurement_unavailable": 0, "passed": 3, "rejected": 0}, "KeyChain": {"measured_attempts": 2, "measurement_unavailable": 0, "passed": 0, "rejected": 2}}}, "extent": {"append_only_contract": "producer appends; snapshot is not a final-file hash", "read_cap_reached": false, "size_at_open_bytes": 12636, "snapshot_bytes": 12636, "source_file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/pilot_pairs_v2_flip60_fp203_r02_j707691_hopper_m_02_g0_floorplan203_attempts.jsonl", "trailing_incomplete_bytes_not_counted": 0}, "scene": "FloorPlan203", "snapshot": {"file": "logs/runs/t01v2_flip_progress_04/evidence/pilot_pairs_v2_flip60_fp203_r02_j707691_hopper_m_02_g0_floorplan203_journal.prefix", "sha256": "c05884a34b9678231561ba3aaf2b3bae1092a4c6b32f6a3769e21b1bd4200bd9"}, "source_run": "pilot_pairs_v2_flip60_fp203_r02_j707691_hopper_m_02_g0_floorplan203"}], "scope": "source-reported complete journal prefixes only; running source not finally audited and passes not independently accepted", "snapshot_utc": "2026-11-09T05:01:33.720365+00:00"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.18321306101279333}
+# exit_code: 0

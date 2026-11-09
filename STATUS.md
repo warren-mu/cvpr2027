@@ -550,3 +550,30 @@ FP204 retry707668 passed its gate and started at12:36:50 Asia/Singapore; it rema
 Ended-prefix diagnostic diag_flip_partial_fp203_r01 authenticated 15 recorded attempts; actual observed quota={"counted_flip": 8, "counted_stay": 7, "next_required_mode": "stay", "scope": "across the entire scene, including Controller restarts: counted Flip attempts >= counted Stay attempts; failed native placement does not earn quota"}. The failed source is unsealed, so these remain observed-prefix diagnostics only. Per-gate Flip/Stay counts and the first available rejected examples are in logs/review/diag_flip_partial_fp203_r01.md; strict checkpoint t01v2_checkpoint_flip60_fp203_r01 independently admits0 pairs and leaves final attempt counts unknown. Recorded timing scope={"discovery_seconds": null, "logged_total_duration_sec": 1192.4, "observed_counted_generation_seconds_sum": 80.80041176197119, "outside_observed_counted_spans_seconds": 1111.599588238029, "scope": "Residual includes uncounted placements, startup/preflight/discovery/serialization/finalization/cleanup; not attributed to discovery"}.
 
 FP204 retry running prefix t01v2_flip_progress_03 at04:46:08.944155UTC:3 observed attempts,0 producer passes; rejected visible-X2,w0physical1. No independent acceptance is inferred.
+
+### Overnight live prefix 2026-11-09T05:01:33.720365+00:00
+
+707691 / FloorPlan203 cadence-only r02 continues. Complete observed journal rows: 17; producer-reported classes: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; rejection counts: {"anchor_visible_at_v0": 6, "one_action_evidence_unavailable": 1, "target_uniqueness_or_ratio": 1, "v0_candidates_visibility": 1, "w0_physical": 8}. This is an archived live prefix, not a final source or independent acceptance. Source: results/t01v2_flip_progress_04.json.
+
+
+### FP204 Flip unit 707668: sealed failure funnel
+
+PBS 707668.hopper-m-02 的 FloorPlan204/60° 单元已结束，原运行状态为 `incomplete`、exit 1，失败原因 `TimeoutError: Worker deadline expired`。这是已封存的终止记录，并非完成采集：原记录共 10 次计入尝试，Flip/Stay 为 5/5；原生放置失败而未计入的提议为 12。所有失败及终止尝试保留；独立验收另看 checkpoint，下面仅是生成器原记录漏斗，不能当作独立合格数。
+
+表中每个 gate 均为「通过/失败/未知」，分母是该行实际尝试；尚未执行的检查保持未知，没有补成零。各 gate 是独立测量列，并非假定依次全部执行；原执行顺序仍先物理检查。
+
+| Group | Mode | Actual attempts | Source-reported Look passes | X hidden | Prefix ≤3 | First evidence ≥250 | Solvable both | Physical both | Witness both |
+|---|---|---:|---:|---|---|---|---|---|---|
+| All anchors | flip | 5 | 0 | 2/3/0 | 2/3/0 | 1/1/3 | 0/2/3 | 5/0/0 | 0/0/5 |
+| All anchors | stay | 5 | 0 | 0/1/4 | 0/1/4 | 0/0/5 | 0/0/5 | 1/3/1 | 0/0/5 |
+| CellPhone | flip | 3 | 0 | 1/2/0 | 1/2/0 | 1/0/2 | 0/1/2 | 3/0/0 | 0/0/3 |
+| CreditCard | flip | 2 | 0 | 1/1/0 | 1/1/0 | 0/1/1 | 0/1/1 | 2/0/0 | 0/0/2 |
+| CreditCard | stay | 1 | 0 | 0/1/0 | 0/1/0 | 0/0/1 | 0/0/1 | 1/0/0 | 0/0/1 |
+| KeyChain | stay | 2 | 0 | 0/0/2 | 0/0/2 | 0/0/2 | 0/0/2 | 0/2/0 | 0/0/2 |
+| Pillow | stay | 2 | 0 | 0/0/2 | 0/0/2 | 0/0/2 | 0/0/2 | 0/1/1 | 0/0/2 |
+
+拒绝原因原计数：anchor_visible_at_v0=4; one_action_evidence_unavailable=2; terminal_interruption=1; w0_physical=3。来源：`results/diag_flip_sealed_fp204_retry1.json` 及其原日志中的 `SEALED_FLIP_ANCHOR_FUNNEL_JSON`，绑定 `results/pilot_pairs_v2_flip60_fp204_r01_retry1_j707668_hopper_m_02_g0_floorplan204.json` 与完整 journal；阈值和原始记录均未改。
+
+### Next overnight Flip iteration: ranked native proposals
+
+Commit137bc6a adds an opt-in producer with the existing discovery cadence, exactly equal complete native tokens, and stable Look-only ordering by predicted whole-anchor visibility. It retains every old candidate point, all thresholds, physical checks, frozen renders, seeded orientation, far-first Stay, fixed labels, and independent witness replay. Reason: sealed FP204 and observed FP203 funnels still reject visible anchors at v0; large native-token work also limits the number of trials. Predicted boxes are proposal priorities only; actual rendered masks remain authoritative. CPU regression result: results/t01v2_flip_ranked_cpu_01.json (557 tests, successful). Next units are60°/FloorPlan203 and204, each full1200seconds,1GPU, premium/autox, budget-guarded before submission.

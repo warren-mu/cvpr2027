@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 13.481676989002153
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_flip_ranked_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t01v2_flip_ranked_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T13:04:39",
+    "log_path": "logs/runs/t01v2_flip_ranked_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "137bc6ad5e539d2eb253e688fd550a4edbc187ee",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/t01v2_flip_ranked_cpu_01.diff",
+    "end": "2026-11-09T13:04:53",
+    "duration_sec": 13.5,
+    "exit_code": 0,
+    "metrics_sha256": "cd43e5b0a7fbd796d9b152706446f09e792c641a2bd0843c9c7c96de6dad4e4a"
+  }
+}
