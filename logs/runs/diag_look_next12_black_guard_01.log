@@ -1,0 +1,202 @@
+# run_logged: python3 -m src.tools.record_command --name diag_look_next12_black_guard_01 -- python3 -c """One-off read-only guard for two exact native black-gate chains.
+
+Run inline only through run_logged + record_command. No qsub/qdel, result
+mutation, name normalization, live process inference, or synthetic payloads.
+"""
+import hashlib
+import io
+import json
+from pathlib import Path
+import shlex
+import subprocess
+from PIL import Image
+from src.tools import phase_watch as watch
+
+ROOT = Path.cwd().resolve()
+auditor = watch.load_module('oneoff_black_auditor', ROOT / 'scripts/audit_provenance.py')
+
+
+def require(value, reason):
+    if not value:
+        raise ValueError(reason)
+
+
+def logged(name):
+    return watch.load_logged(ROOT, ROOT / 'results' / (name + '.json'), auditor)
+
+
+def reference(path):
+    path = Path(path).resolve()
+    return {'file': str(path.relative_to(ROOT)), 'sha256': watch.digest(path), 'bytes': path.stat().st_size}
+
+
+def bind(ref, data, path):
+    require(ref['file'] == str(path.relative_to(ROOT)) and ref['sha256'] == watch.digest(path)
+            and ref['metrics_sha256'] == data['_meta']['metrics_sha256']
+            and ref['exit_code'] == data['_meta']['exit_code'], 'Original nested result reference differs')
+
+
+def validate(job, name, receipt_dir, accounting_name, inner_name=None):
+    directory = (ROOT / 'logs/pbs' / receipt_dir).resolve()
+    pp, sp, rp = directory / 'payload.json', directory / 'job.pbs', directory / 'submission.json'
+    payload, receipt = json.loads(pp.read_text()), json.loads(rp.read_text())
+    outer, outer_ref = logged(name)
+    account, account_ref = logged(accounting_name)
+    require(account['_meta']['exit_code'] == 0 and account['metrics']['complete_allocation_accounting'] is True
+            and account['config']['errors'] == [], 'Accounting not complete')
+    ac = account['_meta']['command']
+    require(ac == ['python3', 'src/tools/pbs_usage.py', '--name', accounting_name, job],
+            'Require the exact canonical logged PBS accounting command')
+    account_log = (ROOT / account['_meta']['log_path']).read_text()
+    require(json.dumps(account['config'], indent=2) in account_log, 'PBS config absent from authenticated original log')
+    entries = [row for row in account['config']['jobs'] if row['job_id'] == job]
+    require(len(entries) == 1 and entries[0]['qstat_exit'] == 0, 'PBS job missing/ambiguous')
+    fields = entries[0]['fields']
+    require(fields['project'] == 'CFP04-SF-125' and fields['job_state'] == 'F'
+            and fields['Exit_status'] == '86' and fields['run_count'] == '1'
+            and fields['Job_Owner'].split('@')[0] == 'e1583364', 'Not this owned terminal black-only job')
+    require(payload['repo'] == str(ROOT) and payload['name'] == name and payload['task_id'] == 'T01'
+            and payload['queue'] == 'autox' and payload['requested_host'] is None
+            and payload['requested_gpu_count'] == 1 and payload['dry_run'] is False,
+            'Original immutable allocation differs')
+    require(pp.stat().st_mode & 0o222 == 0 and sp.stat().st_mode & 0o222 == 0, 'Original payload/script is not immutable')
+    require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],
+            'Receipt does not prove one successful submission of the exact job')
+    wall = fields['Resource_List.walltime']
+    h, m, s = map(int, wall.split(':'))
+    require(h * 3600 + m * 60 + s == payload['requested_wall_seconds']
+            and fields['Resource_List.ngpus'] == '1' and fields['Resource_List.ncpus'] == '12'
+            and fields['queue'] == 'smallx' and 'PBS_O_QUEUE=autox' in fields['Variable_List']
+            and float(fields['Resource_List.queue_charge_rate']) == payload['requested_queue_charge_rate'],
+            'PBS resources/router/charge differ from original payload')
+    expected_qsub = ['qsub', '-N', fields['Job_Name'], '-l', 'walltime=' + wall,
+                     '-o', str(directory / 'pbs.out'), str(sp)]
+    require(receipt['command'] == expected_qsub
+            and shlex.split(fields['Submit_arguments']) == expected_qsub[1:]
+            and fields['Output_Path'].split(':', 1)[1] == str(directory / 'pbs.out'),
+            'Receipt/PBS exact argv or output binding differs')
+    template = subprocess.check_output(['git', 'show', outer['_meta']['git_commit'] + ':scripts/pbs/job_1gpu.pbs'], text=True)
+    require(template.count('@@CVPR_PAYLOAD@@') == 1
+            and '#PBS -P CFP04-SF-125\n' in template and '#PBS -q autox\n' in template
+            and '#PBS -l select=1:ngpus=1\n' in template
+            and sp.read_text() == template.replace('@@CVPR_PAYLOAD@@', shlex.quote(str(pp))),
+            'Job script differs from the committed one-GPU template and exact original payload path')
+    require(outer['_meta']['name'] == name and outer['_meta']['command'] == payload['command']
+            and outer['_meta']['exit_code'] == 86, 'Outer result is not the exact immutable PBS command')
+    for other in (ROOT / 'logs/pbs').glob('*/payload.json'):
+        require(json.loads(other.read_text()).get('retry_of') != job, 'A retry payload already exists; do not duplicate')
+
+    if inner_name is not None:
+        inner, inner_ref = logged(inner_name)
+        nested = outer['config']['command']
+        require(payload['budget_group'] == 'T01v2' and outer['config']['pbs_job_id'] == job
+                and outer['metrics']['command_exit_code'] == 86 and outer.get('error') is None
+                and payload['command'] == ['python3','-u','-m','src.tools.record_command','--name',name,'--',*nested],
+                'T02 outer is not its actual record_command wrapper')
+        require(nested == ['python3','-u','scripts/run_logged.py','--name',inner_name,'--seed','0','--',*inner['_meta']['command']],
+                'Original nested run_logged command does not bind the actual inner result')
+        argv = inner['_meta']['command']
+        require(argv[:6] == ['python3','-u','-m','src.tools.t02_export','--name',inner_name], 'Wrong T02 inner producer')
+        c, m = inner['config'], inner['metrics']
+        expected = ['python3','-u','-m','src.tools.t02_export','--name',inner_name,'--source',c['source']]
+        for pair in c['pair_id']: expected.extend(['--pair-id',pair])
+        expected += ['--timeout-seconds','840','--pair-timeout-seconds','600','--gate-timeout-seconds','180']
+        require(argv == expected and c['timeout_seconds'] == 840 and c['pair_timeout_seconds'] == 600
+                and c['version'] == 't02_single_gpu_export_v1' and c['gpus'] == 1 and c['depth'] == 4
+                and c['resolution'] == 255 and c['pbs_jobid'] == job and c['name'] == inner_name,
+                'T02 config/argv/allocation differs')
+        require(inner['_meta']['exit_code'] == 86 and m['producer_exit_code'] == 86
+                and m['kind'] == 't02_table_export' and m['status'] == 'blocked_by_render_gate'
+                and m['black_frame_detected'] is True and m['errors'] == [] and m['cleanup_errors'] == []
+                and m['pairs'] == [] and m['unstarted_pair_ids'] == c['pair_id']
+                and m['export_checks_complete'] is False and m['downstream_allowed'] is False,
+                'T02 is not a clean pre-export black-gate stop')
+        gate_name = inner_name + '_gate'
+        gate_ref = m['gate']
+        mask, cpu = c['cuda_visible_devices'], c['cpu_affinity']
+        checked_results = [outer_ref, inner_ref]
+    else:
+        inner, inner_ref = outer, outer_ref
+        c, m = outer['config'], outer['metrics']
+        argv = payload['command']
+        require(payload['budget_group'] == 'G01' and argv[:6] == ['python3','-u','-m','src.tools.g01_collect_parallel','--name',name]
+                and c['collection_version'] == 'g01_single_stage_collection_v1' and c['gpus'] == 1
+                and c['pbs_jobid'] == job and c['name'] == name and c['stage_plans'] == [], 'Not the original G01 native collection entry')
+        expected = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',name,'--scenes',*c['scenes'],
+                    '--concurrency','6','--benchmark-source',c['benchmark_source'],'--timeout-seconds','2860']
+        require(argv == expected and c['concurrencies'] == [6] and c['timeout_seconds'] == 2860
+                and c['submission']['file'] == str(pp.relative_to(ROOT)) and c['submission']['sha256'] == watch.digest(pp),
+                'G01 original command/submission identity differs')
+        require(m['kind'] == 'g01_parallel_collection' and m['status'] == 'blocked_by_render_gate'
+                and m['exit_code'] == 86 and m['black_frame_detected'] is True and m['cleanup_errors'] == []
+                and m['scene_runs'] == [] and m['started_shards'] == [] and m['stages'] == []
+                and m['admission_final'] == [] and m['unfinished_run_names'] == [] and m['stop_reasons'] == []
+                and not m.get('error') and not m.get('errors') and m['acceptance_passed'] is False,
+                'G01 has work/non-black errors or uncertain cleanup')
+        gate_name = name + '_j' + job.replace('.', '_').replace('-', '_') + '_gate'
+        require(m['gate']['run_name'] == gate_name and m['gate']['exit_code'] == 86
+                and not m['gate'].get('provenance_error') and m['gate']['result_path'] == 'results/' + gate_name + '.json',
+                'G01 gate wrapper is not the exact failed native gate')
+        gate_ref = m['gate']['source']
+        mask, cpu = c['parent_cuda_visible_devices'], c['cpu_affinity']
+        checked_results = [outer_ref]
+
+    gate, audit_ref = logged(gate_name)
+    bind(gate_ref, gate, ROOT / 'results' / (gate_name + '.json'))
+    g, a, gm = gate['config'], gate['config']['allocation'], gate['metrics']
+    nodes = {part.split('/')[0] for part in fields['exec_host'].split('+')}
+    require(nodes == {c['node']} == {g['node']} == {outer['_meta']['host']} == {inner['_meta']['host']} == {gate['_meta']['host']},
+            'Actual PBS node does not match every producer and gate')
+    require(g['name'] == gate_name and g['pbs_jobid'] == job and a['pbs_jobid'] == job
+            and a['name'] == gate_name and a['cuda_visible_devices'] == mask and a['cuda_driver_uuids'] == [mask]
+            and a['cpu_affinity'] == cpu and len(cpu) == len(set(cpu)) == 12
+            and a['scratch'] == payload['environment']['CVPR_SCRATCH']
+            and g['resolution'] == 255 and g['segmentation'] is True, 'Native gate allocation/mask/CPU/scratch mismatch')
+    command = gate['_meta']['command']
+    require(Path(command[0]).name == 'python3' and command[1:4] == ['-u','-m','src.tools.render_gate']
+            and command[4:] == ['--name',gate_name,'--gpus','1','--resolution','255','--segmentation',
+                               '--timeout-seconds',str(float(g['timeout_seconds']))]
+            or (Path(command[0]).name == 'python3' and command[1:] == ['-u','-m','src.tools.render_gate',
+                '--name',gate_name,'--gpus','1','--resolution','255','--segmentation','--timeout-seconds',str(int(g['timeout_seconds']))]),
+            'Native gate command differs')
+    require(gate['_meta']['exit_code'] == 86 and gm['exit_code'] == 86 and gm['passed'] is False
+            and gm['black_frame_detected'] is True and gm['errors'] == [] and gm['cleanup_errors'] == []
+            and gm['expected_gpu_count'] == gm['completed_gpu_count'] == 1
+            and len(gm['devices']) == len(a['devices']) == 1, 'Gate is not a complete clean one-GPU black stop')
+    device, row = a['devices'][0], gm['devices'][0]
+    obs = row['observation']
+    require(device['logical_index'] == 0 and device['gpu_uuid'] == mask and row['worker_error'] is None
+            and obs['gpu_identity'] == device and obs['node'] == c['node']
+            and not obs.get('error') and not obs.get('cleanup_error')
+            and [capture['stage'] for capture in obs['captures']] == ['after_constructor','after_Pass']
+            and any(packet['stage'] == 'Pass' and packet['fresh_main_rgb_payloads'] > 0
+                    and packet['cached_metadata'] is False for packet in obs['wire_packets']),
+            'Worker/native identity, actual fresh Pass RGB, or cleanup missing')
+    images = []
+    for capture in obs['captures']:
+        require(capture['valid_shape'] is True and capture['shape'] == [255,255,3] and capture['dtype'] == 'uint8'
+                and capture['action_success'] is True and not capture['error_message']
+                and capture['black'] is True and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0,
+                'Not the complete original successful-action full-zero capture')
+        path = Path(capture['png']['path']).resolve()
+        require(path.parent == ROOT / 'logs/runs' / gate_name / 'render_gate'
+                and watch.digest(path) == capture['png']['sha256'], 'Black PNG missing or SHA/path mismatch')
+        with Image.open(io.BytesIO(path.read_bytes())) as image:
+            require(image.mode == 'RGB' and image.size == (255,255) and image.getextrema() == ((0,0),)*3,
+                    'Decoded native PNG is not a full all-zero RGB image')
+        images.append(reference(path))
+    return {'eligible_proven_black_gate_retry': True, 'job_id': job, 'native_kind': m['kind'],
+        'original_payload': reference(pp), 'original_job_script': reference(sp), 'original_receipt': reference(rp),
+        'original_command_unchanged': payload['command'], 'pbs_accounting': account_ref,
+        'source_results': checked_results + [audit_ref], 'node': c['node'], 'gpu_uuid': mask,
+        'captures': images, 'cleanup': 'all original parent/gate/worker cleanup checks passed',
+        'next_action_scope': 'root may submit fresh names with retry_of this job through unchanged budget guard; no submission done here'}
+
+
+proofs=[validate('708217.hopper-m-02','pilot_pairs_v2_look_table_fp204_extension01_retry1','pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae','diag_look_census_extension_black_accounting_02','t02_look_table_fp204_extension01_retry1'),validate('708224.hopper-m-02','gen_train_next12_60_01','gen_train_next12_60_01-20261109T102226Z-c2520d25','diag_g01_next12_black_accounting_01')]
+print('BLACK_RETRY_GUARD_JSON: '+json.dumps(proofs,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-09T18:30:37
+BLACK_RETRY_GUARD_JSON: [{"captures": [{"bytes": 269, "file": "logs/runs/t02_look_table_fp204_extension01_retry1_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"bytes": 269, "file": "logs/runs/t02_look_table_fp204_extension01_retry1_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "cleanup": "all original parent/gate/worker cleanup checks passed", "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d", "job_id": "708217.hopper-m-02", "native_kind": "t02_table_export", "next_action_scope": "root may submit fresh names with retry_of this job through unchanged budget guard; no submission done here", "node": "hopper-16", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.record_command", "--name", "pilot_pairs_v2_look_table_fp204_extension01_retry1", "--", "python3", "-u", "scripts/run_logged.py", "--name", "t02_look_table_fp204_extension01_retry1", "--seed", "0", "--", "python3", "-u", "-m", "src.tools.t02_export", "--name", "t02_look_table_fp204_extension01_retry1", "--source", "results/t01v2_checkpoint_flip_geometry_01.json", "--pair-id", "floorplan204_00038", "--timeout-seconds", "840", "--pair-timeout-seconds", "600", "--gate-timeout-seconds", "180"], "original_job_script": {"bytes": 1132, "file": "logs/pbs/pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae/job.pbs", "sha256": "59e70ee9124ab2dc744321c9e03232f4e0470521110bf5c5e24e36294029347b"}, "original_payload": {"bytes": 1226, "file": "logs/pbs/pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae/payload.json", "sha256": "30bb7c0b636d7a572a54942849038c18ad0a912b2cec85e13995719d50070878"}, "original_receipt": {"bytes": 467, "file": "logs/pbs/pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae/submission.json", "sha256": "48e83620937f4205fc3c0cb392c1c1e5b1dcc10f12f4373167849ae3f0e7782c"}, "pbs_accounting": {"log_path": "logs/runs/diag_look_census_extension_black_accounting_02.log", "log_sha256": "a5ba0ffb9abf0973149144e8f60abf4cbff65ec2f59d52cee864883d827dbdd0", "path": "results/diag_look_census_extension_black_accounting_02.json", "sha256": "55ac52a01f5279ba5dfa19821e604a942e0adbed049407c260cbdffc9b70454b"}, "source_results": [{"log_path": "logs/runs/pilot_pairs_v2_look_table_fp204_extension01_retry1.log", "log_sha256": "7c89e28e27f99740ffd9054d0c92710ca2c4f7ecb77b522d19383d864fbfb6bb", "path": "results/pilot_pairs_v2_look_table_fp204_extension01_retry1.json", "sha256": "f08dd5bf856f6742b6f7a820ce1a98dabdeb39ba020ba8d5ebe62c4aed482865"}, {"log_path": "logs/runs/t02_look_table_fp204_extension01_retry1.log", "log_sha256": "20a10baafef1e6e77bc9685fb1717f4a4d7948a4f725b0a67e4fe193a15a99f6", "path": "results/t02_look_table_fp204_extension01_retry1.json", "sha256": "784ad0ba9b61110f860c4417a9a875a18c5609d08a4c766ab545cbcc0816f40f"}, {"log_path": "logs/runs/t02_look_table_fp204_extension01_retry1_gate.log", "log_sha256": "c402af7a016414c35222dc5274d2ac9aa95f4e63a1863054edcc1662d132b5d3", "path": "results/t02_look_table_fp204_extension01_retry1_gate.json", "sha256": "9ba73cb5891d59e8e10b1366a9abefae39646f8c8b22878931052065985ad0cd"}]}, {"captures": [{"bytes": 269, "file": "logs/runs/gen_train_next12_60_01_j708224_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"bytes": 269, "file": "logs/runs/gen_train_next12_60_01_j708224_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "cleanup": "all original parent/gate/worker cleanup checks passed", "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-6e4785f0-652c-3903-a3d9-b1f131c1266a", "job_id": "708224.hopper-m-02", "native_kind": "g01_parallel_collection", "next_action_scope": "root may submit fresh names with retry_of this job through unchanged budget guard; no submission done here", "node": "hopper-27", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_next12_60_01", "--scenes", "FloorPlan8", "FloorPlan9", "FloorPlan10", "FloorPlan205", "FloorPlan206", "FloorPlan207", "FloorPlan302", "FloorPlan303", "FloorPlan304", "FloorPlan402", "FloorPlan403", "FloorPlan404", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "2860"], "original_job_script": {"bytes": 1104, "file": "logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/job.pbs", "sha256": "44bd4b9b028306e913f1e035c2e00df6bec6431572efb1b0eefd151bdf99e3e6"}, "original_payload": {"bytes": 1039, "file": "logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/payload.json", "sha256": "a678d94b308998e77cd68923cb365f9972d937eeba1ba185ed5127c8a4c67d70"}, "original_receipt": {"bytes": 411, "file": "logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/submission.json", "sha256": "e6267a6f7f4599b2549ee5851c8cf30b522c769c8fb8ea4cdc5426b28f7fae54"}, "pbs_accounting": {"log_path": "logs/runs/diag_g01_next12_black_accounting_01.log", "log_sha256": "f30f79aafa825f4b27761a903eb621c5509cbd6d60f1358384729d380bce7d27", "path": "results/diag_g01_next12_black_accounting_01.json", "sha256": "6a1a1030fa3e2e50ef9eedf7d020d0f6dd7846b7bfcad89da1bfd6238e42b568"}, "source_results": [{"log_path": "logs/runs/gen_train_next12_60_01.log", "log_sha256": "f5a1f71e42478bd9ea36ff8df2bd5ff73f8b5d74b23d2e66cf5da2832bc59863", "path": "results/gen_train_next12_60_01.json", "sha256": "ae8d49ae079d2f4619045a05b096765a8b3e7e20f5fa0bb49fdea47304b87588"}, {"log_path": "logs/runs/gen_train_next12_60_01_j708224_hopper_m_02_gate.log", "log_sha256": "3b310e81c7c2859742f7409d715e33857013172fa1ddda8e48b22ed6d71c1b21", "path": "results/gen_train_next12_60_01_j708224_hopper_m_02_gate.json", "sha256": "db0ddf1057e223e149fb129ff846fbb98aea9390d1cfe41092e99891f1617c05"}]}]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.4184657289879397}
+# exit_code: 0

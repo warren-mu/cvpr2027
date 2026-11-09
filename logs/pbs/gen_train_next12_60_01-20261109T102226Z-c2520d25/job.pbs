@@ -1,0 +1,33 @@
+#!/bin/bash
+#PBS -P CFP04-SF-125
+#PBS -q autox
+#PBS -l select=1:ngpus=1
+#PBS -j oe
+# Hopper automatically grants 12 CPUs and 225 GB host RAM per GPU.
+# submit.py supplies -N, -l walltime, -o and replaces the payload placeholder.
+set -euo pipefail
+: "${PBS_JOBID:?Submit through PBS; never execute workloads on a login node}"
+payload=/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/payload.json
+exec python3 - "$payload" <<'PY'
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text())
+repo = payload["repo"]
+name = payload["name"]
+env = dict(os.environ)
+env.update(payload["environment"])
+env["CVPR_RUN_NAME"] = name
+env["CVPR_RESULTS_PATH"] = str(Path(repo) / "results" / (name + ".json"))
+launch = '''set -euo pipefail
+source "$1/scripts/scratch_env.sh"
+cd -- "$1"
+exec python3 "$1/scripts/run_logged.py" --name "$2" -- "${@:3}"
+'''
+code = subprocess.call(["bash", "-c", launch, "pbs", repo, name, *payload["command"]],
+                       cwd=repo, env=env)
+sys.exit(code)
+PY

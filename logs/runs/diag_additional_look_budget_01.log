@@ -1,0 +1,15 @@
+# run_logged: python3 -m src.tools.record_command --name diag_additional_look_budget_01 -- python3 -c import pathlib,json,importlib.util
+from src.tools.t01_partition import audited_result,sha_file
+r=pathlib.Path.cwd();p=r/'logs/review/diag_additional_look_export_plan_01/additional_look_plan.json';assert sha_file(p)=='1d45782b593643f3a122af3f82d2ac65aaa087bd23b5c2bc8b9a242130b41167'
+d=json.loads(p.read_text());logged,ref=audited_result(r/'results/diag_additional_look_export_plan_01.json')
+assert logged['_meta']['exit_code']==0 and d['ready_after_CPU_preflight'] and d['errors']==[] and d['additional_Look_count']==14
+spec=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase);b=phase.budget_state(r)
+requested=sum(g['wall_seconds']*g['gpus']/3600 for g in d['groups'])
+assert b['accounted_or_reserved_by_subbudget']['T01v2']+requested<=16 and b['accounted_or_reserved_total']+requested<=60
+print('ADDITIONAL_LOOK_BUDGET_JSON: '+json.dumps({'plan':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'logged_plan':ref,'budget_before':b['accounted_or_reserved_by_subbudget'],'total_before':b['accounted_or_reserved_total'],'requested_upper':requested,'after_T01v2':b['accounted_or_reserved_by_subbudget']['T01v2']+requested},sort_keys=True))
+with (r/'STATUS.md').open('a') as f:f.write('\nAdditional frozen Look export batch: all14 original G01 inputs passed actual authenticated T02 source loading (diag_additional_look_export_plan_01), with unchanged scientific checks. Inventory01 fixes31 unique Look; original17 and later14 are disjoint by proposal identity. Original exporter will diagnose the14 in6/7/1 groups, each worker600s, oneGPU per job, unchanged D4/255px/60degree rules. Additional ceilings total '+str(requested)+'GPUh; T01v2 actual/reserved plus all three new ceilings is '+str(b['accounted_or_reserved_by_subbudget']['T01v2']+requested)+'/16. Source plan is frozen before submitting; no cache/training approval inferred.\n')
+
+# start: 2026-11-09T18:27:16
+ADDITIONAL_LOOK_BUDGET_JSON: {"after_T01v2": 13.202222222222222, "budget_before": {"E2E": 1.4341666666666666, "G01": 3.086666666666667, "T01v2": 10.61888888888889}, "logged_plan": {"audit": {"fail": [], "file": "results/diag_additional_look_export_plan_01.json", "warn": []}, "exit_code": 0, "file": "results/diag_additional_look_export_plan_01.json", "git_commit": "c8ed1aa9b34c0a351d7622c0e349db1258654139", "metrics_sha256": "d4c720a8c46b7a65cabec65c4da27af9885f18bb3234f0b24c1ed1d1921e97f9", "sha256": "fe130ed50dc11e72b1661d0882a78de7a85dc5cf1726859c52514ad313dcc1c5"}, "plan": {"file": "logs/review/diag_additional_look_export_plan_01/additional_look_plan.json", "sha256": "1d45782b593643f3a122af3f82d2ac65aaa087bd23b5c2bc8b9a242130b41167"}, "requested_upper": 2.583333333333333, "total_before": 26.823055555555555}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 89.1513389799511}
+# exit_code: 0

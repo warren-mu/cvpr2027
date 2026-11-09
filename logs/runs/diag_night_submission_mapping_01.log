@@ -1,0 +1,21 @@
+# run_logged: python3 -m src.tools.record_command --name diag_night_submission_mapping_01 -- python3 -c import pathlib,json
+from src.tools.t01_partition import audited_result,sha_file
+r=pathlib.Path.cwd()
+guard,gref=audited_result(r/'results/diag_look_census_extension_black_guard_01.json')
+account,aref=audited_result(r/'results/diag_look_census_extension_black_accounting_01.json')
+assert guard['_meta']['exit_code']==account['_meta']['exit_code']==0 and guard['metrics']['command_exit_code']==0
+records=[]
+for name,job,folder,prior,wall,group in [
+('pilot_pairs_v2_look_table_fp204_extension01_retry1','708217.hopper-m-02','pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae','708196.hopper-m-02',900,'T01v2'),
+('gen_train_next12_60_01','708224.hopper-m-02','gen_train_next12_60_01-20261109T102226Z-c2520d25',None,2890,'G01')]:
+ p=r/'logs/pbs'/folder/'payload.json';s=p.with_name('submission.json');pd=json.loads(p.read_text());sd=json.loads(s.read_text())
+ assert sd['returncode']==0 and sd['stdout'].strip()==job and pd['retry_of']==prior and pd['name']==name
+ assert pd['requested_host'] is None and pd['requested_gpu_count']==1 and pd['requested_wall_seconds']==wall and pd['queue']=='autox' and pd['budget_group']==group
+ records.append({'name':name,'job':job,'retry_of':prior,'payload':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'receipt':{'file':str(s.relative_to(r)),'sha256':sha_file(s)}})
+with (r/'STATUS.md').open('a') as f:f.write('\nSubmission confirmation: proven black-only708196 -> same-scope retry708217 (FP204 original unresolved pair, worker600s/PBS900s); old allocation '+str(account['metrics']['total_allocation_gpu_hours'])+'GPUh and queue '+str(account['metrics']['queue_wait_seconds_by_job']['708196.hopper-m-02'])+'s preserved. New training-scenes collection708224 uses the pushed next12 plan (concurrency6, parent2860s/PBS2890s). Both singleGPU/autox/nohost, live budget guard passed each submission; submission is not execution success.\n')
+print('NIGHT_SUBMISSIONS_JSON: '+json.dumps({'records':records,'black_guard':gref,'black_accounting':aref},sort_keys=True))
+
+# start: 2026-11-09T18:25:24
+NIGHT_SUBMISSIONS_JSON: {"black_accounting": {"audit": {"fail": [], "file": "results/diag_look_census_extension_black_accounting_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_look_census_extension_black_accounting_01.diff"]}, "exit_code": 0, "file": "results/diag_look_census_extension_black_accounting_01.json", "git_commit": "57e10df6c676aae74af7d9912f28e03304c7b688", "metrics_sha256": "f85adcae5b6f7aec076d4b916630300a4554d8aabe62277eb8744ff18a5ac963", "sha256": "08962cbaf9c6c0aa02d4f820033e3a31815bce3a72fb6ca8d2ad40f5945d0d1b"}, "black_guard": {"audit": {"fail": [], "file": "results/diag_look_census_extension_black_guard_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_look_census_extension_black_guard_01.diff"]}, "exit_code": 0, "file": "results/diag_look_census_extension_black_guard_01.json", "git_commit": "5c7ba8bc04a4cf9a407b7b986c0b56edae8a3314", "metrics_sha256": "779789681164addb9e8571160178f4c58d7dd3fa7241070cccb924d92726d6d4", "sha256": "a2c2ecd3908f4e7154f8659a89df2113e85c1de0dcca72e54bf2e9895ba5d9e6"}, "records": [{"job": "708217.hopper-m-02", "name": "pilot_pairs_v2_look_table_fp204_extension01_retry1", "payload": {"file": "logs/pbs/pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae/payload.json", "sha256": "30bb7c0b636d7a572a54942849038c18ad0a912b2cec85e13995719d50070878"}, "receipt": {"file": "logs/pbs/pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae/submission.json", "sha256": "48e83620937f4205fc3c0cb392c1c1e5b1dcc10f12f4373167849ae3f0e7782c"}, "retry_of": "708196.hopper-m-02"}, {"job": "708224.hopper-m-02", "name": "gen_train_next12_60_01", "payload": {"file": "logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/payload.json", "sha256": "a678d94b308998e77cd68923cb365f9972d937eeba1ba185ed5127c8a4c67d70"}, "receipt": {"file": "logs/pbs/gen_train_next12_60_01-20261109T102226Z-c2520d25/submission.json", "sha256": "e6267a6f7f4599b2549ee5851c8cf30b522c769c8fb8ea4cdc5426b28f7fae54"}, "retry_of": null}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.17050228896550834}
+# exit_code: 0

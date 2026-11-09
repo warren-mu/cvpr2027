@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.17050228896550834
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd()\nguard,gref=audited_result(r/'results/diag_look_census_extension_black_guard_01.json')\naccount,aref=audited_result(r/'results/diag_look_census_extension_black_accounting_01.json')\nassert guard['_meta']['exit_code']==account['_meta']['exit_code']==0 and guard['metrics']['command_exit_code']==0\nrecords=[]\nfor name,job,folder,prior,wall,group in [\n('pilot_pairs_v2_look_table_fp204_extension01_retry1','708217.hopper-m-02','pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae','708196.hopper-m-02',900,'T01v2'),\n('gen_train_next12_60_01','708224.hopper-m-02','gen_train_next12_60_01-20261109T102226Z-c2520d25',None,2890,'G01')]:\n p=r/'logs/pbs'/folder/'payload.json';s=p.with_name('submission.json');pd=json.loads(p.read_text());sd=json.loads(s.read_text())\n assert sd['returncode']==0 and sd['stdout'].strip()==job and pd['retry_of']==prior and pd['name']==name\n assert pd['requested_host'] is None and pd['requested_gpu_count']==1 and pd['requested_wall_seconds']==wall and pd['queue']=='autox' and pd['budget_group']==group\n records.append({'name':name,'job':job,'retry_of':prior,'payload':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'receipt':{'file':str(s.relative_to(r)),'sha256':sha_file(s)}})\nwith (r/'STATUS.md').open('a') as f:f.write('\\nSubmission confirmation: proven black-only708196 -> same-scope retry708217 (FP204 original unresolved pair, worker600s/PBS900s); old allocation '+str(account['metrics']['total_allocation_gpu_hours'])+'GPUh and queue '+str(account['metrics']['queue_wait_seconds_by_job']['708196.hopper-m-02'])+'s preserved. New training-scenes collection708224 uses the pushed next12 plan (concurrency6, parent2860s/PBS2890s). Both singleGPU/autox/nohost, live budget guard passed each submission; submission is not execution success.\\n')\nprint('NIGHT_SUBMISSIONS_JSON: '+json.dumps({'records':records,'black_guard':gref,'black_accounting':aref},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_night_submission_mapping_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_night_submission_mapping_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd()\nguard,gref=audited_result(r/'results/diag_look_census_extension_black_guard_01.json')\naccount,aref=audited_result(r/'results/diag_look_census_extension_black_accounting_01.json')\nassert guard['_meta']['exit_code']==account['_meta']['exit_code']==0 and guard['metrics']['command_exit_code']==0\nrecords=[]\nfor name,job,folder,prior,wall,group in [\n('pilot_pairs_v2_look_table_fp204_extension01_retry1','708217.hopper-m-02','pilot_pairs_v2_look_table_fp204_extension01_retry1-20261109T102041Z-06dabaae','708196.hopper-m-02',900,'T01v2'),\n('gen_train_next12_60_01','708224.hopper-m-02','gen_train_next12_60_01-20261109T102226Z-c2520d25',None,2890,'G01')]:\n p=r/'logs/pbs'/folder/'payload.json';s=p.with_name('submission.json');pd=json.loads(p.read_text());sd=json.loads(s.read_text())\n assert sd['returncode']==0 and sd['stdout'].strip()==job and pd['retry_of']==prior and pd['name']==name\n assert pd['requested_host'] is None and pd['requested_gpu_count']==1 and pd['requested_wall_seconds']==wall and pd['queue']=='autox' and pd['budget_group']==group\n records.append({'name':name,'job':job,'retry_of':prior,'payload':{'file':str(p.relative_to(r)),'sha256':sha_file(p)},'receipt':{'file':str(s.relative_to(r)),'sha256':sha_file(s)}})\nwith (r/'STATUS.md').open('a') as f:f.write('\\nSubmission confirmation: proven black-only708196 -> same-scope retry708217 (FP204 original unresolved pair, worker600s/PBS900s); old allocation '+str(account['metrics']['total_allocation_gpu_hours'])+'GPUh and queue '+str(account['metrics']['queue_wait_seconds_by_job']['708196.hopper-m-02'])+'s preserved. New training-scenes collection708224 uses the pushed next12 plan (concurrency6, parent2860s/PBS2890s). Both singleGPU/autox/nohost, live budget guard passed each submission; submission is not execution success.\\n')\nprint('NIGHT_SUBMISSIONS_JSON: '+json.dumps({'records':records,'black_guard':gref,'black_accounting':aref},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T18:25:24",
+    "log_path": "logs/runs/diag_night_submission_mapping_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "c8ed1aa9b34c0a351d7622c0e349db1258654139",
+    "git_dirty": false,
+    "end": "2026-11-09T18:25:27",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "d1575fe3167943547772dd495587dd6854509f192fc423f52cdf50a059f59261"
+  }
+}
