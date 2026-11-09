@@ -11,8 +11,15 @@ from pathlib import Path
 import re
 import shlex
 
-VERSION = 'c912aeab_opening_black_retry_host_v1'
+LEGACY_VERSION = 'c912aeab_opening_black_retry_host_v1'
+VERSION = 'c912aeab_opening_black_retry_host_v2_exclude22_after709293'
 HOSTS = ('hopper-22', 'hopper-28', 'hopper-30')
+AVAILABLE_HOSTS = ('hopper-28', 'hopper-30')
+DISABLED_HOSTS = {'hopper-22': {
+    'reason': 'New pinned submissions excluded after authenticated opening black gate',
+    'job_id': '709293.hopper-m-02',
+    'gpu_uuid': 'GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56',
+    'strict_guard_result': 'results/diag_g01_test_round2_s01_black_retry_plan_02.json'}}
 
 
 def require(condition, message):
@@ -79,6 +86,16 @@ def same_retry_command(repo, old, new, old_name, new_name):
     require(expected == new, 'Black retry changed its original scientific/resource command')
 
 
+def next_host(version, index, previous_host):
+    require(version in (LEGACY_VERSION, VERSION), 'Unknown pinned retry policy version')
+    if version == LEGACY_VERSION:
+        return HOSTS[index % len(HOSTS)]
+    # Keep the global successful-reservation index, but skip the disabled node.
+    start = -1 if previous_host is None else HOSTS.index(previous_host)
+    return next(HOSTS[(start + offset) % len(HOSTS)] for offset in range(1, len(HOSTS) + 1)
+                if HOSTS[(start + offset) % len(HOSTS)] in AVAILABLE_HOSTS)
+
+
 def rotation(repo, recorded_index=None):
     """Read immutable successful reservations while submit_phase owns its lock.
 
@@ -89,8 +106,9 @@ def rotation(repo, recorded_index=None):
     for path in (repo / 'logs/pbs').glob('*/payload.json'):
         payload = json.loads(path.read_text())
         auth = payload.get('black_retry_host_authorization')
-        if payload.get('dry_run') or not isinstance(auth, dict) or auth.get('version') != VERSION:
+        if payload.get('dry_run') or not isinstance(auth, dict):
             continue
+        require(auth.get('version') in (LEGACY_VERSION, VERSION), 'Unknown host rotation authorization version')
         receipt_path = path.with_name('submission.json')
         if not receipt_path.exists():
             continue
@@ -99,11 +117,24 @@ def rotation(repo, recorded_index=None):
             continue
         index = auth.get('rotation_index')
         require(type(index) is int and index >= 0 and index not in successful
-                and auth.get('requested_host') == payload.get('requested_host') == HOSTS[index % len(HOSTS)]
+                and auth.get('requested_host') == payload.get('requested_host') and payload.get('requested_host') in HOSTS
                 and re.fullmatch(r'\d+\.hopper-m-\d+\s*', receipt.get('stdout', '')),
                 'Successful host rotation history is ambiguous or invalid')
         successful[index] = (path, receipt_path)
     require(sorted(successful) == list(range(len(successful))), 'Successful host rotation history is not contiguous')
+    previous_host = None
+    v2_seen = False
+    for turn in range(len(successful)):
+        item = json.loads(successful[turn][0].read_text())
+        auth = item['black_retry_host_authorization']
+        require(not (v2_seen and auth['version'] == LEGACY_VERSION), 'Legacy rotation cannot resume after v2')
+        require(item['requested_host'] == next_host(auth['version'], turn, previous_host),
+                'Successful versioned host rotation history has the wrong node')
+        if auth['version'] == VERSION:
+            require(auth.get('available_hosts') == list(AVAILABLE_HOSTS) and auth.get('disabled_hosts') == DISABLED_HOSTS,
+                    'Successful v2 host rotation policy differs')
+            v2_seen = True
+        previous_host = item['requested_host']
     index = len(successful) if recorded_index is None else recorded_index
     require(type(index) is int and 0 <= index <= len(successful), 'Invalid recorded host rotation index')
     previous = None
@@ -115,12 +146,17 @@ def rotation(repo, recorded_index=None):
 
 
 def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha256,
-                          name, command, task, group, gpus, wall_seconds, _recorded_rotation_index=None):
+                          name, command, task, group, gpus, wall_seconds, _recorded_rotation_index=None,
+                          _recorded_version=None):
     repo = Path(repo).resolve()
     if host is None:
         require(evidence_path is None and evidence_sha256 is None, 'Host evidence requires explicit approved retry host')
         return None
-    require(host in HOSTS and gpus == 1 and type(gpus) is int and task == 'T01'
+    version = VERSION if _recorded_version is None else _recorded_version
+    require(version in (LEGACY_VERSION, VERSION) and
+            (_recorded_version is None or _recorded_rotation_index is not None), 'Policy version override requires recorded runtime index')
+    allowed_hosts = HOSTS if version == LEGACY_VERSION else AVAILABLE_HOSTS
+    require(host in allowed_hosts and gpus == 1 and type(gpus) is int and task == 'T01'
             and group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot'), 'Only approved one-GPU black-retry hosts are allowed')
     require(isinstance(retry_of, str) and re.fullmatch(r'\d+\.hopper-m-\d+', retry_of)
             and isinstance(evidence_path, str) and re.fullmatch(r'[0-9a-f]{64}', evidence_sha256 or ''),
@@ -147,7 +183,12 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     previous_host = payload.get('requested_host')
     require(previous_host is None or previous_host in HOSTS, 'Previous host is outside the approved rotation')
     rotation_index, rotation_previous = rotation(repo, _recorded_rotation_index)
-    require(host == HOSTS[rotation_index % len(HOSTS)], 'Approved hosts must rotate22,28,30 across successful retry submissions')
+    previous_global_host = None
+    if rotation_previous:
+        _, previous_bytes = file_ref(repo, rotation_previous['payload'], 'logs/pbs')
+        previous_global_host = json.loads(previous_bytes)['requested_host']
+    require(host == next_host(version, rotation_index, previous_global_host),
+            'Approved hosts must rotate globally, skipping nodes disabled by the recorded policy')
     for candidate in (repo / 'logs/pbs').glob('*/payload.json'):
         prior = json.loads(candidate.read_text())
         receipt_file = candidate.with_name('submission.json')
@@ -225,11 +266,14 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
         with Image.open(io.BytesIO(body)) as image:
             require(image.mode == 'RGB' and image.size == (255, 255) and image.getextrema() == ((0, 0),) * 3,
                     'Original decoded PNG is not all black')
-    return {'version': VERSION, 'evidence': {'file': str(guard_path.relative_to(repo)), 'sha256': evidence_sha256},
+    binding = {'version': version, 'evidence': {'file': str(guard_path.relative_to(repo)), 'sha256': evidence_sha256},
             'retry_of': retry_of, 'requested_host': host, 'previous_requested_host': previous_host,
             'rotation_index': rotation_index, 'rotation_previous': rotation_previous,
             'original_node': node, 'original_gpu_uuid': gpu,
             'queue_fallback_after_seconds': 1200, 'scope': 'opening black gate retry only; no scientific acceptance'}
+    if version == VERSION:
+        binding.update(available_hosts=list(AVAILABLE_HOSTS), disabled_hosts=json.loads(json.dumps(DISABLED_HOSTS)))
+    return binding
 
 
 def validate_payload_host(repo, payload):
@@ -238,11 +282,12 @@ def validate_payload_host(repo, payload):
     if host is None:
         require(binding is None, 'Unpinned payload must not claim pinned retry authorization')
         return None
-    require(isinstance(binding, dict) and binding.get('version') == VERSION, 'Pinned payload lacks explicit black-retry policy')
+    require(isinstance(binding, dict) and binding.get('version') in (LEGACY_VERSION, VERSION), 'Pinned payload lacks explicit black-retry policy')
     evidence = binding.get('evidence', {})
     actual = validate_request_host(repo, host=host, retry_of=payload.get('retry_of'), evidence_path=evidence.get('file'),
         evidence_sha256=evidence.get('sha256'), name=payload['name'], command=payload['command'],
         task=payload['task_id'], group=payload['budget_group'], gpus=payload['requested_gpu_count'],
-        wall_seconds=payload['requested_wall_seconds'], _recorded_rotation_index=binding.get('rotation_index'))
+        wall_seconds=payload['requested_wall_seconds'], _recorded_rotation_index=binding.get('rotation_index'),
+        _recorded_version=binding['version'])
     require(actual == binding, 'Pinned runtime payload differs from authenticated retry permission')
     return actual

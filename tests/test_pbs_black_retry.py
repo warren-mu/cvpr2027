@@ -82,11 +82,11 @@ class Evidence:
     def refresh_guard(self):
         self.guard={'config':{},'metrics':{'strict_black_gate_proof':self.proof}}
         self.guard_ref=self.logged('strict_guard',self.guard,['python3','-c','fixture'],0)
-    def arguments(self,host='hopper-22'):
+    def arguments(self,host='hopper-28'):
         cmd=list(self.command);cmd[cmd.index('--name')+1]=self.new_name
         return dict(host=host,retry_of=self.job,evidence_path=self.guard_ref['file'],evidence_sha256=self.guard_ref['sha256'],
             name=self.new_name,command=cmd,task='T01',group='G01',gpus=1,wall_seconds=1830)
-    def validate(self,host='hopper-22'):
+    def validate(self,host='hopper-28'):
         return policy.validate_request_host(self.root,**self.arguments(host))
 
 
@@ -96,7 +96,7 @@ class BlackRetryTests(unittest.TestCase):
     def tearDown(self):self.temp.cleanup()
     def test_real_black_chain_and_runtime_exact_binding(self):
         binding=self.e.validate();p=dict(self.e.payload,name=self.e.new_name,command=self.e.arguments()['command'],
-            requested_host='hopper-22',retry_of=self.e.job,black_retry_host_authorization=binding)
+            requested_host='hopper-28',retry_of=self.e.job,black_retry_host_authorization=binding)
         self.assertEqual(policy.validate_payload_host(self.root,p),binding)
         p['black_retry_host_authorization']['original_gpu_uuid']='different'
         with self.assertRaises(ValueError):policy.validate_payload_host(self.root,p)
@@ -128,26 +128,79 @@ class BlackRetryTests(unittest.TestCase):
     def test_original_source_byte_mutation_rejected(self):
         p=self.root/self.e.parent_ref['file'];p.write_text(p.read_text()+' ')
         with self.assertRaisesRegex(ValueError,'SHA'):self.e.validate()
-    def test_global_rotation_and_runtime_prefix_are_stable(self):
-        first=self.e.validate()
+    def test_global_mixed_version_history_and_runtime_prefix_are_stable(self):
+        # This is the original v1 runtime proof, not a new v1 submission.
+        first=policy.validate_request_host(self.root,**self.e.arguments('hopper-22'),
+            _recorded_rotation_index=0,_recorded_version=policy.LEGACY_VERSION)
+        self.assertEqual(first['version'],policy.LEGACY_VERSION)
+        self.assertNotIn('available_hosts',first)
         p=dict(self.e.payload,name=self.e.new_name,command=self.e.arguments()['command'],
             requested_host='hopper-22',retry_of=self.e.job,black_retry_host_authorization=first)
         self.e.write('logs/pbs/first/payload.json',p,True)
         self.e.write('logs/pbs/first/submission.json',{'returncode':0,'stdout':'709300.hopper-m-02\n'})
-        with self.assertRaisesRegex(ValueError,'rotate'):self.e.validate('hopper-22')
-        with self.assertRaisesRegex(ValueError,'already has'):self.e.validate('hopper-28')
-        index, previous=policy.rotation(self.root)
-        self.assertEqual(index,1)
-        second=dict(first,rotation_index=index,rotation_previous=previous,requested_host=policy.HOSTS[index%3])
+        for index,host in ((1,'hopper-28'),(2,'hopper-30')):
+            turn,previous=policy.rotation(self.root)
+            self.assertEqual(turn,index)
+            binding=dict(first,rotation_index=index,rotation_previous=previous,requested_host=host)
+            reservation=dict(p,name='different_previous_'+str(index),retry_of='previous_'+str(index),
+                             requested_host=host,black_retry_host_authorization=binding)
+            self.e.write(f'logs/pbs/previous{index}/payload.json',reservation,True)
+            self.e.write(f'logs/pbs/previous{index}/submission.json',{'returncode':0,'stdout':f'{709300+index}.hopper-m-02\n'})
+        self.assertEqual(policy.rotation(self.root)[0],3)
         self.assertEqual(policy.validate_payload_host(self.root,p),first)
-        q=dict(p,requested_host='hopper-28',black_retry_host_authorization=second)
-        self.e.write('logs/pbs/second/payload.json',q,True)
-        self.e.write('logs/pbs/second/submission.json',{'returncode':0,'stdout':'709301.hopper-m-02\n'})
-        index, previous=policy.rotation(self.root)
-        self.assertEqual(index,2)
-        self.assertEqual(policy.HOSTS[index%3],'hopper-30')
+        with self.assertRaises(ValueError):self.e.validate('hopper-22')
+        with self.assertRaisesRegex(ValueError,'already has'):self.e.validate('hopper-28')
+        # Global index3 now selects28 by skipping22; later v2 history must not alter v1 replay.
+        index,previous=policy.rotation(self.root)
+        third=dict(first,version=policy.VERSION,rotation_index=index,rotation_previous=previous,
+                   requested_host='hopper-28',available_hosts=list(policy.AVAILABLE_HOSTS),
+                   disabled_hosts=copy.deepcopy(policy.DISABLED_HOSTS))
+        q=dict(p,name='third_other',retry_of='other_original',requested_host='hopper-28',black_retry_host_authorization=third)
+        self.e.write('logs/pbs/third/payload.json',q,True)
+        self.e.write('logs/pbs/third/submission.json',{'returncode':0,'stdout':'709303.hopper-m-02\n'})
+        self.assertEqual(policy.rotation(self.root)[0],4)
+        self.assertEqual(policy.next_host(policy.VERSION,4,'hopper-28'),'hopper-30')
         self.assertEqual(policy.validate_payload_host(self.root,p),first)
         self.assertIsNone(policy.validate_payload_host(self.root,{'requested_host':None}))
+
+    def test_new_requests_exclude22_and_bind_available_policy(self):
+        with self.assertRaises(ValueError):self.e.validate('hopper-22')
+        with self.assertRaisesRegex(ValueError,'rotate'):self.e.validate('hopper-30')
+        binding=self.e.validate('hopper-28')
+        self.assertEqual(binding['version'],policy.VERSION)
+        self.assertEqual(binding['available_hosts'],['hopper-28','hopper-30'])
+        self.assertEqual(binding['disabled_hosts']['hopper-22']['job_id'],'709293.hopper-m-02')
+        p=dict(self.e.payload,name=self.e.new_name,command=self.e.arguments()['command'],requested_host='hopper-28',
+               retry_of=self.e.job,black_retry_host_authorization=binding)
+        self.e.write('logs/pbs/new/payload.json',p,True)
+        self.e.write('logs/pbs/new/submission.json',{'returncode':0,'stdout':'709310.hopper-m-02\n'})
+        self.assertEqual(policy.validate_payload_host(self.root,p),binding)
+        q=copy.deepcopy(p);q['black_retry_host_authorization']['available_hosts'].insert(0,'hopper-22')
+        with self.assertRaises(ValueError):policy.validate_payload_host(self.root,q)
+        with self.assertRaisesRegex(ValueError,'override'):
+            policy.validate_request_host(self.root,**self.e.arguments('hopper-22'),_recorded_version=policy.LEGACY_VERSION)
+
+    def test_new_strict_retry_after_three_legacy_reservations_uses28(self):
+        for index,host in enumerate(policy.HOSTS):
+            self.e.write(f'logs/pbs/history{index}/payload.json',{
+                'requested_host':host,'retry_of':f'{700000+index}.hopper-m-02',
+                'black_retry_host_authorization':{'version':policy.LEGACY_VERSION,
+                    'rotation_index':index,'requested_host':host}},True)
+            self.e.write(f'logs/pbs/history{index}/submission.json',
+                {'returncode':0,'stdout':f'{700100+index}.hopper-m-02\n'})
+        binding=self.e.validate('hopper-28')
+        self.assertEqual(binding['rotation_index'],3)
+        p=dict(self.e.payload,name=self.e.new_name,command=self.e.arguments()['command'],requested_host='hopper-28',
+               retry_of=self.e.job,black_retry_host_authorization=binding)
+        self.e.write('logs/pbs/current/payload.json',p,True)
+        self.e.write('logs/pbs/current/submission.json',{'returncode':0,'stdout':'709320.hopper-m-02\n'})
+        self.assertEqual(policy.validate_payload_host(self.root,p),binding)
+        index,previous=policy.rotation(self.root)
+        future=dict(binding,rotation_index=index,rotation_previous=previous,requested_host='hopper-30')
+        self.e.write('logs/pbs/future/payload.json',dict(p,name='future',retry_of='709321.hopper-m-02',
+            requested_host='hopper-30',black_retry_host_authorization=future),True)
+        self.e.write('logs/pbs/future/submission.json',{'returncode':0,'stdout':'709322.hopper-m-02\n'})
+        self.assertEqual(policy.validate_payload_host(self.root,p),binding)
 
     def test_immutable_quota_retry_only_changes_parent_identity(self):
         old={'parent_run_name':'old','seed':0,'scenes':['FloorPlan21']}
