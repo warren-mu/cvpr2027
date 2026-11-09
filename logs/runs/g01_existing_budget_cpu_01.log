@@ -1,0 +1,13 @@
+# run_logged: python3 -m src.tools.record_command --name g01_existing_budget_cpu_01 -- python3 -c import unittest
+suite=unittest.TestSuite()
+for pattern in ('test_t00b_runtime.py','test_t01v2_parallel.py','test_t01v2_clone_parallel.py','test_t01v2_stable_parallel.py','test_t01v2_search_parallel.py','test_t01v2_solvable_parallel.py','test_t01v2_isolated_parallel.py','test_pbs_cancel_evidence.py'):
+ suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))
+raise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())
+# start: 2026-11-09T12:21:30
+.................................................................
+----------------------------------------------------------------------
+Ran 65 tests in 0.894s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.6368162040016614}
+# exit_code: 0
