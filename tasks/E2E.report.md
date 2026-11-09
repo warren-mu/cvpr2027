@@ -35,3 +35,8 @@ These Direct divergent states retain their own world images under supplement8; t
 PBS accounting:0.4675 GPUh and67 seconds queue wait for707497. Failed707395 and black-gate707488 remain preserved;707488→707497 is recorded in the existing retry evidence.
 Sources: results/smoke_e2e_views_02_r8335e243.json, results/smoke_e2e_views_accounting_02.json, results/smoke_e2e_contract_cpu_02.json (64 tests passed).
 Step2 is next; steps3–5 remain unrun. T0/T3 reward confirmed by human: select correct1/wrong0, observe−0.05, invalid0, no format bonus. The five pairs are direct/tau0: **证据前逻辑未覆盖**; Look requires a later step5 run.
+
+
+## Step2 PASS; original-model evaluation next
+
+The CPU witness replay passed for both worlds of all five approved Direct pairs (results/smoke_e2e_replay_01.json). The canonical table interface suite passed64 tests (results/smoke_e2e_contract_cpu_02.json). This used no GPU. All selected pairs remain tau0: 证据前逻辑未覆盖. Next is step3 original Qwen2.5-VL-3B with obs_never/obs_always/diag_base, one episode per pair/world.

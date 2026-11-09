@@ -447,3 +447,6 @@ Human confirmed E2E T0/T3 reward policy: correct select+1, wrong select0, observ
 Concurrent Claude commit4e8a305 only changed task documents: T04 agrees with the human-confirmed zero-format-bonus policy; supplement11 asks for far-to-near Stay w1 search, without changing evidence250 or other thresholds. The merge with our reward confirmation was pushed asb3b7867. Supplement11 is being prepared as additive opt-in producer modules, to keep current collection and E2E code files unchanged while workers run. Current allocations continue.
 
 E2E707497 / smoke_e2e_views_02_r8335e243 completed step1, exit0: five checked D4 tables and fresh20-state check passed. Worker export durations and state counts are in tasks/E2E.report.md; PBS final cost0.4675 GPUh, queue67 s. This is only the E2E20-state exception, not formal T02 acceptance. Step2 pending; all prior failures retained.
+
+
+Supplement12 be43fc4 read: new mixed collection paused; current707493/707495 allowed to finish. Next six Look-only units compare FP203/204 and the historical-most-attempted kitchen at both100/60degrees. Each unit reserves20minutes; E2E keeps one1GPU slot. Supplement11 far-first Stay and supplement9 frozen rendering remain required. E2E step2 CPU witness replay passed; step3 is next.
