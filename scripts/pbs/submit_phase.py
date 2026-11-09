@@ -467,7 +467,9 @@ def main():
     parser.add_argument("--task", required=True, choices=sorted(LIMITS))
     parser.add_argument("--gpus", type=int, required=True, choices=(1, 2, 3, 4, 8))
     parser.add_argument("--walltime", required=True)
-    parser.add_argument("--host", type=validate_host, help="Optional compute host, e.g. hopper-29")
+    parser.add_argument("--host", type=validate_host, help="Only a proven opening-black retry on hopper-22/28/30")
+    parser.add_argument("--black-retry-evidence", help="Original logged strict black-gate guard result")
+    parser.add_argument("--black-retry-evidence-sha256", help="Exact guard result SHA256")
     parser.add_argument("--retry-of", help="Original explicit PBS job ID; provenance metadata only")
     parser.add_argument("--budget-group", choices=sorted(SUBBUDGET_LIMITS), help="Additional limit within the existing phase budget")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
@@ -494,8 +496,11 @@ def main():
     try:
         seconds = wall_seconds(args.walltime)
         group = budget_group(args.task, args.name, command, args.budget_group)
-        if group and args.host is not None:
-            raise ValueError("Budgeted pilots use unpinned Express allocations with the per-card render gate")
+        sys.path.insert(0, str(repo))
+        from src.tools.pbs_black_retry import validate_request_host
+        host_authorization = validate_request_host(repo, host=args.host, retry_of=args.retry_of,
+            evidence_path=args.black_retry_evidence, evidence_sha256=args.black_retry_evidence_sha256,
+            name=args.name, command=command, task=args.task, group=group, gpus=args.gpus, wall_seconds=seconds)
         state = budget_state(repo)
         validate_request(args.task, args.gpus, seconds, args.name, state, group)
     except (ValueError, RuntimeError) as error:
@@ -517,6 +522,8 @@ def main():
                "budget_revision": BUDGET_REVISION, "queue": "autox",
                "retry_of": args.retry_of, "budget_group": group,
                "requested_queue_charge_rate": state["charge_policy"]["rates"][queue_for_gpus(args.gpus)]}
+    if host_authorization is not None:
+        payload["black_retry_host_authorization"] = host_authorization
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")
     payload_path.chmod(0o444)

@@ -95,11 +95,13 @@ def submission_identity(repo, name, job, timeout):
         command = data.get('command', [])
         if (ids != [job] or data.get('budget_group') != 'G01' or data.get('task_id') != 'T01'
                 or data.get('budget_batch') != 't00b_t01_20261108' or data.get('queue') != 'autox'
-                or data.get('requested_host') is not None or data.get('requested_gpu_count') != 1
+                or data.get('requested_gpu_count') != 1
                 or type(data.get('requested_wall_seconds')) is not int
                 or timeout > data['requested_wall_seconds'] - 30
                 or command.count('src.tools.g01_parallel') != 1):
             raise ValueError('G01 allocation differs from its budgeted unpinned single-GPU submission')
+        from src.tools.pbs_black_retry import validate_payload_host
+        host_authorization = validate_payload_host(repo, data)
         matches.append({'file': str(path.relative_to(repo)), 'sha256': sha_file(path),
             'requested_wall_seconds': data['requested_wall_seconds'], 'budget_group': 'G01'})
     if len(matches) != 1:
