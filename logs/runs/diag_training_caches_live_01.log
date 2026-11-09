@@ -1,0 +1,16 @@
+# run_logged: python3 -m src.tools.record_command --name diag_training_caches_live_01 -- python3 -c import json,pathlib
+for name in ['t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01']:
+ for n in [name,name+'_gate']:
+  p=pathlib.Path('results')/(n+'.json');log=pathlib.Path('logs/runs')/(n+'.log')
+  row={'name':n,'has_log':log.exists(),'has_final_result':p.exists()}
+  if p.exists():
+   d=json.loads(p.read_text());m=d['metrics'];row.update(meta={k:d['_meta'].get(k) for k in ['end','exit_code','duration_sec','host']},metrics={k:m.get(k) for k in ['status','passed','cache_matches_live','black_frame_detected','producer_exit_code','errors','cleanup_errors']})
+  print(json.dumps(row,sort_keys=True))
+
+# start: 2026-11-10T07:29:58
+{"has_final_result": false, "has_log": true, "name": "t02_export_cache_six05_08_01_retry2"}
+{"has_final_result": true, "has_log": true, "meta": {"duration_sec": 7.2, "end": "2026-11-10T07:04:54", "exit_code": 0, "host": "hopper-28"}, "metrics": {"black_frame_detected": false, "cache_matches_live": null, "cleanup_errors": [], "errors": [], "passed": true, "producer_exit_code": null, "status": null}, "name": "t02_export_cache_six05_08_01_retry2_gate"}
+{"has_final_result": false, "has_log": true, "name": "t02_export_cache_six09_14_01"}
+{"has_final_result": true, "has_log": true, "meta": {"duration_sec": 7.7, "end": "2026-11-10T07:24:29", "exit_code": 0, "host": "hopper-28"}, "metrics": {"black_frame_detected": false, "cache_matches_live": null, "cleanup_errors": [], "errors": [], "passed": true, "producer_exit_code": null, "status": null}, "name": "t02_export_cache_six09_14_01_gate"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.04116730799432844}
+# exit_code: 0

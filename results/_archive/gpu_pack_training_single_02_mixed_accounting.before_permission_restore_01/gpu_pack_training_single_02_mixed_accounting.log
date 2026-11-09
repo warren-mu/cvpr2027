@@ -1,0 +1,17 @@
+# run_logged: python3 -m src.tools.pbs_mixed_accounting --name gpu_pack_training_single_02_mixed_accounting --payload logs/pbs/gpu_pack_training_single_02-20261109T225606Z-ded8d8d9/payload.json --payload-sha256 e054c0a6242e52a31d01b303bfb98bc6ceb9b9402552cef91bcba5ed356ff3a0 --pack-result results/gpu_pack_training_single_02.json --pack-sha256 41fb580357b6d136bf4adbcd2f04712979ef3e82be38395892f66e28ddcb2bb1 --accounting-result results/diag_gpu_pack_709350_accounting_01.json --accounting-sha256 c5a7631d9d5dfaae8d340eca7773dbca72a8b36162a4a576b1e7433d2f877d0a
+# start: 2026-11-10T07:09:50
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 318, in <module>
+    raise SystemExit(main())
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 306, in main
+    metrics = compute_split(repo, *refs)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 165, in compute_split
+    require(payload.get('dry_run') is False and payload_path.stat().st_mode & 0o222 == 0,
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 29, in require
+    raise ValueError(message)
+ValueError: Mixed accounting requires an original immutable submitted payload
+# exit_code: 1

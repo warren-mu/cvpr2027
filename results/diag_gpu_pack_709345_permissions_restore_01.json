@@ -1,0 +1,43 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.15874495799653232
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"One-off authorized restoration; validates all bytes before changing modes.\"\"\"\nimport json\nimport os\nfrom pathlib import Path\nimport shlex\nimport stat\nimport subprocess\nfrom src.tools.pbs_mixed_accounting import logged, reference\n\nroot = Path.cwd().resolve()\nname = 'gpu_pack_training_4gpu_01'\nassert os.environ['CVPR_RUN_NAME'] == 'diag_gpu_pack_709345_permissions_restore_01'\nfolder = root / 'logs/pbs/gpu_pack_training_4gpu_01-20261109T224723Z-3e84884c'\npayload_path, script_path = folder / 'payload.json', folder / 'job.pbs'\npayload = json.loads(payload_path.read_bytes())\nreceipt = json.loads((folder / 'submission.json').read_bytes())\nassert payload['name'] == name and payload['dry_run'] is False\nassert payload['requested_gpu_count'] == 4 and payload['requested_wall_seconds'] == 3057\nassert payload['requested_host'] is None and payload['queue'] == 'autox'\nassert payload['budget_group'] == 'PACK' and payload['task_id'] == 'T01'\nassert receipt['returncode'] == 0 and receipt['stdout'].strip() == '709345.hopper-m-02'\nassert receipt['command'] == ['qsub', '-N', 'cvpr27_3e84884c', '-l', 'walltime=00:50:57',\n    '-o', str(folder / 'pbs.out'), str(script_path)]\nsubmit_ref = reference(root / 'results/diag_submit_gpu_pack_training_4gpu_01.json', root)\nsubmit, _ = logged(root, submit_ref)\nassert submit['_meta']['exit_code'] == 0 and submit['metrics']['command_exit_code'] == 0\nexpected = ['python3', 'scripts/pbs/submit_phase.py', '--task', 'T01', '--budget-group', 'PACK',\n    '--name', name, '--gpus', '4', '--walltime', '00:50:57', '--', *payload['command']]\nassert submit['config']['command'] == expected\nassert submit['_meta']['command'] == ['python3', '-m', 'src.tools.record_command', '--name',\n    'diag_submit_gpu_pack_training_4gpu_01', '--', *expected]\ntemplate = subprocess.run(['git', 'show', '82031465:scripts/pbs/job_1gpu.pbs'],\n    check=True, stdout=subprocess.PIPE, text=True).stdout\nassert template.count('@@CVPR_PAYLOAD@@') == 1\nassert template.count('#PBS -l select=1:ngpus=1') == 1\nexpected_script = template.replace('#PBS -l select=1:ngpus=1', '#PBS -l select=1:ngpus=4').replace(\n    '@@CVPR_PAYLOAD@@', shlex.quote(str(payload_path)))\nassert script_path.read_text() == expected_script\nrecords = []\nfor path in (payload_path, script_path):\n    before = reference(path, root)\n    original = subprocess.run(['git', 'show', '82031465:' + str(path.relative_to(root))],\n        check=True, stdout=subprocess.PIPE).stdout\n    assert original == path.read_bytes()\n    mode = stat.S_IMODE(path.stat().st_mode)\n    assert mode in (0o644, 0o444)\n    records.append({'path': path, 'before': before, 'mode': mode})\n# Both originals and the submitted template/argv are authenticated before mutation.\noutput = []\nfor item in records:\n    if item['mode'] == 0o644:\n        item['path'].chmod(0o444)\n    after = reference(item['path'], root)\n    assert after == item['before'] and stat.S_IMODE(item['path'].stat().st_mode) == 0o444\n    output.append({'reference': after, 'before_mode': oct(item['mode']), 'after_mode': '0o444',\n        'bytes_unchanged': True, 'original_git_commit': '82031465'})\nprint('QUEUED_PACK_PERMISSION_RECOVERY_JSON: ' + json.dumps({'job_id': '709345.hopper-m-02',\n    'submission_result': submit_ref, 'receipt': reference(folder / 'submission.json', root),\n    'files': output, 'resource_queue_command_unchanged': True}, sort_keys=True), flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_gpu_pack_709345_permissions_restore_01",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "diag_gpu_pack_709345_permissions_restore_01",
+      "--",
+      "python3",
+      "-c",
+      "\"\"\"One-off authorized restoration; validates all bytes before changing modes.\"\"\"\nimport json\nimport os\nfrom pathlib import Path\nimport shlex\nimport stat\nimport subprocess\nfrom src.tools.pbs_mixed_accounting import logged, reference\n\nroot = Path.cwd().resolve()\nname = 'gpu_pack_training_4gpu_01'\nassert os.environ['CVPR_RUN_NAME'] == 'diag_gpu_pack_709345_permissions_restore_01'\nfolder = root / 'logs/pbs/gpu_pack_training_4gpu_01-20261109T224723Z-3e84884c'\npayload_path, script_path = folder / 'payload.json', folder / 'job.pbs'\npayload = json.loads(payload_path.read_bytes())\nreceipt = json.loads((folder / 'submission.json').read_bytes())\nassert payload['name'] == name and payload['dry_run'] is False\nassert payload['requested_gpu_count'] == 4 and payload['requested_wall_seconds'] == 3057\nassert payload['requested_host'] is None and payload['queue'] == 'autox'\nassert payload['budget_group'] == 'PACK' and payload['task_id'] == 'T01'\nassert receipt['returncode'] == 0 and receipt['stdout'].strip() == '709345.hopper-m-02'\nassert receipt['command'] == ['qsub', '-N', 'cvpr27_3e84884c', '-l', 'walltime=00:50:57',\n    '-o', str(folder / 'pbs.out'), str(script_path)]\nsubmit_ref = reference(root / 'results/diag_submit_gpu_pack_training_4gpu_01.json', root)\nsubmit, _ = logged(root, submit_ref)\nassert submit['_meta']['exit_code'] == 0 and submit['metrics']['command_exit_code'] == 0\nexpected = ['python3', 'scripts/pbs/submit_phase.py', '--task', 'T01', '--budget-group', 'PACK',\n    '--name', name, '--gpus', '4', '--walltime', '00:50:57', '--', *payload['command']]\nassert submit['config']['command'] == expected\nassert submit['_meta']['command'] == ['python3', '-m', 'src.tools.record_command', '--name',\n    'diag_submit_gpu_pack_training_4gpu_01', '--', *expected]\ntemplate = subprocess.run(['git', 'show', '82031465:scripts/pbs/job_1gpu.pbs'],\n    check=True, stdout=subprocess.PIPE, text=True).stdout\nassert template.count('@@CVPR_PAYLOAD@@') == 1\nassert template.count('#PBS -l select=1:ngpus=1') == 1\nexpected_script = template.replace('#PBS -l select=1:ngpus=1', '#PBS -l select=1:ngpus=4').replace(\n    '@@CVPR_PAYLOAD@@', shlex.quote(str(payload_path)))\nassert script_path.read_text() == expected_script\nrecords = []\nfor path in (payload_path, script_path):\n    before = reference(path, root)\n    original = subprocess.run(['git', 'show', '82031465:' + str(path.relative_to(root))],\n        check=True, stdout=subprocess.PIPE).stdout\n    assert original == path.read_bytes()\n    mode = stat.S_IMODE(path.stat().st_mode)\n    assert mode in (0o644, 0o444)\n    records.append({'path': path, 'before': before, 'mode': mode})\n# Both originals and the submitted template/argv are authenticated before mutation.\noutput = []\nfor item in records:\n    if item['mode'] == 0o644:\n        item['path'].chmod(0o444)\n    after = reference(item['path'], root)\n    assert after == item['before'] and stat.S_IMODE(item['path'].stat().st_mode) == 0o444\n    output.append({'reference': after, 'before_mode': oct(item['mode']), 'after_mode': '0o444',\n        'bytes_unchanged': True, 'original_git_commit': '82031465'})\nprint('QUEUED_PACK_PERMISSION_RECOVERY_JSON: ' + json.dumps({'job_id': '709345.hopper-m-02',\n    'submission_result': submit_ref, 'receipt': reference(folder / 'submission.json', root),\n    'files': output, 'resource_queue_command_unchanged': True}, sort_keys=True), flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T07:24:16",
+    "log_path": "logs/runs/diag_gpu_pack_709345_permissions_restore_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "7a39115692b64a01c19e532c48035607bd1a38a2",
+    "git_dirty": false,
+    "end": "2026-11-10T07:24:18",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "b4dbfda91a8e72f4031056491f77c117d85c6a041a4e33421d6dcbcb9be33e06"
+  }
+}

@@ -1,0 +1,97 @@
+# run_logged: python3 src/tools/record_command.py --name diag_gpu_pack_payload_mode_restore_01 -- python3 -c """Authorized one-off recovery of original payload permissions, never bytes."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import stat
+import subprocess
+from src.tools.pbs_mixed_accounting import logged, reference, read_reference
+
+root = Path.cwd().resolve()
+assert os.environ.get('CVPR_RUN_NAME') == 'diag_gpu_pack_payload_mode_restore_01'
+items = [
+    ('709349.hopper-m-02', 'gpu_pack_training_single_01', 'gpu_pack_training_single_01-20261109T225356Z-d587de07'),
+    ('709350.hopper-m-02', 'gpu_pack_training_single_02', 'gpu_pack_training_single_02-20261109T225606Z-ded8d8d9'),
+]
+verified = []
+for job, name, receipt_dir in items:
+    payload_path = root / 'logs/pbs' / receipt_dir / 'payload.json'
+    payload_ref = reference(payload_path, root)
+    payload, _ = read_reference(root, payload_ref)
+    pack, _ = logged(root, reference(root / 'results' / (name + '.json'), root))
+    parent_ref = pack['config']['parent_payload_reference']
+    _, linked = read_reference(root, parent_ref, root / 'logs/pbs')
+    assert linked == payload_path.resolve() and parent_ref['sha256'] == payload_ref['sha256']
+    assert payload['name'] == name and payload['dry_run'] is False
+    assert pack['config']['pbs_jobid'] == job
+    assert pack['metrics']['all_owned_units_ended'] is True and pack['metrics']['cleanup_errors'] == []
+    receipt_path = payload_path.with_name('submission.json')
+    receipt = json.loads(receipt_path.read_bytes())
+    assert receipt['returncode'] == 0 and receipt['stdout'].strip() == job
+    original = subprocess.run(['git', 'show', '82031465:' + str(payload_path.relative_to(root))],
+                              check=True, stdout=subprocess.PIPE).stdout
+    assert original == payload_path.read_bytes()
+    assert stat.S_IMODE(payload_path.stat().st_mode) == 0o644
+    claim_refs = []
+    for entry in pack['metrics']['unit_claims']:
+        claim, _ = read_reference(root, entry['claim_reference'], Path(pack['config']['queue_root']))
+        assert claim['pbs_jobid'] == job and claim['unit_id'] == entry['unit_id']
+        _, claim_payload = read_reference(root, claim['parent_payload_reference'], root / 'logs/pbs')
+        assert claim_payload == payload_path.resolve()
+        assert claim['parent_payload_reference']['sha256'] == payload_ref['sha256']
+        claim_refs.append(entry['claim_reference'])
+    assert claim_refs
+    failed_name = name + '_mixed_accounting'
+    meta_path = root / 'logs/runs' / (failed_name + '.meta.json')
+    failed_meta = json.loads(meta_path.read_bytes())
+    assert failed_meta['exit_code'] == 1 and failed_meta.get('end')
+    assert failed_meta.get('results_missing') is True
+    assert not (root / 'results' / (failed_name + '.json')).exists()
+    log_path = root / 'logs/runs' / (failed_name + '.log')
+    assert 'Mixed accounting requires an original immutable submitted payload' in log_path.read_text()
+    artifacts = [log_path, meta_path]
+    diff_path = root / 'logs/runs' / (failed_name + '.diff')
+    if diff_path.exists(): artifacts.append(diff_path)
+    if failed_meta.get('git_diff_path'):
+        recorded_diff = (root / failed_meta['git_diff_path']).resolve()
+        assert recorded_diff in [p.resolve() for p in artifacts]
+    archive = root / 'results/_archive' / (failed_name + '.before_permission_restore_01')
+    assert not archive.exists()
+    verified.append(dict(job=job, name=name, path=payload_path, ref=payload_ref,
+                         receipt=reference(receipt_path, root), claims=claim_refs,
+                         artifacts=artifacts, archive=archive,
+                         original_commit='82031465', original_git_sha256=hashlib.sha256(original).hexdigest()))
+
+# No mutation until both original payloads, claimed copies and ended failures agree.
+records = []
+for item in verified:
+    archived = []
+    item['archive'].mkdir(parents=True, exist_ok=False)
+    for source in item['artifacts']:
+        before = reference(source, root)
+        target = item['archive'] / source.name
+        shutil.move(str(source), str(target))
+        after = reference(target, root)
+        assert before['sha256'] == after['sha256'] and before['bytes'] == after['bytes']
+        archived.append({'original': before, 'archived': after})
+    before_mode = stat.S_IMODE(item['path'].stat().st_mode)
+    item['path'].chmod(0o444)
+    after_ref = reference(item['path'], root)
+    assert after_ref == item['ref']
+    after_mode = stat.S_IMODE(item['path'].stat().st_mode)
+    assert after_mode == 0o444
+    records.append({'job': item['job'], 'pack_name': item['name'],
+                    'payload_reference': after_ref, 'original_git_commit': item['original_commit'],
+                    'original_git_sha256': item['original_git_sha256'],
+                    'parent_and_claim_sha_verified': True, 'claim_references': item['claims'],
+                    'submission_reference': item['receipt'], 'before_mode': oct(before_mode),
+                    'after_mode': oct(after_mode), 'payload_bytes_unchanged': True,
+                    'archived_failed_artifacts': archived,
+                    'original_failed_result_absent': True})
+print('PAYLOAD_PERMISSION_RECOVERY_JSON: ' + json.dumps(records, sort_keys=True, allow_nan=False), flush=True)
+
+# start: 2026-11-10T07:14:59
+PAYLOAD_PERMISSION_RECOVERY_JSON: [{"after_mode": "0o444", "archived_failed_artifacts": [{"archived": {"bytes": 1617, "file": "results/_archive/gpu_pack_training_single_01_mixed_accounting.before_permission_restore_01/gpu_pack_training_single_01_mixed_accounting.log", "sha256": "6c57bc0014fa665a28a9ae04883d05068f45e67eaa4442057b061ff341fd7847"}, "original": {"bytes": 1617, "file": "logs/runs/gpu_pack_training_single_01_mixed_accounting.log", "sha256": "6c57bc0014fa665a28a9ae04883d05068f45e67eaa4442057b061ff341fd7847"}}, {"archived": {"bytes": 1204, "file": "results/_archive/gpu_pack_training_single_01_mixed_accounting.before_permission_restore_01/gpu_pack_training_single_01_mixed_accounting.meta.json", "sha256": "a22bfa18c2db493ebad1ae85c2010bb60f9c9f9e92b8eb0e940a59a80b17c8b9"}, "original": {"bytes": 1204, "file": "logs/runs/gpu_pack_training_single_01_mixed_accounting.meta.json", "sha256": "a22bfa18c2db493ebad1ae85c2010bb60f9c9f9e92b8eb0e940a59a80b17c8b9"}}], "before_mode": "0o644", "claim_references": [{"bytes": 3671, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01/claims/e1c80f3a2a6500a8eb227409492b36fbf0dde18870447e8a38c6fe09e91154e8.json", "sha256": "ef290121fd88cd86cdcb1f2054d7a9cb02463f4ff3b94fb344ccab1764701e25"}], "job": "709349.hopper-m-02", "original_failed_result_absent": true, "original_git_commit": "82031465", "original_git_sha256": "e7bf9050c77d33e9dcc8e90976a3b840cf8db6e82a25e7bf7387151c03d46634", "pack_name": "gpu_pack_training_single_01", "parent_and_claim_sha_verified": true, "payload_bytes_unchanged": true, "payload_reference": {"bytes": 1691, "file": "logs/pbs/gpu_pack_training_single_01-20261109T225356Z-d587de07/payload.json", "sha256": "e7bf9050c77d33e9dcc8e90976a3b840cf8db6e82a25e7bf7387151c03d46634"}, "submission_reference": {"bytes": 421, "file": "logs/pbs/gpu_pack_training_single_01-20261109T225356Z-d587de07/submission.json", "sha256": "132dfe8334851da9a3536e70742c7edabf07d2907dded0c9e7ee9f7208cff3f1"}}, {"after_mode": "0o444", "archived_failed_artifacts": [{"archived": {"bytes": 1617, "file": "results/_archive/gpu_pack_training_single_02_mixed_accounting.before_permission_restore_01/gpu_pack_training_single_02_mixed_accounting.log", "sha256": "4dbd221e2035a7ac27a98b5a831a9e31e2243b96876453c2e8bb57829fbd2dd6"}, "original": {"bytes": 1617, "file": "logs/runs/gpu_pack_training_single_02_mixed_accounting.log", "sha256": "4dbd221e2035a7ac27a98b5a831a9e31e2243b96876453c2e8bb57829fbd2dd6"}}, {"archived": {"bytes": 1204, "file": "results/_archive/gpu_pack_training_single_02_mixed_accounting.before_permission_restore_01/gpu_pack_training_single_02_mixed_accounting.meta.json", "sha256": "acfa7592bc9ee5bdcc48d53dbf39e2122543e838a7e05a52ce9a6058ceeb921e"}, "original": {"bytes": 1204, "file": "logs/runs/gpu_pack_training_single_02_mixed_accounting.meta.json", "sha256": "acfa7592bc9ee5bdcc48d53dbf39e2122543e838a7e05a52ce9a6058ceeb921e"}}], "before_mode": "0o644", "claim_references": [{"bytes": 3672, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01/claims/940ccc6e783556a9b6564ea6c52936f6048bfa4232471b0dbf0fdc3b3129d6b8.json", "sha256": "b2d5cc4381e2f9bd47386349a87a71c8806e699b6ce4bbfc7595aae142c3e239"}], "job": "709350.hopper-m-02", "original_failed_result_absent": true, "original_git_commit": "82031465", "original_git_sha256": "e054c0a6242e52a31d01b303bfb98bc6ceb9b9402552cef91bcba5ed356ff3a0", "pack_name": "gpu_pack_training_single_02", "parent_and_claim_sha_verified": true, "payload_bytes_unchanged": true, "payload_reference": {"bytes": 1691, "file": "logs/pbs/gpu_pack_training_single_02-20261109T225606Z-ded8d8d9/payload.json", "sha256": "e054c0a6242e52a31d01b303bfb98bc6ceb9b9402552cef91bcba5ed356ff3a0"}, "submission_reference": {"bytes": 421, "file": "logs/pbs/gpu_pack_training_single_02-20261109T225606Z-ded8d8d9/submission.json", "sha256": "166bff13d8410ae052a4aa394acfbfa7df7f5dd0f070b3d08e77876d34bd597c"}}]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.25869016197975725}
+# exit_code: 0

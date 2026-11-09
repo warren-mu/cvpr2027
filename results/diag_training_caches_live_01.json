@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.04116730799432844
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib\nfor name in ['t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01']:\n for n in [name,name+'_gate']:\n  p=pathlib.Path('results')/(n+'.json');log=pathlib.Path('logs/runs')/(n+'.log')\n  row={'name':n,'has_log':log.exists(),'has_final_result':p.exists()}\n  if p.exists():\n   d=json.loads(p.read_text());m=d['metrics'];row.update(meta={k:d['_meta'].get(k) for k in ['end','exit_code','duration_sec','host']},metrics={k:m.get(k) for k in ['status','passed','cache_matches_live','black_frame_detected','producer_exit_code','errors','cleanup_errors']})\n  print(json.dumps(row,sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_training_caches_live_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_training_caches_live_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib\nfor name in ['t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01']:\n for n in [name,name+'_gate']:\n  p=pathlib.Path('results')/(n+'.json');log=pathlib.Path('logs/runs')/(n+'.log')\n  row={'name':n,'has_log':log.exists(),'has_final_result':p.exists()}\n  if p.exists():\n   d=json.loads(p.read_text());m=d['metrics'];row.update(meta={k:d['_meta'].get(k) for k in ['end','exit_code','duration_sec','host']},metrics={k:m.get(k) for k in ['status','passed','cache_matches_live','black_frame_detected','producer_exit_code','errors','cleanup_errors']})\n  print(json.dumps(row,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T07:29:58",
+    "log_path": "logs/runs/diag_training_caches_live_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "7a39115692b64a01c19e532c48035607bd1a38a2",
+    "git_dirty": false,
+    "end": "2026-11-10T07:30:00",
+    "duration_sec": 0.1,
+    "exit_code": 0,
+    "metrics_sha256": "2da6be41b9e01827d5897aa0dd37effe8a67578a791b86cd2c641e18930d5f07"
+  }
+}
