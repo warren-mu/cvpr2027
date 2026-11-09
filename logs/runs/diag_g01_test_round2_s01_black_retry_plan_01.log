@@ -1,0 +1,251 @@
+# run_logged: python3 -c """One-off read-only guard for two exact native black-gate chains.
+
+Run inline only through run_logged + record_command. No qsub/qdel, result
+mutation, name normalization, live process inference, or synthetic payloads.
+"""
+import io
+import json
+from pathlib import Path
+import shlex
+import subprocess
+from PIL import Image
+from src.tools import phase_watch as watch
+
+ROOT = Path.cwd().resolve()
+auditor = watch.load_module('oneoff_black_auditor', ROOT / 'scripts/audit_provenance.py')
+
+
+def require(value, reason):
+    if not value:
+        raise ValueError(reason)
+
+
+def logged(name):
+    return watch.load_logged(ROOT, ROOT / 'results' / (name + '.json'), auditor)
+
+
+def reference(path):
+    path = Path(path).resolve()
+    return {'file': str(path.relative_to(ROOT)), 'sha256': watch.digest(path), 'bytes': path.stat().st_size}
+
+
+def bind(ref, data, path):
+    require(ref['file'] == str(path.relative_to(ROOT)) and ref['sha256'] == watch.digest(path)
+            and ref['metrics_sha256'] == data['_meta']['metrics_sha256']
+            and ref['exit_code'] == data['_meta']['exit_code'], 'Original nested result reference differs')
+
+
+def validate(job, name, receipt_dir, accounting_name, inner_name=None):
+    directory = (ROOT / 'logs/pbs' / receipt_dir).resolve()
+    pp, sp, rp = directory / 'payload.json', directory / 'job.pbs', directory / 'submission.json'
+    payload, receipt = json.loads(pp.read_text()), json.loads(rp.read_text())
+    outer, outer_ref = logged(name)
+    account, account_ref = logged(accounting_name)
+    require(account['_meta']['exit_code'] == 0 and account['metrics']['complete_allocation_accounting'] is True
+            and account['config']['errors'] == [], 'Accounting not complete')
+    ac = account['_meta']['command']
+    require(ac == ['python3', 'src/tools/pbs_usage.py', '--name', accounting_name, job],
+            'Require the exact canonical logged PBS accounting command')
+    account_log = (ROOT / account['_meta']['log_path']).read_text()
+    require(json.dumps(account['config'], indent=2) in account_log, 'PBS config absent from authenticated original log')
+    entries = [row for row in account['config']['jobs'] if row['job_id'] == job]
+    require(len(entries) == 1 and entries[0]['qstat_exit'] == 0, 'PBS job missing/ambiguous')
+    fields = entries[0]['fields']
+    require(fields['project'] == 'CFP04-SF-125' and fields['job_state'] == 'F'
+            and fields['Exit_status'] == '86' and fields['run_count'] == '1'
+            and fields['Job_Owner'].split('@')[0] == 'e1583364', 'Not this owned terminal black-only job')
+    require(payload['repo'] == str(ROOT) and payload['name'] == name and payload['task_id'] == 'T01'
+            and payload['queue'] == 'autox' and payload['requested_host'] is None
+            and payload['requested_gpu_count'] == 1 and payload['dry_run'] is False,
+            'Original immutable allocation differs')
+    require(pp.stat().st_mode & 0o222 == 0 and sp.stat().st_mode & 0o222 == 0, 'Original payload/script is not immutable')
+    require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],
+            'Receipt does not prove one successful submission of the exact job')
+    wall = fields['Resource_List.walltime']
+    h, m, s = map(int, wall.split(':'))
+    require(h * 3600 + m * 60 + s == payload['requested_wall_seconds']
+            and fields['Resource_List.ngpus'] == '1' and fields['Resource_List.ncpus'] == '12'
+            and fields['queue'] == 'smallx' and 'PBS_O_QUEUE=autox' in fields['Variable_List']
+            and float(fields['Resource_List.queue_charge_rate']) == payload['requested_queue_charge_rate'],
+            'PBS resources/router/charge differ from original payload')
+    expected_qsub = ['qsub', '-N', fields['Job_Name'], '-l', 'walltime=' + wall,
+                     '-o', str(directory / 'pbs.out'), str(sp)]
+    require(receipt['command'] == expected_qsub
+            and shlex.split(fields['Submit_arguments']) == expected_qsub[1:]
+            and fields['Output_Path'].split(':', 1)[1] == str(directory / 'pbs.out'),
+            'Receipt/PBS exact argv or output binding differs')
+    template = subprocess.check_output(['git', 'show', outer['_meta']['git_commit'] + ':scripts/pbs/job_1gpu.pbs'], text=True)
+    require(template.count('@@CVPR_PAYLOAD@@') == 1
+            and '#PBS -P CFP04-SF-125\n' in template and '#PBS -q autox\n' in template
+            and '#PBS -l select=1:ngpus=1\n' in template
+            and sp.read_text() == template.replace('@@CVPR_PAYLOAD@@', shlex.quote(str(pp))),
+            'Job script differs from the committed one-GPU template and exact original payload path')
+    require(outer['_meta']['name'] == name and outer['_meta']['command'] == payload['command']
+            and outer['_meta']['exit_code'] == 86, 'Outer result is not the exact immutable PBS command')
+    for other in (ROOT / 'logs/pbs').glob('*/payload.json'):
+        require(json.loads(other.read_text()).get('retry_of') != job, 'A retry payload already exists; do not duplicate')
+
+    if inner_name is not None:
+        inner, inner_ref = logged(inner_name)
+        nested = outer['config']['command']
+        require(payload['budget_group'] == 'T01v2' and outer['config']['pbs_job_id'] == job
+                and outer['metrics']['command_exit_code'] == 86 and outer.get('error') is None
+                and payload['command'] == ['python3','-u','-m','src.tools.record_command','--name',name,'--',*nested],
+                'T02 outer is not its actual record_command wrapper')
+        require(nested == ['python3','-u','scripts/run_logged.py','--name',inner_name,'--seed','0','--',*inner['_meta']['command']],
+                'Original nested run_logged command does not bind the actual inner result')
+        argv = inner['_meta']['command']
+        require(argv[:6] == ['python3','-u','-m','src.tools.t02_export','--name',inner_name], 'Wrong T02 inner producer')
+        c, m = inner['config'], inner['metrics']
+        expected = ['python3','-u','-m','src.tools.t02_export','--name',inner_name,'--source',c['source']]
+        for pair in c['pair_id']: expected.extend(['--pair-id',pair])
+        expected += ['--timeout-seconds','2280','--pair-timeout-seconds','300','--gate-timeout-seconds','180']
+        require(argv == expected and c['timeout_seconds'] == 2280 and c['pair_timeout_seconds'] == 300
+                and c['version'] == 't02_single_gpu_export_v1' and c['gpus'] == 1 and c['depth'] == 4
+                and c['resolution'] == 255 and c['pbs_jobid'] == job and c['name'] == inner_name,
+                'T02 config/argv/allocation differs')
+        require(inner['_meta']['exit_code'] == 86 and m['producer_exit_code'] == 86
+                and m['kind'] == 't02_table_export' and m['status'] == 'blocked_by_render_gate'
+                and m['black_frame_detected'] is True and m['errors'] == [] and m['cleanup_errors'] == []
+                and m['pairs'] == [] and m['unstarted_pair_ids'] == c['pair_id']
+                and m['export_checks_complete'] is False and m['downstream_allowed'] is False,
+                'T02 is not a clean pre-export black-gate stop')
+        gate_name = inner_name + '_gate'
+        gate_ref = m['gate']
+        gate_timeout = c['gate_timeout_seconds']
+        mask, cpu = c['cuda_visible_devices'], c['cpu_affinity']
+        checked_results = [outer_ref, inner_ref]
+    else:
+        inner, inner_ref = outer, outer_ref
+        c, m = outer['config'], outer['metrics']
+        argv = payload['command']
+        require(payload['budget_group'] == 'G01' and argv[:6] == ['python3','-u','-m','src.tools.g01_collect_parallel','--name',name]
+                and c['collection_version'] == 'g01_single_stage_collection_v1' and c['gpus'] == 1
+                and c['pbs_jobid'] == job and c['name'] == name and c['stage_plans'] == [], 'Not the original G01 native collection entry')
+        expected = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',name,'--scenes',*c['scenes'],
+                    '--concurrency','6','--benchmark-source',c['benchmark_source'],'--timeout-seconds',str(expected_timeout),'--partition','test',
+                    '--quota-plan', old_plan_ref['file'], '--quota-plan-sha256', old_plan_ref['sha256']]
+        require(argv == expected and c['concurrencies'] == [6] and c['timeout_seconds'] == expected_timeout
+                and c.get('g01_partition') == 'test' and c.get('per_scene_class_cap') == 6
+                and c['submission']['file'] == str(pp.relative_to(ROOT)) and c['submission']['sha256'] == watch.digest(pp),
+                'G01 original command/submission identity differs')
+        require(m['kind'] == 'g01_parallel_collection' and m['status'] == 'blocked_by_render_gate'
+                and m['exit_code'] == 86 and m['black_frame_detected'] is True and m['cleanup_errors'] == []
+                and m['scene_runs'] == [] and m['started_shards'] == [] and m['stages'] == []
+                and m['admission_final'] == [] and m['unfinished_run_names'] == [] and m['stop_reasons'] == []
+                and not m.get('error') and not m.get('errors') and m['acceptance_passed'] is False,
+                'G01 has work/non-black errors or uncertain cleanup')
+        gate_name = name + '_j' + job.replace('.', '_').replace('-', '_') + '_gate'
+        require(m['gate']['run_name'] == gate_name and m['gate']['exit_code'] == 86
+                and not m['gate'].get('provenance_error') and m['gate']['result_path'] == 'results/' + gate_name + '.json',
+                'G01 gate wrapper is not the exact failed native gate')
+        gate_ref = m['gate']['source']
+        gate_timeout = c['gate_timeout_seconds']
+        mask, cpu = c['parent_cuda_visible_devices'], c['cpu_affinity']
+        checked_results = [outer_ref]
+
+    gate, audit_ref = logged(gate_name)
+    bind(gate_ref, gate, ROOT / 'results' / (gate_name + '.json'))
+    g, a, gm = gate['config'], gate['config']['allocation'], gate['metrics']
+    nodes = {part.split('/')[0] for part in fields['exec_host'].split('+')}
+    require(nodes == {c['node']} == {g['node']} == {outer['_meta']['host']} == {inner['_meta']['host']} == {gate['_meta']['host']},
+            'Actual PBS node does not match every producer and gate')
+    require(g['name'] == gate_name and g['pbs_jobid'] == job and a['pbs_jobid'] == job
+            and a['name'] == gate_name and a['cuda_visible_devices'] == mask and a['cuda_driver_uuids'] == [mask]
+            and a['cpu_affinity'] == cpu and len(cpu) == len(set(cpu)) == 12
+            and a['scratch'] == payload['environment']['CVPR_SCRATCH']
+            and g['resolution'] == 255 and g['segmentation'] is True
+            and g['timeout_seconds'] == gate_timeout, 'Native gate allocation/mask/CPU/scratch mismatch')
+    command = gate['_meta']['command']
+    gate_arguments = ['-u','-m','src.tools.render_gate','--name',gate_name,'--gpus','1',
+                      '--resolution','255','--segmentation','--timeout-seconds']
+    require(Path(command[0]).name == 'python3' and command[1:-1] == gate_arguments
+            and command[-1] in (str(float(gate_timeout)), str(int(gate_timeout))),
+            'Native gate command differs')
+    require(gate['_meta']['exit_code'] == 86 and gm['exit_code'] == 86 and gm['passed'] is False
+            and gm['black_frame_detected'] is True and gm['errors'] == [] and gm['cleanup_errors'] == []
+            and gm['expected_gpu_count'] == gm['completed_gpu_count'] == 1
+            and len(gm['devices']) == len(a['devices']) == 1, 'Gate is not a complete clean one-GPU black stop')
+    device, row = a['devices'][0], gm['devices'][0]
+    obs = row['observation']
+    require(device['logical_index'] == 0 and device['gpu_uuid'] == mask and row['worker_error'] is None
+            and obs['gpu_identity'] == device and obs['node'] == c['node']
+            and not obs.get('error') and not obs.get('cleanup_error')
+            and [capture['stage'] for capture in obs['captures']] == ['after_constructor','after_Pass']
+            and any(packet['stage'] == 'Pass' and packet['fresh_main_rgb_payloads'] > 0
+                    and packet['cached_metadata'] is False for packet in obs['wire_packets']),
+            'Worker/native identity, actual fresh Pass RGB, or cleanup missing')
+    images = []
+    for capture in obs['captures']:
+        require(capture['valid_shape'] is True and capture['shape'] == [255,255,3] and capture['dtype'] == 'uint8'
+                and capture['action_success'] is True and not capture['error_message']
+                and capture['black'] is True and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0,
+                'Not the complete original successful-action full-zero capture')
+        path = Path(capture['png']['path']).resolve()
+        require(path.parent == ROOT / 'logs/runs' / gate_name / 'render_gate'
+                and watch.digest(path) == capture['png']['sha256'], 'Black PNG missing or SHA/path mismatch')
+        with Image.open(io.BytesIO(path.read_bytes())) as image:
+            require(image.mode == 'RGB' and image.size == (255,255) and image.getextrema() == ((0,0),)*3,
+                    'Decoded native PNG is not a full all-zero RGB image')
+        images.append(reference(path))
+    return {'eligible_proven_black_gate_retry': True, 'job_id': job, 'native_kind': m['kind'],
+        'original_payload': reference(pp), 'original_job_script': reference(sp), 'original_receipt': reference(rp),
+        'original_command_unchanged': payload['command'], 'pbs_accounting': account_ref,
+        'source_results': checked_results + [audit_ref], 'node': c['node'], 'gpu_uuid': mask,
+        'captures': images, 'cleanup': 'all original parent/gate/worker cleanup checks passed',
+        'next_action_scope': 'root may submit fresh names with retry_of this job through unchanged budget guard; no submission done here'}
+
+
+# One exact technical retry: only the immutable plan parent identity changes.
+job = '709207.hopper-m-02'
+parent = 'gen_test_config_round2_40_s01'
+next_parent = parent + '_retry1'
+name = 'diag_g01_test_round2_s01_black_retry_plan_01'
+accounting = 'g01_test_round2_s01_black_accounting_01'
+prep, prep_ref = logged('diag_g01_test_round2_slice01_plan_01')
+require(prep['_meta']['exit_code'] == 0 and prep['metrics']['status'] == 'first_fixed_slice_ready', 'Original fixed slice plan did not succeed')
+old_plan_ref = prep['metrics']['new_plan']
+old_path = (ROOT / old_plan_ref['file']).resolve()
+require(watch.digest(old_path) == old_plan_ref['sha256'] and not old_path.stat().st_mode & 0o222, 'Original immutable plan changed')
+plan = json.loads(old_path.read_text())
+require(plan['parent_run_name'] == parent and plan['partition'] == 'test' and plan['version'] == 'g01_static_configuration_tickets_v2', 'Wrong original plan identity')
+expected_timeout = prep['metrics']['required_parent_timeout_seconds']
+require(expected_timeout == 1600 and prep['metrics']['requested_pbs_wall_seconds'] == 1630, 'Original timing differs')
+directory = ROOT / 'logs/pbs/gen_test_config_round2_40_s01-20261109T201635Z-1b1dba8e'
+payload = json.loads((directory / 'payload.json').read_text())
+require(payload['command'] == prep['metrics']['producer_command'] and payload['requested_wall_seconds'] == 1630, 'Actual job differs from the original immutable inventory plan')
+outer, oref = logged(parent)
+require(outer['config']['quota_plan_reference'] == old_plan_ref and outer['config']['collection_quota_version'] == plan['version'], 'Actual collection does not bind the original plan')
+require(outer['config']['scenes'] == [row['scene'] for row in plan['assignments']] and outer['config']['seed'] == 0 and outer['config']['field_of_view'] == 60, 'Scene sequence, seed or camera differs')
+proof = validate(job,parent,directory.name,accounting)
+new_plan = dict(plan)
+new_plan['parent_run_name'] = next_parent
+require({k:v for k,v in new_plan.items() if k != 'parent_run_name'} == {k:v for k,v in plan.items() if k != 'parent_run_name'}, 'A scientific/quota value changed')
+new_path = ROOT / 'configs/gen_test_config_round2_40_s01_retry1_quota.json'
+with new_path.open('x') as handle:
+    json.dump(new_plan, handle, ensure_ascii=False, indent=2, allow_nan=False); handle.write('\n')
+new_path.chmod(0o444)
+new_ref = reference(new_path)
+new_command = list(payload['command'])
+new_command[new_command.index('--name')+1] = next_parent
+new_command[new_command.index('--quota-plan')+1] = new_ref['file']
+new_command[new_command.index('--quota-plan-sha256')+1] = new_ref['sha256']
+metrics = {'strict_black_gate_proof':proof, 'technical_retry_plan_ready':True,
+           'old_parent_name':parent, 'new_parent_name':next_parent, 'retry_of':job,
+           'original_plan':old_plan_ref, 'new_plan':new_ref,
+           'only_plan_value_changed':'parent_run_name', 'all_other_plan_values_equal':True,
+           'producer_command':new_command, 'requested_wall_seconds':1630,
+           'scope':'Technical identity-only retry plan after authenticated zero-scene black gate; no scientific/quota/scene/seed change and no submission.'}
+account, aref = logged(accounting)
+gate_name = parent+'_j709207_hopper_m_02_gate'
+gate, gref = logged(gate_name)
+result = {'metrics':metrics,'config':{'name':name,'artifacts':[reference(old_path),new_ref]},
+          'sources':[{'file':ref['path'],'sha256':ref['sha256'],'metrics_sha256':data['_meta']['metrics_sha256']}
+                     for ref,data in ((prep_ref,prep),(oref,outer),(aref,account),(gref,gate))]}
+with (ROOT/'results'/(name+'.json')).open('x') as handle:
+    json.dump(result,handle,indent=2,allow_nan=False);handle.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T05:17:45
+FINAL_METRICS_JSON: {"all_other_plan_values_equal": true, "new_parent_name": "gen_test_config_round2_40_s01_retry1", "new_plan": {"bytes": 47073, "file": "configs/gen_test_config_round2_40_s01_retry1_quota.json", "sha256": "f79f07eabe001d3ecef1ce90deccb758673127883dd16ae2bac5a044be4f6a9d"}, "old_parent_name": "gen_test_config_round2_40_s01", "only_plan_value_changed": "parent_run_name", "original_plan": {"file": "configs/gen_test_config_round2_40_s01_quota.json", "sha256": "69df1663873004f24834f86e309bd9a6ea9eaa5064b31968da1dd5fbfc8d94d8"}, "producer_command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_test_config_round2_40_s01_retry1", "--scenes", "FloorPlan21", "FloorPlan221", "FloorPlan321", "FloorPlan421", "FloorPlan22", "FloorPlan222", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "test", "--quota-plan", "configs/gen_test_config_round2_40_s01_retry1_quota.json", "--quota-plan-sha256", "f79f07eabe001d3ecef1ce90deccb758673127883dd16ae2bac5a044be4f6a9d"], "requested_wall_seconds": 1630, "retry_of": "709207.hopper-m-02", "scope": "Technical identity-only retry plan after authenticated zero-scene black gate; no scientific/quota/scene/seed change and no submission.", "strict_black_gate_proof": {"captures": [{"bytes": 269, "file": "logs/runs/gen_test_config_round2_40_s01_j709207_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"bytes": 269, "file": "logs/runs/gen_test_config_round2_40_s01_j709207_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "cleanup": "all original parent/gate/worker cleanup checks passed", "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-0b97c030-7a1b-585d-5e41-28c0e5e3dd70", "job_id": "709207.hopper-m-02", "native_kind": "g01_parallel_collection", "next_action_scope": "root may submit fresh names with retry_of this job through unchanged budget guard; no submission done here", "node": "hopper-24", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_test_config_round2_40_s01", "--scenes", "FloorPlan21", "FloorPlan221", "FloorPlan321", "FloorPlan421", "FloorPlan22", "FloorPlan222", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "test", "--quota-plan", "configs/gen_test_config_round2_40_s01_quota.json", "--quota-plan-sha256", "69df1663873004f24834f86e309bd9a6ea9eaa5064b31968da1dd5fbfc8d94d8"], "original_job_script": {"bytes": 1111, "file": "logs/pbs/gen_test_config_round2_40_s01-20261109T201635Z-1b1dba8e/job.pbs", "sha256": "ef2d66c28ff900af58ad0d04c19336136513356d120f68cdf20d79a2688c8a03"}, "original_payload": {"bytes": 1167, "file": "logs/pbs/gen_test_config_round2_40_s01-20261109T201635Z-1b1dba8e/payload.json", "sha256": "e9a103ea102a566f40a76c472b5ac2795596bcd40b2ccb00b8e8608f814cf362"}, "original_receipt": {"bytes": 425, "file": "logs/pbs/gen_test_config_round2_40_s01-20261109T201635Z-1b1dba8e/submission.json", "sha256": "28fe70a0b9b7237be1dc036486ad1964be1b557cbbbcd70cba8496a01a2c8e16"}, "pbs_accounting": {"log_path": "logs/runs/g01_test_round2_s01_black_accounting_01.log", "log_sha256": "be0631975dc782d0bada10b68ed3186817a0c09cad2f516cc68c03c956ce4b5b", "path": "results/g01_test_round2_s01_black_accounting_01.json", "sha256": "c5b1f394d3c15096b45d0991c0625a4e60f65897ec0cf2b3a752d00cb60ddd55"}, "source_results": [{"log_path": "logs/runs/gen_test_config_round2_40_s01.log", "log_sha256": "f747ad73b46cbeb271d4d57a2b7f345cee70bb06be46d12c87b000d9ce63f49a", "path": "results/gen_test_config_round2_40_s01.json", "sha256": "e71231f52924b5b4a8f936fa7ea7f022dc8f6bed77bfbd39068917f23be81f44"}, {"log_path": "logs/runs/gen_test_config_round2_40_s01_j709207_hopper_m_02_gate.log", "log_sha256": "45f137b4081de8772edc797401b00e7861b2229c4d31214005049967007db045", "path": "results/gen_test_config_round2_40_s01_j709207_hopper_m_02_gate.json", "sha256": "bd81f5461291c5f19c0963859e423b5890ede66d543fe6873a7ea8caf6b28cc1"}]}, "technical_retry_plan_ready": true}
+# exit_code: 0

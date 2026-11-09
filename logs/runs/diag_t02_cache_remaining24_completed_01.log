@@ -1,0 +1,140 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_remaining24_completed_01 -- python3 -c """One-off reading of the completed original certificate; no native re-render or new authorization.
+
+Run through run_logged + record_command, only after the fixed-population cache
+producer ends. Original source/native science is not repeated on the login node.
+"""
+import signal
+
+
+def deadline(signum, frame):
+    raise TimeoutError('Certificate summary exceeded the 12-second metadata limit')
+
+
+signal.signal(signal.SIGALRM, deadline)
+signal.setitimer(signal.ITIMER_REAL, 12)
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+from src.tools.t01_partition import audited_result, canonical_hash
+from src.tools import t02_cache_check as cache
+from src.envs.pair_table_cache import require_cache_validation
+
+ROOT = Path.cwd().resolve()
+PARENTS = ('t02_export_train_six_01_retry3', 't02_export_train_six_02_retry2',
+           't02_export_train_six_03', 't02_export_train_six_04')
+SOURCES = ['results/' + parent + '_u%04d.json' % i for parent in PARENTS for i in range(6)]
+CLASSES = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+
+
+def require(value, reason):
+    if not value:
+        raise ValueError(reason)
+
+
+def source_bytes(reference):
+    path = (ROOT / reference['file']).resolve()
+    path.relative_to(ROOT / 'results')
+    body = path.read_bytes()
+    require(hashlib.sha256(body).hexdigest() == reference['sha256'], 'Original export bytes changed')
+    data = json.loads(body)
+    require(data['_meta']['metrics_sha256'] == reference['metrics_sha256'] == canonical_hash(data['metrics']),
+            'Original export metrics identity changed')
+    return data
+
+
+def main():
+    cache_name, name = sys.argv[1:]
+    require(cache_name == 't02_export_cache_remaining24_01'
+            or cache_name.startswith('t02_export_cache_remaining24_01_retry'), 'Wrong fixed-cutoff cache')
+    require(name == os.environ.get('CVPR_RUN_NAME'), 'Use the explicitly named logged summary')
+    data, reference = audited_result('results/' + cache_name + '.json')
+    cfg, metrics, meta = data['config'], data['metrics'], data['_meta']
+    require(meta.get('end') and meta.get('exit_code') == 0 and cfg['source'] == SOURCES
+            and cfg.get('version') == cache.VERSION and cfg.get('policy') == cache.CACHE_POLICY
+            and cfg.get('sample_size') == 200 and cfg.get('seed') == 0 and cfg.get('gpus') == 1
+            and metrics.get('cache_matches_live') is True and metrics.get('sample_complete') is True
+            and metrics.get('downstream_allowed') is True and metrics.get('stop_downstream') is False
+            and metrics.get('errors') == [] and metrics.get('cleanup_errors') == []
+            and metrics.get('missing_state_keys') == [] and metrics.get('black_frame_detected') is False,
+            'Original entire-population cache did not complete successfully; no passed class counts')
+    directory = Path(cfg['scratch_directory']).resolve()
+    require(directory == Path(cfg['scratch']).resolve() / 't02_cache' / cache_name / cfg['pbs_jobid'],
+            'Wrong original cache scratch namespace')
+    report = cache.read_json_ref(metrics['validation_report'], directory, expected=directory / 'cache_validation.json')
+    plan = cache.read_json_ref(metrics['sampling_plan'], directory, expected=directory / 'sampling_plan.json')
+    certificate = cache.read_json_ref(metrics['authorization_manifest'], directory, expected=directory / 'cache_authorization.json')
+    require_cache_validation(report)
+    require(report.get('table_native_and_pair_checks_authorized') is True
+            and report.get('producer_cleanup_errors') == [] and report.get('producer_errors') == []
+            and report['sampling_plan'] == plan and cfg['population_sha256'] == plan['population_sha256']
+            and plan['seed'] == 0 and plan['sample_size'] == 200
+            and certificate.get('version') == cache.VERSION
+            and certificate.get('cache_validation') == metrics['validation_report']
+            and certificate.get('sampling_plan') == metrics['sampling_plan']
+            and certificate.get('full_T02_acceptance') is None,
+            'Original report and whole-population certificate do not bind the same sample')
+    selected = [tuple(key) for key in plan['selected_keys']]
+    observed = [(row['dataset_key'], row['state_id']) for row in report['states']]
+    require(len(set(selected)) == len(selected) == len(observed) == 200 and set(selected) == set(observed),
+            'Original fixed 200-state sample was incomplete or replaced')
+    fresh = {(row['dataset_key'], row['state_id'], world_name, world['fresh_source']['render_id'])
+             for row in report['states'] for world_name, world in row['worlds'].items()}
+    require(fresh == {tuple(key) for key in report['native_authenticated_render_ids']},
+            'Report native authentication IDs do not cover its exact fresh renders')
+    ledger = metrics['population_ledger']
+    require([row['source']['file'] for row in ledger] == SOURCES
+            and len({row['dataset_key'] for row in ledger}) == len(ledger)
+            and all(row['population_membership'] == 'complete_independently_verified_table' for row in ledger)
+            and certificate['tables'] == {row['dataset_key']: {field: row['table_manifest'][field]
+                for field in ('file', 'sha256', 'bytes')} for row in ledger}
+            and report['table_shadow_metadata'] == certificate['table_shadow_metadata'] == metrics['table_shadow_metadata'],
+            'Certificate population differs from the complete fixed 24-source inventory')
+    rows = []
+    for entry in ledger:
+        original = source_bytes(entry['source'])
+        require(entry['source'] in data['sources'] and original['_meta']['exit_code'] == 0
+                and original['metrics']['export_checks_complete'] is True
+                and original['metrics']['errors'] == original['metrics']['cleanup_errors'] == [],
+                'Population source differs from original authenticated successful export')
+        original_rows = original['metrics']['pairs']
+        require(len(original_rows) == 1, 'Expected one original pair per source')
+        row = original_rows[0]
+        require(row['pair_id'] == entry['original_pair_id'] == entry['pair_id']
+                and row['status'] == 'exported' and row['table_manifest'] == entry['table_manifest']
+                and row['kind'] in CLASSES, 'Original class/pair/table identity does not match certificate population')
+        rows.append({'dataset_key': entry['dataset_key'], 'pair_id': row['pair_id'], 'scene': row['scene'],
+                     'kind': row['kind'], 'source': entry['source'], 'table_manifest': entry['table_manifest'],
+                     'shadow_divergent_states': entry['shadow_divergent_states'], 'in_clean_subset': entry['in_clean_subset']})
+    original_classes = {row['dataset_key']: row['kind'] for row in rows}
+    require(all(row['kind'] == original_classes[row['dataset_key']] for row in report['states']),
+            'Sampled cache class differs from its exact original exported pair class')
+    output = {'cache_result': reference, 'authorization_manifest': metrics['authorization_manifest'],
+        'validation_report': metrics['validation_report'], 'sampling_plan': metrics['sampling_plan'],
+        'pair_count': len(rows), 'by_class': {kind: sum(row['kind'] == kind for row in rows) for kind in CLASSES},
+        'observed_distinct_states': report['observed_distinct_states'], 'population_size': plan['population_size'],
+        'measured_total_duration_seconds': meta['duration_sec'], 'job_id': cfg['pbs_jobid'], 'rows': rows,
+        'scope': 'Reading the original complete export/native/cache certificate; no new scientific acceptance, no repeat native scan, no measured speedup claim.',
+        'full_T02_acceptance': None, 'balance_checked_here': False, 'throughput_checked_here': False,
+        'training_pool_frozen': False}
+    destination = ROOT / 'logs/review' / name
+    destination.mkdir(exist_ok=False)
+    path = destination / 'certificate_summary.json'
+    with path.open('x') as stream:
+        json.dump(output, stream, indent=2, sort_keys=True, allow_nan=False)
+        stream.write('\n')
+    print('T02_REMAINING24_CERTIFICATE_SUMMARY_JSON: ' + json.dumps({
+        'report': {'file': str(path.relative_to(ROOT)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()},
+        **{k: output[k] for k in ('pair_count', 'by_class', 'observed_distinct_states', 'measured_total_duration_seconds', 'job_id')}
+    }, sort_keys=True), flush=True)
+
+
+if __name__ == '__main__':
+    main()
+ t02_export_cache_remaining24_01 diag_t02_cache_remaining24_completed_01
+# start: 2026-11-10T05:16:09
+T02_REMAINING24_CERTIFICATE_SUMMARY_JSON: {"by_class": {"direct_flip": 8, "direct_stay": 12, "look_flip": 1, "look_stay": 3}, "job_id": "709186.hopper-m-02", "measured_total_duration_seconds": 4251.2, "observed_distinct_states": 200, "pair_count": 24, "report": {"file": "logs/review/diag_t02_cache_remaining24_completed_01/certificate_summary.json", "sha256": "01643981761af2a293308acdb662ee0fa6525cf77f2b3abe2e73eabe6520e1af"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.4644131609820761}
+# exit_code: 0
