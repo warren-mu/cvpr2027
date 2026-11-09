@@ -706,3 +706,9 @@ PBS707807.hopper-m-02 is the first G01 concurrency benchmark: oneGPU/12CPU, prem
 Current accounted-or-reserved subbudgets are {"E2E": 1.3611111111111112, "G01": 2.186111111111111, "T01v2": 9.314166666666667}; shared phase 24.54472222222222/60. The earlier S15 accounting measurements remain preserved, but the budget's strict producer check only recognizes its canonical file-path invocation; t01v2_flip_s15_accounting_canonical now supplies that original-entry final record without changing any accounting tool.
 
 Receipt: logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e. Code and CPU evidence were pushed before submission (19d8c4a). Queue wait remains pending until PBS records a start/final history.
+
+### G01 first start failed before render gate; namespace fixed
+
+PBS707807.hopper-m-02 stopped before launching its render gate or any scene. The shared historical child launcher only accepted pilot_pairs_ names, while G01 requires gen_train_. The original orchestration_failed result, stack trace and all unstarted assignments are retained. PBS measured allocation: 0.0008333333333333334GPUh, charge multiplier1.0, charged0.0008333333333333334GPUh; queue wait5.2minutes (source:results/g01_concurrency_failed_start_accounting_01.json).
+
+G01 now has its own non-overwriting gen_train_ launcher with the same run_logged/seed0/environment/private-session/cleanup contract; shared historical tools are unchanged. Regression fixtures exercise the actual gate and scene names and every existing evidence collision path.60 focused G01/resource/source tests passed (g01_launcher_fix_cpu_01). After audit/push, retry the same benchmark with a new name; no active job was canceled.

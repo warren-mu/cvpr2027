@@ -1,0 +1,28 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_start_failure_report_01 -- python3 -c import pathlib,json
+from src.tools.t01_partition import audited_result
+r=pathlib.Path.cwd()
+d,ref=audited_result(r/'results/g01_concurrency_failed_start_accounting_01.json')
+assert d['_meta']['exit_code']==0
+j=d['config']['jobs'][0];h=d['metrics']['allocation_gpu_hours_by_job'][j['job_id']];rate=float(j['fields']['Resource_List.queue_charge_rate'])
+p=r/'STATUS.md'
+note=f'''
+### G01 first start failed before render gate; namespace fixed
+
+PBS707807.hopper-m-02 stopped before launching its render gate or any scene. The shared historical child launcher only accepted pilot_pairs_ names, while G01 requires gen_train_. The original orchestration_failed result, stack trace and all unstarted assignments are retained. PBS measured allocation: {h}GPUh, charge multiplier{rate}, charged{h*rate}GPUh; queue wait{j['queue_wait_seconds']/60}minutes (source:{ref['file']}).
+
+G01 now has its own non-overwriting gen_train_ launcher with the same run_logged/seed0/environment/private-session/cleanup contract; shared historical tools are unchanged. Regression fixtures exercise the actual gate and scene names and every existing evidence collision path.60 focused G01/resource/source tests passed (g01_launcher_fix_cpu_01). After audit/push, retry the same benchmark with a new name; no active job was canceled.
+'''
+assert '### G01 first start failed before render gate; namespace fixed' not in p.read_text()
+p.write_text(p.read_text()+note)
+print(note)
+
+# start: 2026-11-09T14:32:28
+
+### G01 first start failed before render gate; namespace fixed
+
+PBS707807.hopper-m-02 stopped before launching its render gate or any scene. The shared historical child launcher only accepted pilot_pairs_ names, while G01 requires gen_train_. The original orchestration_failed result, stack trace and all unstarted assignments are retained. PBS measured allocation: 0.0008333333333333334GPUh, charge multiplier1.0, charged0.0008333333333333334GPUh; queue wait5.2minutes (source:results/g01_concurrency_failed_start_accounting_01.json).
+
+G01 now has its own non-overwriting gen_train_ launcher with the same run_logged/seed0/environment/private-session/cleanup contract; shared historical tools are unchanged. Regression fixtures exercise the actual gate and scene names and every existing evidence collision path.60 focused G01/resource/source tests passed (g01_launcher_fix_cpu_01). After audit/push, retry the same benchmark with a new name; no active job was canceled.
+
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.07379935297649354}
+# exit_code: 0

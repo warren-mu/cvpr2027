@@ -1,0 +1,28 @@
+{
+  "name": "g01_launcher_fix_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "g01_launcher_fix_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_g01*.py','test_pair_v2_g01.py','test_t01v2_flip_geometry_checkpoint.py','test_t01v2_controller_association.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T14:30:49",
+  "log_path": "logs/runs/g01_launcher_fix_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "e0cd02cc2ed89148a69b7ef3d45dc2f649ae61f2",
+  "git_dirty": false,
+  "end": "2026-11-09T14:31:00",
+  "duration_sec": 10.6,
+  "exit_code": 0,
+  "metrics_sha256": "5d2cab0e9522f234e74eba88e1bc0cd133866129ddd5f6f0186fc7c127feed4b"
+}
