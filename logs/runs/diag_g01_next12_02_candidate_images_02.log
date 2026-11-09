@@ -1,0 +1,133 @@
+# run_logged: python3 -u -m src.tools.record_command --name diag_g01_next12_02_candidate_images_02 -- python3 -c """One-off original-image copy from a completed archived live snapshot only."""
+import datetime
+import json
+import os
+import shlex
+from pathlib import Path
+from src.tools.t01_partition import audited_result, sha_file
+from src.tools import merge_pair_v2 as merge
+from src.tools.t01v2_live_progress import complete_prefix, observed_counts
+
+ROOT = merge.ROOT.resolve()
+NAME = 'diag_g01_next12_02_candidate_images_02'
+PARENT = 'gen_train_next12_60_02'
+JOB = '708343.hopper-m-02'
+SNAPSHOT = 'results/diag_g01_next12_02_live_03.json'
+DIRECTORY = ROOT / 'logs/review/g01_next12_02_candidates_02'
+assert os.environ['CVPR_RUN_NAME'] == NAME
+assert not DIRECTORY.exists(), 'Preserve earlier publication'
+data, reference = audited_result(ROOT / SNAPSHOT)
+assert data['_meta'].get('end') and data['_meta']['exit_code'] == 0
+assert data['metrics']['command_exit_code'] == 0
+arguments = merge.producer_arguments(data['_meta']['command'], 'src.tools.record_command')
+assert arguments[:3] == ['--name', data['_meta']['name'], '--'] and arguments[3:] == data['config']['command']
+log = ROOT / data['_meta']['log_path']
+marker = 'G01_PROGRESS_SNAPSHOT: '
+records = [json.loads(line[len(marker):]) for line in log.read_text().splitlines() if line.startswith(marker)]
+assert len(records) == 1
+snapshot = records[0]
+assert snapshot['collection'] == PARENT and snapshot['pbs_jobid'] == JOB
+archive_root = ROOT / 'logs/runs/diag_g01_next12_02_live_03'
+
+def archived(ref):
+    return merge.reference_path(ref, root=ROOT, within=archive_root)
+
+candidates, source_proofs = [], []
+for source in snapshot['sources']:
+    if source['scene'] != 'FloorPlan306':
+        continue
+    if source.get('journal_prefix') is None:
+        continue
+    journal_path = archived(source['journal_prefix'])
+    body = journal_path.read_bytes()
+    assert complete_prefix(body) == body
+    assert len(body) == source['journal_extent']['snapshot_bytes']
+    assert source['journal_extent']['read_cap_reached'] is False
+    assert observed_counts(body, source['scene']) == source['counts']
+    rows = [json.loads(line) for line in body.decode().splitlines() if line.strip()]
+    chosen = [(index, row) for index, row in enumerate(rows)
+              if row['status'] == 'passed' and row['kind'] in ('look_flip', 'look_stay')]
+    if not chosen:
+        continue
+    name, scene = source['name'], source['scene']
+    assert name == f'{PARENT}_c6_{scene.lower()}'
+    shard = json.loads(archived(source['shard']).read_bytes())
+    archived(source['plan'])
+    assert shard['name'] == name and shard['scene'] == scene and shard['pbs_jobid'] == JOB
+    assert shard['field_of_view'] == 60
+    header = archived(source['log_prefix']).read_text().splitlines()[0]
+    assert header.startswith('# run_logged: ')
+    argv = merge.producer_arguments(shlex.split(header[len('# run_logged: '):]), 'src.envs.pair_v2_g01_shard')
+    assert merge.option(argv, '--name') == name and merge.option(argv, '--scene') == scene
+    assert float(merge.option(argv, '--timeout-seconds')) == 1200
+    assert Path(merge.option(argv, '--shard-config')).parent.resolve() == Path(shard['raw_evidence_dir']).resolve()
+    gate, gate_ref = audited_result(ROOT / source['gate']['file'])
+    assert gate['metrics']['passed'] is True
+    for key in ('file', 'sha256', 'metrics_sha256', 'git_commit', 'exit_code'):
+        assert gate_ref[key] == source['gate'][key] == shard['gate_source'][key]
+    source_proofs.append({k: source[k] for k in ('name', 'scene', 'state', 'log_prefix', 'shard', 'plan', 'gate', 'journal_prefix', 'journal_extent')})
+    for journal_index, row in chosen:
+        pair_ref = {'file': row['pair_file'], 'sha256': row['pair_sha256']}
+        pair_path = merge.reference_path(pair_ref, root=ROOT, within=ROOT / 'data/world_pairs/v2' / name)
+        pair = json.loads(pair_path.read_bytes())
+        raw_path = merge.reference_path(row['raw_attempt'], root=ROOT, within=shard['raw_evidence_dir'])
+        raw = json.loads(raw_path.read_bytes())
+        for key in ('pair_id', 'scene', 'kind', 'status', 'discard_reasons'):
+            assert pair[key] == row[key] == raw[key], 'Original pair/raw/archived journal identity differs'
+        assert row['scene'] == scene and row['discard_reasons'] == []
+        image_ref = pair['review_image']
+        assert image_ref in pair['portable_files']
+        image_path = merge.reference_path(image_ref, root=ROOT, within=pair_path.parent)
+        image = image_path.read_bytes()
+        assert image.startswith(b'\x89PNG\r\n\x1a\n')
+        candidates.append({'entry': {'pair_id': pair['pair_id'], 'scene': scene, 'kind': pair['kind'],
+            'source_file': f'results/{name}.json', 'source_ended_at_snapshot': source['state'] == 'ended_source_reported',
+            'source_state_at_snapshot': source['state'], 'source_snapshot': source,
+            'journal': source['journal_prefix'], 'journal_index': journal_index,
+            'raw_attempt': row['raw_attempt'], 'pair_reference': pair_ref, 'original_review_image': image_ref,
+            'status': 'running_source_candidate_not_independently_verified',
+            'review_label': '运行中候选图，尚未独立验收', 'independent_acceptance': None, 'T02_acceptance': None}, 'bytes': image})
+assert candidates, 'No Look image exists in this archived snapshot'
+# Review coverage only; not an outcome filter or a scientific random sample.
+candidates.sort(key=lambda item: ({'FloorPlan306': 0}.get(item['entry']['scene'], 2),
+                                  merge.scene_number(item['entry']['scene']), item['entry']['journal_index']))
+selected, remainder, seen = [], [], set()
+for image in candidates:
+    key = image['entry']['scene'], image['entry']['kind']
+    if key not in seen:
+        selected.append(image)
+        seen.add(key)
+    else:
+        remainder.append(image)
+selected = (selected + remainder)[:2]
+manifest = {'created_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'scope': 'Original source-reported Look PNG copies from authenticated archived complete journal rows; no live result read or independent checkpoint.',
+    'review_label': '运行中候选图，尚未独立验收', 'parent_run_name': PARENT, 'pbs_jobid': JOB,
+    'snapshot_result': reference, 'snapshot_log': {'file': str(log.relative_to(ROOT)), 'sha256': sha_file(log)},
+    'snapshot_observed_at_utc': snapshot['observed_at_utc'], 'parent_reported_at_snapshot': snapshot['parent_reported'],
+    'scheduler_query_performed': False, 'parent_terminal_asserted': False,
+    'source_proofs': source_proofs, 'images': [],
+    'selection': 'Only FloorPlan306, at most2: earliest archived row per class, then remaining archived rows. Review coverage only; earlier publication remains separate.',
+    'independent_acceptance': None, 'full_T02_acceptance': None, 'human_review_approved': None, 'is_checkpoint': False,
+    'outside_frozen_morning36': True, 'source_files_modified': False, 'new_GPU_rendering': False}
+DIRECTORY.mkdir(parents=True, exist_ok=False)
+for index, image in enumerate(selected):
+    entry = image['entry']
+    destination = DIRECTORY / f"{index:05d}_{entry['pair_id']}_{entry['kind']}.png"
+    with destination.open('xb') as stream:
+        stream.write(image['bytes'])
+    assert sha_file(destination) == entry['original_review_image']['sha256']
+    manifest['images'].append({**entry, 'copied_review_image': {'file': str(destination.relative_to(ROOT)), 'sha256': sha_file(destination)}})
+path = DIRECTORY / 'manifest.json'
+with path.open('x') as stream:
+    json.dump(manifest, stream, indent=2, sort_keys=True, allow_nan=False)
+    stream.write('\n')
+print('G01_NEXT12_CANDIDATE_IMAGES_JSON: ' + json.dumps({'manifest': {'file': str(path.relative_to(ROOT)), 'sha256': sha_file(path)},
+    'image_count': len(manifest['images']), 'images': [{k: row[k] for k in ('pair_id', 'scene', 'kind', 'copied_review_image')} for row in manifest['images']],
+    'snapshot_result': reference, 'snapshot_observed_at_utc': snapshot['observed_at_utc'], 'review_label': manifest['review_label'],
+    'independent_acceptance': None, 'is_checkpoint': False, 'outside_frozen_morning36': True}, sort_keys=True, allow_nan=False), flush=True)
+
+# start: 2026-11-09T20:26:11
+G01_NEXT12_CANDIDATE_IMAGES_JSON: {"image_count": 2, "images": [{"copied_review_image": {"file": "logs/review/g01_next12_02_candidates_02/00000_floorplan306_00050_look_stay.png", "sha256": "61e4f03ae16a98dbc278b2cb7e30330e9a06066db6111231edba5e10b6959d50"}, "kind": "look_stay", "pair_id": "floorplan306_00050", "scene": "FloorPlan306"}, {"copied_review_image": {"file": "logs/review/g01_next12_02_candidates_02/00001_floorplan306_00090_look_stay.png", "sha256": "69ea59bdf50495ae74694932be8f4dc4a94c3da8a9c334dd5a12c4ee7ab5a087"}, "kind": "look_stay", "pair_id": "floorplan306_00090", "scene": "FloorPlan306"}], "independent_acceptance": null, "is_checkpoint": false, "manifest": {"file": "logs/review/g01_next12_02_candidates_02/manifest.json", "sha256": "dea848764410bd8f4993a6b0e703a9c15e6499789f3147fb1c9241513eef5c3c"}, "outside_frozen_morning36": true, "review_label": "\u8fd0\u884c\u4e2d\u5019\u9009\u56fe\uff0c\u5c1a\u672a\u72ec\u7acb\u9a8c\u6536", "snapshot_observed_at_utc": "2026-11-09T12:23:02.209680+00:00", "snapshot_result": {"audit": {"fail": [], "file": "results/diag_g01_next12_02_live_03.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_g01_next12_02_live_03.diff"]}, "exit_code": 0, "file": "results/diag_g01_next12_02_live_03.json", "git_commit": "4390ee1660af0e742967cf346d7f68b25f049602", "metrics_sha256": "c8be2029693c441fbbcd1ef42eb3d91475c19b8e58e558f8eb788d019712307a", "sha256": "f827bac64994db786d9d1e5c9b978c5cef94e80070a2b9088a36945b6ac9120e"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.45172309095505625}
+# exit_code: 0
