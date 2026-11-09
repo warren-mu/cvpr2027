@@ -16,6 +16,7 @@ from omegaconf import OmegaConf
 from PIL import Image
 from verl import DataProto
 from verl.utils.dataset.rl_dataset import collate_fn
+from verl.single_controller.base import Worker
 from verl.single_controller.base.decorator import register, Dispatch
 from verl.workers.fsdp_workers import ActorRolloutRefWorker, CriticWorker
 from verl.utils.seed import seed_everything
@@ -41,7 +42,13 @@ def json_value(value):
     return value
 
 
-class ObservedActorWorker(ActorRolloutRefWorker):
+class ObservedWorkerHooks(Worker):
+    """Common direct base required by pinned verl's colocated WorkerDict.
+
+    The upstream actor/critic remain next in each concrete worker's MRO, so
+    their constructors and model/update implementations are unchanged.
+    """
+
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def init_model(self):
         seed_everything(0)
@@ -60,11 +67,12 @@ class ObservedActorWorker(ActorRolloutRefWorker):
         return result
 
 
-class ObservedCriticWorker(CriticWorker):
-    @register(dispatch_mode=Dispatch.ONE_TO_ALL)
-    def init_model(self):
-        seed_everything(0)
-        return super().init_model()
+class ObservedActorWorker(ObservedWorkerHooks, ActorRolloutRefWorker):
+    pass
+
+
+class ObservedCriticWorker(ObservedWorkerHooks, CriticWorker):
+    pass
 
 
 class EnvConfig:

@@ -1,6 +1,8 @@
-"""Synthetic CPU contracts only; actual PPO integration runs under PBS."""
+"""CPU contracts and pinned worker wiring; actual PPO runs under PBS."""
+import os
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from src.tools.smoke_e2e_training_contract import (episode_plan, generation_groups,
     prompt_identity, decision_token_spans, task_reward, require_direct, available_actions)
@@ -69,6 +71,88 @@ class TrainingContracts(unittest.TestCase):
         for kind, shared in [('look_flip', True), ('direct_flip', True), ('look_flip', False)]:
             with self.assertRaises(ValueError):
                 require_direct({'a': SimpleNamespace(kind=kind, initial_state='v0', states={'v0': SimpleNamespace(shared=shared)})})
+
+
+class PinnedWorkerWiring(unittest.TestCase):
+    """Exercise real pinned Ray/verl wiring without creating a Ray cluster/GPU.
+
+    Only model constructors/initializers are patched below. Class construction,
+    remote-class wrapping, colocation and registered dispatch use the installed
+    pinned implementation that rejected the first actual T0 attempt.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        scratch = os.environ.get('CVPR_SCRATCH')
+        if not scratch:
+            raise unittest.SkipTest('Source scratch_env.sh to check the actual pinned Hopper workers')
+        from src.tools.smoke_e2e_train import upstream_roots
+        upstream_roots(scratch)  # Checks the exact VAGEN and verl commits.
+        import ray
+        from src.tools import smoke_e2e_training_runtime as runtime
+        from verl.single_controller.ray.base import RayClassWithInitArgs, create_colocated_worker_cls
+        cls.ray, cls.runtime = ray, runtime
+        cls.ray_args = RayClassWithInitArgs
+        cls.colocate = staticmethod(create_colocated_worker_cls)
+
+    def test_actual_workers_share_base_and_preserve_upstream_constructors(self):
+        r = self.runtime
+        self.assertIs(r.ObservedActorWorker.__base__, r.ObservedWorkerHooks)
+        self.assertIs(r.ObservedCriticWorker.__base__, r.ObservedWorkerHooks)
+        self.assertIs(r.ObservedWorkerHooks.__init__, r.Worker.__init__)
+        self.assertIs(r.ObservedActorWorker.__init__, r.ActorRolloutRefWorker.__init__)
+        self.assertIs(r.ObservedCriticWorker.__init__, r.CriticWorker.__init__)
+        self.assertIs(r.ObservedActorWorker.update_actor, r.ActorRolloutRefWorker.update_actor)
+        self.assertIs(r.ObservedCriticWorker.update_critic, r.CriticWorker.update_critic)
+
+    def test_actual_registered_model_init_seeds_then_dispatches_upstream(self):
+        r, calls = self.runtime, []
+        for concrete, upstream, label in (
+                (r.ObservedActorWorker, r.ActorRolloutRefWorker, 'actor'),
+                (r.ObservedCriticWorker, r.CriticWorker, 'critic')):
+            with self.subTest(worker=label), \
+                    patch.object(r, 'seed_everything', side_effect=lambda seed: calls.append(('seed', seed))), \
+                    patch.object(upstream, 'init_model', lambda self: calls.append(('model', label))):
+                calls.clear()
+                concrete.init_model(object.__new__(concrete))
+                self.assertEqual(calls, [('seed', 0), ('model', label)])
+
+    def test_actual_colocated_factory_builds_and_dispatches_all_three_roles(self):
+        r, calls = self.runtime, []
+
+        def actor_init(worker, config, role):
+            worker.test_role, worker.test_config = role, config
+            calls.append(('construct', role, config))
+
+        def critic_init(worker, config):
+            worker.test_role, worker.test_config = 'critic', config
+            calls.append(('construct', 'critic', config))
+
+        with patch.object(r.Worker, '__init__', return_value=None), \
+                patch.object(r.ActorRolloutRefWorker, '__init__', actor_init), \
+                patch.object(r.CriticWorker, '__init__', critic_init), \
+                patch.object(r, 'seed_everything', side_effect=lambda seed: calls.append(('seed', seed))), \
+                patch.object(r.ActorRolloutRefWorker, 'init_model', lambda self: self.test_role), \
+                patch.object(r.CriticWorker, 'init_model', lambda self: self.test_role):
+            roles = {
+                'actor_rollout': self.ray_args(self.ray.remote(r.ObservedActorWorker), config='actor_cfg', role='actor_rollout'),
+                'critic': self.ray_args(self.ray.remote(r.ObservedCriticWorker), config='critic_cfg'),
+                'ref': self.ray_args(self.ray.remote(r.ObservedActorWorker), config='ref_cfg', role='ref')}
+            wrapped = self.colocate(roles)
+            worker_dict_cls = wrapped.cls.__ray_actor_class__
+            self.assertIs(worker_dict_cls.__base__, r.ObservedWorkerHooks)
+            workers = object.__new__(worker_dict_cls)
+            worker_dict_cls.__init__(workers)
+            self.assertEqual(calls, [('construct', 'actor_rollout', 'actor_cfg'),
+                                     ('construct', 'critic', 'critic_cfg'),
+                                     ('construct', 'ref', 'ref_cfg')])
+            calls.clear()
+            self.assertEqual(workers.actor_rollout_init_model(), 'actor_rollout')
+            self.assertEqual(workers.critic_init_model(), 'critic')
+            self.assertEqual(workers.ref_init_model(), 'ref')
+            self.assertEqual(calls, [('seed', 0), ('seed', 0), ('seed', 0)])
+            self.assertTrue(callable(workers.actor_rollout_smoke_memory))
+            self.assertFalse(self.ray.is_initialized())
 
 
 if __name__ == '__main__':
