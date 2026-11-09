@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 1.1504309800220653
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01v2_look_unit_review_checkpoint import source_support\nfrom src.tools.t01v2_posthoc_solvability import verified_passed_rows\nname = \"pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203\"\nwith source_support():\n data, source = merge.load_source(merge.ROOT / \"results\" / (name + \".json\"))\ncfg, metrics = data[\"config\"], data[\"metrics\"]\neligibility, journal_ref, _ = verified_passed_rows(data)\nrows = [json.loads(line) for line in merge.reference_path(journal_ref, within=merge.ROOT / \"data/world_pairs/v2\").read_text().splitlines() if line.strip()]\nlast = rows[-1]\nif last[\"pair_id\"] != \"floorplan203_00027\":\n raise ValueError(\"Unexpected terminal journal row\")\nattempt = merge.read_reference(last[\"raw_attempt\"], within=cfg[\"raw_evidence_dir\"])\nif last[\"raw_attempt\"][\"sha256\"] != \"5a3def82f6460f9de080b092276239d01fef5680876a94026bccb1ae319dcedf\" or any(attempt.get(key) != last.get(key) for key in (\"pair_id\",\"scene\",\"status\",\"discard_reasons\")):\n raise ValueError(\"Terminal raw/journal reference differs\")\npool_path = str(Path(cfg[\"raw_evidence_dir\"]) / \"marked_controller_001/construction/projection_pools_000990.json\")\nmatches = [item for item in metrics[\"pool_catalogs\"] if item[\"reference\"][\"file\"] == pool_path]\nif len(matches) != 1 or matches[0][\"reference\"][\"sha256\"] != \"aa3d4cf76c35196c6969e28b3187bc5fd9715fd91fe1d05efdcadd622d62b4fb\":\n raise ValueError(\"Missing or changed audited bilateral catalog\")\ncatalog = matches[0]\npool = merge.read_reference(catalog[\"reference\"], within=cfg[\"raw_evidence_dir\"])\nif pool[\"identity\"] != catalog[\"identity\"] or pool[\"view\"] != catalog[\"view\"] or pool[\"counts\"] != catalog[\"counts\"]:\n raise ValueError(\"Catalog summary differs from authenticated raw pool\")\nprint(\"FLIP_EXISTING_FOLLOWUP_JSON: \" + json.dumps({\n \"bilateral_catalog\": {\"reference\": catalog[\"reference\"], \"identity\": pool[\"identity\"], \"view\": pool[\"view\"], \"counts\": pool[\"counts\"]},\n \"terminal_attempt\": {\"reference\": last[\"raw_attempt\"], **{key:attempt.get(key) for key in (\"pair_id\",\"mode\",\"search_controller_id\",\"projection_pool_reference\",\"discard_reasons\",\"generation_seconds\",\"counts_as_pair_attempt\")}, \"role_domain\": attempt[\"proposal\"][\"role_domain\"]},\n \"deadline_source\": {\"result_reference\": {key:source[key] for key in (\"file\",\"sha256\",\"metrics_sha256\")}, \"meta_reference\":{\"file\":source[\"meta_file\"],\"sha256\":source[\"meta_sha256\"]}, \"meta\":{key:data[\"_meta\"].get(key) for key in (\"start\",\"end\",\"exit_code\")}, \"status\":metrics.get(\"status\"),\"error\":metrics.get(\"error\"),\"terminal_generator_status\":metrics.get(\"terminal_generator_status\"),\"eligibility\":eligibility},\n \"scope\":\"Only authenticated existing fields; scheduler explanation is an inference, not a new measured count.\"\n}, sort_keys=True, allow_nan=False))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_look_flip_followup_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_look_flip_followup_01",
+      "--",
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01v2_look_unit_review_checkpoint import source_support\nfrom src.tools.t01v2_posthoc_solvability import verified_passed_rows\nname = \"pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203\"\nwith source_support():\n data, source = merge.load_source(merge.ROOT / \"results\" / (name + \".json\"))\ncfg, metrics = data[\"config\"], data[\"metrics\"]\neligibility, journal_ref, _ = verified_passed_rows(data)\nrows = [json.loads(line) for line in merge.reference_path(journal_ref, within=merge.ROOT / \"data/world_pairs/v2\").read_text().splitlines() if line.strip()]\nlast = rows[-1]\nif last[\"pair_id\"] != \"floorplan203_00027\":\n raise ValueError(\"Unexpected terminal journal row\")\nattempt = merge.read_reference(last[\"raw_attempt\"], within=cfg[\"raw_evidence_dir\"])\nif last[\"raw_attempt\"][\"sha256\"] != \"5a3def82f6460f9de080b092276239d01fef5680876a94026bccb1ae319dcedf\" or any(attempt.get(key) != last.get(key) for key in (\"pair_id\",\"scene\",\"status\",\"discard_reasons\")):\n raise ValueError(\"Terminal raw/journal reference differs\")\npool_path = str(Path(cfg[\"raw_evidence_dir\"]) / \"marked_controller_001/construction/projection_pools_000990.json\")\nmatches = [item for item in metrics[\"pool_catalogs\"] if item[\"reference\"][\"file\"] == pool_path]\nif len(matches) != 1 or matches[0][\"reference\"][\"sha256\"] != \"aa3d4cf76c35196c6969e28b3187bc5fd9715fd91fe1d05efdcadd622d62b4fb\":\n raise ValueError(\"Missing or changed audited bilateral catalog\")\ncatalog = matches[0]\npool = merge.read_reference(catalog[\"reference\"], within=cfg[\"raw_evidence_dir\"])\nif pool[\"identity\"] != catalog[\"identity\"] or pool[\"view\"] != catalog[\"view\"] or pool[\"counts\"] != catalog[\"counts\"]:\n raise ValueError(\"Catalog summary differs from authenticated raw pool\")\nprint(\"FLIP_EXISTING_FOLLOWUP_JSON: \" + json.dumps({\n \"bilateral_catalog\": {\"reference\": catalog[\"reference\"], \"identity\": pool[\"identity\"], \"view\": pool[\"view\"], \"counts\": pool[\"counts\"]},\n \"terminal_attempt\": {\"reference\": last[\"raw_attempt\"], **{key:attempt.get(key) for key in (\"pair_id\",\"mode\",\"search_controller_id\",\"projection_pool_reference\",\"discard_reasons\",\"generation_seconds\",\"counts_as_pair_attempt\")}, \"role_domain\": attempt[\"proposal\"][\"role_domain\"]},\n \"deadline_source\": {\"result_reference\": {key:source[key] for key in (\"file\",\"sha256\",\"metrics_sha256\")}, \"meta_reference\":{\"file\":source[\"meta_file\"],\"sha256\":source[\"meta_sha256\"]}, \"meta\":{key:data[\"_meta\"].get(key) for key in (\"start\",\"end\",\"exit_code\")}, \"status\":metrics.get(\"status\"),\"error\":metrics.get(\"error\"),\"terminal_generator_status\":metrics.get(\"terminal_generator_status\"),\"eligibility\":eligibility},\n \"scope\":\"Only authenticated existing fields; scheduler explanation is an inference, not a new measured count.\"\n}, sort_keys=True, allow_nan=False))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T12:04:43",
+    "log_path": "logs/runs/diag_look_flip_followup_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "dafc07f031ef1ac34d971eafcdb666d88b1972b3",
+    "git_dirty": false,
+    "end": "2026-11-09T12:04:44",
+    "duration_sec": 1.3,
+    "exit_code": 0,
+    "metrics_sha256": "cd8608eac32b70d4161ce01a43ab6b09da21d2a14d5a8490774d22f3356464e1"
+  }
+}

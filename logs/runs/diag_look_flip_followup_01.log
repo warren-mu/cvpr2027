@@ -1,0 +1,36 @@
+# run_logged: python3 -m src.tools.record_command --name diag_look_flip_followup_01 -- python3 -c import json
+from pathlib import Path
+from src.tools import merge_pair_v2 as merge
+from src.tools.t01v2_look_unit_review_checkpoint import source_support
+from src.tools.t01v2_posthoc_solvability import verified_passed_rows
+name = "pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203"
+with source_support():
+ data, source = merge.load_source(merge.ROOT / "results" / (name + ".json"))
+cfg, metrics = data["config"], data["metrics"]
+eligibility, journal_ref, _ = verified_passed_rows(data)
+rows = [json.loads(line) for line in merge.reference_path(journal_ref, within=merge.ROOT / "data/world_pairs/v2").read_text().splitlines() if line.strip()]
+last = rows[-1]
+if last["pair_id"] != "floorplan203_00027":
+ raise ValueError("Unexpected terminal journal row")
+attempt = merge.read_reference(last["raw_attempt"], within=cfg["raw_evidence_dir"])
+if last["raw_attempt"]["sha256"] != "5a3def82f6460f9de080b092276239d01fef5680876a94026bccb1ae319dcedf" or any(attempt.get(key) != last.get(key) for key in ("pair_id","scene","status","discard_reasons")):
+ raise ValueError("Terminal raw/journal reference differs")
+pool_path = str(Path(cfg["raw_evidence_dir"]) / "marked_controller_001/construction/projection_pools_000990.json")
+matches = [item for item in metrics["pool_catalogs"] if item["reference"]["file"] == pool_path]
+if len(matches) != 1 or matches[0]["reference"]["sha256"] != "aa3d4cf76c35196c6969e28b3187bc5fd9715fd91fe1d05efdcadd622d62b4fb":
+ raise ValueError("Missing or changed audited bilateral catalog")
+catalog = matches[0]
+pool = merge.read_reference(catalog["reference"], within=cfg["raw_evidence_dir"])
+if pool["identity"] != catalog["identity"] or pool["view"] != catalog["view"] or pool["counts"] != catalog["counts"]:
+ raise ValueError("Catalog summary differs from authenticated raw pool")
+print("FLIP_EXISTING_FOLLOWUP_JSON: " + json.dumps({
+ "bilateral_catalog": {"reference": catalog["reference"], "identity": pool["identity"], "view": pool["view"], "counts": pool["counts"]},
+ "terminal_attempt": {"reference": last["raw_attempt"], **{key:attempt.get(key) for key in ("pair_id","mode","search_controller_id","projection_pool_reference","discard_reasons","generation_seconds","counts_as_pair_attempt")}, "role_domain": attempt["proposal"]["role_domain"]},
+ "deadline_source": {"result_reference": {key:source[key] for key in ("file","sha256","metrics_sha256")}, "meta_reference":{"file":source["meta_file"],"sha256":source["meta_sha256"]}, "meta":{key:data["_meta"].get(key) for key in ("start","end","exit_code")}, "status":metrics.get("status"),"error":metrics.get("error"),"terminal_generator_status":metrics.get("terminal_generator_status"),"eligibility":eligibility},
+ "scope":"Only authenticated existing fields; scheduler explanation is an inference, not a new measured count."
+}, sort_keys=True, allow_nan=False))
+
+# start: 2026-11-09T12:04:43
+FLIP_EXISTING_FOLLOWUP_JSON: {"bilateral_catalog": {"counts": {"A": {"direct": {"before_cap": 207, "cap": 40, "retained": 40}, "input_native_eligible": 244, "look": {"before_cap": 20, "cap": 12, "retained": 12}, "unique_native_points": 244}, "B": {"direct": {"before_cap": 171, "cap": 40, "retained": 40}, "input_native_eligible": 1135, "look": {"before_cap": 952, "cap": 12, "retained": 12}, "unique_native_points": 1135}}, "identity": {"anchor_name": "Book_e173324d", "anchor_type": "Book", "candidate_names": ["Bowl_cd243bbd", "Vase_3e4d327d"], "candidate_policy": "two_marked_pickupables_v1", "candidate_types": ["Bowl", "Vase"], "same_class": false, "search_candidate_origin": "natural", "target_type": "marked object"}, "reference": {"availability": "retained_raw_file", "bytes": 10331611, "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_look60_seq_01/707558_hopper_m_02/FloorPlan203/marked_controller_001/construction/projection_pools_000990.json", "materialized": true, "sha256": "aa3d4cf76c35196c6969e28b3187bc5fd9715fd91fe1d05efdcadd622d62b4fb"}, "view": {"horizon": 30, "position": {"x": -5.5, "y": 0.9070531129837036, "z": 0.0}, "yaw": 135}}, "deadline_source": {"eligibility": {"cleanup_errors": [], "eligible": true, "error": "TimeoutError: T01v2 simulator deadline reached", "exit_code": 1, "partial_source": true, "reasons": [], "status": "incomplete"}, "error": "TimeoutError: T01v2 simulator deadline reached", "meta": {"end": "2026-11-09T11:07:03", "exit_code": 1, "start": "2026-11-09T10:47:37"}, "meta_reference": {"file": "logs/runs/pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203.meta.json", "sha256": "dba52e4bf5e148138a3e62779da486b28e19e0781dadfb571e2aaccfe988284f"}, "result_reference": {"file": "results/pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203.json", "metrics_sha256": "20f5cbacf30137c807224a9fbef45a22e42e55a9192f6daf941a1175121a4fc7", "sha256": "21834ccc36b65134050f72b097cb01e452e71403c9111106a182f9ccbe70f17e"}, "status": "incomplete", "terminal_generator_status": "incomplete"}, "scope": "Only authenticated existing fields; scheduler explanation is an inference, not a new measured count.", "terminal_attempt": {"counts_as_pair_attempt": true, "discard_reasons": ["terminal_interruption"], "generation_seconds": 2.596376284956932, "mode": "stay", "pair_id": "floorplan203_00027", "projection_pool_reference": {"bytes": 8610589, "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_look60_seq_01/707558_hopper_m_02/FloorPlan203/marked_controller_001/construction/projection_pools_000324.json", "sha256": "0217f0b11d03686b4d35f7f3eca1d9b24d5acbf96cd6a3607d0c6b4af979fb61"}, "reference": {"file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_look60_seq_01/707558_hopper_m_02/FloorPlan203/floorplan203_00027_trial000042/attempt.json", "sha256": "5a3def82f6460f9de080b092276239d01fef5680876a94026bccb1ae319dcedf"}, "role_domain": {"domain_totals": {"flip": 0, "stay_a": 66, "stay_b": 0}, "exhausted_after_yield": [], "fallback_due_to_exhaustion": false, "generation_version": "candidate_roles_sha256_view_round_robin_v1", "mode": "stay", "mode_fallback": true, "pair_index": 0, "projection_pool": {"fallback_due_to_exhaustion": false, "ordinal": 0, "pool": "look", "requested_pool": "look", "role_schedule_scope": "within this projection pool", "version": "native_projection_look_direct_pools_v1", "view_index": 0}, "remaining_after_yield": {"flip": 0, "stay_a": 65, "stay_b": 0}, "requested_mode": "flip", "requested_stay_side": "A", "source_sides": ["A", "A"], "stay_side": "A", "stay_yield_index": 0, "unavailable_at_start": ["flip", "stay_b"], "view_count": 1, "view_index": 0}, "search_controller_id": "marked_controller_001"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.1504309800220653}
+# exit_code: 0
