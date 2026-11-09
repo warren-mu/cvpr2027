@@ -1,0 +1,56 @@
+{
+  "config": {
+    "scope": "precise predeclared rule description; no source values or thresholds changed"
+  },
+  "metrics": {
+    "Direct_totals": {
+      "100": 0,
+      "60": 0
+    },
+    "Look_totals": {
+      "100": 1,
+      "60": 11
+    },
+    "applied_branch": "strictly_larger_Look_total",
+    "correction": "Initial diagnostic described a Direct tiebreak too broadly; that branch was not reached. Actual11versus1 Look comparison and60degree selection are unchanged. Original diagnostic/config preserved.",
+    "selected_field_of_view": 60,
+    "selection_changed": false,
+    "selection_rule": "higher Look total wins; only when both Look totals are zero compare Direct; remaining ties retain100"
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_look_fov_selection_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_look_fov_selection_01.json",
+      "git_commit": "3e626e270a98151726be75e2cf8a865de1500477",
+      "metrics_sha256": "240bbe91ccd9dfd20fc13120508b219f746591545c8294b9c11d4b91ebbfb748",
+      "sha256": "db3ef6b002bff5904144ef63ad65c020a0b687b823a05b7142d0aea7c1a85d0c"
+    }
+  ],
+  "_meta": {
+    "name": "t01v2_look_fov_selection_rule_02",
+    "command": [
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nname='t01v2_look_fov_selection_rule_02'\nd,ref=audited_result(Path('results/t01v2_look_fov_selection_01.json'))\ntotals=d['metrics']['totals_by_field_of_view']\nlook={v:totals[v]['look_flip']+totals[v]['look_stay'] for v in ('100','60')}\ndirect={v:totals[v]['direct_flip']+totals[v]['direct_stay'] for v in ('100','60')}\nif look['60']>look['100']: selected=60;branch='strictly_larger_Look_total'\nelif look['100']>look['60']:selected=100;branch='strictly_larger_Look_total'\nelif look['100']==0 and direct['60']>direct['100']:selected=60;branch='both_Look_zero_compare_Direct'\nelse:selected=100;branch='retain100_on_tie_or_Direct_winner'\nassert selected==d['metrics']['selected_field_of_view']\nrule='higher Look total wins; only when both Look totals are zero compare Direct; remaining ties retain100'\np=Path('configs/t01v2_selected_fov.json');original=p.read_text()\narchive=Path('configs/t01v2_selected_fov.initial_rule_01.json')\nif archive.exists():raise FileExistsError(archive)\narchive.write_text(original)\nmanifest=json.loads(original);manifest.update(rule=rule,selection_result='results/'+name+'.json',comparison_result='results/t01v2_look_fov_selection_01.json')\np.write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\\n')\nm={'selected_field_of_view':selected,'Look_totals':look,'Direct_totals':direct,'applied_branch':branch,'selection_rule':rule,'selection_changed':False,'correction':'Initial diagnostic described a Direct tiebreak too broadly; that branch was not reached. Actual11versus1 Look comparison and60degree selection are unchanged. Original diagnostic/config preserved.'}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'scope':'precise predeclared rule description; no source values or thresholds changed'},'sources':[ref]},indent=2,sort_keys=True)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T11:52:43",
+    "log_path": "logs/runs/t01v2_look_fov_selection_rule_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "6e476a34357b1b6f0df9e5b0bfe2b0dfd87c3964",
+    "git_dirty": false,
+    "end": "2026-11-09T11:52:43",
+    "duration_sec": 0.4,
+    "exit_code": 0,
+    "metrics_sha256": "ba6b053a279ea353423c09982225093f304049d84c16edb5a0f160e819f947b2"
+  }
+}

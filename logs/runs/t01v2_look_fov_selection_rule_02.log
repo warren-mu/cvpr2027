@@ -1,0 +1,27 @@
+# run_logged: python3 -c import json
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+name='t01v2_look_fov_selection_rule_02'
+d,ref=audited_result(Path('results/t01v2_look_fov_selection_01.json'))
+totals=d['metrics']['totals_by_field_of_view']
+look={v:totals[v]['look_flip']+totals[v]['look_stay'] for v in ('100','60')}
+direct={v:totals[v]['direct_flip']+totals[v]['direct_stay'] for v in ('100','60')}
+if look['60']>look['100']: selected=60;branch='strictly_larger_Look_total'
+elif look['100']>look['60']:selected=100;branch='strictly_larger_Look_total'
+elif look['100']==0 and direct['60']>direct['100']:selected=60;branch='both_Look_zero_compare_Direct'
+else:selected=100;branch='retain100_on_tie_or_Direct_winner'
+assert selected==d['metrics']['selected_field_of_view']
+rule='higher Look total wins; only when both Look totals are zero compare Direct; remaining ties retain100'
+p=Path('configs/t01v2_selected_fov.json');original=p.read_text()
+archive=Path('configs/t01v2_selected_fov.initial_rule_01.json')
+if archive.exists():raise FileExistsError(archive)
+archive.write_text(original)
+manifest=json.loads(original);manifest.update(rule=rule,selection_result='results/'+name+'.json',comparison_result='results/t01v2_look_fov_selection_01.json')
+p.write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
+m={'selected_field_of_view':selected,'Look_totals':look,'Direct_totals':direct,'applied_branch':branch,'selection_rule':rule,'selection_changed':False,'correction':'Initial diagnostic described a Direct tiebreak too broadly; that branch was not reached. Actual11versus1 Look comparison and60degree selection are unchanged. Original diagnostic/config preserved.'}
+Path('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'scope':'precise predeclared rule description; no source values or thresholds changed'},'sources':[ref]},indent=2,sort_keys=True)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))
+
+# start: 2026-11-09T11:52:43
+FINAL_METRICS_JSON: {"Direct_totals": {"100": 0, "60": 0}, "Look_totals": {"100": 1, "60": 11}, "applied_branch": "strictly_larger_Look_total", "correction": "Initial diagnostic described a Direct tiebreak too broadly; that branch was not reached. Actual11versus1 Look comparison and60degree selection are unchanged. Original diagnostic/config preserved.", "selected_field_of_view": 60, "selection_changed": false, "selection_rule": "higher Look total wins; only when both Look totals are zero compare Direct; remaining ties retain100"}
+# exit_code: 0

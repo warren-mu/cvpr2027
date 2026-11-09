@@ -1,0 +1,63 @@
+# run_logged: python3 -c import json
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+root=Path.cwd()
+name='t01v2_look_fov_selection_01'
+selection_path=root/'configs/t01v2_selected_fov.json'
+result_path=root/'results'/(name+'.json')
+if selection_path.exists() or result_path.exists():raise FileExistsError('Preserve existing selection')
+entries=[
+(100,203,'t01v2_checkpoint_look100_fp203_01'),
+(100,204,'t01v2_checkpoint_look100_fp204_01'),
+(100,10,'t01v2_checkpoint_look100_fp10_01'),
+(60,203,'t01v2_checkpoint_look60_fp203_02'),
+(60,204,'t01v2_checkpoint_look60_fp204_02'),
+(60,10,'t01v2_checkpoint_look60_fp10_01')]
+sources=[]; rows=[]; totals={v:{k:0 for k in ('direct_flip','direct_stay','look_flip','look_stay')} for v in (100,60)}
+for camera,scene,source_name in entries:
+ d,ref=audited_result(root/'results'/(source_name+'.json'))
+ m=d['metrics']
+ if d['_meta']['exit_code']!=0 or m['errors'] or m['status'] not in ('checkpoint_ready_for_human_review','checkpoint_no_qualified_pairs'):raise ValueError('Unverified source')
+ if len(m['source_runs'])!=1 or m['source_runs'][0]['scene']!='FloorPlan'+str(scene):raise ValueError('Wrong source scene')
+ recorded=m['source_runs'][0]['source']['file']
+ actual,actual_ref=audited_result(root/recorded)
+ if actual['config']['field_of_view']!=camera or actual['config']['scene']!='FloorPlan'+str(scene):raise ValueError('Wrong source camera')
+ counts=m['independently_verified_by_class']
+ if m['published_pair_count']!=sum(counts.values()):raise ValueError('Checkpoint count mismatch')
+ for kind,count in counts.items():
+  if type(count)is not int or count<0:raise ValueError('Invalid count')
+  totals[camera][kind]+=count
+ sources.extend([ref,actual_ref])
+ rows.append({'field_of_view':camera,'scene':'FloorPlan'+str(scene),'attempts':m['observed_attempts'],'counts':counts,'checkpoint':ref['file'],'funnel':'logs/review/diag_look_funnel'+str(camera)+'_fp'+str(scene)+'_01.md'})
+def rank(camera):
+ c=totals[camera];return(c['look_flip']+c['look_stay'],c['direct_flip']+c['direct_stay'],int(camera==100))
+selected=max((100,60),key=rank)
+accounts=[]
+for camera,account_name in [(100,'t01v2_look100_accounting_01'),(60,'t01v2_look60_accounting_01')]:
+ d,ref=audited_result(root/'results'/(account_name+'.json'));sources.append(ref)
+ if not d['metrics']['complete_allocation_accounting']:raise ValueError('Missing final cost')
+ for job in d['config']['jobs']:
+  jid=job['job_id'];rate=float(job['fields']['Resource_List.queue_charge_rate'])
+  hours=d['metrics']['allocation_gpu_hours_by_job'][jid]
+  accounts.append({'field_of_view':camera,'job_id':jid,'gpus':int(job['fields']['Resource_List.ngpus']),'queue_wait_seconds':d['metrics']['queue_wait_seconds_by_job'][jid],'allocation_gpu_hours':hours,'charge_rate':rate,'charged_gpu_hours':hours*rate})
+metrics={'selected_field_of_view':selected,'selection_rule':'maximize independently checked Look total; if tied compare Direct total; if tied retain100','totals_by_field_of_view':totals,'units':rows,'pbs':accounts,'total_charged_gpu_hours':sum(a['charged_gpu_hours'] for a in accounts),'all_six_units_completed':True,'fixed_label_supplement13_compliance':False,'expansion_authorized_by_these_pairs':False,'scope':'supplement12 same-scene construction-stage FOV comparison; historical spatial labels preserved, new fixed-label generation remains required'}
+config={'approved_selection_rule':'tasks/T01v2.md supplements10,13','future_collection_field_of_view':selected,'same_scenes':['FloorPlan203','FloorPlan204','FloorPlan10'],'thresholds_modified':False,'seed_changed':False,'existing_evidence_rewritten':False}
+selection_path.write_text(json.dumps({'field_of_view':selected,'selection_result':'results/'+name+'.json','rule':metrics['selection_rule'],'comparison_counts':totals,'scope':metrics['scope'],'authorizing_task_commit':'5a50999'},indent=2,sort_keys=True)+'\n')
+report_path=root/'tasks/T01v2.report.md'
+heading='## Supplement12 same-scene Look pilot completed; supplement13 next'
+old=report_path.read_text() if report_path.exists() else ''
+if heading in old:raise ValueError('Report section already exists')
+lines=['',heading,'','All six20-minute scene grants ended and each unit funnel was published separately. The predeclared rule selects'+str(selected)+'degrees:100degrees has'+str(sum(totals[100][k] for k in ('look_flip','look_stay')))+' independently checked Look pairs and60degrees has'+str(sum(totals[60][k] for k in ('look_flip','look_stay')))+'. These are historical construction-policy passes, not supplement13 fixed-label compliance: old T01 review/replay labels can change across views. New fixed-object labels and Flip search are being implemented; no expansion is claimed from these old records.','',
+'| FOV | Scene | Recorded attempts | LookFlip | LookStay | Funnel |','|---:|---|---:|---:|---:|---|']
+for r in rows:lines.append('|'+str(r['field_of_view'])+'|'+r['scene']+'|'+str(r['attempts'])+'|'+str(r['counts']['look_flip'])+'|'+str(r['counts']['look_stay'])+'|'+r['funnel']+'|')
+lines+=['','| PBS job | GPUs | Queue seconds | Allocation GPUh | Charge rate | Charged GPUh |','|---|---:|---:|---:|---:|---:|']
+for a in accounts:lines.append('|'+a['job_id']+'|'+str(a['gpus'])+'|'+str(a['queue_wait_seconds'])+'|'+str(a['allocation_gpu_hours'])+'|'+str(a['charge_rate'])+'|'+str(a['charged_gpu_hours'])+'|')
+lines+=['','Two single-GPU allocations used'+str(metrics['total_charged_gpu_hours'])+'charged GPUh in total. Source-level timeout/incomplete status is retained; completed pair evidence was independently checked, not relabeled as a complete pilot. The first60-degree FP203 checkpoint failed a final-controller/preflight association; the strict per-pair Controller adapter then rechecked the same unchanged evidence and accepted6. The original failed record remains.',
+'','Flip diagnosis and per-view pool distributions: logs/review/diag_look_flip_existing_01/report.md and logs/runs/diag_look_flip_existing_01.log. Next20-minute pilot uses only the selected FOV, full legal3D-side proposals, edge-view preference, at least onehalf actual Flip attempts and stable object labels. Physical, distance-ratio, prefix, evidence and witness thresholds stay unchanged. Supplement14 permits autonomous iterations; expansion still requires a new independently accepted LookFlip and at least3 accepted Look pairs, within20GPUh.']
+report_path.write_text(old+'\n'.join(lines)+'\n')
+result_path.write_text(json.dumps({'metrics':metrics,'config':config,'sources':sources},indent=2,sort_keys=True)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True),flush=True)
+
+# start: 2026-11-09T11:50:38
+FINAL_METRICS_JSON: {"all_six_units_completed": true, "expansion_authorized_by_these_pairs": false, "fixed_label_supplement13_compliance": false, "pbs": [{"allocation_gpu_hours": 0.9791666666666666, "charge_rate": 1.0, "charged_gpu_hours": 0.9791666666666666, "field_of_view": 100, "gpus": 1, "job_id": "707546.hopper-m-02", "queue_wait_seconds": 613}, {"allocation_gpu_hours": 0.9775, "charge_rate": 1.0, "charged_gpu_hours": 0.9775, "field_of_view": 60, "gpus": 1, "job_id": "707558.hopper-m-02", "queue_wait_seconds": 50}], "scope": "supplement12 same-scene construction-stage FOV comparison; historical spatial labels preserved, new fixed-label generation remains required", "selected_field_of_view": 60, "selection_rule": "maximize independently checked Look total; if tied compare Direct total; if tied retain100", "total_charged_gpu_hours": 1.9566666666666666, "totals_by_field_of_view": {"60": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 11}, "100": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 1}}, "units": [{"attempts": 58, "checkpoint": "results/t01v2_checkpoint_look100_fp203_01.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 1}, "field_of_view": 100, "funnel": "logs/review/diag_look_funnel100_fp203_01.md", "scene": "FloorPlan203"}, {"attempts": 70, "checkpoint": "results/t01v2_checkpoint_look100_fp204_01.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "field_of_view": 100, "funnel": "logs/review/diag_look_funnel100_fp204_01.md", "scene": "FloorPlan204"}, {"attempts": 72, "checkpoint": "results/t01v2_checkpoint_look100_fp10_01.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "field_of_view": 100, "funnel": "logs/review/diag_look_funnel100_fp10_01.md", "scene": "FloorPlan10"}, {"attempts": 28, "checkpoint": "results/t01v2_checkpoint_look60_fp203_02.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 6}, "field_of_view": 60, "funnel": "logs/review/diag_look_funnel60_fp203_01.md", "scene": "FloorPlan203"}, {"attempts": 38, "checkpoint": "results/t01v2_checkpoint_look60_fp204_02.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 5}, "field_of_view": 60, "funnel": "logs/review/diag_look_funnel60_fp204_01.md", "scene": "FloorPlan204"}, {"attempts": 39, "checkpoint": "results/t01v2_checkpoint_look60_fp10_01.json", "counts": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "field_of_view": 60, "funnel": "logs/review/diag_look_funnel60_fp10_01.md", "scene": "FloorPlan10"}]}
+# exit_code: 0
