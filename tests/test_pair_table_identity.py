@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from test_pair_table import table
-from tests.test_pair_table_cache import sample
+from test_pair_table_cache import sample
 from src.envs.paired_env import RGBFrame, table_environment
 from src.envs.pair_table import TableObservationBackend
 from src.envs.pair_table_identity import identity_fields
