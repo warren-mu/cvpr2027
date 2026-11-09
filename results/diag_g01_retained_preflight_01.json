@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 41.483246693969704
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.t01v2_posthoc_solvability import verified_passed_rows\nrows=[]; selected=[]\ndef check(ref, root):\n try:\n  p=merge.reference_path(ref,within=root)\n  if \"bytes\" in ref and p.stat().st_size!=ref[\"bytes\"]:raise ValueError(\"Byte length mismatch\")\n  return {\"reference\":ref,\"sha_verified\":True}\n except Exception as e:return {\"reference\":ref,\"sha_verified\":False,\"error\":type(e).__name__+\": \"+str(e)}\nfor path in sorted((merge.ROOT/\"results\").glob(\"gen_train_concurrency_s15_02_c*_floorplan*.json\")):\n out={\"source_file\":str(path.relative_to(merge.ROOT)),\"selected_for_full_original_checkpoint\":False}\n rows.append(out)\n try:\n  data,ref=audited_result(path); m=data[\"metrics\"]; c=data[\"config\"]; raw=Path(c[\"raw_evidence_dir\"])\n  eligibility,journal,passed=verified_passed_rows(data)\n  out.update(source_reference=ref,source_status=m.get(\"status\"),reported_passed_by_class=m.get(\"passed_by_class\"),eligibility=eligibility,journal=journal,original_final_preflight=check(m.get(\"scene_preflight_reference\"),raw))\n  visits={}\n  for visit in m.get(\"controller_visits\",[]):\n   cid=visit[\"controller_id\"]\n   if cid in visits:raise ValueError(\"Duplicate original Controller\")\n   visits[cid]={\"preflight\":check(visit.get(\"preflight_reference\"),raw),\"index\":check(visit.get(\"raw_index\"),raw),\"initial_setup\":check(visit.get(\"initial_agent_setup_reference\"),raw)}\n  out[\"original_controller_artifacts\"]=visits\n  proofs=[]\n  for compact,pairref,pairpath in passed:\n   pair=merge.read_reference(pairref,within=pairpath.parent)\n   cid=pair[\"search_controller_id\"]; visit=visits[cid]\n   checked=all(v[\"sha_verified\"] for v in visit.values())\n   proofs.append({\"pair_id\":pair[\"pair_id\"],\"kind\":pair[\"kind\"],\"pair_reference\":pairref,\"controller_id\":cid,\"controller_artifacts_sha_verified\":checked})\n  out[\"candidate_controller_bindings\"]=proofs\n  ready=bool(proofs) and eligibility[\"eligible\"] and out[\"original_final_preflight\"][\"sha_verified\"] and all(p[\"controller_artifacts_sha_verified\"] for p in proofs)\n  out[\"selected_for_full_original_checkpoint\"]=ready\n  if ready:selected.append(str(path.relative_to(merge.ROOT)))\n except Exception as e:out[\"error\"]=type(e).__name__+\": \"+str(e)\nprint(\"G01_RETAINED_PREFLIGHT_JSON: \"+json.dumps({\"scope\":\"Original references only; no files rebuilt, no scientific acceptance implied; unused Controller index loss does not erase a complete used Controller\",\"sources\":rows,\"selected_sources\":selected},sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_g01_retained_preflight_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_g01_retained_preflight_01",
+      "--",
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.t01v2_posthoc_solvability import verified_passed_rows\nrows=[]; selected=[]\ndef check(ref, root):\n try:\n  p=merge.reference_path(ref,within=root)\n  if \"bytes\" in ref and p.stat().st_size!=ref[\"bytes\"]:raise ValueError(\"Byte length mismatch\")\n  return {\"reference\":ref,\"sha_verified\":True}\n except Exception as e:return {\"reference\":ref,\"sha_verified\":False,\"error\":type(e).__name__+\": \"+str(e)}\nfor path in sorted((merge.ROOT/\"results\").glob(\"gen_train_concurrency_s15_02_c*_floorplan*.json\")):\n out={\"source_file\":str(path.relative_to(merge.ROOT)),\"selected_for_full_original_checkpoint\":False}\n rows.append(out)\n try:\n  data,ref=audited_result(path); m=data[\"metrics\"]; c=data[\"config\"]; raw=Path(c[\"raw_evidence_dir\"])\n  eligibility,journal,passed=verified_passed_rows(data)\n  out.update(source_reference=ref,source_status=m.get(\"status\"),reported_passed_by_class=m.get(\"passed_by_class\"),eligibility=eligibility,journal=journal,original_final_preflight=check(m.get(\"scene_preflight_reference\"),raw))\n  visits={}\n  for visit in m.get(\"controller_visits\",[]):\n   cid=visit[\"controller_id\"]\n   if cid in visits:raise ValueError(\"Duplicate original Controller\")\n   visits[cid]={\"preflight\":check(visit.get(\"preflight_reference\"),raw),\"index\":check(visit.get(\"raw_index\"),raw),\"initial_setup\":check(visit.get(\"initial_agent_setup_reference\"),raw)}\n  out[\"original_controller_artifacts\"]=visits\n  proofs=[]\n  for compact,pairref,pairpath in passed:\n   pair=merge.read_reference(pairref,within=pairpath.parent)\n   cid=pair[\"search_controller_id\"]; visit=visits[cid]\n   checked=all(v[\"sha_verified\"] for v in visit.values())\n   proofs.append({\"pair_id\":pair[\"pair_id\"],\"kind\":pair[\"kind\"],\"pair_reference\":pairref,\"controller_id\":cid,\"controller_artifacts_sha_verified\":checked})\n  out[\"candidate_controller_bindings\"]=proofs\n  ready=bool(proofs) and eligibility[\"eligible\"] and out[\"original_final_preflight\"][\"sha_verified\"] and all(p[\"controller_artifacts_sha_verified\"] for p in proofs)\n  out[\"selected_for_full_original_checkpoint\"]=ready\n  if ready:selected.append(str(path.relative_to(merge.ROOT)))\n except Exception as e:out[\"error\"]=type(e).__name__+\": \"+str(e)\nprint(\"G01_RETAINED_PREFLIGHT_JSON: \"+json.dumps({\"scope\":\"Original references only; no files rebuilt, no scientific acceptance implied; unused Controller index loss does not erase a complete used Controller\",\"sources\":rows,\"selected_sources\":selected},sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-09T17:32:23",
+    "log_path": "logs/runs/diag_g01_retained_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "e69bed09dbb4e1e89b0f7c2bf21952b67436a552",
+    "git_dirty": false,
+    "end": "2026-11-09T17:33:06",
+    "duration_sec": 41.6,
+    "exit_code": 0,
+    "metrics_sha256": "5abb5dbe2d4e593c893a4afaeba22a1f4f308ea3ca2a5c14aa1fbffbfe3ca6ab"
+  }
+}

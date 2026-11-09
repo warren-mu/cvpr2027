@@ -1,0 +1,29 @@
+{
+  "name": "diag_look_census_b_retry_mapping_02",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_census_b_retry_mapping_02",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();g,gr=audited_result(r/'results/diag_look_census_b_retry_guard_02.json');a,ar=audited_result(r/'results/diag_look_census_b_black_accounting_02.json')\nassert g['_meta']['exit_code']==0 and g['metrics']['command_exit_code']==0 and a['_meta']['exit_code']==0\nfolder=r/'logs/pbs/pilot_pairs_v2_look_table_b01_retry2-20261109T092915Z-5b54d581'\np=json.loads((folder/'payload.json').read_text());s=json.loads((folder/'submission.json').read_text())\nassert s['returncode']==0 and s['stdout'].strip()=='708146.hopper-m-02' and p['retry_of']=='708121.hopper-m-02'\nassert p['requested_gpu_count']==1 and p['requested_host'] is None and p['queue']=='autox' and p['requested_wall_seconds']==2340\ngate,gate_ref=audited_result(r/'results/t02_look_table_b01_retry2_gate.json');assert gate['_meta']['exit_code']==0 and gate['metrics']['passed'] and gate['metrics']['cleanup_errors']==[]\nnote='\\nB诊断第二次原样重提：708121 →708146（原708054记录也保留）。708121再次仅在出图检查阶段黑帧，严格原PBS/PNG/UUID/清理核验 diag_look_census_b_retry_guard_02 通过；实际'+str(a['metrics']['total_allocation_gpu_hours'])+'GPU·小时，排队'+str(a['metrics']['queue_wait_seconds_by_job']['708121.hopper-m-02'])+'秒。708146已通过原生出图检查，仍按冻结清单的相同六对、相同D4规则继续；没有改变阈值或按结果换对。\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('CENSUS_B_RETRY2_MAPPING: '+json.dumps({'old_job':'708121.hopper-m-02','new_job':'708146.hopper-m-02','guard':gr,'accounting':ar,'new_gate':gate_ref},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T17:40:41",
+  "log_path": "logs/runs/diag_look_census_b_retry_mapping_02.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "e69bed09dbb4e1e89b0f7c2bf21952b67436a552",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_look_census_b_retry_mapping_02.diff",
+  "end": "2026-11-09T17:40:42",
+  "duration_sec": 0.2,
+  "exit_code": 0,
+  "metrics_sha256": "bff185e1e9a241cd8191c698b99412887a5cdf088cfdfa7d727c9f43e32d24ba"
+}

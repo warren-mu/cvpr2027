@@ -1,0 +1,17 @@
+# run_logged: python3 -m src.tools.record_command --name diag_look_census_b_retry_mapping_02 -- python3 -c import pathlib,json
+from src.tools.t01_partition import audited_result
+r=pathlib.Path.cwd();g,gr=audited_result(r/'results/diag_look_census_b_retry_guard_02.json');a,ar=audited_result(r/'results/diag_look_census_b_black_accounting_02.json')
+assert g['_meta']['exit_code']==0 and g['metrics']['command_exit_code']==0 and a['_meta']['exit_code']==0
+folder=r/'logs/pbs/pilot_pairs_v2_look_table_b01_retry2-20261109T092915Z-5b54d581'
+p=json.loads((folder/'payload.json').read_text());s=json.loads((folder/'submission.json').read_text())
+assert s['returncode']==0 and s['stdout'].strip()=='708146.hopper-m-02' and p['retry_of']=='708121.hopper-m-02'
+assert p['requested_gpu_count']==1 and p['requested_host'] is None and p['queue']=='autox' and p['requested_wall_seconds']==2340
+gate,gate_ref=audited_result(r/'results/t02_look_table_b01_retry2_gate.json');assert gate['_meta']['exit_code']==0 and gate['metrics']['passed'] and gate['metrics']['cleanup_errors']==[]
+note='\nB诊断第二次原样重提：708121 →708146（原708054记录也保留）。708121再次仅在出图检查阶段黑帧，严格原PBS/PNG/UUID/清理核验 diag_look_census_b_retry_guard_02 通过；实际'+str(a['metrics']['total_allocation_gpu_hours'])+'GPU·小时，排队'+str(a['metrics']['queue_wait_seconds_by_job']['708121.hopper-m-02'])+'秒。708146已通过原生出图检查，仍按冻结清单的相同六对、相同D4规则继续；没有改变阈值或按结果换对。\n'
+with (r/'STATUS.md').open('a') as f:f.write(note)
+print('CENSUS_B_RETRY2_MAPPING: '+json.dumps({'old_job':'708121.hopper-m-02','new_job':'708146.hopper-m-02','guard':gr,'accounting':ar,'new_gate':gate_ref},sort_keys=True))
+
+# start: 2026-11-09T17:40:41
+CENSUS_B_RETRY2_MAPPING: {"accounting": {"audit": {"fail": [], "file": "results/diag_look_census_b_black_accounting_02.json", "warn": []}, "exit_code": 0, "file": "results/diag_look_census_b_black_accounting_02.json", "git_commit": "e69bed09dbb4e1e89b0f7c2bf21952b67436a552", "metrics_sha256": "688c8721809d71b64e28753f5369c81ebaca34ffda1d355087f2800ea6d94886", "sha256": "8da3f416c0094c70cde49812c2cc417e8e0740c6bb34b69adbd3603d17dd45b7"}, "guard": {"audit": {"fail": [], "file": "results/diag_look_census_b_retry_guard_02.json", "warn": []}, "exit_code": 0, "file": "results/diag_look_census_b_retry_guard_02.json", "git_commit": "e69bed09dbb4e1e89b0f7c2bf21952b67436a552", "metrics_sha256": "c607d028a592dd49902ce809057484572ea176ed1c6b34873aaad8146a0c1cd0", "sha256": "5a03d80681d1a58ee39b2d1ed0ed727f5983ab4defdb8463859947a2f46b7eef"}, "new_gate": {"audit": {"fail": [], "file": "results/t02_look_table_b01_retry2_gate.json", "warn": []}, "exit_code": 0, "file": "results/t02_look_table_b01_retry2_gate.json", "git_commit": "e69bed09dbb4e1e89b0f7c2bf21952b67436a552", "metrics_sha256": "7969879a7947fbdff140e59e5aaa142278883b0e9ea546adbcf329c72b999c3a", "sha256": "db32a99438453b01131635dea29f6b163cac0e9180c31f898372f8495a4d9b02"}, "new_job": "708146.hopper-m-02", "old_job": "708121.hopper-m-02"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.09632553195115179}
+# exit_code: 0
