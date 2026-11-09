@@ -130,7 +130,11 @@ def load_exports(paths, scratch):
             if details.get("table_manifest") != manifest or Path(manifest["file"]).resolve() != pair_dir / "table/table.json":
                 raise ValueError("Pair and export-check record name different table bytes")
             table = load_table(manifest["file"], expected_sha256=manifest["sha256"])
+            from src.envs.pair_table_export import FROZEN_RENDER_VERSION
             if (table.pair_id != pair_id or table.source.get("export_version") != EXPORT_VERSION
+                    or table.source.get("frozen_render_version") != FROZEN_RENDER_VERSION
+                    or table.source.get("render_source_worlds") != [world["reference"] for world in package["worlds"]]
+                    or table.source.get('candidate_policy') != package['source_config'].get('candidate_policy')
                     or table.source.get("t01") != stored["source_provenance"]
                     or any(getattr(table, key) != package[key] for key in ("scene", "kind", "instruction", "anchor_name"))
                     or tuple(table.candidate_names) != tuple(package["candidate_names"])
@@ -236,7 +240,8 @@ def fresh_worker(config, connection):
                         raise ValueError("source_world_restore_failed")
                 reachable, reference = table_catalog(table)
                 renderer = SimulatorTableRenderer(sim, package["worlds"], reachable, package["initial_position"],
-                    table.anchor_name, table.candidate_names, pair_id=table.pair_id, reachable_reference=reference)
+                    table.anchor_name, table.candidate_names, pair_id=table.pair_id, reachable_reference=reference,
+                    target_names=table.target_names, candidate_policy=table.source.get('candidate_policy'))
                 for index, state_id in enumerate(config["state_ids"]):
                     sim.check_deadline()
                     fresh = renderer.render_pair(table.states[state_id].view)

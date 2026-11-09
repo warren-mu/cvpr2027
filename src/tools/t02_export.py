@@ -116,11 +116,28 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
         reachable, reference = actual["positions"], actual["query_reference"]
         catalog_scope = "fresh native GetReachablePositions in restored direct w0; original order retained"
     renderer = SimulatorTableRenderer(sim, worlds, reachable, package["initial_position"],
-        package["anchor_name"], package["candidate_names"], pair_id=package["pair_id"], reachable_reference=reference)
+        package["anchor_name"], package["candidate_names"], pair_id=package["pair_id"], reachable_reference=reference,
+        target_names=package['target_names'], candidate_policy=package['source_config'].get('candidate_policy'))
+    from src.envs.pair_table_export import FROZEN_RENDER_VERSION
     table = build_table(renderer, **{key: package[key] for key in (
         "pair_id", "scene", "kind", "instruction", "anchor_name", "candidate_names", "target_names",
         "initial_position", "initial_heading")}, source={"t01": package["source_provenance"],
-            "export_version": VERSION, "reachable_scope": catalog_scope, "reachable_reference": reference})
+            "export_version": VERSION, "reachable_scope": catalog_scope, "reachable_reference": reference,
+            "frozen_render_version": FROZEN_RENDER_VERSION,
+            "candidate_policy": package['source_config'].get('candidate_policy'),
+            "render_source_worlds": [world["reference"] for world in worlds]})
+    table.export_measurements['frozen_pose_readbacks'] = {}
+    for scope, stages in (('requested_vs_actual', {'setup', 'capture'}),
+                          ('actual_w0_vs_w1_nonanchor', {'paired_nonanchor'})):
+        measured = [row['measurement'] for row in renderer.restore_checks if row['stage'] in stages]
+        table.export_measurements['frozen_pose_readbacks'][scope] = {
+            'readbacks': len(measured),
+            'positions_all_exact': all(row['all_object_positions_exact'] for row in measured) if measured else None,
+            'rotations_all_exact': all(row['all_object_rotations_exact'] for row in measured) if measured else None,
+            'max_position_delta_m': max((row['max_position_delta_m'] for row in measured), default=None),
+            'max_raw_rotation_component_delta_degrees': max((row['max_raw_rotation_component_delta_degrees']
+                                                            for row in measured), default=None),
+            'scope': 'read-only diagnostics; existing physical/restore/image thresholds unchanged'}
     manifest = save_table(table, directory, max_total_bytes=max_table_bytes)
     # Check the bytes that downstream consumers will actually load, not only
     # the in-memory object that produced them. load_table clears both flags.
@@ -132,6 +149,7 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
     return {"table_manifest": manifest, "table_complete": True, "native_checks": native,
             "pair_checks": checks, "restoration": restoration, "reachable_scope": catalog_scope,
             "reachable_reference": reference, "export_measurements": table.export_measurements,
+            "frozen_restore_readbacks": renderer.restore_checks,
             "cache_matches_live": None, "cache_status": "not_run_requires_at_least_200_paired_states",
             "downstream_allowed": False, "task_acceptance": None}
 

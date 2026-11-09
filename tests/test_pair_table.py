@@ -318,6 +318,7 @@ class TableTests(unittest.TestCase):
 
     def test_world_and_camera_bindings_do_not_accept_other_state(self):
         obj = {'name': 'X', 'position': {'x': 0, 'y': 0, 'z': 0},
+               'rotation': {'x': 0, 'y': 0, 'z': 0},
                'objectType': 'Kettle', 'moveable': True, 'pickupable': True}
         snapshot = {'objects': [obj], 'poses': [{'objectName': 'X', 'position': obj['position']}]}
         world_metadata_matches({'objects': [obj]}, snapshot)

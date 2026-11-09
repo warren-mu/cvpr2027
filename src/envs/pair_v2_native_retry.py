@@ -16,6 +16,73 @@ from .pair_v2_stable import (StableCloneSimulator, common_baseline_check, PREFLI
                              PREFLIGHT_POLICY, position_step, exceeded)
 
 NATIVE_RETRY_VERSION = 'native_placement_unchanged_state_retry_v1'
+FROZEN_RENDER_VERSION = 'w0_nonanchor_frozen_render_v1'
+FROZEN_RENDER_POLICY = {
+    'version': FROZEN_RENDER_VERSION,
+    'physics': 'unchanged two native placements and settling checks; retain both original physical snapshots',
+    'requested_render_worlds': 'complete physical w0 pose list for both worlds; replace only X position and rotation with physically settled w1 X',
+    'render_actions': 'PausePhysicsAutoSim; SetObjectPoses(placeStationary=True), PhysicsSyncTransforms, Pass for w0 then w1; no agent action or physics advance between captures',
+    'readback': 'all requested editable poses checked against actual metadata; exact equality and maximum position/rotation differences recorded',
+    'acceptance': 'unchanged restoration position<=1cm/exact agent and physical/image/witness criteria; no new exact-pose acceptance threshold',
+    'actual_cross_world': 'all nonanchor native position/rotation differences recorded without replacing measurements by zero',
+}
+
+
+def frozen_pose_lists(worlds, anchor):
+    if len(worlds) != 2 or worlds[0]['scene'] != worlds[1]['scene']:
+        raise ValueError('Frozen render needs two original physical worlds in one scene')
+    poses = [engine.complete_pose_list(world['objects'], world['poses']) for world in worlds]
+    source = {item['objectName']: item for item in poses[1]}
+    if set(source) != {item['objectName'] for item in poses[0]} or anchor not in source:
+        raise ValueError('Frozen render physical inventories differ or anchor is absent')
+    first = copy.deepcopy(poses[0])
+    second = [copy.deepcopy(source[anchor] if item['objectName'] == anchor else item) for item in first]
+    return [first, second]
+
+
+def pose_readback(poses, objects):
+    """Read-only diagnostics; Euler representation differences remain visible."""
+    actual = engine.objects_by_name(objects)
+    requested = {item['objectName']: item for item in poses}
+    if len(requested) != len(poses) or not set(requested) <= set(actual):
+        raise ValueError('Pose readback has duplicate or missing identities')
+    rows = {}
+    for name, desired in requested.items():
+        observed = actual[name]
+        rotation = {axis: abs(desired['rotation'][axis] - observed['rotation'][axis]) for axis in 'xyz'}
+        rows[name] = {'position_delta_m': engine.distance(desired['position'], observed['position']),
+            'rotation_component_abs_diff_degrees': rotation,
+            'rotation_shortest_component_diff_degrees': {a: min(v % 360, 360 - v % 360) for a, v in rotation.items()},
+            'position_exact': desired['position'] == observed['position'],
+            'rotation_exact': desired['rotation'] == observed['rotation']}
+    return {'objects': rows, 'all_pose_components_exact': all(v['position_exact'] and v['rotation_exact'] for v in rows.values()),
+        'max_position_delta_m': max((v['position_delta_m'] for v in rows.values()), default=0.),
+        'max_rotation_component_abs_diff_degrees': max((n for v in rows.values() for n in v['rotation_component_abs_diff_degrees'].values()), default=0.),
+        'max_rotation_shortest_component_diff_degrees': max((n for v in rows.values() for n in v['rotation_shortest_component_diff_degrees'].values()), default=0.),
+        'scope': 'actual metadata versus requested pose values; diagnostic, not a new acceptance threshold'}
+
+
+def frozen_requested_snapshot(worlds, poses, index):
+    """Explicit desired-state template used only by the existing restore check."""
+    template = copy.deepcopy(worlds[0])
+    template['poses'] = copy.deepcopy(poses[index])
+    values = {row['objectName']: row for row in poses[index]}
+    for obj in template['objects']:
+        if obj['name'] in values:
+            for key in ('position', 'rotation'):
+                obj[key] = copy.deepcopy(values[obj['name']][key])
+    template['serialization_scope'] = 'derived requested render template only; not an observed native snapshot'
+    template.pop('reference', None)
+    return template
+
+
+def record_restore_readback(sim, snapshot, measured):
+    readback = pose_readback(snapshot['poses'], sim.controller.last_event.metadata['objects'])
+    proof = {'version': FROZEN_RENDER_VERSION, 'requested_snapshot_reference': snapshot['reference'],
+             'restored_snapshot_reference': measured['restored_snapshot_reference'], 'readback': readback}
+    measured['frozen_pose_readback_reference'] = sim.store.save_json(f'frozen_restore_readback_{sim.action_count:06d}.json', proof)
+    measured['frozen_pose_readback'] = readback
+    return measured
 NATIVE_RETRY_POLICY = {
     'version': NATIVE_RETRY_VERSION, 'maximum_points_per_placement': 40,
     'point_arguments': 'literal authenticated native spawn coordinates; no height or pivot offset added',
@@ -276,6 +343,41 @@ class RetryPlacementSimulator(StableCloneSimulator):
     safeguards remain available for explicit future callers; no clone is made
     by this class. A native failure does not count as a pair construction.
     """
+    def restore_snapshot(self, snapshot):
+        capture, measured = super().restore_snapshot(snapshot)
+        if self.config.get('frozen_render_version') == FROZEN_RENDER_VERSION:
+            record_restore_readback(self, snapshot, measured)
+        return capture, measured
+
+    def freeze_render_pair(self, worlds, anchor, key):
+        """Render actual paused worlds; original physical results stay separate."""
+        poses = frozen_pose_lists(worlds, anchor)
+        beginning = len(self.query_log)
+        self.action('PausePhysicsAutoSim')
+        rendered, captures, readbacks, restores = [], [], [], []
+        for index in range(2):
+            self.action('SetObjectPoses', objectPoses=copy.deepcopy(poses[index]), placeStationary=True)
+            self.action('PhysicsSyncTransforms')
+            self.action('Pass')
+            capture = self.last_capture
+            snapshot = self.snapshot(key + f'_frozen_w{index}')
+            desired = frozen_requested_snapshot(worlds, poses, index)
+            restored = engine.restoration_state(desired, snapshot['objects'], snapshot['agent'])
+            readbacks.append(pose_readback(poses[index], snapshot['objects']))
+            rendered.append(snapshot); captures.append(capture); restores.append(restored)
+        nonanchor = [{'objectName': obj['name'], 'position': obj['position'], 'rotation': obj['rotation']}
+                     for obj in rendered[0]['objects'] if obj['name'] != anchor]
+        proof = {'version': FROZEN_RENDER_VERSION, 'policy': copy.deepcopy(FROZEN_RENDER_POLICY),
+            'anchor_name': anchor, 'physical_world_references': [w['reference'] for w in worlds],
+            'requested_pose_lists': poses, 'actual_world_references': [w['reference'] for w in rendered],
+            'actual_capture_references': [c['evidence'] for c in captures],
+            'action_references': copy.deepcopy(self.query_log[beginning:]),
+            'readbacks': readbacks, 'restoration_checks': restores,
+            'nonanchor_cross_world_readback': pose_readback(nonanchor, rendered[1]['objects'])}
+        reference = self.store.save_json(key + '_frozen_render.json', proof)
+        return {'worlds': rendered, 'captures': captures, 'proof': proof, 'reference': reference,
+                'passed': all(check['restore_deterministic'] for check in restores)}
+
     def preflight_scene(self):
         if not self.action_count:
             return super().preflight_scene()

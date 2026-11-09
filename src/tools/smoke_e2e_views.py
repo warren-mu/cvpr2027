@@ -132,7 +132,11 @@ def reload_export(row, package, directory):
         raise ValueError("Export manifest identity mismatch")
     read_json_ref(row["raw_index"], directory)
     table = load_table(manifest["file"], expected_sha256=manifest["sha256"])
+    from src.envs.pair_table_export import FROZEN_RENDER_VERSION
     if (table.pair_id != package["pair_id"] or table.source.get("export_version") != EXPORT_VERSION
+            or table.source.get("frozen_render_version") != FROZEN_RENDER_VERSION
+            or table.source.get("render_source_worlds") != [world["reference"] for world in package["worlds"]]
+            or table.source.get('candidate_policy') != package['source_config'].get('candidate_policy')
             or table.source.get("t01") != stored["source_provenance"]
             or any(getattr(table, key) != package[key] for key in ("scene", "kind", "instruction", "anchor_name"))
             or tuple(table.candidate_names) != tuple(package["candidate_names"])

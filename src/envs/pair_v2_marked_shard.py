@@ -28,7 +28,8 @@ from . import pair_v2_terminal as terminal
 from .pair_v2_stable import PREFLIGHT_VERSION, PREFLIGHT_POLICY, augment_physical_result
 from .pair_v2_coverage_order import view_index_order
 from .thor_common import process_identity
-from .pair_v2_native_retry import NATIVE_RETRY_VERSION
+from .pair_v2_native_retry import (NATIVE_RETRY_VERSION, FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY,
+                                   record_restore_readback)
 
 PRODUCER_MODULE = 'src.envs.pair_v2_marked_shard'
 SAFE_RETRY_VERSION = NATIVE_RETRY_VERSION
@@ -55,6 +56,8 @@ def enable_config(config):
         proposal_order='existing view domain; same-class marked candidates first per actual view; independent pool role streams; global Look/Direct alternation',
         controller_restart='only when native failed placement changes reported pose/identity; previous Controller must be confirmed stopped',
         retry_point_limit=40, scientific_thresholds_unchanged=True)
+    config.update(frozen_render_version=FROZEN_RENDER_VERSION,
+                  frozen_render_policy=copy.deepcopy(FROZEN_RENDER_POLICY))
     config['clone_raw_storage_limit']['scope'] = 'disabled cloning; scene-wide raw storage cap retained as infrastructure only'
     return config
 
@@ -73,6 +76,7 @@ def tags():
         'solvability_policy': copy.deepcopy(solvable.SOLVABILITY_POLICY),
         'generation_version': roles.ROLE_VERSION, 'generation_policy': copy.deepcopy(roles.ROLE_POLICY),
         'safe_retry_version': SAFE_RETRY_VERSION, 'producer_module': PRODUCER_MODULE,
+        'frozen_render_version': FROZEN_RENDER_VERSION, 'frozen_render_policy': copy.deepcopy(FROZEN_RENDER_POLICY),
         'p_backend_solvability_verified': None}
 
 
@@ -99,11 +103,19 @@ def replay_worker(config, connection):
         raise ValueError('Marked replay requires its declared natural candidate policy')
     config['enable_candidate_clone'] = False
     previous = original_policy.closest_target
+    original_restore = engine.V2Simulator.restore_snapshot
+    def restore(sim, snapshot):
+        capture, measured = original_restore(sim, snapshot)
+        if config.get('frozen_render_version') == FROZEN_RENDER_VERSION:
+            record_restore_readback(sim, snapshot, measured)
+        return capture, measured
     try:
         original_policy.closest_target = candidates.closest_target
+        engine.V2Simulator.restore_snapshot = restore
         return search.replay_worker(config, connection)
     finally:
         original_policy.closest_target = previous
+        engine.V2Simulator.restore_snapshot = original_restore
 
 
 def save_successful_prefix(sim, row, beginning):
@@ -139,10 +151,11 @@ def prefix_observer(original, sim, row, beginning, arguments):
             del sim.action
 
 
-def construct_observer(sim, proposal, role, record, row):
+def construct_observer(sim, proposal, role, record, row, *, frozen=False, physical_context=None):
     """Return a temporary method; native retry adapter owns safe mutation rules."""
     original = sim.construct_world
-    realized = {}
+    realized, constructions = {}, {}
+    context = {} if physical_context is None else physical_context
     def construct(baseline, key, placements, require_agent=None):
         world = 'w0' if key.endswith('_w0') else 'w1' if key.endswith('_w1') else None
         if world is None or len(placements) != 1:
@@ -167,9 +180,26 @@ def construct_observer(sim, proposal, role, record, row):
         row['proposal'] = proposal
         row.setdefault('native_retry_records', {})[world] = copy.deepcopy(result.get('retry_records'))
         realized[world] = result['snapshot']
+        constructions[world] = result
+        if frozen and world == 'w1' and result['passed'] and constructions['w0']['passed']:
+            physical_worlds = [realized['w0'], realized['w1']]
+            row['physical_world_references'] = [copy.deepcopy(w['reference']) for w in physical_worlds]
+            measured = sim.freeze_render_pair(physical_worlds, name, row['pair_id'])
+            row['frozen_render_reference'] = copy.deepcopy(measured['reference'])
+            row['frozen_render_readbacks'] = copy.deepcopy(measured['proof']['readbacks'])
+            row['nonanchor_cross_world_readback'] = copy.deepcopy(measured['proof']['nonanchor_cross_world_readback'])
+            row['physical_w1'] = augment_physical_result(_BASE_PHYSICAL(result), result['physical'])
+            if not measured['passed']:
+                raise RuntimeError('frozen_render_restore_failed')
+            for index, label in enumerate(('w0', 'w1')):
+                # Keep physical dictionaries untouched. All target, pixel,
+                # distance and witness checks below use these actual renders.
+                constructions[label]['snapshot'] = measured['worlds'][index]
+                constructions[label]['capture'] = measured['captures'][index]
+            context.update(physical_worlds=physical_worlds, render_worlds=measured['worlds'])
         if world == 'w1' and proposal['mode'] == 'stay':
             row['stay_horizontal_displacement'] = candidates.stay_horizontal_displacement(
-                [realized['w0'], realized['w1']], name)
+                [constructions['w0']['snapshot'], result['snapshot']], name)
         return result
     return original, construct
 
@@ -177,14 +207,19 @@ def construct_observer(sim, proposal, role, record, row):
 def measured_build(sim, config, baseline, identities, proposal, view, pair_id, directory, reachable, attempt_row=None):
     row = {} if attempt_row is None else attempt_row
     row.update(tags())
-    oriented, role = roles.orient_proposal(proposal, config['scene'], old_solvable.pair_attempt_index(pair_id, config['scene']), seed=0)
+    # orient_proposal copies its input. The live pool is not part of a selected
+    # proposal and may contain thousands of full native coordinate tokens.
+    record = proposal['_private_pool_record']
+    public_proposal = {key: value for key, value in proposal.items() if key != '_private_pool_record'}
+    oriented, role = roles.orient_proposal(public_proposal, config['scene'], old_solvable.pair_attempt_index(pair_id, config['scene']), seed=0)
     role.update(candidate_a_name=identities['candidate_names'][0], candidate_b_name=identities['candidate_names'][1])
     row['proposal_role'] = role
-    record = proposal['_private_pool_record']
-    oriented.pop('_private_pool_record', None)
     row['projection_pool_reference'] = copy.deepcopy(record['reference'])
     row['candidate_types'], row['same_class'] = copy.deepcopy(identities['candidate_types']), identities['same_class']
-    original_construct, new_construct = construct_observer(sim, oriented, role, record, row)
+    frozen = config.get('frozen_render_version') == FROZEN_RENDER_VERSION
+    physical_context = {}
+    original_construct, new_construct = construct_observer(sim, oriented, role, record, row, frozen=frozen,
+                                                          physical_context=physical_context)
     had, own = 'construct_world' in vars(sim), vars(sim).get('construct_world')
     old_observer = isolated.build_with_prefix_observer
     original_save = sim.store.save_json
@@ -196,13 +231,26 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
             name = f'attempt_setup_{Path(directory).name}.json'
         return original_save(name, value)
     solvable.reset_report()
+    original_single_edit = original_policy.single_edit_check
+    def single_edit(first, requested, anchor):
+        if frozen:
+            physical = physical_context.get('physical_worlds')
+            rendered = physical_context.get('render_worlds')
+            if not physical or not rendered or first != rendered[0]['poses'] or anchor != identities['anchor_name']:
+                raise ValueError('Frozen requested-edit check lacks its original physical w0 and actual render')
+            first = physical[0]['poses']
+        return original_single_edit(first, requested, anchor)
     try:
         sim.construct_world = new_construct
         sim.store.save_json = save
+        original_policy.single_edit_check = single_edit
         isolated.build_with_prefix_observer = prefix_observer
-        return isolated.isolated_build(_BASE_BUILD, sim, config, baseline, identities, oriented, view,
+        result = isolated.isolated_build(_BASE_BUILD, sim, config, baseline, identities, oriented, view,
             pair_id, directory, reachable, attempt_row=row)
+        split_prefix_rejection(result)
+        return result
     finally:
+        original_policy.single_edit_check = original_single_edit
         isolated.build_with_prefix_observer = old_observer
         if store_had:
             sim.store.save_json = store_own
@@ -219,6 +267,22 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
             for key in ('anchor_visible_actions_w0', 'anchor_visible_actions_w1'):
                 row[key] = copy.deepcopy(report.get(key))
         solvable.reset_report()
+
+
+def split_prefix_rejection(row):
+    if row.get('discard_reasons') != ['neither_hidden_shared_prefix_nor_direct_evidence']:
+        return
+    pre = row.get('prefix_measurement') or {}
+    masks = pre.get('prefix_edit_mask_pixels')
+    if not isinstance(masks, list) or len(masks) != 1 or not isinstance(masks[0], dict):
+        return
+    pixels = [masks[0].get(key) for key in ('w0', 'w1')]
+    if not all(type(value) is int and value >= 0 for value in pixels):
+        return
+    if any(pixels):
+        row['discard_reasons'] = ['anchor_visible_at_v0_but_direct_evidence_failed']
+    elif type(pre.get('prefix_max_abs_diff')) is int and pre['prefix_max_abs_diff'] > 3:
+        row['discard_reasons'] = ['anchor_hidden_but_prefix_rgb_diff_gt3']
 
 
 def export_pair(config, row, worlds, prefix, after, witnesses, constructions):
@@ -239,13 +303,50 @@ def export_pair(config, row, worlds, prefix, after, witnesses, constructions):
     return old_solvable.export_pair(_BASE_EXPORT, config, row, worlds, prefix, after, witnesses, constructions)
 
 
+def compact_native_retry(record):
+    """Keep measured outcomes/references without duplicating raw pose maps.
+
+    References identify original records, not a promise that rejected raw
+    payloads survived the existing retention cap. Retained full attempts and
+    successful pairs still contain their unmodified native ledger.
+    """
+    if record is None:
+        return None
+    result = {key: copy.deepcopy(record[key]) for key in (
+        'version', 'scene', 'record_key', 'object_name', 'rotation', 'status',
+        'max_points', 'supplied_point_count', 'attempted_point_count', 'failed_point_count',
+        'arguments', 'action_reference', 'fresh_controller_required',
+        'pair_attempt_counter_modified', 'error', 'reason', 'ledger_reference') if key in record}
+    result['successful_token_reference'] = pools.native_token_reference(record.get('successful_token'))
+    result['attempts'] = []
+    for attempt in record.get('attempts', []):
+        item = {key: copy.deepcopy(attempt[key]) for key in (
+            'token_index', 'arguments', 'action_index', 'action_reference', 'native_success',
+            'error', 'pose_read_error') if key in attempt}
+        item['spawn_token_reference'] = pools.native_token_reference(attempt.get('spawn_token'))
+        check = attempt.get('unchanged_check')
+        item['unchanged_check'] = None if check is None else {key: copy.deepcopy(check[key]) for key in (
+            'verified', 'unchanged', 'inventory_exact', 'identity_changed_names', 'pose_changed_names',
+            'missing_names', 'added_names', 'representation_only_names', 'scope', 'error') if key in check}
+        result['attempts'].append(item)
+    result['storage_scope'] = 'compact measured retry outcomes; referenced raw availability follows the original retention decision'
+    return result
+
+
 def compact_attempt(row):
     result = stable.compact_attempt(row)
     for key in ('candidate_policy', 'candidate_types', 'same_class', 'projection_pool_reference',
-                'proposal_role', 'native_retry_records', 'stay_horizontal_displacement',
+                'proposal_role', 'stay_horizontal_displacement',
                 'attempt_setup_reference', 'attempt_setup_native_prefix_reference',
-                'native_retry_failure', 'counts_as_pair_attempt'):
+                'frozen_render_reference', 'physical_world_references', 'frozen_render_readbacks',
+                'nonanchor_cross_world_readback',
+                'counts_as_pair_attempt'):
         result[key] = copy.deepcopy(row.get(key))
+    records = row.get('native_retry_records')
+    result['native_retry_records'] = None if records is None else {
+        world: {name: compact_native_retry(record) for name, record in values.items()}
+        for world, values in records.items()}
+    result['native_retry_failure'] = compact_native_retry(row.get('native_retry_failure'))
     result['look_solvability'] = solvable.compact_report(row.get('look_solvability'))
     return result
 
@@ -331,7 +432,8 @@ def discover_view(sim, baseline, reachable, view, config, state):
             observation_cameras=[pools.camera_after_action(camera, action) for action in actions])
         record.update(identity=copy.deepcopy(identity), discovery_reference=source,
                       unavailable_observation_actions=unavailable)
-        record['reference'] = sim.store.save_json(f'projection_pools_{sim.action_count:06d}.json', record)
+        record['reference'] = sim.store.save_json(f'projection_pools_{sim.action_count:06d}.json',
+                                                  pools.pool_evidence_record(record))
         state['pool_catalogs'].append({'identity': identity, 'view': view, 'counts': record['counts'],
                                       'reference': search.raw_reference(record['reference'])})
         yield identity, record
@@ -446,7 +548,8 @@ def run_search(sim, config, baseline, state, journal, connection, seen):
                     print('T01V2_ATTEMPT: ' + json.dumps(compact, sort_keys=True, allow_nan=False), flush=True)
                 else:
                     state['placement_point_failures'].append({'pair_id_not_consumed': pair_id,
-                        'trial': trial, 'raw_attempt': raw, 'native_retry_failure': row.get('native_retry_failure')})
+                        'trial': trial, 'raw_attempt': raw,
+                        'native_retry_failure': compact_native_retry(row.get('native_retry_failure'))})
                 connection.send(('progress', summary(state, config)))
             if terminal_error is not None:
                 raise terminal_error

@@ -121,6 +121,44 @@ def _point_key(token):
     return (token['receptacle_name'], *(point[a] for a in ('x', 'y', 'z')))
 
 
+def native_token_reference(token):
+    """Small diagnostic reference; never a token accepted for placement.
+
+    The complete native coordinate list remains in the authenticated query
+    action and the live token. Repeating that list for every selected point
+    makes a pool quadratic in the number of native coordinates.
+    """
+    if token is None:
+        return None
+    return {key: copy.deepcopy(token[key]) for key in (
+        'action', 'success', 'scene', 'receptacle_name', 'receptacle_id_at_query',
+        'receptacle_position_at_query', 'selected_position', 'query_reference',
+        'source', 'scope') if key in token}
+
+
+def pool_evidence_record(record):
+    """Serialize proposal geometry with native query references, not copies.
+
+    This is a diagnostic storage layout only. Runtime points, point ordering,
+    complete placement tokens, and acceptance checks are untouched.
+    """
+    output = {key: copy.deepcopy(value) for key, value in record.items()
+              if key not in ('points', 'diagnostics')}
+    def point(item):
+        result = {key: copy.deepcopy(value) for key, value in item.items() if key != 'token'}
+        token = item['token']
+        result['token'] = {key: copy.deepcopy(value) for key, value in token.items() if key != 'spawn'}
+        result['token']['spawn_reference'] = native_token_reference(token['spawn'])
+        return result
+    output['diagnostics'] = {side: [point(item) for item in values]
+                             for side, values in record['diagnostics'].items()}
+    output['points'] = {pool: {side: [point(item) for item in values] for side, values in sides.items()}
+                        for pool, sides in record['points'].items()}
+    output['storage_layout'] = 'projection_geometry_native_query_references_v1'
+    output['native_coordinate_storage'] = 'complete native coordinates remain in referenced query action bytes; runtime tokens unchanged'
+    return output
+
+
 def build_view_pools(left, right, candidate_a, candidate_b, anchor, *, camera, view, observation_cameras):
     """Input sides are the uncapped existing native-eligible placement groups."""
     half_height = _number(anchor['axisAlignedBoundingBox']['size']['y']) / 2

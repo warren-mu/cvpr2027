@@ -33,6 +33,34 @@ def record():
 
 
 class ProjectionPoolTests(unittest.TestCase):
+    def test_saved_pool_geometry_references_queries_without_duplicate_coordinate_payload(self):
+        class RawCoordinates:
+            def __deepcopy__(self, memo):
+                raise AssertionError('Native coordinate arrays must not be recopied into the diagnostic pool')
+        rec = record()
+        raw = RawCoordinates()
+        for side in ('A', 'B'):
+            for point in rec['diagnostics'][side]:
+                point['token']['spawn']['coordinates'] = raw
+        stored = pools.pool_evidence_record(rec)
+        self.assertEqual(stored['counts'], rec['counts'])
+        self.assertEqual(stored['view'], rec['view'])
+        self.assertEqual(stored['policy'], rec['policy'])
+        for side in ('A', 'B'):
+            for original, saved in zip(rec['diagnostics'][side], stored['diagnostics'][side]):
+                self.assertIs(original['token']['spawn']['coordinates'], raw)
+                self.assertEqual(saved['start'], original['start'])
+                self.assertEqual(saved['after_actions'], original['after_actions'])
+                self.assertNotIn('spawn', saved['token'])
+                self.assertNotIn('coordinates', saved['token']['spawn_reference'])
+                self.assertEqual(saved['token']['spawn_reference']['selected_position'],
+                                 original['token']['spawn']['selected_position'])
+                self.assertEqual(saved['token']['spawn_reference']['query_reference'],
+                                 original['token']['spawn']['query_reference'])
+            for pool in ('look', 'direct'):
+                self.assertEqual([p['token']['position'] for p in stored['points'][pool][side]],
+                                 [p['token']['position'] for p in rec['points'][pool][side]])
+
     def test_actual_vertical_fov_aspect_yaw_pitch_and_camera_height(self):
         cam = camera()
         center = pools.project_point({'x': 0, 'y': 1, 'z': 1}, cam)

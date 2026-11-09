@@ -154,6 +154,45 @@ def verified_read(reference, roots):
     return data
 
 
+def pose_restore_measurements(metadata, snapshot):
+    """Read-only all-object pose comparison; numeric signed zeros are equal."""
+    objects = {obj['name']: obj for obj in metadata['objects']}
+    expected = {obj['name']: obj for obj in snapshot['objects']}
+    if (len(objects) != len(metadata['objects']) or len(expected) != len(snapshot['objects'])
+            or set(objects) != set(expected)):
+        raise ValueError('Native metadata inventory differs from the declared snapshot')
+    positions, rotations, position_mismatches, rotation_mismatches = [], [], [], []
+    for name, target in expected.items():
+        actual = objects[name]
+        for key in ('position', 'rotation'):
+            if any(type(obj[key].get(axis)) not in (int, float) or not math.isfinite(obj[key][axis])
+                   for obj in (actual, target) for axis in 'xyz'):
+                raise ValueError('Missing/nonfinite reported object pose')
+        positions.append(math.sqrt(sum((actual['position'][axis] - target['position'][axis]) ** 2 for axis in 'xyz')))
+        rotations.extend(abs(actual['rotation'][axis] - target['rotation'][axis]) for axis in 'xyz')
+        if actual['position'] != target['position']:
+            position_mismatches.append(name)
+        if actual['rotation'] != target['rotation']:
+            rotation_mismatches.append(name)
+    return {'all_object_positions_exact': not position_mismatches,
+            'all_object_rotations_exact': not rotation_mismatches,
+            'max_position_delta_m': max(positions, default=0.),
+            'max_raw_rotation_component_delta_degrees': max(rotations, default=0.),
+            'position_mismatch_names': sorted(position_mismatches),
+            'rotation_mismatch_names': sorted(rotation_mismatches),
+            'comparison': 'exact finite numeric xyz; no epsilon; raw Euler components; signed zeros equal'}
+
+
+def frozen_non_anchor_measurements(left, right, anchor_name):
+    """Report actual readback differences; approved acceptance thresholds stay."""
+    names = [{obj['name'] for obj in metadata['objects']} for metadata in (left, right)]
+    if anchor_name not in names[0] or names[0] != names[1]:
+        raise ValueError('Frozen render inventory changed')
+    filtered = [{'objects': [obj for obj in metadata['objects'] if obj['name'] != anchor_name]}
+                for metadata in (left, right)]
+    return pose_restore_measurements(filtered[1], filtered[0])
+
+
 def world_metadata_matches(metadata, snapshot):
     objects = {obj['name']: obj for obj in metadata['objects']}
     expected = {obj['name']: obj for obj in snapshot['objects']}
@@ -166,6 +205,7 @@ def world_metadata_matches(metadata, snapshot):
         actual = objects[requested['objectName']]['position']
         if math.sqrt(sum((actual[k] - requested['position'][k]) ** 2 for k in ('x', 'y', 'z'))) > .01:
             raise ValueError('Native query/capture is not in its declared world pose state')
+    return pose_restore_measurements(metadata, snapshot)
 
 
 def verify_agent_setup(action, state, table):
@@ -198,6 +238,25 @@ def verify_cached_binding(table, row):
             raise ValueError('Cache report used different masks or candidate labels')
 
 
+def verify_paused_setup(evidence, read):
+    sequence = evidence.get('paused_setup_actions')
+    expected = ['PausePhysicsAutoSim', 'SetObjectPoses', 'PhysicsSyncTransforms', 'TeleportFull']
+    if not isinstance(sequence, list) or [row.get('action') for row in sequence] != expected:
+        raise ValueError('Missing complete paused native setup chain')
+    native = [json.loads(read(row['reference'])) for row in sequence]
+    for index, (row, action) in enumerate(zip(sequence, native)):
+        if (action.get('action') != row['action'] or action.get('exception') is not None
+                or action.get('after_metadata', {}).get('lastActionSuccess') is not True):
+            raise ValueError('Failed paused setup action')
+        if index and (action.get('index') != native[index - 1].get('index') + 1
+                      or action['before_metadata'] != native[index - 1]['after_metadata']):
+            raise ValueError('Paused setup chain is interrupted')
+    if (sequence[0]['reference'] != evidence.get('physics_pause_action')
+            or sequence[-1]['reference'] != evidence.get('agent_setup_action')):
+        raise ValueError('Pause/camera source is not the declared setup chain')
+    return native
+
+
 def verify_render_sources(table, *, evidence_roots):
     """Decode original captures and native actions, independent of table pixels.
 
@@ -209,6 +268,9 @@ def verify_render_sources(table, *, evidence_roots):
     import numpy as np
     from PIL import Image
     read = lambda ref: verified_read(ref, evidence_roots)
+    from .pair_table_export import FROZEN_RENDER_VERSION, verify_frozen_world_request, frozen_target_measurement
+    if table.source.get('frozen_render_version') != FROZEN_RENDER_VERSION:
+        raise ValueError('Real table lacks its approved frozen-render policy')
     seen = set()
     for key, state in table.states.items():
         measured = classify_views(state.captures, table.anchor_name, kind=table.kind)
@@ -265,7 +327,24 @@ def verify_render_sources(table, *, evidence_roots):
                     or placement.get('arguments', {}).get('placeStationary') is not True
                     or set(objects) != {o['name'] for o in snapshot['objects']}):
                 raise ValueError('Capture not bound to its complete authenticated world snapshot')
-            world_metadata_matches(metadata, snapshot)
+            measured_restore = world_metadata_matches(metadata, snapshot)
+            target_measurement = frozen_target_measurement(metadata['objects'], table.candidate_names,
+                table.anchor_name, table.target_names[world], table.source.get('candidate_policy'))
+            if target_measurement != src.get('frozen_target_measurement'):
+                raise ValueError('Frozen target readback not reproduced from native metadata')
+            if measured_restore != src.get('restore_readback'):
+                raise ValueError('Saved restore readback differs from native metadata')
+            setup_actions = verify_paused_setup(src, read)
+            if world == 0 and (src['world_pose_action'] != src['paused_setup_actions'][1]['reference']
+                    or action['index'] != setup_actions[-1]['index'] + 1
+                    or action['before_metadata'] != setup_actions[-1]['after_metadata']):
+                raise ValueError('w0 capture is not directly after its paused setup')
+            if world == 1:
+                original_refs = verify_frozen_world_request(snapshot, read)
+                if (original_refs != table.source.get('render_source_worlds')
+                        or original_refs[0] != state.captures[0].source['snapshot_reference']
+                        or snapshot['frozen_render_recipe']['anchor_name'] != table.anchor_name):
+                    raise ValueError('Frozen w1 recipe names another pair/anchor source')
             realized_agent = verify_agent_setup(json.loads(read(src['agent_setup_action'])), state, table)
             if encoded(metadata['agent']) != encoded(realized_agent):
                 raise ValueError('Actual capture camera changed after its requested state setup')
@@ -277,6 +356,22 @@ def verify_render_sources(table, *, evidence_roots):
                     actual = json.loads(read(row['reference']))
                     if actual.get('action') != row['action'] or actual.get('exception') is not None:
                         raise ValueError('Unsuccessful intervening paired render action')
+                left_src = state.captures[0].source
+                previous = json.loads(read(left_src['render_action']))
+                for row in sequence:
+                    actual = json.loads(read(row['reference']))
+                    if (actual['index'] != previous['index'] + 1
+                            or actual['before_metadata'] != previous['after_metadata']):
+                        raise ValueError('Paired paused capture sequence is interrupted')
+                    previous = actual
+                if (sequence[0]['reference'] != src['world_pose_action']
+                        or sequence[-1]['reference'] != src['render_action']
+                        or src['physics_pause_action'] != left_src['physics_pause_action']):
+                    raise ValueError('w1 capture does not retain the same paused render chain')
+                left_metadata = json.loads(read(left_src['capture']['files']['metadata']))
+                comparison = frozen_non_anchor_measurements(left_metadata, metadata, table.anchor_name)
+                if comparison != src.get('non_anchor_pose_comparison'):
+                    raise ValueError('Actual non-anchor pose comparison is not reproduced')
         # Domain records must be byte-identical in their public implications;
         # build_table already refuses world-specific neighbor differences.
         if len(state.graph_evidence) != 2 or any(d.get('complete') is not True for d in state.graph_evidence):
@@ -288,15 +383,22 @@ def verify_render_sources(table, *, evidence_roots):
         for world, domain in enumerate(state.graph_evidence):
             evidence = domain['evidence']
             setup = json.loads(read(evidence['setup']))
+            setup_actions = verify_paused_setup(evidence, read)
             expected_snapshot_ref = state.captures[world].source['snapshot_reference']
-            if evidence.get('world') != world or evidence.get('world_snapshot_reference') != expected_snapshot_ref:
+            graph_snapshot_ref = evidence.get('world_snapshot_reference')
+            if (evidence.get('world') != world or not isinstance(graph_snapshot_ref, dict)
+                    or graph_snapshot_ref.get('sha256') != expected_snapshot_ref.get('sha256')
+                    or read(graph_snapshot_ref) != read(expected_snapshot_ref)):
                 raise ValueError('Native graph proof belongs to the other world')
             snapshot = json.loads(read(expected_snapshot_ref))
             world_metadata_matches({'objects': setup['objects']}, snapshot)
             placement = json.loads(read(evidence['world_pose_action']))
             if (placement.get('action') != 'SetObjectPoses' or placement.get('exception') is not None
-                    or placement['arguments'].get('objectPoses') != snapshot['poses']):
+                    or placement['arguments'].get('objectPoses') != snapshot['poses']
+                    or evidence['world_pose_action'] != evidence['paused_setup_actions'][1]['reference']):
                 raise ValueError('Native graph setup did not apply its authenticated world')
+            if world_metadata_matches(setup_actions[2]['after_metadata'], snapshot) != evidence.get('restore_readback'):
+                raise ValueError('Graph restore readback differs from its actual native sync result')
             realized_agent = verify_agent_setup(json.loads(read(evidence['agent_setup_action'])), state, table)
             actual_position = setup['agent']['position']
             if sum((actual_position[k] - table.positions[state.view.viewpoint_id][k]) ** 2

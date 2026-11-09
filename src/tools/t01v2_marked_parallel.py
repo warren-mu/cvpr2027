@@ -7,6 +7,7 @@ from src.tools.t01v2_stable_parallel import stable_scene_command
 from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SPEC
 from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
 from src.envs.pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
+from src.envs.pair_v2_native_retry import FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY
 
 SCENE_MODULE = 'src.envs.pair_v2_marked_shard'
 
@@ -16,6 +17,7 @@ def marked_tags():
             'candidate_policy': CANDIDATE_POLICY, 'candidate_policy_spec': copy.deepcopy(CANDIDATE_POLICY_SPEC),
             'projection_pool_version': POOL_VERSION, 'projection_pool_policy': copy.deepcopy(POOL_POLICY),
             'attempt_setup_version': ATTEMPT_SETUP_VERSION, 'attempt_setup_policy': copy.deepcopy(ATTEMPT_SETUP_POLICY),
+            'frozen_render_version': FROZEN_RENDER_VERSION, 'frozen_render_policy': copy.deepcopy(FROZEN_RENDER_POLICY),
             'enable_candidate_clone': False, 'budget_limit_charged_gpu_hours': 16}
 
 

@@ -161,11 +161,17 @@ class MarkedShardTests(unittest.TestCase):
 
     def test_uncounted_trials_have_unique_setup_filenames_and_restore_private_methods(self):
         rec = record(); rec['reference'] = {'file': 'pool', 'sha256': 'd' * 64}
+        class MustNotCopy:
+            def __deepcopy__(self, memo):
+                raise AssertionError('The entire private pool must not be copied per proposal')
+        rec['unselected_private_domain'] = MustNotCopy()
         proposal, view, _ = next(pools.PoolProposalIterator([rec])); proposal['_private_pool_record'] = rec
         sim = SimpleNamespace(store=Store(), construct_world=lambda *a, **kw: None)
         old_construct, old_observer = sim.construct_world, shard.isolated.build_with_prefix_observer
         identity = {'candidate_names': ['A', 'B'], 'candidate_types': ['Mug', 'Book'], 'same_class': False}
         def isolated_build(original, actual, config, baseline, identities, prop, camera_view, pair_id, directory, reachable, attempt_row):
+            self.assertNotIn('_private_pool_record', prop)
+            self.assertIs(proposal['_private_pool_record'], rec)
             actual.store.save_json('attempt_setup_' + pair_id + '.json', {'pair_id': pair_id})
             raise NativePlacementExhausted({'status': 'exhausted', 'failed_point_count': 40})
         with patch.object(shard.isolated, 'isolated_build', side_effect=isolated_build):
@@ -176,6 +182,41 @@ class MarkedShardTests(unittest.TestCase):
         self.assertEqual(len({name for name, _ in sim.store.saved}), 2)
         self.assertIs(sim.construct_world, old_construct)
         self.assertIs(shard.isolated.build_with_prefix_observer, old_observer)
+
+    def test_compact_retry_keeps_outcomes_and_refs_without_copying_raw_maps(self):
+        class RawPayload:
+            def __deepcopy__(self, memo):
+                raise AssertionError('Raw arrays/pose maps must not enter compact rejections')
+        raw = RawPayload()
+        token = {'selected_position': {'x': 1., 'y': 2., 'z': 3.}, 'coordinates': raw,
+                 'query_reference': {'file': 'query', 'sha256': 'a' * 64}, 'receptacle_name': 'Surface'}
+        check = {'verified': True, 'unchanged': False, 'pose_changed_names': ['X'],
+                 'before_object_poses': raw, 'after_object_poses': raw}
+        retry = {'status': 'fresh_controller_required', 'failed_point_count': 1,
+                 'attempted_point_count': 1, 'fresh_controller_required': True,
+                 'ledger_reference': {'file': 'ledger', 'sha256': 'b' * 64},
+                 'successful_token': None, 'error': 'native failure',
+                 'attempts': [{'action_index': 7, 'action_reference': {'file': 'action7', 'sha256': 'c' * 64},
+                    'spawn_token': token, 'native_success': False, 'unchanged_check': check,
+                    'before_object_poses': raw, 'after_object_poses': raw}]}
+        result = shard.compact_native_retry(retry)
+        self.assertEqual(result['failed_point_count'], 1)
+        self.assertTrue(result['fresh_controller_required'])
+        self.assertEqual(result['ledger_reference'], retry['ledger_reference'])
+        item = result['attempts'][0]
+        self.assertIs(item['native_success'], False)
+        self.assertEqual(item['unchanged_check']['pose_changed_names'], ['X'])
+        self.assertEqual(item['spawn_token_reference']['selected_position'], token['selected_position'])
+        self.assertEqual(item['spawn_token_reference']['query_reference'], token['query_reference'])
+        self.assertNotIn('before_object_poses', item)
+        self.assertNotIn('before_object_poses', item['unchanged_check'])
+        self.assertNotIn('coordinates', item['spawn_token_reference'])
+        row = {'native_retry_failure': retry, 'native_retry_records': {'w0': {'X': retry}}}
+        with patch.object(shard.stable, 'compact_attempt', return_value={}):
+            compact = shard.compact_attempt(row)
+        self.assertEqual(compact['native_retry_failure'], result)
+        self.assertEqual(compact['native_retry_records']['w0']['X'], result)
+        self.assertIs(retry['attempts'][0]['before_object_poses'], raw)
 
     def test_exhausted_native_points_do_not_consume_pair_attempt_or_repeat_forever(self):
         rec = record(); rec['reference'] = {'file': 'pool', 'sha256': 'd' * 64}
@@ -210,6 +251,9 @@ class MarkedShardTests(unittest.TestCase):
             self.assertEqual(journal.getvalue(), '')
             self.assertEqual(current['failed_native_point_count'], 40)
             self.assertEqual(current['proposal_trials'], 1)
+            failure = current['placement_point_failures'][0]['native_retry_failure']
+            self.assertEqual(failure['failed_point_count'], 40)
+            self.assertIn('storage_scope', failure)
 
     def test_parent_private_bindings_restore_and_missing_receipt_cannot_succeed(self):
         old = shard.base.generator_worker, shard.base.Worker, shard.base.write_result

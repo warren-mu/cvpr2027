@@ -19,6 +19,64 @@ from .paired_env import RGBFrame
 from .pair_table import (PairTable, RenderedView, TableState, TABLE_VERSION,
                          classify_views, encoded)
 
+FROZEN_RENDER_VERSION = 'w0_nonanchor_frozen_table_v1'
+
+
+def frozen_w1_request(worlds, anchor_name):
+    """A declared render recipe, never an asserted physical observation."""
+    from .pair_v2_simulator import objects_by_name, complete_pose_list
+    if len(worlds) != 2 or worlds[0]['scene'] != worlds[1]['scene']:
+        raise ValueError('Frozen table needs two source worlds in the same scene')
+    inventories = [objects_by_name(world['objects']) for world in worlds]
+    if set(inventories[0]) != set(inventories[1]) or anchor_name not in inventories[0]:
+        raise ValueError('Frozen table source inventories disagree')
+    poses = complete_pose_list(worlds[0]['objects'], worlds[0]['poses'])
+    anchor_poses = [pose for pose in worlds[1]['poses'] if pose['objectName'] == anchor_name]
+    if len(anchor_poses) != 1 or sum(pose['objectName'] == anchor_name for pose in poses) != 1:
+        raise ValueError('Frozen table requires the one original anchor pose in both worlds')
+    for index, pose in enumerate(poses):
+        if pose['objectName'] == anchor_name:
+            poses[index] = copy.deepcopy(anchor_poses[0])
+    objects = [copy.deepcopy(inventories[1][anchor_name] if obj['name'] == anchor_name else obj)
+               for obj in worlds[0]['objects']]
+    return {'scene': worlds[0]['scene'], 'key': 'declared_frozen_table_w1',
+            'poses': poses, 'objects': objects,
+            'agent': copy.deepcopy(worlds[0]['agent']),
+            'agent_setup_command': copy.deepcopy(worlds[0]['agent_setup_command']),
+            'clone_context': copy.deepcopy(worlds[0].get('clone_context')),
+            'frozen_render_version': FROZEN_RENDER_VERSION,
+            'frozen_render_recipe': {'anchor_name': anchor_name,
+                'source_world_references': [copy.deepcopy(world['reference']) for world in worlds],
+                'operation': 'w0 all non-anchor poses; original w1 anchor pose; no physics advance'},
+            'serialization_scope': 'declared target poses, not a native observation; actual restore readbacks are separate'}
+
+
+def verify_frozen_world_request(snapshot, read):
+    if snapshot.get('frozen_render_version') != FROZEN_RENDER_VERSION:
+        raise ValueError('Missing explicit frozen table render recipe')
+    recipe = snapshot['frozen_render_recipe']
+    refs = recipe['source_world_references']
+    if len(refs) != 2:
+        raise ValueError('Frozen recipe must retain both original world references')
+    originals = [{**json.loads(read(ref)), 'reference': ref} for ref in refs]
+    if snapshot != frozen_w1_request(originals, recipe['anchor_name']):
+        raise ValueError('Frozen table request differs from its authenticated original worlds')
+    return refs
+
+
+def frozen_target_measurement(objects, candidate_names, anchor_name, target_name, candidate_policy):
+    """Re-evaluate the original target/1.5 ratio after native frozen restore."""
+    if candidate_policy is None:
+        from .pair_v2_policy import closest_target
+    else:
+        from .pair_v2_marked_policy import CANDIDATE_POLICY, closest_target
+        if candidate_policy != CANDIDATE_POLICY:
+            raise ValueError('Unknown candidate semantics in frozen table source')
+    measured = closest_target(objects, list(candidate_names), anchor_name)
+    if measured.get('passed') is not True or measured.get('target_name') != target_name:
+        raise ValueError('frozen_render_target_changed: ' + json.dumps(measured, sort_keys=True))
+    return measured
+
 
 class PairRenderer(Protocol):
     def domain(self, world: int, state: ViewState) -> dict:
@@ -129,10 +187,16 @@ class SimulatorTableRenderer:
     the existing complete_pose_list guard; it never invents clones.
     """
     def __init__(self, sim, worlds, reachable, initial_position, anchor_name, candidate_names,
-                 *, pair_id, reachable_reference):
+                 *, pair_id, reachable_reference, target_names, candidate_policy=None):
         self.sim, self.worlds, self.reachable = sim, copy.deepcopy(worlds), copy.deepcopy(reachable)
+        requested = frozen_w1_request(self.worlds, anchor_name)
+        reference = sim.store.save_json('table_frozen_w1_request.json', requested)
+        self.worlds[1] = {**requested, 'reference': reference}
         self.positions = {point_id(point): point for point in [initial_position, *reachable]}
         self.names = (anchor_name, *candidate_names)
+        self.target_names, self.candidate_policy = tuple(target_names), candidate_policy
+        if len(self.target_names) != 2 or any(name not in candidate_names for name in self.target_names):
+            raise ValueError('Require both authenticated source target identities')
         self.pair_id, self.reachable_reference = pair_id, copy.deepcopy(reachable_reference)
         from .thor_common import process_identity
         identity = {'worker': process_identity(os.getpid()),
@@ -142,16 +206,21 @@ class SimulatorTableRenderer:
         self.process_reference = sim.store.save_json('table_process_' + identity['instance_nonce'] + '.json', identity)
         self.process_id = self.process_reference['sha256']
         self.serial = 0
+        self.restore_checks = []
 
     def setup(self, world, state):
         from .pair_v2_simulator import complete_pose_list
         sim = self.sim
         snapshot = self.worlds[world]
+        beginning = len(sim.query_log)
         sim.action('PausePhysicsAutoSim')
+        self.physics_pause_action = copy.deepcopy(sim.last_action_reference)
         sim.action('SetObjectPoses', objectPoses=complete_pose_list(
             sim.controller.last_event.metadata['objects'], snapshot['poses']), placeStationary=True)
         self.world_pose_action = copy.deepcopy(sim.last_action_reference)
         sim.action('PhysicsSyncTransforms')
+        from .pair_table_checks import world_metadata_matches
+        self.restore_readback = world_metadata_matches(sim.controller.last_event.metadata, snapshot)
         # Feed the originally executed arguments back to THOR; reported float32
         # horizon values can accumulate Euler drift when reused as new inputs.
         agent = copy.deepcopy(snapshot.get('agent_setup_command'))
@@ -162,6 +231,9 @@ class SimulatorTableRenderer:
         agent['forceAction'] = False
         sim.action('TeleportFull', **agent)
         self.agent_setup_action = copy.deepcopy(sim.last_action_reference)
+        self.paused_setup_actions = copy.deepcopy(sim.query_log[beginning:])
+        self.restore_checks.append({'world': world, 'state_id': state_id(state),
+            'stage': 'setup', 'measurement': world_metadata_matches(sim.controller.last_event.metadata, snapshot)})
         return sim.snapshot('table_setup')
 
     def domain(self, world, state):
@@ -180,6 +252,9 @@ class SimulatorTableRenderer:
             'reachable_reference': self.reachable_reference,
             'world_snapshot_reference': self.worlds[world]['reference'],
             'world_pose_action': copy.deepcopy(self.world_pose_action),
+            'physics_pause_action': copy.deepcopy(self.physics_pause_action),
+            'paused_setup_actions': copy.deepcopy(self.paused_setup_actions),
+            'restore_readback': copy.deepcopy(self.restore_readback),
             'agent_setup_action': copy.deepcopy(self.agent_setup_action)}}
 
     def capture(self, world, state, sequence):
@@ -187,6 +262,12 @@ class SimulatorTableRenderer:
         from .pair_v2_simulator import objects_by_name, distance
         sim = self.sim
         sim.action('Pass')
+        from .pair_table_checks import world_metadata_matches
+        readback = world_metadata_matches(sim.controller.last_event.metadata, self.worlds[world])
+        target_measurement = frozen_target_measurement(sim.controller.last_event.metadata['objects'],
+            self.names[1:], self.names[0], self.target_names[world], self.candidate_policy)
+        self.restore_checks.append({'world': world, 'state_id': state_id(state),
+            'stage': 'capture', 'measurement': readback})
         observation = sim.last_capture
         objects = objects_by_name(sim.controller.last_event.metadata['objects'])
         masks = {}
@@ -211,6 +292,10 @@ class SimulatorTableRenderer:
              'snapshot_sha256': self.worlds[world]['reference']['sha256'],
              'process_reference': self.process_reference,
              'agent_setup_action': copy.deepcopy(self.agent_setup_action),
+             'physics_pause_action': copy.deepcopy(self.physics_pause_action),
+             'paused_setup_actions': copy.deepcopy(self.paused_setup_actions),
+             'restore_readback': readback,
+             'frozen_target_measurement': target_measurement,
              'world_pose_action': copy.deepcopy(self.world_pose_action)}, False)
 
     def render_pair(self, state):
@@ -218,12 +303,19 @@ class SimulatorTableRenderer:
         self.setup(0, state)
         left = self.capture(0, state, 'w0_then_w1_without_agent_action')
         sim = self.sim
+        left_metadata = copy.deepcopy(sim.controller.last_event.metadata)
         begin = len(sim.query_log)
         sim.action('SetObjectPoses', objectPoses=complete_pose_list(
             sim.controller.last_event.metadata['objects'], self.worlds[1]['poses']), placeStationary=True)
         self.world_pose_action = copy.deepcopy(sim.last_action_reference)
         sim.action('PhysicsSyncTransforms')
+        from .pair_table_checks import world_metadata_matches, frozen_non_anchor_measurements
+        self.restore_readback = world_metadata_matches(sim.controller.last_event.metadata, self.worlds[1])
         right = self.capture(1, state, 'w0_then_w1_without_agent_action')
+        right.source['non_anchor_pose_comparison'] = frozen_non_anchor_measurements(
+            left_metadata, sim.controller.last_event.metadata, self.names[0])
+        self.restore_checks.append({'world': None, 'state_id': state_id(state),
+            'stage': 'paired_nonanchor', 'measurement': copy.deepcopy(right.source['non_anchor_pose_comparison'])})
         # Keep every intervening action, not only an asserted same-camera flag.
         right.source['between_renders'] = copy.deepcopy(sim.query_log[begin:])
         return left, right

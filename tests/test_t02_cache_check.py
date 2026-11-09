@@ -34,7 +34,7 @@ def table():
     states = {key: SimpleNamespace(captures=(view(key, 0), view(key, 1)), view=ViewState("v", index))
               for index, key in enumerate(("s0", "s1"))}
     return SimpleNamespace(pair_id="p", scene="FloorPlan1", kind="look_flip", anchor_name="X",
-                           candidate_names=("A", "B"), states=states)
+                           candidate_names=("A", "B"), target_names=("A", "B"), source={}, states=states)
 
 
 class CacheProducerTests(unittest.TestCase):
@@ -86,7 +86,8 @@ class CacheProducerTests(unittest.TestCase):
             "metrics": {"kind": "t02_table_export", "export_checks_complete": True, "cleanup_errors": [],
                         "errors": [], "unstarted_pair_ids": [], "pairs": [row]}}
         value = SimpleNamespace(**{key: package[key] for key in ("pair_id", "scene", "kind", "instruction", "anchor_name", "candidate_names", "target_names")},
-            synthetic=False, source={"export_version": cache.EXPORT_VERSION, "t01": package["source_provenance"]},
+            synthetic=False, source={"export_version": cache.EXPORT_VERSION, "t01": package["source_provenance"],
+                "frozen_render_version": "w0_nonanchor_frozen_table_v1", "render_source_worlds": [world["reference"] for world in package["worlds"]]},
             initial_state="s0", states={"s0": SimpleNamespace(view=ViewState("v", 0))}, positions={"v": package["initial_position"]})
         return data, package, value, manifest
 

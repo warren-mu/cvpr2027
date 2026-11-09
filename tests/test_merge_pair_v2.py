@@ -11,7 +11,7 @@ from src.tools.merge_pair_v2 import (KINDS, balanced_selection, durations,
     publication_eligible, reference_path, scene_number, source_eligibility,
     shard_producer, search_source_inventory, verify_clone_measurements, verify_preflight,
     verify_search_identity, verify_search_ledger, verify_source_identity,
-    CONSTRUCTION_SPEC_REFERENCES, specification_provenance, final_pair_eligible, target_balance)
+    CONSTRUCTION_SPEC_REFERENCES, CURRENT_SPEC_REFERENCE, specification_provenance, final_pair_eligible, target_balance)
 
 
 def source(exit_code=0, status="completed_search", cleanup=None):
@@ -176,9 +176,20 @@ class MergePairV2Tests(unittest.TestCase):
         checked = specification_provenance(sha, commit, documents.__getitem__)
         self.assertTrue(checked['historical_spec'])
         self.assertEqual(checked['compatible_references'], ['635afb6'])
-        documents[commit] = documents['d869611']
+        documents[commit] = documents[CURRENT_SPEC_REFERENCE]
         current = specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit, documents.__getitem__)
         self.assertFalse(current['historical_spec'])
+
+    def test_human_approved_supplement8_spec_is_explicitly_compatible(self):
+        commit = 'a' * 40
+        documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
+        self.assertIn('4e010a3', documents)
+        documents[commit] = documents['4e010a3']
+        sha = hashlib.sha256(documents[commit]).hexdigest()
+        checked = specification_provenance(sha, commit, documents.__getitem__)
+        self.assertEqual(checked['compatible_references'], ['4e010a3'])
+        with self.assertRaises(ValueError):
+            specification_provenance('0' * 64, commit, documents.__getitem__)
 
     def test_unknown_or_mismatched_commit_spec_fails_closed(self):
         commit = 'a' * 40

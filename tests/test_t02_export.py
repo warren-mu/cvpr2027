@@ -18,14 +18,14 @@ UUID = "GPU-11111111-2222-3333-4444-555555555555"
 
 def package(kind="look_flip"):
     world = {"scene": "FloorPlan1", "agent_setup_command": {"position": {"x": 0, "y": 1, "z": 0}},
-             "clone_context": None}
+             "clone_context": None, "reference": {"file": "/source/world.json", "sha256": "e" * 64}}
     return {"pair_id": "p", "scene": "FloorPlan1", "kind": kind, "instruction": "Select target",
             "anchor_name": "X", "candidate_names": ["A", "B"], "target_names": ["A", "B"],
             "initial_position": {"x": 0, "y": 1, "z": 0}, "initial_heading": 0,
             "worlds": [copy.deepcopy(world), copy.deepcopy(world)], "clone_context": None,
             "reachable_positions": [{"x": .25, "y": 1, "z": 0}, {"x": -.25, "y": 1, "z": 0}],
             "reachable_reference": {"file": "/original/query.json", "sha256": "a" * 64},
-            "reachable_scope": "original", "source_provenance": {}, "t01": {"pair_id": "p"},
+            "reachable_scope": "original", "source_provenance": {}, "source_config": {}, "t01": {"pair_id": "p"},
             "evidence_roots": ["/original"]}
 
 

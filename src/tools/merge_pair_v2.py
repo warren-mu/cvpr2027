@@ -25,8 +25,8 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
 PER_CLASS = 20
 REVIEWS_PER_CLASS = 10
-CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611")
-CURRENT_SPEC_REFERENCE = "d869611"
+CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611", "4e010a3")
+CURRENT_SPEC_REFERENCE = "4e010a3"
 
 
 @lru_cache(maxsize=64)
@@ -126,6 +126,11 @@ def marked_policy_configuration(config):
     if config.get('enable_candidate_clone') is not False or any(config.get(key) is not None for key in
             ('search_version', 'search_policy', 'proposal_order_version', 'proposal_order_policy')):
         raise ValueError('Marked natural producer cannot claim old cloning/search/order policies')
+    if any(config.get(key) is not None for key in ('frozen_render_version', 'frozen_render_policy')):
+        from src.envs.pair_v2_native_retry import FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY
+        if config.get('frozen_render_version') != FROZEN_RENDER_VERSION or config.get('frozen_render_policy') != FROZEN_RENDER_POLICY:
+            raise ValueError('Unknown frozen render policy for marked source')
+        expected.update(frozen_render_version=FROZEN_RENDER_VERSION, frozen_render_policy=FROZEN_RENDER_POLICY)
     return expected
 
 
@@ -299,7 +304,7 @@ def load_source(path):
         raise ValueError("Hashed metrics evidence rule differs from source config")
     if any(data["metrics"].get(key) != config.get(key) for key in
            ("search_version", "search_policy", "solvability_version", "solvability_policy", "generation_version", "generation_policy",
-            "attempt_setup_version", "attempt_setup_policy")):
+            "attempt_setup_version", "attempt_setup_policy", "frozen_render_version", "frozen_render_policy")):
         raise ValueError("Hashed metrics search configuration differs from source config")
     marked_keys = ('candidate_policy', 'candidate_policy_spec', 'projection_pool_version', 'projection_pool_policy')
     if any(key in config or key in data['metrics'] for key in marked_keys):
@@ -780,13 +785,24 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                evidence_version=None, search_version=None, search_policy=None, search_clone_source=None,
                solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None,
                attempt_setup_version=None, attempt_setup_policy=None, candidate_policy=None, candidate_policy_spec=None,
-               projection_pool_version=None, projection_pool_policy=None):
+               projection_pool_version=None, projection_pool_policy=None,
+               frozen_render_version=None, frozen_render_policy=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
         mark_observation, physical_check, prefix_check, public_copy, public_exact,
         restore_state_check, single_edit_check, witness_check)
     marked = candidate_policy is not None
+    frozen = frozen_render_version is not None
+    if frozen:
+        from src.envs.pair_v2_native_retry import FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY
+        if (not marked or frozen_render_version != FROZEN_RENDER_VERSION or frozen_render_policy != FROZEN_RENDER_POLICY
+                or row.get('frozen_render_version') != frozen_render_version
+                or row.get('frozen_render_policy') != frozen_render_policy):
+            raise ValueError('Frozen renders require their exact opted-in marked source policy')
+    elif frozen_render_policy is not None or any(row.get(key) is not None for key in
+            ('frozen_render_version', 'frozen_render_policy', 'frozen_render_reference', 'physical_world_references')):
+        raise ValueError('Historical pairs cannot silently acquire frozen-render claims')
     if marked:
         from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SPEC, closest_target
         from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
@@ -861,6 +877,11 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     replays = [read(f"witness_w{i}.json") for i in range(2)]
     restored = [read(f"restored_snapshot_w{i}.json") for i in range(2)]
     constructions = [read(f"construction_w{i}.json") for i in range(2)]
+    physical_worlds, frozen_verification = worlds, None
+    if frozen:
+        from src.envs.pair_v2_marked_verify import verify_frozen_render
+        physical_worlds, frozen_verification = verify_frozen_render(row, worlds, constructions,
+            lambda ref: read_reference(ref, root=root, within=raw_root))
     preflight_reference = row["scene_preflight_reference"]
     preflight_path = reference_path(preflight_reference, root=root, within=directory)
     if portable.get(preflight_path) != preflight_reference["sha256"]:
@@ -923,7 +944,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     for index, world in enumerate(worlds):
         if world.get("scene") != row["scene"] or prefix[index]["metadata"]["objects"] != world["objects"]:
             raise ValueError("Snapshot and captured prefix objects disagree")
-        if constructions[index]["realized_objects"] != world["objects"]:
+        if constructions[index]["realized_objects"] != physical_worlds[index]["objects"]:
             raise ValueError("Physical evidence and saved world disagree")
         original = read_reference(world["reference"], root=root, within=raw_root)
         if original != {k: v for k, v in world.items() if k != "reference"}:
@@ -958,7 +979,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             from src.envs.pair_v2_marked_verify import verify_attempt_setup
         else:
             from src.envs.pair_v2_isolated_verify import verify_attempt_setup
-        attempt_setup = verify_attempt_setup(row, worlds, constructions, common_objects,
+        attempt_setup = verify_attempt_setup(row, physical_worlds, constructions, common_objects,
             lambda ref: read_reference(ref, root=root, within=raw_root))
     for c in constructions:
         if c.get("settling", {}).get("settled") is not True or not c["settling"].get("observations"):
@@ -988,7 +1009,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             returned = [o for o in placement["after_metadata"]["objects"] if o["name"] == name]
             if len(returned) != 1 or returned[0]["position"] != geom["returned_position"]:
                 raise ValueError("Requested pivot is not the recorded pre-settle native placement result")
-    if constructions[1]["before_objects"] != worlds[0]["objects"] or constructions[1]["edited_names"] != [anchor]:
+    if constructions[1]["before_objects"] != physical_worlds[0]["objects"] or constructions[1]["edited_names"] != [anchor]:
         raise ValueError("w1 was not constructed from w0 with only its anchor edited")
     role = None
     if generation_version is not None:
@@ -998,7 +1019,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
         from src.envs.pair_v2_marked_policy import stay_horizontal_displacement
         if row.get('stay_horizontal_displacement') != stay_horizontal_displacement(worlds, anchor):
             raise ValueError('Stay displacement diagnostic differs from actual two-world anchor positions')
-    single = single_edit_check(worlds[0]["poses"], constructions[1]["requested_poses"], anchor)
+    single = single_edit_check(physical_worlds[0]["poses"], constructions[1]["requested_poses"], anchor)
     look = row["kind"].startswith("look")
     shared0 = shared1 = None
     if look:
@@ -1042,6 +1063,10 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                    for w, r in zip(worlds, restored)]
     witnesses = []
     for index, replay in enumerate(replays):
+        if frozen:
+            from src.envs.pair_v2_marked_verify import verify_frozen_restore_diagnostic
+            verify_frozen_restore_diagnostic(replay['restoration'], worlds[index],
+                lambda ref: read_reference(ref, root=root, within=raw_root))
         if (replay.get("status") != "completed" or replay.get("cleanup_errors") != []
                 or replay.get("error") is not None or replay.get("construction_process_id") != worlds[index].get("worker_pid")
                 or replay.get("process_id") != restored[index].get("worker_pid")):
@@ -1098,6 +1123,7 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             "clone_verification": clone,
             "look_solvability_verification": solvability,
             "proposal_role_verification": role,
+            **({'frozen_render_verification': frozen_verification} if frozen else {}),
             **({"attempt_setup_verification": attempt_setup} if attempt_setup is not None else {}),
             "verification_scope": "construction-stage and applicable supplement 4(a); P-table/BFS/no-leak/cache checks not run",
             "full_metrics_spec_compliance": None,
@@ -1301,7 +1327,8 @@ def main(argv=None):
                                              attempt_setup_version=cfg.get("attempt_setup_version"),
                                              attempt_setup_policy=cfg.get("attempt_setup_policy"),
                                              candidate_policy=cfg.get('candidate_policy'), candidate_policy_spec=cfg.get('candidate_policy_spec'),
-                                             projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'))
+                                             projection_pool_version=cfg.get('projection_pool_version'), projection_pool_policy=cfg.get('projection_pool_policy'),
+                                             frozen_render_version=cfg.get('frozen_render_version'), frozen_render_policy=cfg.get('frozen_render_policy'))
                         qualified.append({"pair_id": pair["pair_id"], "scene": pair["scene"], "kind": pair["kind"],
                             "target_w0": pair["target_w0"], "target_w1": pair["target_w1"],
                             "source_file": reference["file"], "source_metrics_sha256": reference["metrics_sha256"],

@@ -11,6 +11,95 @@ from .pair_v2_isolated_shard import ATTEMPT_SETUP_VERSION, ATTEMPT_SETUP_POLICY
 from .pair_v2_native_retry import NATIVE_RETRY_VERSION, unchanged_objects
 
 
+def verify_frozen_render(row, worlds, constructions, read_json):
+    """Authenticate physical originals separately from actual paused renders."""
+    from .pair_v2_native_retry import (FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY,
+        frozen_pose_lists, frozen_requested_snapshot, pose_readback)
+    if (row.get('frozen_render_version') != FROZEN_RENDER_VERSION
+            or row.get('frozen_render_policy') != FROZEN_RENDER_POLICY):
+        raise ValueError('Unknown frozen-render contract')
+    refs = row.get('physical_world_references')
+    if not isinstance(refs, list) or len(refs) != 2:
+        raise ValueError('Both original physical snapshot references are required')
+    physical = [{**read_json(ref), 'reference': ref} for ref in refs]
+    if any(world['objects'] != construction['realized_objects'] for world, construction in zip(physical, constructions)):
+        raise ValueError('Frozen rendering cannot replace the original measured physics')
+    anchor = row['identities']['anchor_name']
+    poses = frozen_pose_lists(physical, anchor)
+    proof = read_json(row['frozen_render_reference'])
+    if (proof.get('version') != FROZEN_RENDER_VERSION or proof.get('policy') != FROZEN_RENDER_POLICY
+            or proof.get('anchor_name') != anchor or proof.get('physical_world_references') != refs
+            or not same(proof.get('requested_pose_lists'), poses)
+            or proof.get('actual_world_references') != [world['reference'] for world in worlds]):
+        raise ValueError('Frozen render recipe differs from physical w0 plus actual settled w1 anchor')
+    action_refs = proof.get('action_references')
+    if not isinstance(action_refs, list) or len(action_refs) != 7:
+        raise ValueError('Frozen render needs its complete paused two-world native action chain')
+    expected = [('PausePhysicsAutoSim', {})]
+    for values in poses:
+        expected += [('SetObjectPoses', {'objectPoses': values, 'placeStationary': True}),
+                     ('PhysicsSyncTransforms', {}), ('Pass', {})]
+    actions = []
+    for ref, (name, arguments) in zip(action_refs, expected):
+        action = read_json(ref['reference'])
+        if (ref.get('action') != name or action.get('action') != name or action.get('exception') is not None
+                or not same(action.get('arguments'), arguments)
+                or action['after_metadata'].get('lastActionSuccess') is not True
+                or (action.get('capture') or {}).get('valid') is not True
+                or (action.get('capture') or {}).get('black') is not False):
+            raise ValueError('Frozen render contains an unverified, failed or unexpected native action')
+        if actions and (action['index'] != actions[-1]['index'] + 1
+                        or not same(action['before_metadata'], actions[-1]['after_metadata'])):
+            raise ValueError('Frozen native action chain is not continuous')
+        if agent_pose(action['before_metadata']) != physical[0]['agent'] or agent_pose(action['after_metadata']) != physical[0]['agent']:
+            raise ValueError('Frozen paired renders changed the agent')
+        actions.append(action)
+    if actions[0]['before_metadata']['objects'] != physical[1]['objects']:
+        raise ValueError('Frozen render does not follow the original w1 physical realization')
+    readbacks, restoration = [], []
+    for index, action_index in enumerate((3, 6)):
+        world, action = worlds[index], actions[action_index]
+        if (world.get('last_action') != 'Pass' or world.get('last_action_reference') != action_refs[action_index]['reference']
+                or not same(world['objects'], action['after_metadata']['objects'])
+                or not same(world['agent'], agent_pose(action['after_metadata']))
+                or world.get('capture_reference') != action.get('capture')
+                or proof['actual_capture_references'][index] != action.get('capture')):
+            raise ValueError('Saved frozen world is not its actual paused native capture')
+        actual = engine.objects_by_name(world['objects'])
+        for item in engine.complete_pose_list(world['objects'], world['poses']):
+            if any(item[key] != actual[item['objectName']][key] for key in ('position', 'rotation')):
+                raise ValueError('Saved frozen snapshot poses differ from actual native metadata')
+        readbacks.append(pose_readback(poses[index], world['objects']))
+        measured = engine.restoration_state(frozen_requested_snapshot(physical, poses, index), world['objects'], world['agent'])
+        if not measured['restore_deterministic']:
+            raise ValueError('Frozen actual world fails unchanged restoration position/agent checks')
+        restoration.append(measured)
+    nonanchor = [{'objectName': obj['name'], 'position': obj['position'], 'rotation': obj['rotation']}
+                 for obj in worlds[0]['objects'] if obj['name'] != anchor]
+    cross = pose_readback(nonanchor, worlds[1]['objects'])
+    if (not same(proof.get('readbacks'), readbacks) or not same(row.get('frozen_render_readbacks'), readbacks)
+            or not same(proof.get('restoration_checks'), restoration)
+            or not same(proof.get('nonanchor_cross_world_readback'), cross)
+            or not same(row.get('nonanchor_cross_world_readback'), cross)):
+        raise ValueError('Frozen pose diagnostics were altered or rounded to zero')
+    return physical, {'version': FROZEN_RENDER_VERSION, 'passed': True, 'readbacks': readbacks,
+        'nonanchor_cross_world_readback': cross, 'physical_world_references': refs,
+        'frozen_render_reference': row['frozen_render_reference']}
+
+
+def verify_frozen_restore_diagnostic(restoration, snapshot, read_json):
+    from .pair_v2_native_retry import FROZEN_RENDER_VERSION, pose_readback
+    proof = read_json(restoration['frozen_pose_readback_reference'])
+    realized = read_json(restoration['restored_snapshot_reference'])
+    actual = pose_readback(snapshot['poses'], realized['objects'])
+    if (proof.get('version') != FROZEN_RENDER_VERSION
+            or proof.get('requested_snapshot_reference') != snapshot['reference']
+            or proof.get('restored_snapshot_reference') != restoration['restored_snapshot_reference']
+            or not same(proof.get('readback'), actual) or not same(restoration.get('frozen_pose_readback'), actual)):
+        raise ValueError('Frozen restore readback diagnostic differs from its actual metadata')
+    return actual
+
+
 def verify_canonical_preflight_prefix(preflight, pause, read_json):
     """The sole initial Teleport is real; no indices or baseline values reset."""
     record = read_json(preflight['initial_agent_setup_reference'])
