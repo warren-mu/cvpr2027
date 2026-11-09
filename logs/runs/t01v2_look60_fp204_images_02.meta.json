@@ -1,0 +1,29 @@
+{
+  "name": "t01v2_look60_fp204_images_02",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_look60_fp204_images_02",
+    "--",
+    "python3",
+    "-c",
+    "import json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve()\nsource='pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan204'\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrows=[json.loads(line) for line in raw.splitlines() if line.strip()]\nrows=[r for r in rows if r.get('status')=='passed' and r.get('kind','').startswith('look_')]\nrows=[r for r in rows if r['pair_id']=='floorplan204_00031']\nassert rows\nout=root/'logs/review/t01v2_look_fov60_fp204_02';out.mkdir(exist_ok=False)\nproofs=[]\nfor row in rows:\n pair=(root/row['pair_file']).resolve();pair.relative_to(root/'data/world_pairs/v2')\n blob=pair.read_bytes();assert hashlib.sha256(blob).hexdigest()==row['pair_sha256']\n d=json.loads(blob);ref=d['review_image'];picture=(root/ref['file']).resolve();picture.relative_to(root)\n image=picture.read_bytes();assert hashlib.sha256(image).hexdigest()==ref['sha256']\n dest=out/(row['pair_id']+'.png');dest.write_bytes(image)\n proofs.append({'journal_row':row,'original_review_image':ref,'published_image':{'file':str(dest.relative_to(root)),'sha256':ref['sha256']}})\nproof={'scope':'provisional producer-passed Look pairs; ended-source independent checkpoint pending','source_run':source,'field_of_view':60,'pairs':proofs,'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent}\n(out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n(out/'README.md').write_text('FOV60 FloorPlan204 provisional Look review images. Source producer-passed images copied unchanged with authenticated references. Independent per-controller checkpoint pending; these are not yet independently accepted.\\n')\nprint(json.dumps({'published_pairs':[r['pair_id'] for r in rows],'review_directory':str(out.relative_to(root))}))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T11:25:39",
+  "log_path": "logs/runs/t01v2_look60_fp204_images_02.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "1f4f36d1c05337f431cef56f867f63e78f894cf4",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/t01v2_look60_fp204_images_02.diff",
+  "end": "2026-11-09T11:25:39",
+  "duration_sec": 0.4,
+  "exit_code": 0,
+  "metrics_sha256": "a8273c98fe43630e6694e7c75ecea7ecad941c139b977548f2f512967a1edc1e"
+}

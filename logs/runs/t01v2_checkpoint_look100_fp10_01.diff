@@ -1,0 +1,15 @@
+diff --git a/STATUS.md b/STATUS.md
+index 3c0fe5c..b99fd0d 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -497,3 +497,10 @@ E2E T0 job707594 failed before its first PPO update: pinned verl's colocated-wor
+ 
+ ### E2E colocated-worker compatibility fix
+ FailedT0 job707594 consumed0.08361111111111111 allocatedGPU-hours at confirmedrate1 and waited12 seconds (results/smoke_e2e_T0_accounting_01.json). It completed no update. Commit1f4f36d gives actor/ref and critic the shared observation/seed-hook immediate base required by the pinned verl factory, preserving upstream constructors and update implementations. The real installed Ray/verl CPU wiring regression and training-contract suite passed9 tests in39.596s; no test skipped. Retry retains the same training/reward configuration and a one-GPU,one-hour maximum reservation.
++
++### Look FOV60 FloorPlan204 unit and per-Controller acceptance
++The second60-degree unit ended at 2026-11-09T11:26:33 source time:38 recorded attempts, Flip7 and Stay31. Producer passes:0 LookFlip,5 LookStay. The Stay cumulative funnel is10 ->10 ->6 ->5 ->5 ->5; Flip has0 reaching the first hidden-prefix gate, with6 physical failures and1 later target-mode rejection. See logs/review/diag_look_funnel60_fp204_01.md for actual gate counts, unknown measurements and recorded rejected examples.
++The source-final preflight mismatch was an association bug: accepted FP203 pairs belonged to marked_controller_000, while the final source reference describes marked_controller_001. Additive adapter ef3f48b authenticates the identical pair/raw Controller ID, unique audited visit, original index/preflight/baseline/setup/physical snapshots and process identities, then calls the unchanged full validators. Original sources and failed checkpoint remain unchanged. All13 CPU behavior tests passed (t01v2_controller_association_cpu_01). Fresh checkpoints t01v2_checkpoint_look60_fp203_02 and t01v2_checkpoint_look60_fp204_02 independently accepted6 and5 LookStay respectively, errors[]; these are construction checks, not formalT02 acceptance. Both image directories are published. The prior100degree FP203 independently accepted1 LookStay.
++
++Human relayed Claude's no-blocker review of t01v2_checkpoint_look100_fp203_01 and t01v2_look_fov60_fp204_01. NEW expansion gate: at least1 independently accepted LookFlip AND at least3 accepted Look total AND no-blocker image review. No expansion yet: LookFlip remains0. Supplement11 far-first Stay is already active. Latest fetched main contains supplement12 only; requested missing detailed Flip fix text before implementing an assumed design. Stable object-label behavior is being checked.
++E2E T0 retry is707612,smoke_e2e_T0_02,1GPU/unpinned Express/autox/one-hour cap, retry_of707594. Before submission E2E actual0.6975/4GPUh and T01v2 measured+reserved7.877222222222223/16; full newT0 walltime reserved. Active collection parents continue their kitchen unit.
