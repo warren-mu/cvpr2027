@@ -1,0 +1,23 @@
+# run_logged: python3 -m src.tools.record_command --name diag_flip_s15_submission_status_01 -- python3 -c import json,pathlib
+root=pathlib.Path.cwd()
+dirs=["logs/pbs/pilot_pairs_v2_flip60_fp203_s15_r01-20261109T053733Z-cae9d210","logs/pbs/pilot_pairs_v2_flip60_fp204_s15_r01-20261109T053936Z-a2bd404f"]
+rows=[]
+for text in dirs:
+ d=root/text
+ payload=json.loads((d/'payload.json').read_text()); receipt=json.loads((d/'submission.json').read_text()); before=json.loads((d/'budget_before_submission.json').read_text())
+ assert receipt['returncode']==0 and not receipt['stderr'] and payload['requested_gpu_count']==1 and payload['requested_wall_seconds']==1380 and payload['requested_host'] is None and payload['queue']=='autox' and payload['budget_group']=='T01v2'
+ reserve=payload['requested_gpu_count']*payload['requested_wall_seconds']/3600*payload['requested_queue_charge_rate']
+ rows.append({'run':payload['name'],'job_id':receipt['stdout'].strip(),'receipt':text,'reserved_charged_gpu_hours':reserve,'before':before})
+latest=rows[-1]
+postgroup=latest['before']['accounted_or_reserved_by_subbudget']['T01v2']+latest['reserved_charged_gpu_hours']
+postshared=latest['before']['accounted_or_reserved_total']+latest['reserved_charged_gpu_hours']
+s=root/'STATUS.md'; marker='### Supplement15 bounded GPU pilots submitted'
+assert marker not in s.read_text()
+table=['| Pilot | PBS job | Reserved charged GPU-hours |','|---|---|---:|']+['| '+x['run']+' | '+x['job_id']+' | '+str(x['reserved_charged_gpu_hours'])+' |' for x in rows]
+s.write_text(s.read_text()+'\n'+marker+'\n\nBoth receipts confirm premium/autox submission,1GPU/12CPU, no host restriction,23-minute allocation ceiling and a full1200-second scene unit with the original per-card image gate. The generator is committed/tested/pushed before submission. The source-specific independent read-only checker continues in parallel; generated candidates remain pending independent acceptance.\n\n'+'\n'.join(table)+f'\n\nAfter the second requested reservation, the submission ledger bound is T01v2={postgroup}/16 and shared T00b+T01={postshared}/60 charged GPU-hours. These are measured-or-reserved upper bounds, not claims that queued allocations have run. Receipt directories: '+', '.join(dirs)+'.\n')
+print(json.dumps({'submissions':[{k:v for k,v in x.items() if k!='before'} for x in rows],'post_reservation_T01v2':postgroup,'post_reservation_shared':postshared},sort_keys=True))
+
+# start: 2026-11-09T13:43:02
+{"post_reservation_T01v2": 9.427777777777777, "post_reservation_shared": 22.47222222222222, "submissions": [{"job_id": "707737.hopper-m-02", "receipt": "logs/pbs/pilot_pairs_v2_flip60_fp203_s15_r01-20261109T053733Z-cae9d210", "reserved_charged_gpu_hours": 0.38333333333333336, "run": "pilot_pairs_v2_flip60_fp203_s15_r01"}, {"job_id": "707740.hopper-m-02", "receipt": "logs/pbs/pilot_pairs_v2_flip60_fp204_s15_r01-20261109T053936Z-a2bd404f", "reserved_charged_gpu_hours": 0.38333333333333336, "run": "pilot_pairs_v2_flip60_fp204_s15_r01"}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.053991844004485756}
+# exit_code: 0

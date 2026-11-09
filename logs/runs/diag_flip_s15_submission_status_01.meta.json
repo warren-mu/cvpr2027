@@ -1,0 +1,28 @@
+{
+  "name": "diag_flip_s15_submission_status_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_flip_s15_submission_status_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib\nroot=pathlib.Path.cwd()\ndirs=[\"logs/pbs/pilot_pairs_v2_flip60_fp203_s15_r01-20261109T053733Z-cae9d210\",\"logs/pbs/pilot_pairs_v2_flip60_fp204_s15_r01-20261109T053936Z-a2bd404f\"]\nrows=[]\nfor text in dirs:\n d=root/text\n payload=json.loads((d/'payload.json').read_text()); receipt=json.loads((d/'submission.json').read_text()); before=json.loads((d/'budget_before_submission.json').read_text())\n assert receipt['returncode']==0 and not receipt['stderr'] and payload['requested_gpu_count']==1 and payload['requested_wall_seconds']==1380 and payload['requested_host'] is None and payload['queue']=='autox' and payload['budget_group']=='T01v2'\n reserve=payload['requested_gpu_count']*payload['requested_wall_seconds']/3600*payload['requested_queue_charge_rate']\n rows.append({'run':payload['name'],'job_id':receipt['stdout'].strip(),'receipt':text,'reserved_charged_gpu_hours':reserve,'before':before})\nlatest=rows[-1]\npostgroup=latest['before']['accounted_or_reserved_by_subbudget']['T01v2']+latest['reserved_charged_gpu_hours']\npostshared=latest['before']['accounted_or_reserved_total']+latest['reserved_charged_gpu_hours']\ns=root/'STATUS.md'; marker='### Supplement15 bounded GPU pilots submitted'\nassert marker not in s.read_text()\ntable=['| Pilot | PBS job | Reserved charged GPU-hours |','|---|---|---:|']+['| '+x['run']+' | '+x['job_id']+' | '+str(x['reserved_charged_gpu_hours'])+' |' for x in rows]\ns.write_text(s.read_text()+'\\n'+marker+'\\n\\nBoth receipts confirm premium/autox submission,1GPU/12CPU, no host restriction,23-minute allocation ceiling and a full1200-second scene unit with the original per-card image gate. The generator is committed/tested/pushed before submission. The source-specific independent read-only checker continues in parallel; generated candidates remain pending independent acceptance.\\n\\n'+'\\n'.join(table)+f'\\n\\nAfter the second requested reservation, the submission ledger bound is T01v2={postgroup}/16 and shared T00b+T01={postshared}/60 charged GPU-hours. These are measured-or-reserved upper bounds, not claims that queued allocations have run. Receipt directories: '+', '.join(dirs)+'.\\n')\nprint(json.dumps({'submissions':[{k:v for k,v in x.items() if k!='before'} for x in rows],'post_reservation_T01v2':postgroup,'post_reservation_shared':postshared},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T13:43:02",
+  "log_path": "logs/runs/diag_flip_s15_submission_status_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5ff56555c86d1b56ada746efc044798baf11fff7",
+  "git_dirty": false,
+  "end": "2026-11-09T13:43:03",
+  "duration_sec": 0.1,
+  "exit_code": 0,
+  "metrics_sha256": "066d49719fe67328c2f972153f5f7feeb1f2f87b9be79eb3cb880c10b67a9d51"
+}

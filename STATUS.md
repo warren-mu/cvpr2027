@@ -626,3 +626,14 @@ Commit772fa9e implements full native-point input, predicted centre3D role ratios
 ### Supplement15 actual producer ready for the next bounded pilots
 
 Commit601b3f2 connects the approved complete-tuple geometry before physical construction, after the original seed exchange, and at every actual native retry validator. The original successful w0 fallback becomes w1's fixed counterpart. Same-screen-side roles are allowed; original Stay, physical/pixel/solvability/witness checks and fixed labels remain. Focused actual-native/spawn wiring:11 tests passed (results/t01v2_flip_s15_producer_cpu_01.json); complete generation regression:571 tests passed (results/t01v2_flip_s15_regressions_01.json). The strict read-only v2 independent-checkpoint adapter is being completed in parallel; no new pair is independently counted or used to unlock G01 before it passes. Next: two separate1GPU20-minute60° pilots in FloorPlan203/204, premium/autox, no host pin, original per-card image gate and submission budget guard.
+
+### Supplement15 bounded GPU pilots submitted
+
+Both receipts confirm premium/autox submission,1GPU/12CPU, no host restriction,23-minute allocation ceiling and a full1200-second scene unit with the original per-card image gate. The generator is committed/tested/pushed before submission. The source-specific independent read-only checker continues in parallel; generated candidates remain pending independent acceptance.
+
+| Pilot | PBS job | Reserved charged GPU-hours |
+|---|---|---:|
+| pilot_pairs_v2_flip60_fp203_s15_r01 | 707737.hopper-m-02 | 0.38333333333333336 |
+| pilot_pairs_v2_flip60_fp204_s15_r01 | 707740.hopper-m-02 | 0.38333333333333336 |
+
+After the second requested reservation, the submission ledger bound is T01v2=9.427777777777777/16 and shared T00b+T01=22.47222222222222/60 charged GPU-hours. These are measured-or-reserved upper bounds, not claims that queued allocations have run. Receipt directories: logs/pbs/pilot_pairs_v2_flip60_fp203_s15_r01-20261109T053733Z-cae9d210, logs/pbs/pilot_pairs_v2_flip60_fp204_s15_r01-20261109T053936Z-a2bd404f.
