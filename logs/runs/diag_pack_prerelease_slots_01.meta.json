@@ -1,0 +1,28 @@
+{
+  "name": "diag_pack_prerelease_slots_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pack_prerelease_slots_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib,subprocess\nr=subprocess.run(['qstat','-u','e1583364'],capture_output=True,text=True,timeout=30);print(r.stdout);print(r.stderr)\nfor n in ['t02_export_cache_six05_08_01_retry1','t02_export_train_six_11','t02_export_train_six_12']:\n p=pathlib.Path('results')/(n+'.json')\n if p.exists():\n  d=json.loads(p.read_text());m=d.get('metrics',{});print(json.dumps({'name':n,'end':d.get('_meta',{}).get('end'),'exit_code':d.get('_meta',{}).get('exit_code'),'status':m.get('status'),'black_frame_detected':m.get('black_frame_detected'),'cleanup_errors':m.get('cleanup_errors'),'error':m.get('error')},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T06:39:19",
+  "log_path": "logs/runs/diag_pack_prerelease_slots_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "38b155511c32e3fa4820be7b225d8df93f720a11",
+  "git_dirty": false,
+  "end": "2026-11-10T06:39:35",
+  "duration_sec": 15.3,
+  "exit_code": 0,
+  "metrics_sha256": "ae27856f46a623b492b9de147494cdc6e26552e08cf01b15eb7ac9b00da5c20d"
+}

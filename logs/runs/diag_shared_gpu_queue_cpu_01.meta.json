@@ -1,0 +1,28 @@
+{
+  "name": "diag_shared_gpu_queue_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_shared_gpu_queue_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\npatterns=['test_gpu*.py', 'test_g01_shared_unit.py', 'test_pbs_black_retry.py', 'test_mixed_phase_budget.py', 'test_e2e_budget.py', 'test_external_final_budget.py', 'test_g01_configuration.py', 'test_g01_quota.py', 'test_g01_collect_parallel.py', 'test_g01_parallel.py', 'test_g01_test_partition.py', 'test_g01_geometry_checkpoint.py', 'test_pair_table_g01_source.py', 'test_g01_checkpoint_receipts.py', 'test_g01_final_preflight_binding.py', 'test_t02_export.py', 'test_t02_export_parallel.py']\nloader=unittest.TestLoader();suite=unittest.TestSuite()\nfor pattern in patterns:suite.addTests(loader.discover(\"tests\",pattern=pattern))\nresult=unittest.TextTestRunner(verbosity=1).run(suite)\nraise SystemExit(not result.wasSuccessful())\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T06:43:45",
+  "log_path": "logs/runs/diag_shared_gpu_queue_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "411bb533e7f9f06c9f1802d0e163a883e849d7fa",
+  "git_dirty": false,
+  "end": "2026-11-10T06:44:20",
+  "duration_sec": 34.7,
+  "exit_code": 0,
+  "metrics_sha256": "32b860fc7e295f6e5985f9c5c578ce2325f2023cb2adbdfd0a0504670e6090b2"
+}

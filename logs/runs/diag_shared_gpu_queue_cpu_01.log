@@ -1,0 +1,61 @@
+# run_logged: python3 -m src.tools.record_command --name diag_shared_gpu_queue_cpu_01 -- python3 -c import unittest
+patterns=['test_gpu*.py', 'test_g01_shared_unit.py', 'test_pbs_black_retry.py', 'test_mixed_phase_budget.py', 'test_e2e_budget.py', 'test_external_final_budget.py', 'test_g01_configuration.py', 'test_g01_quota.py', 'test_g01_collect_parallel.py', 'test_g01_parallel.py', 'test_g01_test_partition.py', 'test_g01_geometry_checkpoint.py', 'test_pair_table_g01_source.py', 'test_g01_checkpoint_receipts.py', 'test_g01_final_preflight_binding.py', 'test_t02_export.py', 'test_t02_export_parallel.py']
+loader=unittest.TestLoader();suite=unittest.TestSuite()
+for pattern in patterns:suite.addTests(loader.discover("tests",pattern=pattern))
+result=unittest.TextTestRunner(verbosity=1).run(suite)
+raise SystemExit(not result.wasSuccessful())
+
+# start: 2026-11-10T06:43:45
+.....Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_pack.py", line 224, in main
+    ended, data = end_unit(queue, running, sources)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_pack.py", line 116, in end_unit
+    require(data['metrics'].get('cleanup_errors') == [], 'Unit did not confirm owned-process cleanup')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_shared_claim.py", line 28, in require
+    raise ValueError(message)
+ValueError: Unit did not confirm owned-process cleanup
+.................................................................................................................................................................Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 177, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 173, in pair_worker
+    with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_export.py", line 281, in session
+    raise RuntimeError("stop failed")
+RuntimeError: stop failed
+.....Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 177, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 177, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: missing source metadata
+......................
+----------------------------------------------------------------------
+Ran 193 tests in 33.401s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 34.61355597601505}
+# exit_code: 0
