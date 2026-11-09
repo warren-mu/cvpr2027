@@ -57,7 +57,8 @@ class RoundsTests(unittest.TestCase):
             return {'file': str(path), 'sha256': 'a' * 64}
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
             cfg = {'max_attempts': 1000, 'scene_pairs_per_class': 1000,
-                   'scene': 'FloorPlan203', 'raw_evidence_dir': directory}
+                   'scene': 'FloorPlan203', 'raw_evidence_dir': directory,
+                   'attempt_journal': str(Path(directory) / 'synthetic_attempts.jsonl')}
             stack.enter_context(patch.object(rounds.core, 'existing_views', return_value=[{}]))
             stack.enter_context(patch.object(rounds.core, 'discover_view', side_effect=discovery))
             stack.enter_context(patch.object(rounds.pools, 'PoolProposalIterator', side_effect=lambda values: values[0]['stream']))
