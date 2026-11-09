@@ -149,18 +149,18 @@ class PilotLifecycleTests(unittest.TestCase):
 
     def engineering_result(self):
         result = complete_result('T4')
-        result.update(actual_completed_updates=5, updates=result['updates'][:5],
+        result.update(actual_completed_updates=1, updates=result['updates'][:1],
             holdout_evaluations=result['holdout_evaluations'][:1], checkpoint_saved=True,
             engineering_smoke_version=pilot.ENGINEERING_SMOKE)
         return result
 
-    def test_engineering_success_is_five_updates_without_formal_pilot_permission(self):
+    def test_engineering_success_is_one_update_without_formal_pilot_permission(self):
         with tempfile.TemporaryDirectory() as directory:
             code, saved, workers, model, manifest = self.run_fixture(Path(directory),
                 worker_result=self.engineering_result(), arm='T4',
                 engineering_smoke=pilot.ENGINEERING_SMOKE, name='smoke_e2e_pilot_engineering_T4_fixture')
         self.assertEqual((code, model, manifest), (0, 1, 1))
-        self.assertEqual(workers[0]['updates'], 5)
+        self.assertEqual(workers[0]['updates'], 1)
         self.assertEqual(workers[0]['version'], pilot.ENGINEERING_VERSION)
         self.assertEqual(workers[0]['budget_group'], 'E2Epilot')
         self.assertEqual(workers[0]['format_policy'], 'explicit_task_zero')
@@ -176,7 +176,7 @@ class PilotLifecycleTests(unittest.TestCase):
     def test_engineering_failure_and_uncertain_cleanup_preserve_incomplete_status(self):
         for mutation in ('updates', 'cache', 'mode', 'checkpoint', 'holdout', 'cleanup'):
             result = self.engineering_result(); cleanup = []
-            if mutation == 'updates': result['actual_completed_updates'] = 4
+            if mutation == 'updates': result['actual_completed_updates'] = 0
             elif mutation == 'cache': result['dataset_proof']['cache_authorized'] = False
             elif mutation == 'mode': result.pop('engineering_smoke_version')
             elif mutation == 'checkpoint': result['checkpoint_saved'] = False
@@ -215,7 +215,7 @@ class PilotLifecycleTests(unittest.TestCase):
                     patch.object(training.os, 'sched_setaffinity', create=True), \
                     patch.object(dataset, 'load_pilot_pool', side_effect=ValueError('original formal cache qualification rejected')) as loader:
                 spec, spec_ref = pilot.load_spec('configs/smoke_e2e_pilot.json')
-                config = {'arm': 'T4', 'engineering_smoke': pilot.ENGINEERING_SMOKE, 'updates': 5,
+                config = {'arm': 'T4', 'engineering_smoke': pilot.ENGINEERING_SMOKE, 'updates': 1,
                     'identity': {'cpu_affinity': list(range(12))}, 'pilot_spec_reference': spec_ref,
                     'format_policy': spec['format_policy'], 'credit_pipeline': spec['credit_pipeline'],
                     'manifest_reference': {'file': 'data/frozen.json', 'sha256': 'a' * 64},

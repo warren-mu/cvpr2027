@@ -10,11 +10,12 @@ class PilotContractTests(unittest.TestCase):
         for arm in pilot.ARM_UPDATES:
             self.assertEqual(pilot.execution_schedule(arm),
                 (pilot.ARM_UPDATES[arm], pilot.HOLDOUT_UPDATES[arm]))
-        self.assertEqual(pilot.execution_schedule('T4', pilot.ENGINEERING_SMOKE), (5, (0,)))
+        self.assertEqual(pilot.execution_schedule('T4', pilot.ENGINEERING_SMOKE), (1, (0,)))
         self.assertEqual(pilot.ARM_UPDATES, {'T0': 50, 'T4': 50, 'T2': 5})
         self.assertEqual(pilot.HOLDOUT_UPDATES['T4'], (0, 20, 40, 50))
         for arm, mode in [('T0', pilot.ENGINEERING_SMOKE), ('T2', pilot.ENGINEERING_SMOKE),
-                          ('T4', True), ('T4', 'five_updates'), ('unknown', None)]:
+                          ('T4', True), ('T4', 'five_updates'),
+                          ('T4', 't4_five_update_engineering_v1'), ('unknown', None)]:
             with self.subTest(arm=arm, mode=mode), self.assertRaises(ValueError):
                 pilot.execution_schedule(arm, mode)
 

@@ -28,7 +28,7 @@ from src.tools.smoke_e2e_pilot_dataset import (VERSION as DATASET_VERSION, SCENE
 from src.tools.smoke_e2e_pilot_contract import ENGINEERING_SMOKE, execution_schedule
 
 VERSION = 'smoke_e2e_pilot_driver_v1'
-ENGINEERING_VERSION = 'smoke_e2e_pilot_engineering_driver_v1'
+ENGINEERING_VERSION = 'smoke_e2e_pilot_engineering_driver_v2'
 SPEC_VERSION = 'smoke_e2e_pilot_spec_v1'
 MODEL = 'Qwen/Qwen2.5-VL-3B-Instruct'
 ARM_UPDATES = {'T0': 50, 'T4': 50, 'T2': 5}
@@ -155,7 +155,7 @@ def run(args):
         metrics.update(kind='smoke_e2e_pilot_engineering_training', engineering_smoke_version=mode,
             engineering_smoke_completed=False, learning_comparison_eligible=False,
             scheduled_holdout_updates=list(holdout_updates), unrun_formal_holdout_updates=[20, 40, 50],
-            scope='T4 first5 updates only; same qualified pool and frozen method; no50-step learning comparison or resume authorization')
+            scope='T4 first update only; same qualified pool and frozen method; no50-step learning comparison or resume authorization')
     worker, sources, code = None, [], 1
     install_signals()
     try:
@@ -314,7 +314,7 @@ def main():
     execute.add_argument('--pilot-spec', default='configs/smoke_e2e_pilot.json')
     execute.add_argument('--critic-offload', action='store_true')
     execute.add_argument('--engineering-smoke', choices=[ENGINEERING_SMOKE], default=None,
-        help='Explicit T4 first5-update engineering check; never formal pilot completion')
+        help='T4 engineering check with one complete update; never formal pilot completion')
     execute.add_argument('--timeout-seconds', required=True, type=float)
     execute.add_argument('--gate-timeout-seconds', type=float, default=180.)
     report = commands.add_parser('summarize')
