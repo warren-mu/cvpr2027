@@ -26,6 +26,8 @@ TOTAL_LIMIT = 120.0
 BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40"
 SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 6.0, "G01": 40.0, "T02": 40.0}
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
+EXTERNAL_FINAL_CONFIG = "configs/phase_external_final_jobs.json"
+EXTERNAL_FINAL_VERSION = "g01_direct_qsub_final_cost_v1"
 
 
 def budget_group(task, name, command, declared=None):
@@ -183,14 +185,14 @@ def recorded_final_hours(fields, hours, job_id):
     return hours
 
 
-def _final_accounting(repo, wanted):
+def _final_accounting(repo, wanted, paths=None):
     if not wanted:
         return {}
     spec = importlib.util.spec_from_file_location("phase_provenance", repo / "scripts/audit_provenance.py")
     auditor = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(auditor)
     records = {}
-    for path in sorted((repo / "results").glob("*.json")):
+    for path in sorted(paths if paths is not None else (repo / "results").glob("*.json")):
         data = json.loads(path.read_text())
         jobs = data.get("config", {}).get("jobs", [])
         if not isinstance(jobs, list):
@@ -246,6 +248,121 @@ def _final_accounting(repo, wanted):
     return records
 
 
+def _external_final_jobs(repo, normal_jobs):
+    """Register the one preserved CPU request that PBS actually charged a GPU.
+
+    This is an explicit closed-job exception, not a submission transport, a
+    synthetic submit_phase payload or permission for further direct qsub jobs.
+    """
+    config_path = repo / EXTERNAL_FINAL_CONFIG
+    original_submit = repo / "results/diag_submit_test_round2_cpu_01.json"
+    if not config_path.exists():
+        if original_submit.exists():
+            raise RuntimeError("Known external PBS allocation has no final-cost registration")
+        return [], {}
+    registry = json.loads(config_path.read_text())
+    entries = registry.get("entries")
+    if (registry.get("version") != EXTERNAL_FINAL_VERSION or registry.get("budget_batch") != BATCH
+            or not isinstance(entries, list)):
+        raise RuntimeError("Invalid external final-cost registry")
+    if original_submit.exists() and not entries:
+        raise RuntimeError("Known external PBS allocation cannot be omitted from its registry")
+    spec = importlib.util.spec_from_file_location("external_phase_provenance", repo / "scripts/audit_provenance.py")
+    auditor = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(auditor)
+
+    def read_ref(reference):
+        if (not isinstance(reference, dict) or not isinstance(reference.get("file"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256"))) is None):
+            raise RuntimeError("External evidence needs an exact original file/SHA")
+        path = (repo / reference["file"]).resolve()
+        path.relative_to(repo.resolve())
+        body = path.read_bytes()
+        if hashlib.sha256(body).hexdigest() != reference["sha256"]:
+            raise RuntimeError("External original evidence changed: " + reference["file"])
+        return path, body.decode("utf-8")
+
+    def logged(reference):
+        path, body = read_ref(reference)
+        data = json.loads(body)
+        meta = data.get("_meta", {})
+        digest = hashlib.sha256(json.dumps(data.get("metrics"), sort_keys=True).encode()).hexdigest()
+        if (path.parent != (repo / "results").resolve() or meta.get("exit_code") != 0
+                or not isinstance(meta.get("end"), str) or not meta["end"]
+                or meta.get("metrics_sha256") != digest or auditor.audit_file(str(path))["fail"]):
+            raise RuntimeError("External source is not an authenticated completed logged result")
+        log_path = (repo / meta["log_path"]).resolve()
+        log_path.relative_to(repo.resolve())
+        return path, data, log_path.read_text()
+
+    submissions, final, seen = [], {}, set(normal_jobs)
+    for entry in entries:
+        job = entry.get("job_id")
+        if (job != "709137.hopper-m-02" or entry.get("name") != "test_round2_cpu_01"
+                or entry.get("task_id") != "T01" or entry.get("budget_group") != "G01"
+                or entry.get("submission_transport") != "direct_qsub"
+                or type(entry.get("requested_gpu_count")) is not int or entry["requested_gpu_count"] != 0):
+            raise RuntimeError("Only the explicit ended G01 CPU-request/hook allocation is registered")
+        if job in seen:
+            raise RuntimeError("External final cost duplicates a normal payload or registry job: " + job)
+        for payload_path in (repo / "logs/pbs").glob("*/payload.json"):
+            receipt_path = payload_path.parent / "submission.json"
+            if receipt_path.exists() and job in JOB_ID.findall(json.loads(receipt_path.read_text()).get("stdout", "")):
+                raise RuntimeError("External job already has a normal payload receipt: " + job)
+        seen.add(job)
+        submission_path, submission, submit_log = logged(entry["submission_result"])
+        transcript_path, transcript = read_ref(entry["submission_transcript"])
+        script_path, script = read_ref(entry["request_script"])
+        output_path, _ = read_ref(entry["pbs_output"])
+        accounting_path, accounting, _ = logged(entry["accounting_result"])
+        if (submission_path != original_submit.resolve()
+                or transcript_path != (repo / "logs/pbs/test_round2_cpu_01/submission_transcript.txt").resolve()
+                or script_path != (repo / "experiments/g01_test_round2_cpu_prepare.sh").resolve()
+                or output_path != (repo / "logs/pbs/test_round2_cpu_01/pbs.out").resolve()
+                or accounting_path != (repo / "results/g01_round2_cpu_attempt_accounting_01.json").resolve()):
+            raise RuntimeError("External registry names different original artifacts")
+        command = ["qsub", "-N", "cvpr27_cupre01", "-o", str(output_path),
+                   "experiments/g01_test_round2_cpu_prepare.sh"]
+        wrapper = ["python3", "-m", "src.tools.record_command", "--name", "diag_submit_test_round2_cpu_01", "--", *command]
+        if (submission.get("config", {}).get("command") != command or submission["_meta"].get("command") != wrapper
+                or submission["metrics"].get("command_exit_code") != 0
+                or [line for line in submit_log.splitlines() if JOB_ID.fullmatch(line)] != [job]
+                or [line for line in transcript.splitlines() if JOB_ID.fullmatch(line)] != [job]
+                or [line for line in script.splitlines() if line.startswith("#PBS -P")] != ["#PBS -P CFP04-SF-125"]
+                or [line for line in script.splitlines() if line.startswith("#PBS -q")] != ["#PBS -q interactive"]
+                or [line for line in script.splitlines() if line.startswith("#PBS -l")] != [
+                    "#PBS -l select=1:ncpus=1:mem=8gb:ngpus=0", "#PBS -l walltime=00:10:00"]):
+            raise RuntimeError("Original direct-qsub request/receipt no longer proves the zero-GPU request")
+        expected_account = ["python3", "src/tools/pbs_usage.py", "--name", "g01_round2_cpu_attempt_accounting_01", job]
+        jobs = accounting.get("config", {}).get("jobs")
+        if (accounting["_meta"].get("command") != expected_account or not isinstance(jobs, list)
+                or len(jobs) != 1 or jobs[0].get("job_id") != job or jobs[0].get("qstat_exit") != 0
+                or accounting["config"].get("errors") != []):
+            raise RuntimeError("Exact original final accounting is missing")
+        fields = jobs[0]["fields"]
+        if (fields.get("job_state") != "F" or fields.get("project") != "CFP04-SF-125"
+                or fields.get("Job_Owner", "").split("@")[0] != "e1583364"
+                or fields.get("Job_Name") != "cvpr27_cupre01" or fields.get("queue") != "interactive"
+                or fields.get("run_count") != "1" or fields.get("Resource_List.ngpus") != "1"
+                or fields.get("Resource_List.walltime") != "00:10:00"
+                or shlex.split(fields.get("Submit_arguments", "")) != command[1:]
+                or fields.get("Output_Path", "").split(":", 1)[-1] != str(output_path)):
+            raise RuntimeError("Final PBS allocation is not the authenticated original one-GPU hook result")
+        observed = _final_accounting(repo, {job}, paths=[accounting_path]).get(job)
+        if observed is None:
+            raise RuntimeError("External cost has no verified final allocation; never reserve zero")
+        final[job] = observed
+        submissions.append({"task": "T01", "budget_group": "G01", "name": entry["name"],
+            "job_id": job, "payload": None, "submission_transport": "direct_qsub",
+            "requested_gpu_count": 0, "actual_gpu_count": 1, "gpus": 1,
+            "requested_gpu_hours": 0.0, "recorded_reservation_rate": None, "submission_returncode": 0,
+            "actual_queue": fields["queue"], "original_requested_queue": "interactive",
+            "external_final_registration": {"file": EXTERNAL_FINAL_CONFIG,
+                "sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(), "entry": entry},
+            "scope": "Original CPU request; actual PBS GPU allocation cost only. Not premium or submit_phase submission."})
+    return submissions, final
+
+
 def budget_state(repo, policy=None, live_rates=None):
     policy = policy if policy is not None else charge_policy()
     submissions, seen = [], set()
@@ -272,7 +389,10 @@ def budget_state(repo, policy=None, live_rates=None):
                             "requested_gpu_hours": requested, "gpus": payload["requested_gpu_count"],
                             "recorded_reservation_rate": payload.get("requested_queue_charge_rate"),
                             "submission_returncode": receipt.get("returncode")})
+    external, external_final = _external_final_jobs(repo, seen)
     final = _final_accounting(repo, seen)
+    submissions.extend(external)
+    final.update(external_final)
     live_rates = live_rates if live_rates is not None else live_job_rates(seen - set(final))
     used = {task: 0.0 for task in LIMITS}
     subgroup_costs = {group: [] for group in SUBBUDGET_LIMITS}
