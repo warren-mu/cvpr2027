@@ -1,0 +1,115 @@
+{
+  "config": {
+    "name": "diag_t02_cache_six05_08_plan_01",
+    "scope": "fixed inputs for original full T02 cache checks; no native reread or new acceptance"
+  },
+  "metrics": {
+    "complete_pairs_pending_cache": 23,
+    "config": {
+      "file": "configs/t02_cache_six05_08_fixed.json",
+      "sha256": "7064e4bea714386c44021ab9944ec45fd5d91a1933c14190152c38879c5e1630"
+    },
+    "counts_pending_cache": {
+      "direct_flip": 1,
+      "direct_stay": 10,
+      "look_flip": 9,
+      "look_stay": 3
+    },
+    "requested_gpu_hours_upper_bound": 1.4797222222222222,
+    "requested_walltime": "01:28:47",
+    "sample_size": 200,
+    "status": "fixed_cutoff_ready",
+    "unknown_retained": {
+      "direct_flip": 0,
+      "direct_stay": 0,
+      "look_flip": 0,
+      "look_stay": 1
+    }
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_05_completed_summary_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_05_completed_summary_01.json",
+      "git_commit": "74ecaaf39a8eb849206b025a103bbcafb0890984",
+      "metrics_sha256": "08a254fbfd074c711a00eda911ce4e7a0a9a8946ddec508c8b4befb1f1e9a40d",
+      "sha256": "f8c96b973fb494eb1145e266e1fc7d4a8d227a2cf2daec1f90be5e82936e66f7"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_06_completed_summary_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_06_completed_summary_01.json",
+      "git_commit": "9e664c5e0e84abdf3d321f454d29283af5be4e53",
+      "metrics_sha256": "9802a7d0df2bcb324e68b334421b955161b8ff2b097e354f68da50c493a1eee4",
+      "sha256": "5ec197553c4a5045f1dd39c33629ac59d392a1904a6f7dea80ad50db79d0d5da"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_07_completed_summary_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_07_completed_summary_01.json",
+      "git_commit": "19dd077d7cf90f05e8e0e4427d15bb2ae64e00cf",
+      "metrics_sha256": "1246fc669e42312193c53116120c27cce24536e15c5783db7e51afe952a97ea0",
+      "sha256": "c246115e9ac287728da634985f51bc287472a8a235066c2399fff97f4bd3400b"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_08_completed_summary_01.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/diag_t02_train_six_08_completed_summary_01.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_08_completed_summary_01.json",
+      "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+      "metrics_sha256": "6a634a92439f0c5227023704f08d62d797294dc212780ad5746c5ce1f8a71b1c",
+      "sha256": "ff485bbb87a699da2d1a8c69ddaa3b795189d4780412bab56548614262d3a7b3"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_remaining24_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_remaining24_01.json",
+      "git_commit": "13277481938e6b85f3df0be6e81a39d5141b3371",
+      "metrics_sha256": "a4effbfcc4009754ccbabe41064732228daf411144b4d13fcaa600f746c9608e",
+      "sha256": "a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"
+    }
+  ],
+  "_meta": {
+    "name": "diag_t02_cache_six05_08_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "import json,math,os,hashlib,signal\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nsignal.alarm(12)\nname=os.environ['CVPR_RUN_NAME']; parent='t02_export_cache_six05_08_01'\nsummaries=['diag_t02_train_six_'+n+'_completed_summary_01' for n in ('05','06','07','08')]\nexpected=[f'results/t02_export_train_six_05_u{i:04d}.json' for i in (0,1,2,4,5)]\nexpected += [f'results/{p}_u{i:04d}.json' for p in ('t02_export_train_six_06','t02_export_train_six_07_retry1','t02_export_train_six_08') for i in range(6)]\nrefs=[]; entries=[]; summaries_refs=[]; kinds={k:0 for k in ('direct_flip','direct_stay','look_flip','look_stay')};unknown={k:0 for k in kinds}\nfor n in summaries:\n d,r=audited_result('results/'+n+'.json');assert d['_meta']['exit_code']==0\n refs.append(r);summaries_refs.append(r);m=d['metrics']; entries+=m['cache_source_results']\n for k in kinds:kinds[k]+=m['complete_by_kind'].get(k,0);unknown[k]+=m['unknown_or_rejected_by_kind'].get(k,0)\nfiles=[r['file'] if isinstance(r,dict) else r for r in entries];assert files==expected and len(set(files))==23 and sum(kinds.values())==23 and sum(unknown.values())==1\nlast,lr=audited_result('results/t02_export_cache_remaining24_01.json');refs.append(lr)\nassert last['_meta']['exit_code']==0 and last['metrics']['cache_matches_live'] is True and len(last['metrics']['population_ledger'])==24\ntimeout=math.ceil(last['_meta']['duration_sec']*1.3*len(files)/24);wall=timeout+30;walltime=f'{wall//3600:02d}:{wall%3600//60:02d}:{wall%60:02d}'\ncmd=['python3','-u','-m','src.tools.t02_cache_check','--name',parent]\nfor f in files:cmd+=['--source',f]\ncmd+=['--sample-size','200','--seed','0','--timeout-seconds',str(timeout),'--pair-timeout-seconds','180','--gate-timeout-seconds','180']\nconfig={'status':'fixed_cutoff_pending_cache','name':parent,'source':files,'complete_source_refs_from_original_summaries':entries,'all_four_original_attempt_summaries':summaries_refs,'original_attempt_count':24,'unknown_source':'results/t02_export_train_six_05_u0003.json','complete_counts_pending_cache':kinds,'unknown_counts_preserved':unknown,'sample_size':200,'seed':0,'timeout_seconds':timeout,'walltime':walltime,'engineering_request_basis':{'measured_source':lr,'duration_seconds':last['_meta']['duration_sec'],'original_population_pairs':24,'new_complete_population_pairs':23,'margin':1.3,'pbs_extra_seconds':30,'scope':'engineering walltime reservation only, not observed cost or expected speedup'},'command':cmd,'submission_command':['python3','scripts/pbs/submit_phase.py','--name',parent,'--task','T01','--gpus','1','--walltime',walltime,'--budget-group','T02','--',*cmd],'no_population_replacement_after_sampling':True,'full_training_authorization':False}\np=Path('configs/t02_cache_six05_08_fixed.json');p.parent.mkdir(exist_ok=True);p.open('x').write(json.dumps(config,indent=2,sort_keys=True)+'\\n');p.chmod(0o444)\nm={'status':'fixed_cutoff_ready','config':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'complete_pairs_pending_cache':len(files),'counts_pending_cache':kinds,'unknown_retained':unknown,'requested_walltime':walltime,'requested_gpu_hours_upper_bound':wall/3600,'sample_size':200}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'name':name,'scope':'fixed inputs for original full T02 cache checks; no native reread or new acceptance'},'sources':refs},indent=2,sort_keys=True)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T06:10:01",
+    "log_path": "logs/runs/diag_t02_cache_six05_08_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "cd00c9c157639db28bd787a3197414b992dcd710",
+    "git_dirty": false,
+    "end": "2026-11-10T06:10:03",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "8fc4a592d92c62d4653ffb453eeaa5e378cc1a49d299064430d9dc0bed433700"
+  }
+}
