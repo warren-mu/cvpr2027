@@ -1,0 +1,1004 @@
+{
+  "action_successes": [
+    true
+  ],
+  "actions": [
+    {
+      "distance_m": 1.2216779493550483,
+      "distance_method": "3D Euclidean agent metadata.position to object metadata.position",
+      "kind": "select",
+      "label": 1,
+      "mark_labels_by_name": {
+        "Laptop_277077f6": 2,
+        "Pillow_e654fd90": 1
+      },
+      "measurement_action_sent": false,
+      "metadata_distance": 1.2216780185699463,
+      "realized_relation": {
+        "anchor_name": "Statue_f4ee2318",
+        "candidate_names": [
+          "Laptop_277077f6",
+          "Pillow_e654fd90"
+        ],
+        "candidate_policy": "two_marked_pickupables_v1",
+        "candidate_types": [
+          "Laptop",
+          "Pillow"
+        ],
+        "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+        "distances_m": {
+          "Laptop_277077f6": 1.3017624690306062,
+          "Pillow_e654fd90": 0.33940309254746254
+        },
+        "passed": true,
+        "reasons": [],
+        "same_class": false,
+        "target_name": "Pillow_e654fd90"
+      },
+      "selected_object_id": "Pillow|-01.24|+00.45|-00.02",
+      "selected_object_name": "Pillow_e654fd90",
+      "success": true,
+      "target_name": "Pillow_e654fd90",
+      "visible_mask_pixels": 3222
+    }
+  ],
+  "bbox_proposal_rank_policy": {
+    "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+    "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+    "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+    "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+    "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+    "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+    "scope": "proposal prediction only; no acceptance result or measured visibility is produced",
+    "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+    "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+    "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1"
+  },
+  "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+  "buffered_raw_complete": true,
+  "candidate_label_assignment": {
+    "Laptop_277077f6": 2,
+    "Pillow_e654fd90": 1
+  },
+  "captures": [
+    {
+      "action_index": 2,
+      "black": false,
+      "files": {
+        "masks": {
+          "bytes": 5437,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/frame_000003_masks.npz",
+          "sha256": "685e0dbd13255c21166d9405120e3ad242b8c0d44d1f5919e719f1a8f13655a7"
+        },
+        "metadata": {
+          "bytes": 88872,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/frame_000003_metadata.json",
+          "sha256": "cf554e87e4150cb3f52a897b16de1a76b62ae870f2ac5a27b7928eaef1c1ec99"
+        },
+        "rgb": {
+          "bytes": 83793,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/frame_000003_rgb.png",
+          "sha256": "43f763da790a608bdb5f358555db8c8f7e89ac717e6832a650ef7502a77e8339"
+        }
+      },
+      "mask_pixels_by_name": {
+        "Cabinet_6de9391f": 1442,
+        "CoffeeTable_b7e0db94": 5040,
+        "Floor_0d809d9e": 5958,
+        "Laptop_277077f6": 1259,
+        "Pillow_e654fd90": 3222,
+        "Shelf_1e398f66": 249,
+        "ShelvingUnit_37417a3a": 4129,
+        "Sofa_c1dc7d56": 8029,
+        "Statue_f4ee2318": 253,
+        "Vase_0cc41aeb": 12,
+        "Vase_cc1947d6": 239,
+        "Window_37ba4408": 4022
+      },
+      "rgb_sha256": "1633e2b170382c3bc7f0f01f6791dab6cc03d48ff3c0c65f33a8d8416a706111",
+      "rgb_shape": [
+        255,
+        255,
+        3
+      ],
+      "sequence_id": null,
+      "source_action": "TeleportFull",
+      "stem": "action_2_TeleportFull",
+      "valid": true
+    }
+  ],
+  "cleanup_errors": [],
+  "construction_process_id": 1929743,
+  "discovery_schedule_policy": {
+    "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+    "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+    "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+    "round": "discover at most one new combination, then process each combination active at that round start once",
+    "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim",
+    "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+    "version": "one_discovery_then_full_active_round_v1",
+    "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order"
+  },
+  "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+  "done": true,
+  "error": null,
+  "executed_actions": [
+    "select 1"
+  ],
+  "field_of_view": 60,
+  "fixed_label_pair_id": "floorplan207_00093",
+  "fixed_label_policy": {
+    "approved_task_commit": "5a50999",
+    "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+    "legacy": "absent policy means the original spatial policy; no retrospective upgrades",
+    "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+    "scope": "one object keeps its number across both worlds and all views of one pair",
+    "version": "pair_stable_object_labels_v1",
+    "visible_subset": "draw only currently visible declared candidates; never renumber a subset"
+  },
+  "fixed_label_version": "pair_stable_object_labels_v1",
+  "flip_geometry_policy": {
+    "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+    "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+    "approval": "T01v2 supplement15;5a0a138",
+    "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+    "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+    "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+    "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+    "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+    "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+    "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+    "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim",
+    "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+    "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+    "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+    "unknown": "unknown projection/geometry never counts as a passing prediction",
+    "version": "look_flip_complete_tuple_predicted_center_geometry_v1"
+  },
+  "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+  "fov_contrast_group": "g01_selected60",
+  "fov_contrast_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "fov_contrast_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "g01_partition": "train",
+  "g01_policy": {
+    "actual_class": "unchanged rendered prefix/evidence classification may cross proposal pools; class caps use measured kind while Look attempt balance uses proposed_pool and mode",
+    "approval": "supplement14; execution still requires the separate observed gate and budget check",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "training only:1\u201320/201\u2013220/301\u2013320/401\u2013420",
+    "per_scene_class_cap": 8,
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_mixed_train80_complete_look_geometry_selected60_v2"
+  },
+  "g01_search_policy": {
+    "balance_after_cap": "additional LookFlip proposals may earn required attempt balance while their full class is not exported",
+    "collection": "at most8 producer-passed outputs per actual class per scene; independent verification remains separate",
+    "direct_flip": "unchanged G01 native-surface3D ratio roles and in-frame centre projection; no proximity or per-side cap",
+    "look_attempt_mix": "scene-wide counted LookFlip >= counted LookStay, across Controller restarts; uncounted native failures earn nothing",
+    "look_flip": "supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged",
+    "pool_order": "alternate Look/Direct when an available requested mode exists; explicitly record exhaustion fallback",
+    "quota_skip": "retain original validity verdict and record collection_quota_full; never recast this as physical failure",
+    "stay": "original horizontal native domain; original Look12/Direct40 cap and far-first actual-w0 retries",
+    "task": "G01; approved supplements13/14/15",
+    "unchanged": "seed0 role orientation, native token proof, all physical/target/prefix/evidence/solvability/witness thresholds",
+    "version": "g01_mixed_complete_look_geometry_four_class_quota_v2"
+  },
+  "g01_search_version": "g01_mixed_complete_look_geometry_four_class_quota_v2",
+  "g01_version": "g01_mixed_train80_complete_look_geometry_selected60_v2",
+  "passed": true,
+  "planned_actions": [
+    "select 1"
+  ],
+  "process_id": 1468326,
+  "producer_module": "src.envs.pair_v2_g01_shard",
+  "raw_evidence": {
+    "bytes": 5223,
+    "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/evidence_index.json",
+    "sha256": "e810300967e0820b1aa6d1fce71e58a091ec230f012b81174405a24d7ab2fdd5"
+  },
+  "restoration": {
+    "agent_pose_exact": true,
+    "agent_realized": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -0.75,
+        "y": 0.9009992480278015,
+        "z": 1.0
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 180.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "agent_requested": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -0.75,
+        "y": 0.9009992480278015,
+        "z": 1.0
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 180.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "executed_agent_setup_arguments": {
+      "forceAction": false,
+      "horizon": 30,
+      "position": {
+        "x": -0.75,
+        "y": 0.9009992480278015,
+        "z": 1.0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 180,
+        "z": 0
+      },
+      "standing": true
+    },
+    "frozen_pose_readback": {
+      "all_pose_components_exact": false,
+      "max_position_delta_m": 0.0,
+      "max_rotation_component_abs_diff_degrees": 1.9073486328125e-06,
+      "max_rotation_shortest_component_diff_degrees": 1.9073486328125e-06,
+      "objects": {
+        "ArmChair_a7dd4301": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "ArmChair_c4445d52": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Box_046f9ebd": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CoffeeTable_b7e0db94": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CreditCard_9ae92a2a": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 9.313225746154785e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 9.313225746154785e-10,
+            "z": 0.0
+          }
+        },
+        "FloorLamp_666f6ba6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "GarbageCan_423c7a02": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 4.656612873077393e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 4.656612873077393e-10,
+            "z": 0.0
+          }
+        },
+        "HousePlant_41556123": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "KeyChain_277c5072": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 1.9073486328125e-06,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 1.9073486328125e-06,
+            "z": 0.0
+          }
+        },
+        "Laptop_277077f6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 2.0372681319713593e-10
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 2.0372681319713593e-10
+          }
+        },
+        "Pillow_e654fd90": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "RemoteControl_4801d4ad": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 2.3283064365386963e-10,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 2.3283064365386963e-10,
+            "z": 0.0
+          }
+        },
+        "ShelvingUnit_37417a3a": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SideTable_b6aceebd": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.3283064365386963e-10,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Sofa_c1dc7d56": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Statue_f4ee2318": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 1.1920928955078125e-07
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.1920928955078125e-07,
+            "y": 0.0,
+            "z": 1.1920928955078125e-07
+          }
+        },
+        "TVStand_2273dd5d": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 5.820766091346741e-11,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 5.820766091346741e-11,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Television_ca8419fd": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Vase_0cc41aeb": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Vase_5af273ef": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.3969838619232178e-09,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.3969838619232178e-09,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Vase_cc1947d6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Watch_5d672db6": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.384185791015625e-07,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.384185791015625e-07,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "scope": "actual metadata versus requested pose values; diagnostic, not a new acceptance threshold"
+    },
+    "frozen_pose_readback_reference": {
+      "bytes": 6802,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/frozen_restore_readback_000003.json",
+      "sha256": "63723185177d6a078e2954182fe84b74c7d822aff98dd3b0ca4e731ea6bef217"
+    },
+    "pose_measurements": {
+      "added": [],
+      "editable_inventory_exact": true,
+      "inventory_exact": true,
+      "missing": [],
+      "objects": {
+        "ArmChair_a7dd4301": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 1.7075470168492757e-05,
+            "y": 179.9999542236328,
+            "z": -8.251762665167917e-06
+          },
+          "rotation_before": {
+            "x": 1.7075470168492757e-05,
+            "y": 179.9999542236328,
+            "z": -8.251762665167917e-06
+          },
+          "rotation_exact": true
+        },
+        "ArmChair_c4445d52": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -1.7075475625460967e-05,
+            "y": 179.9999542236328,
+            "z": -2.4504226985300193e-06
+          },
+          "rotation_before": {
+            "x": -1.7075475625460967e-05,
+            "y": 179.9999542236328,
+            "z": -2.4504226985300193e-06
+          },
+          "rotation_exact": true
+        },
+        "Box_046f9ebd": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0007153371698223054,
+            "y": 0.0014220188604667783,
+            "z": 0.002823266666382551
+          },
+          "rotation_before": {
+            "x": -0.0007153371698223054,
+            "y": 0.0014220188604667783,
+            "z": 0.002823266666382551
+          },
+          "rotation_exact": true
+        },
+        "CoffeeTable_b7e0db94": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0006624912493862212,
+            "y": 270.00042724609375,
+            "z": -2.3764236175338738e-05
+          },
+          "rotation_before": {
+            "x": 0.0006624912493862212,
+            "y": 270.00042724609375,
+            "z": -2.3764236175338738e-05
+          },
+          "rotation_exact": true
+        },
+        "CreditCard_9ae92a2a": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.02936820313334465,
+            "y": 0.010135620832443237,
+            "z": 359.9185791015625
+          },
+          "rotation_before": {
+            "x": 0.02936820313334465,
+            "y": 0.010135621763765812,
+            "z": 359.9185791015625
+          },
+          "rotation_exact": false
+        },
+        "FloorLamp_666f6ba6": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.01634286157786846,
+            "y": 0.0137307308614254,
+            "z": 0.014194494113326073
+          },
+          "rotation_before": {
+            "x": 0.01634286157786846,
+            "y": 0.0137307308614254,
+            "z": 0.014194494113326073
+          },
+          "rotation_exact": true
+        },
+        "GarbageCan_423c7a02": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0019455546280369163,
+            "y": 0.0035647230688482523,
+            "z": 359.9818420410156
+          },
+          "rotation_before": {
+            "x": 0.0019455546280369163,
+            "y": 0.003564722603186965,
+            "z": 359.9818420410156
+          },
+          "rotation_exact": false
+        },
+        "HousePlant_41556123": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0014891366008669138,
+            "y": 0.011331087909638882,
+            "z": 0.017756842076778412
+          },
+          "rotation_before": {
+            "x": 0.0014891366008669138,
+            "y": 0.011331087909638882,
+            "z": 0.017756842076778412
+          },
+          "rotation_exact": true
+        },
+        "KeyChain_277c5072": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.0833435058594,
+            "y": 23.587295532226562,
+            "z": 1.3206288814544678
+          },
+          "rotation_before": {
+            "x": 359.0833435058594,
+            "y": 23.587297439575195,
+            "z": 1.3206288814544678
+          },
+          "rotation_exact": false
+        },
+        "Laptop_277077f6": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.003269560867920518,
+            "y": 72.6157455444336,
+            "z": 0.0004454433801583946
+          },
+          "rotation_before": {
+            "x": -0.0032695606350898743,
+            "y": 72.6157455444336,
+            "z": 0.0004454431764315814
+          },
+          "rotation_exact": false
+        },
+        "Pillow_e654fd90": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 358.0012512207031,
+            "y": 74.99787139892578,
+            "z": 0.002361800754442811
+          },
+          "rotation_before": {
+            "x": 358.0012512207031,
+            "y": 74.99787139892578,
+            "z": 0.002361800754442811
+          },
+          "rotation_exact": true
+        },
+        "RemoteControl_4801d4ad": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.029928015545010567,
+            "y": 0.002711813198402524,
+            "z": 359.7372741699219
+          },
+          "rotation_before": {
+            "x": 0.029928015545010567,
+            "y": 0.0027118129655718803,
+            "z": 359.7372741699219
+          },
+          "rotation_exact": false
+        },
+        "ShelvingUnit_37417a3a": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9603271484375,
+            "y": 91.80362701416016,
+            "z": -0.004263369366526604
+          },
+          "rotation_before": {
+            "x": 359.9603271484375,
+            "y": 91.80362701416016,
+            "z": -0.004263369366526604
+          },
+          "rotation_exact": true
+        },
+        "SideTable_b6aceebd": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0022750254720449448,
+            "y": 89.9993896484375,
+            "z": 5.786963811260648e-05
+          },
+          "rotation_before": {
+            "x": -0.002275025239214301,
+            "y": 89.9993896484375,
+            "z": 5.786963811260648e-05
+          },
+          "rotation_exact": false
+        },
+        "Sofa_c1dc7d56": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 2.4077737180050462e-05,
+            "y": 89.9991455078125,
+            "z": 1.9247736418037675e-05
+          },
+          "rotation_before": {
+            "x": 2.4077737180050462e-05,
+            "y": 89.9991455078125,
+            "z": 1.9247736418037675e-05
+          },
+          "rotation_exact": true
+        },
+        "Statue_f4ee2318": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.5605658888816833,
+            "y": 90.0261459350586,
+            "z": 0.989651620388031
+          },
+          "rotation_before": {
+            "x": 0.5605657696723938,
+            "y": 90.0261459350586,
+            "z": 0.9896515011787415
+          },
+          "rotation_exact": false
+        },
+        "TVStand_2273dd5d": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0008433005423285067,
+            "y": 270.00238037109375,
+            "z": 0.0013087153201922774
+          },
+          "rotation_before": {
+            "x": -0.0008433006005361676,
+            "y": 270.00238037109375,
+            "z": 0.0013087153201922774
+          },
+          "rotation_exact": false
+        },
+        "Television_ca8419fd": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.92901611328125,
+            "y": 269.992431640625,
+            "z": 359.97369384765625
+          },
+          "rotation_before": {
+            "x": 359.92901611328125,
+            "y": 269.992431640625,
+            "z": 359.97369384765625
+          },
+          "rotation_exact": true
+        },
+        "Vase_0cc41aeb": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9779052734375,
+            "y": 0.13649164140224457,
+            "z": 0.03261077404022217
+          },
+          "rotation_before": {
+            "x": 359.9779052734375,
+            "y": 0.13649164140224457,
+            "z": 0.03261077404022217
+          },
+          "rotation_exact": true
+        },
+        "Vase_5af273ef": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0053759608417749405,
+            "y": 331.06121826171875,
+            "z": 0.05803646519780159
+          },
+          "rotation_before": {
+            "x": -0.005375959444791079,
+            "y": 331.06121826171875,
+            "z": 0.05803646519780159
+          },
+          "rotation_exact": false
+        },
+        "Vase_cc1947d6": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.022570775821805,
+            "y": 359.6128234863281,
+            "z": 0.015055276453495026
+          },
+          "rotation_before": {
+            "x": 0.02257077395915985,
+            "y": 359.6128234863281,
+            "z": 0.015055276453495026
+          },
+          "rotation_exact": false
+        },
+        "Watch_5d672db6": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 2.3857274055480957,
+            "y": 54.11665725708008,
+            "z": 0.09267949312925339
+          },
+          "rotation_before": {
+            "x": 2.3857271671295166,
+            "y": 54.11665725708008,
+            "z": 0.09267949312925339
+          },
+          "rotation_exact": false
+        }
+      }
+    },
+    "restore_deterministic": true,
+    "restore_max_abs_diff": 2,
+    "restore_rgb_exact": false,
+    "restored_positions_within_1cm": true,
+    "restored_snapshot_reference": {
+      "bytes": 86956,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_01_retry1/708238_hopper_m_02/c6/FloorPlan207/floorplan207_00093_trial000100/replay_w1/snapshot_000000.json",
+      "sha256": "e74b463061393854533373a7c8ab69fd816f35791f68a1f08895b64b23ab3293"
+    },
+    "scope": "state restore: all movable/pickupable positions <=1cm and exact full agent pose; RGB separate"
+  },
+  "restore_deterministic": true,
+  "restore_max_abs_diff": 2,
+  "selected_distance_m": 1.2216779493550483,
+  "selected_mask_pixels": 3222,
+  "selected_name": "Pillow_e654fd90",
+  "snapshot_restored": true,
+  "spawn_token_storage_policy": {
+    "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+    "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+    "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+    "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+    "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes",
+    "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+    "version": "native_token_shared_json_exact_sha256_v1"
+  },
+  "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+  "status": "completed",
+  "success": true,
+  "unity_pid": 1514370,
+  "worker_pid": 1468326
+}

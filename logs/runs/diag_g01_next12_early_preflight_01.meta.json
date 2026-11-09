@@ -1,0 +1,29 @@
+{
+  "name": "diag_g01_next12_early_preflight_01",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_next12_early_preflight_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,os,hashlib\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result,sha_file\nfrom src.tools import merge_pair_v2 as merge\nfrom src.envs.pair_v2_stable import position_step,exceeded,PREFLIGHT_POLICY\nROOT=merge.ROOT.resolve()\nNAME='diag_g01_next12_early_preflight_01'\nassert os.environ['CVPR_RUN_NAME']==NAME\ndef read(ref):\n p=merge.reference_path(ref,root=ROOT); return json.loads(p.read_bytes())\noutput={'scope':'Existing ended sources only; original preflight measurements rechecked against original native action metadata; no new rendering, thresholds or acceptance','sources':[]}\nfor number in (8,9,205):\n name=f'gen_train_next12_60_01_retry1_c6_floorplan{number}'\n data,ref=audited_result(ROOT/'results'/f'{name}.json'); m=data['metrics']\n assert data['_meta']['end'] and m['final_metrics_verified'] is True and m['terminal_verified_after_cleanup'] is True\n journal=ROOT/data['config']['attempt_journal']; assert sha_file(journal)==m['attempt_journal_sha256']\n rows=[json.loads(line) for line in journal.read_text().splitlines() if line.strip()]\n assert len(rows)==m['attempts']\n out={'source':ref,'start':data['_meta']['start'],'end':data['_meta']['end'],'status':m['status'],'attempts':m['attempts'],'passed_by_class':m['passed_by_class'],'scene_excluded':m['scene_excluded'],'search_stop_reason':m['search_stop_reason'],'pool_catalog_count':len(m['pool_catalogs']),'proposal_trials':m['proposal_trials'],'discovery_failures':m['discovery_failures'],'placement_exhausted_proposals':m['placement_exhausted_proposals'],'cleanup_errors':m['cleanup_errors'],'journal':{'file':str(journal.relative_to(ROOT)),'sha256':sha_file(journal)},'visits':[]}\n for visit in m['controller_visits']:\n  pf=read(visit['preflight_reference']); index=read(visit['raw_index'])\n  indexed={(str(Path(r['file']).resolve()),r['sha256']) for r in index['files']}\n  for rawref in index['files']: merge.reference_path(rawref,root=ROOT)\n  assert (str(Path(visit['preflight_reference']['file']).resolve()),visit['preflight_reference']['sha256']) in indexed\n  assert pf['policy']==PREFLIGHT_POLICY and pf['passed']==visit['preflight_passed']\n  diag=pf['diagnostics']; source=diag['source_snapshot']; original=source['objects']\n  source_payload=read(source['reference']); assert source_payload['objects']==original\n  objects={obj['name']:obj for obj in original}\n  steps=[{'index':'pause','action_reference':diag['pause_action_reference'],'measurements':diag['pause_measurements']}]+diag['initial_settling']['observations']\n  previous=original; travelled={}; records=[]; offending={}\n  for step in steps:\n   action_ref=step['action_reference']; assert (str(Path(action_ref['file']).resolve()),action_ref['sha256']) in indexed\n   action=read(action_ref); assert action['exception'] is None and action['after_metadata']['lastActionSuccess'] is True\n   measured=position_step(previous,action['after_metadata']['objects'],original,travelled)\n   assert measured==step['measurements']\n   assert action['action']==('PausePhysicsAutoSim' if step['index']=='pause' else 'AdvancePhysicsStep')\n   if step['index']!='pause': assert action['arguments']=={'timeStep':0.02,'simSeconds':0.1,'allowAutoSimulation':False}\n   names=exceeded(measured,PREFLIGHT_POLICY['initial_displacement_max_m'])\n   records.append({'index':step['index'],'action':action['action'],'action_reference':action_ref,'inventory_exact':measured['inventory_exact'],'missing_names':measured['missing_names'],'added_names':measured['added_names'],'over_limit_names':names,'native_is_scene_at_rest':action['after_metadata'].get('isSceneAtRest')})\n   current={obj['name']:obj for obj in action['after_metadata']['objects']}\n   for name in names:\n    offending.setdefault(name,{'object_metadata':{k:objects[name].get(k) for k in ('name','objectType','pickupable','moveable','parentReceptacles','position','rotation')},'observations':[]})['observations'].append({'index':step['index'],'measurement':measured['objects'][name],'current_parentReceptacles':current[name].get('parentReceptacles'),'current_isMoving':current[name].get('isMoving')})\n   previous=action['after_metadata']['objects']; travelled={name:row['observed_path_length_m'] for name,row in measured['objects'].items()}\n  out['visits'].append({'controller_id':visit['controller_id'],'preflight_reference':visit['preflight_reference'],'raw_index':visit['raw_index'],'all_indexed_files_SHA_verified':True,'recorded_compact':visit['preflight_measurements'],'preflight_passed':pf['passed'],'preflight_reasons':pf['reasons'],'preflight_error':pf['error'],'original_snapshot_reference':source['reference'],'all_initial_measurements_match_original_native_metadata':True,'steps':records,'offending_objects':offending,'stable_baseline_created':pf['snapshot'] is not None,'stability_window_completed':diag['stability_window']['completed']})\n output['sources'].append(out)\nprint('G01_EARLY_PREFLIGHT_DIAG_JSON: '+json.dumps(output,sort_keys=True,allow_nan=False),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-09T18:42:10",
+  "log_path": "logs/runs/diag_g01_next12_early_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368",
+  "git_dirty": false,
+  "end": "2026-11-09T18:42:16",
+  "duration_sec": 1.8,
+  "exit_code": 0,
+  "metrics_sha256": "4a153a6b324ec76b3b8eb0d132a8a353ff1cc18126ebe7faa5423398fca47aee"
+}

@@ -1,0 +1,30 @@
+{
+  "name": "diag_g01_next_scene_plan_01",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_next_scene_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,os\nfrom pathlib import Path\nfrom src.tools import merge_pair_v2 as merge\nfrom src.tools.t01_partition import audited_result,sha_file\nfrom src.tools import g01_collect_parallel as collect\nROOT=merge.ROOT.resolve()\nNAME='diag_g01_next_scene_plan_01'\nassert os.environ['CVPR_RUN_NAME']==NAME\nfiles={\n'FloorPlan2':'pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2',\n'FloorPlan5':'pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan5',\n'FloorPlan6':'pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan6',\n'FloorPlan208':'pilot_pairs_v2_coverage_living_205_208_a00_j707378_hopper_m_02_g0_floorplan208',\n'FloorPlan209':'pilot_pairs_v2_coverage_living_209_212_a00_j707379_hopper_m_02_g0_floorplan209',\n'FloorPlan210':'pilot_pairs_v2_coverage_living_209_212_a00_j707379_hopper_m_02_g0_floorplan210'}\nrecords=[]\nfor scene,name in files.items():\n data,ref=audited_result(ROOT/'results'/f'{name}.json')\n assert data['config']['scene']==scene and data['_meta']['end']\n m=data['metrics']; visits=[]\n for visit in m['controller_visits']:\n  pfref=visit['preflight_reference']; path=merge.reference_path(pfref,root=ROOT); pf=json.loads(path.read_bytes())\n  assert pf['passed']==visit['preflight_passed'] and pf['reasons']==visit['preflight_measurements']['reasons']\n  visits.append({'controller_id':visit['controller_id'],'preflight_reference':pfref,'SHA_verified':True,\n   'preflight_passed':pf['passed'],'recorded_compact':visit['preflight_measurements']})\n records.append({'scene':scene,'source':ref,'producer_module':data['config'].get('producer_module'),\n  'field_of_view':data['config'].get('field_of_view'),'status':m['status'],'error':m.get('error'),\n  'scene_excluded':m.get('scene_excluded'),'attempts':m['attempts'],'discard_reason_counts':m['discard_reason_counts'],\n  'visits':visits})\nnew=('FloorPlan13','FloorPlan305','FloorPlan306','FloorPlan307','FloorPlan405','FloorPlan406','FloorPlan407')\nhistory={scene:[str(path.relative_to(ROOT)) for path in sorted((ROOT/'results').glob('*'+scene.lower()+'.json'))] for scene in new}\nassert not any(history.values()),'A proposed uncollected scene has a prior child source; reconsider before recommendation'\nscenes=['FloorPlan2','FloorPlan13','FloorPlan6','FloorPlan208','FloorPlan209','FloorPlan210',\n        'FloorPlan305','FloorPlan306','FloorPlan307','FloorPlan405','FloorPlan406','FloorPlan407']\ncollect.validate_selection(scenes,6)\ntimeout=collect.required_timeout(scenes,6)\noutput={'scope':'Conditional next training batch recommendation only; no GPU submission, source mutation, threshold change or approval claim',\n 'rule_documents':[{'file':file,'sha256':sha_file(ROOT/file)} for file in ('tasks/T01v2.md','tasks/G01.md')],\n 'proposed_scenes':scenes,'replacement':{'from':'FloorPlan5','to':'FloorPlan13',\n  'reason':'Existing settled-baseline source contains both passed first Controller and failed later fresh Controllers above original0.5m; deprioritize instability without claiming permanently invalid. Replacement has no matching existing per-scene collection source.'},\n 'historical_evidence':records,'uncollected_matching_source_search':history,\n 'interpretation':{'FloorPlan2':'Prior marked natural-candidate search actually reached attempts; physical failures do not certify global scene invalidity',\n 'FloorPlan6':'Old same-type/clone eligibility failure is superseded by marked any-two-pickupable candidates; preflight passed',\n 'FloorPlan208_209_210':'Prior settled preflight passed and construction attempts occurred; placement/physical/visibility failures remain, no claim new60degree yield',\n 'new_scenes':'No matching prior per-scene collection source found; preflight and candidate/geometry availability remain unknown'},\n 'known_prior_exclusions':['FloorPlan8','FloorPlan9','FloorPlan205'],\n 'known_prior_baseline_errors_not_selected':['FloorPlan3','FloorPlan4','FloorPlan212'],\n 'launch_settings':{'gpus':1,'cpu_cores_per_gpu':12,'concurrency':6,'max_shared_witnesses':2,'field_of_view':60,\n  'seed':0,'scene_timeout_seconds':1200,'parent_timeout_seconds':timeout,'minimum_PBS_wall_seconds':timeout+30,\n  'rate1_requested_GPU_hours_upper_bound':(timeout+30)/3600,'queue':'autox','project':'CFP04-SF-125','requested_host':None},\n 'submission_condition':'Root waits for current708238 independent acceptance and existing live charged-budget guard; this night expansion stays<=20GPUh. Original scene gates still run and failures remain.',\n 'GPU_submitted':False,'code_changed':False,'STATUS_changed':False}\nprint('G01_NEXT_SCENE_RECOMMENDATION_JSON: '+json.dumps(output,sort_keys=True,allow_nan=False),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-09T18:49:23",
+  "log_path": "logs/runs/diag_g01_next_scene_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_g01_next_scene_plan_01.diff",
+  "end": "2026-11-09T18:49:29",
+  "duration_sec": 2.7,
+  "exit_code": 0,
+  "metrics_sha256": "4e09dabb80738cbc9c012b098dfd556b1a51d636e746c255aea0c56ccfba448c"
+}

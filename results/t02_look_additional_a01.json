@@ -1,0 +1,243 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794224646.0064015,
+    "cpu_affinity": [
+      73,
+      75,
+      77,
+      79,
+      81,
+      83,
+      85,
+      87,
+      89,
+      91,
+      93,
+      95
+    ],
+    "cuda_visible_devices": "GPU-09144e6d-5c43-bcae-be7b-498cddd7424d",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_look_additional_a01",
+    "node": "hopper-22",
+    "pair_file": null,
+    "pair_id": [
+      "floorplan7_00001",
+      "floorplan7_00008",
+      "floorplan7_00016",
+      "floorplan203_00045",
+      "floorplan203_00054",
+      "floorplan203_00062"
+    ],
+    "pair_timeout_seconds": 600.0,
+    "pbs_jobid": "708241.hopper-m-02",
+    "resolution": 255,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_look_additional_a01/708241.hopper-m-02",
+    "source": "results/t01v2_checkpoint_g01_metadata_01.json",
+    "timeout_seconds": 3840.0,
+    "version": "t02_single_gpu_export_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_additional_a01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_additional_a01_gate.json",
+      "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368",
+      "metrics_sha256": "37a601f33cdcfc6120a17f015757b93a0473cc64b001211dda1c4ba685318838",
+      "sha256": "bb238a81ac6efd377f3ddfcfe7105769e537b33428f9634f88f81586cc25a2d5"
+    },
+    "kind": "t02_table_export",
+    "pairs": [],
+    "producer_exit_code": 86,
+    "status": "blocked_by_render_gate",
+    "task_acceptance": null,
+    "unstarted_pair_ids": [
+      "floorplan7_00001",
+      "floorplan7_00008",
+      "floorplan7_00016",
+      "floorplan203_00045",
+      "floorplan203_00054",
+      "floorplan203_00062"
+    ]
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_g01_metadata_01.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t01v2_checkpoint_g01_metadata_01.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_g01_metadata_01.json",
+      "git_commit": "6689409063abd6c1037a77b29413acfd3681865a",
+      "metrics_sha256": "ec588a9d629a6eb4afc7cecb5c80eaf15a8867476b894f9f85f4813aa837b144",
+      "sha256": "f9ae85114b6595c498d552b900dc0b663ae43017bd7079d1fc610ebbf5e77671"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_train_metadata_revalidate_01_retry1_c6_floorplan7.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/gen_train_metadata_revalidate_01_retry1_c6_floorplan7.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_train_metadata_revalidate_01_retry1_j708126_hopper_m_02_gate.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/gen_train_metadata_revalidate_01_retry1_j708126_hopper_m_02_gate.json",
+        "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+        "metrics_sha256": "cb903914f60297a8f10b6afac28197f7838f6bc43fcd11a84076941e2c756a53",
+        "sha256": "7665b553da88ccc5569e259f7d6acbc0b466fd42659306a87e238587e75a2bb2"
+      },
+      "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+      "log_file": "logs/runs/gen_train_metadata_revalidate_01_retry1_c6_floorplan7.log",
+      "log_sha256": "57759f15287d9deeee48ec25344c87d1d808a87c3c95e229f0525514bc1cc903",
+      "meta_file": "logs/runs/gen_train_metadata_revalidate_01_retry1_c6_floorplan7.meta.json",
+      "meta_sha256": "29aebba897f4f2cada9504778a9c68184b974f9d8ec42852c235f444f5b4ccb7",
+      "metrics_sha256": "1250b9d0954b97137aceaabdb40fac658f76a6d7d34bdf4090189545b3fcc3c6",
+      "metrics_specification": {
+        "actual_document_sha256": "345149801ebba3a5e6948caf381e46bf9ef8bb9fd1714c961b9f98a3ac1565a3",
+        "compatible_references": [
+          "4e010a3"
+        ],
+        "historical_spec": false,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef"
+      },
+      "sha256": "cf00707582fc058a98f6fa252cb6bc51575ec5c347f80ce19424717fa0a990a4",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan7/shard_config.json",
+      "shard_config_sha256": "ce38cbe581ca06d6c07e094800228c790c6467685b74ceaa20ea57bf6a53cdf3"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_train_metadata_revalidate_01_retry1_c6_floorplan203.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/gen_train_metadata_revalidate_01_retry1_c6_floorplan203.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_train_metadata_revalidate_01_retry1_j708126_hopper_m_02_gate.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/gen_train_metadata_revalidate_01_retry1_j708126_hopper_m_02_gate.json",
+        "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+        "metrics_sha256": "cb903914f60297a8f10b6afac28197f7838f6bc43fcd11a84076941e2c756a53",
+        "sha256": "7665b553da88ccc5569e259f7d6acbc0b466fd42659306a87e238587e75a2bb2"
+      },
+      "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+      "log_file": "logs/runs/gen_train_metadata_revalidate_01_retry1_c6_floorplan203.log",
+      "log_sha256": "8866fba74d374fccac3200b490caf59edc55a22234e320e1077135e995f6a93f",
+      "meta_file": "logs/runs/gen_train_metadata_revalidate_01_retry1_c6_floorplan203.meta.json",
+      "meta_sha256": "b1d8ffbdc5e69007048eff55a147847273be31937a66c3e8e042c8c2a2979cc7",
+      "metrics_sha256": "eaec00570121c47d83e039e12a68e993a454909e822eb72ec07dbd4c930422ff",
+      "metrics_specification": {
+        "actual_document_sha256": "345149801ebba3a5e6948caf381e46bf9ef8bb9fd1714c961b9f98a3ac1565a3",
+        "compatible_references": [
+          "4e010a3"
+        ],
+        "historical_spec": false,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef"
+      },
+      "sha256": "e4fdda947d080fcf934417adfe368356c806dd7b92dff697f2f5dac0f4346194",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01_retry1/708126_hopper_m_02/c6/FloorPlan203/shard_config.json",
+      "shard_config_sha256": "8b9b1e564551aa62c88fd096a3bba7108dfa18f16417580df0b49556e84b0825"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_look_additional_a01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_look_additional_a01_gate.json",
+      "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368",
+      "metrics_sha256": "37a601f33cdcfc6120a17f015757b93a0473cc64b001211dda1c4ba685318838",
+      "sha256": "bb238a81ac6efd377f3ddfcfe7105769e537b33428f9634f88f81586cc25a2d5"
+    }
+  ],
+  "_meta": {
+    "name": "t02_look_additional_a01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_look_additional_a01",
+      "--source",
+      "results/t01v2_checkpoint_g01_metadata_01.json",
+      "--pair-id",
+      "floorplan7_00001",
+      "--pair-id",
+      "floorplan7_00008",
+      "--pair-id",
+      "floorplan7_00016",
+      "--pair-id",
+      "floorplan203_00045",
+      "--pair-id",
+      "floorplan203_00054",
+      "--pair-id",
+      "floorplan203_00062",
+      "--timeout-seconds",
+      "3840",
+      "--pair-timeout-seconds",
+      "600",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-22",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-09T18:40:05",
+    "log_path": "logs/runs/t02_look_additional_a01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "dc232c8f8f74de84b7459f2cd69c24a0c3e7f368",
+    "git_dirty": false,
+    "end": "2026-11-09T18:42:03",
+    "duration_sec": 117.9,
+    "exit_code": 86,
+    "metrics_sha256": "acd8f67a1ee9365a5dde1f69d02ea53cd93635c311b7814766bcafc532f3f3dc"
+  }
+}

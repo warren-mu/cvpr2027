@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.5200268629705533
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json,re\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();refs={}\nfor n in ['t02_gate_first_cpu_01','diag_look_census_extension_black_guard_04','diag_additional_look_a_black_guard_01','diag_additional_look_b_black_guard_01','diag_g01_next12_early_preflight_01']:\n d,ref=audited_result(r/'results'/f'{n}.json');assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0;refs[n]=ref\ntest=json.loads((r/'results/t02_gate_first_cpu_01.json').read_text());log=(r/test['_meta']['log_path']).read_text();assert re.search(r'Ran 16 tests in ',log) and '\\nOK\\n' in log\nc,cr=audited_result(r/'results/t02_look_additional_c01.json');row=c['metrics']['pairs'][0]\nassert row['pair_id']=='floorplan301_00083' and row['table_complete'] and row['native_evidence_verified'] and row['rejection_reasons']==[] and row['cleanup_errors']==[]\nrecords=[]\nfor folder in [\n'pilot_pairs_v2_look_table_fp204_extension01_retry2-20261109T103157Z-033e7e1a',\n'pilot_pairs_v2_look_table_fp204_extension01_retry3-20261109T104652Z-6ae1c349',\n'gen_train_next12_60_01_retry1-20261109T103428Z-92485134',\n'pilot_pairs_v2_look_additional_a01-20261109T103720Z-a9c653e4',\n'pilot_pairs_v2_look_additional_b01-20261109T103933Z-dbe1cf85',\n'pilot_pairs_v2_look_additional_c01-20261109T104232Z-2a832d74']:\n f=r/'logs/pbs'/folder;p=json.loads((f/'payload.json').read_text());s=json.loads((f/'submission.json').read_text())\n assert s['returncode']==0\n records.append({'name':p['name'],'job_id':s['stdout'].strip(),'retry_of':p['retry_of'],'receipt':str(f.relative_to(r))})\nwith (r/'STATUS.md').open('a') as f:f.write('\\n### Render-gate ordering and continued night work\\n\\nCommitted ef72cf0 moves only the complete T02 source-authentication block after a successful, clean render gate and before every export Worker. All original source/scientific checks and deadlines remain unchanged; t02_gate_first_cpu_01 passes16 CPU tests, including black/ordinary gate stops, uncertain cleanup, and no first Worker when a later source fails. Previous jobs had source authentication before the gate; future unusable allocations now stop before that CPU work. Current original T02 parents had ended before deployment. Additional groupC708245 produced an ended original complete/native-verified no-non_anchor_divergent report for floorplan301_00083, pending formal census authentication; actual0.065GPUh/187s queue, no cache or training authorization. A708241 and B708242 stopped on black gates with zero exported pairs. FP204 extension chain708196 ->708217 ->708235 ->708258 also remains black-only/unstarted; all failed originals/strict native proofs retained before same-scope retry.\\n\\nG01 next12 retry708238 passed its gate and continues under the existing10-minute snapshot procedure. FP8/9/205 were excluded by their original initial-settling displacement>0.5m checks before any proposal; inventory stayed exact. This matches supplement6 known exclusions, not a search regression. Specific original moved objects and SHA checks are in diag_g01_next12_early_preflight_01; thresholds/reference snapshots remain unchanged, and future scene selection avoids repeatedly scheduling these known exclusions. The normal hopper22 job708071 and black hopper22 job708241 used different GPU UUIDs; existing Unity/Vulkan logs share H200/595.112.07 and show no conclusive driver/root-cause error. GPU UUID and each actual native frame remain recorded; do not classify whole nodes as bad. Latest conditional next-scene recommendation is diag_g01_next_scene_plan_01, to be considered after current independent validation and budget checks.\\n')\nprint('NIGHT_GATE_ORDER_AND_MAPPING_JSON: '+json.dumps({'checks':refs,'completed_C':cr,'submissions':records},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_night_gate_order_report_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_night_gate_order_report_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json,re\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd();refs={}\nfor n in ['t02_gate_first_cpu_01','diag_look_census_extension_black_guard_04','diag_additional_look_a_black_guard_01','diag_additional_look_b_black_guard_01','diag_g01_next12_early_preflight_01']:\n d,ref=audited_result(r/'results'/f'{n}.json');assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0;refs[n]=ref\ntest=json.loads((r/'results/t02_gate_first_cpu_01.json').read_text());log=(r/test['_meta']['log_path']).read_text();assert re.search(r'Ran 16 tests in ',log) and '\\nOK\\n' in log\nc,cr=audited_result(r/'results/t02_look_additional_c01.json');row=c['metrics']['pairs'][0]\nassert row['pair_id']=='floorplan301_00083' and row['table_complete'] and row['native_evidence_verified'] and row['rejection_reasons']==[] and row['cleanup_errors']==[]\nrecords=[]\nfor folder in [\n'pilot_pairs_v2_look_table_fp204_extension01_retry2-20261109T103157Z-033e7e1a',\n'pilot_pairs_v2_look_table_fp204_extension01_retry3-20261109T104652Z-6ae1c349',\n'gen_train_next12_60_01_retry1-20261109T103428Z-92485134',\n'pilot_pairs_v2_look_additional_a01-20261109T103720Z-a9c653e4',\n'pilot_pairs_v2_look_additional_b01-20261109T103933Z-dbe1cf85',\n'pilot_pairs_v2_look_additional_c01-20261109T104232Z-2a832d74']:\n f=r/'logs/pbs'/folder;p=json.loads((f/'payload.json').read_text());s=json.loads((f/'submission.json').read_text())\n assert s['returncode']==0\n records.append({'name':p['name'],'job_id':s['stdout'].strip(),'retry_of':p['retry_of'],'receipt':str(f.relative_to(r))})\nwith (r/'STATUS.md').open('a') as f:f.write('\\n### Render-gate ordering and continued night work\\n\\nCommitted ef72cf0 moves only the complete T02 source-authentication block after a successful, clean render gate and before every export Worker. All original source/scientific checks and deadlines remain unchanged; t02_gate_first_cpu_01 passes16 CPU tests, including black/ordinary gate stops, uncertain cleanup, and no first Worker when a later source fails. Previous jobs had source authentication before the gate; future unusable allocations now stop before that CPU work. Current original T02 parents had ended before deployment. Additional groupC708245 produced an ended original complete/native-verified no-non_anchor_divergent report for floorplan301_00083, pending formal census authentication; actual0.065GPUh/187s queue, no cache or training authorization. A708241 and B708242 stopped on black gates with zero exported pairs. FP204 extension chain708196 ->708217 ->708235 ->708258 also remains black-only/unstarted; all failed originals/strict native proofs retained before same-scope retry.\\n\\nG01 next12 retry708238 passed its gate and continues under the existing10-minute snapshot procedure. FP8/9/205 were excluded by their original initial-settling displacement>0.5m checks before any proposal; inventory stayed exact. This matches supplement6 known exclusions, not a search regression. Specific original moved objects and SHA checks are in diag_g01_next12_early_preflight_01; thresholds/reference snapshots remain unchanged, and future scene selection avoids repeatedly scheduling these known exclusions. The normal hopper22 job708071 and black hopper22 job708241 used different GPU UUIDs; existing Unity/Vulkan logs share H200/595.112.07 and show no conclusive driver/root-cause error. GPU UUID and each actual native frame remain recorded; do not classify whole nodes as bad. Latest conditional next-scene recommendation is diag_g01_next_scene_plan_01, to be considered after current independent validation and budget checks.\\n')\nprint('NIGHT_GATE_ORDER_AND_MAPPING_JSON: '+json.dumps({'checks':refs,'completed_C':cr,'submissions':records},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T18:55:49",
+    "log_path": "logs/runs/diag_night_gate_order_report_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "ef72cf07ce0bf2f5882a9adfdba5791cbf3ae64d",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_night_gate_order_report_01.diff",
+    "end": "2026-11-09T18:55:51",
+    "duration_sec": 0.7,
+    "exit_code": 0,
+    "metrics_sha256": "c481e1eefbd5462d95e3b21b7f9faeb6d5cfffb2c1756d64f10f18cc431f233c"
+  }
+}

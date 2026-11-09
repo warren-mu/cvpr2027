@@ -1,0 +1,63 @@
+# run_logged: python3 -m src.tools.record_command --name t02_gate_first_cpu_01 -- python3 -m unittest discover -s tests -p test_t02_export.py -v
+# start: 2026-11-09T18:53:24
+test_black_with_finalization_or_cleanup_error_is_not_retry_exit86 (test_t02_export.ExportTests) ... ok
+test_cleanup_uncertainty_overrides_a_scientific_rejection (test_t02_export.ExportTests) ... Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 176, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: non_anchor_divergent
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 172, in pair_worker
+    with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_export.py", line 277, in session
+    raise RuntimeError("stop failed")
+RuntimeError: stop failed
+ok
+test_direct_missing_catalog_requires_actual_query_after_restore (test_t02_export.ExportTests) ... ok
+test_failed_native_verification_never_becomes_usable_table (test_t02_export.ExportTests) ... ok
+test_gate_failure_skips_all_source_checks_and_exports (test_t02_export.ExportTests) ... ok
+test_gate_uses_actual_physical_and_vulkan_mapping_without_mask_change (test_t02_export.ExportTests) ... ok
+test_known_pair_rejection_and_unexpected_error_remain_distinct (test_t02_export.ExportTests) ... Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 176, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 176, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: missing source metadata
+ok
+test_later_source_failure_prevents_even_the_first_export (test_t02_export.ExportTests) ... ok
+test_look_preserves_original_catalog_order_and_checks_loaded_bytes (test_t02_export.ExportTests) ... ok
+test_missing_look_or_mixed_clone_context_does_not_invent_domain (test_t02_export.ExportTests) ... ok
+test_portable_black_proof_decodes_png_and_rejects_changed_bytes (test_t02_export.ExportTests) ... ok
+test_requires_one_real_pbs_uuid_scratch_and_twelve_cpus (test_t02_export.ExportTests) ... ok
+test_restore_failure_is_not_a_partial_complete_table (test_t02_export.ExportTests) ... ok
+test_sequential_pairs_cannot_overwrite_each_others_unity_log (test_t02_export.ExportTests) ... ok
+test_successful_gate_still_authenticates_all_pairs_before_first_export (test_t02_export.ExportTests) ... ok
+test_uncertain_successful_gate_cleanup_stops_before_source_checks (test_t02_export.ExportTests) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 1.188s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.6657495090039447}
+# exit_code: 0
