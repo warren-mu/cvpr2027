@@ -31,6 +31,7 @@ from .thor_common import process_identity
 from .pair_v2_native_retry import (NATIVE_RETRY_VERSION, FROZEN_RENDER_VERSION, FROZEN_RENDER_POLICY,
                                    record_restore_readback)
 from .pair_v2_fov import declared_fields, bind_source_fields
+from . import pair_v2_construction_metadata as construction_metadata
 
 PRODUCER_MODULE = 'src.envs.pair_v2_marked_shard'
 SAFE_RETRY_VERSION = NATIVE_RETRY_VERSION
@@ -65,12 +66,13 @@ def enable_config(config):
         retry_point_limit=40, scientific_thresholds_unchanged=True)
     config.update(frozen_render_version=FROZEN_RENDER_VERSION,
                   frozen_render_policy=copy.deepcopy(FROZEN_RENDER_POLICY))
+    config.update(construction_metadata.fields())
     config['clone_raw_storage_limit']['scope'] = 'disabled cloning; scene-wide raw storage cap retained as infrastructure only'
     return config
 
 
 def tags():
-    return {'candidate_policy': candidates.CANDIDATE_POLICY,
+    return {**construction_metadata.fields(), 'candidate_policy': candidates.CANDIDATE_POLICY,
         'candidate_policy_spec': copy.deepcopy(candidates.CANDIDATE_POLICY_SPEC),
         'projection_pool_version': pools.POOL_VERSION, 'projection_pool_policy': copy.deepcopy(pools.POOL_POLICY),
         'enable_candidate_clone': False, 'search_version': None, 'search_policy': None,
@@ -226,7 +228,7 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
     frozen = config.get('frozen_render_version') == FROZEN_RENDER_VERSION
     physical_context = {}
     original_construct, new_construct = construct_observer(sim, oriented, role, record, row, frozen=frozen,
-                                                          physical_context=physical_context)
+        physical_context=physical_context)
     had, own = 'construct_world' in vars(sim), vars(sim).get('construct_world')
     old_observer = isolated.build_with_prefix_observer
     original_save = sim.store.save_json
@@ -651,7 +653,8 @@ def generator_worker(config, connection):
             or config.get('enable_candidate_clone') is not False
             or config.get('projection_pool_policy') != pools.POOL_POLICY):
         raise ValueError('Marked producer requires its exact explicit natural/projection policies')
-    session, retention = search.session_factory(config['runtime']['scratch']), search.SearchRetention()
+    session = search.session_factory(config['runtime']['scratch'], construction_root=config['raw_evidence_dir'])
+    retention = search.SearchRetention()
     previous = (engine.EvidenceStore, stable._SESSION, stable._REPLAY_RAW_COMPLETE,
         stable.replay_worker, clone._REPLAY_CLEANUP, search._EXTERNAL_TERMINAL,
         base.build_pair, base.write_json, base.export_pair, base.wait_replay, base.physical_measurement,

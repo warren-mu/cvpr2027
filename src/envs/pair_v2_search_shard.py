@@ -55,7 +55,13 @@ def enable_config(config):
     return config
 
 
-def session_factory(scratch, **kwargs):
+def session_factory(scratch, *, construction_root=None, **kwargs):
+    # Explicit future marked runs reserve only their original Controller
+    # identity metadata. Legacy/replay callers retain their previous session.
+    if construction_root is not None:
+        from .pair_v2_construction_metadata import ConstructionMetadataSession
+        return ConstructionMetadataSession(scratch, construction_root=construction_root,
+            raw_budget_bytes=RAW_BUDGET_BYTES, terminal_reserve_bytes=TERMINAL_RESERVE_BYTES, **kwargs)
     return SearchEvidenceSession(scratch, raw_budget_bytes=RAW_BUDGET_BYTES,
                                  terminal_reserve_bytes=TERMINAL_RESERVE_BYTES, **kwargs)
 
