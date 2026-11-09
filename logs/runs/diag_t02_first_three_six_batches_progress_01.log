@@ -1,0 +1,42 @@
+# run_logged: python3 -c import json,math
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+name='diag_t02_first_three_six_batches_progress_01'
+kinds=('direct_flip','direct_stay','look_flip','look_stay')
+sources=[];counts={k:0 for k in kinds};rows=[];seen=set()
+for index in (1,2,3):
+ d,r=audited_result(Path('results')/('diag_t02_train_six_%02d_completed_summary_01.json'%index));sources.append(r);m=d['metrics']
+ assert d['_meta']['exit_code']==0 and m['status']=='original_terminal_outcomes_bound' and m['errors']==[]
+ assert len(m['units'])==6 and all(u['usable_export_cache_pending'] for u in m['units'])
+ for u in m['units']:
+  assert u['dataset_key'] not in seen;seen.add(u['dataset_key'])
+ for k in kinds:counts[k]+=m['complete_by_kind'][k]
+ rows.append({'batch':index,'pbs_jobid':m['pbs_jobid'],'by_kind':m['complete_by_kind']})
+wanted={'709028.hopper-m-02','709029.hopper-m-02','709049.hopper-m-02','709051.hopper-m-02','709074.hopper-m-02','709115.hopper-m-02','709089.hopper-m-02','709124.hopper-m-02'}
+cost={}
+for path in sorted(Path('results').glob('diag_t02_train_six*account*.json')):
+ d=json.loads(path.read_text());jobs=d.get('config',{}).get('jobs',[])
+ relevant=[j for j in jobs if j['job_id'] in wanted]
+ if not relevant:continue
+ d,r=audited_result(path);sources.append(r);assert d['_meta']['exit_code']==0 and d['metrics']['complete_allocation_accounting']
+ assert d['_meta']['command'][1]=='src/tools/pbs_usage.py'
+ for j in relevant:
+  f=j['fields'];assert f['job_state']=='F' and f['project']=='CFP04-SF-125'
+  hours=d['metrics']['allocation_gpu_hours_by_job'][j['job_id']];rate=float(f['Resource_List.queue_charge_rate'])
+  value={'allocation_gpu_hours':hours,'queue_charge_rate':rate,'charged_gpu_hours':hours*rate}
+  if j['job_id'] in cost:assert cost[j['job_id']]==value
+  cost[j['job_id']]=value
+assert set(cost)==wanted
+metrics={'status':'original_completed_batch_records_aggregated','export_complete_cache_pending_by_kind':counts,'unique_export_pairs':len(seen),'batches':rows,'pbs_jobs_including_black_failures':cost,'charged_gpu_hours_including_black_failures':math.fsum(v['charged_gpu_hours'] for v in cost.values()),'full_T02_count_added_by_this_summary':0,'scope':'Three completed six-pair export batches; formal cache not yet run for these18; preserves every black attempt and every original source.'}
+Path('results',name+'.json').write_text(json.dumps({'config':{'name':name,'seed':0,'fixed_batches':[1,2,3]},'metrics':metrics,'sources':sources},indent=2)+'\n')
+with Path('STATUS.md').open('a') as f:
+ f.write('\n\n## 2026-11-09 14:30 ET — 三批单卡六对导出完成\n\n')
+ f.write('原子导出检查全部通过，尚待统一200状态正式缓存复核；不提前增加完整T02训练对数。分项：\n\n|批次|PBS|DF|DS|LF|LS|\n|---|---|---:|---:|---:|---:|\n')
+ for row in rows:f.write('|'+str(row['batch'])+'|'+row['pbs_jobid']+'|'+'|'.join(str(row['by_kind'][k]) for k in kinds)+'|\n')
+ f.write('\n三批含所有黑帧失败的实际计费GPU·小时：'+str(metrics['charged_gpu_hours_including_black_failures'])+'。详见 results/'+name+'.json。正式T02仍为先前首5对；当前18对不能作为试跑已过门槛。\n')
+ f.write('\n纯CPU PBS尝试709137被集群hook改成1GPU/12CPU/225GB，资源核验立刻退出，inventory/funnel未开始；原请求没有篡改，按实际1GPU、3秒单列补充计费。无法用0GPU请求绕开该集群资源策略；恢复原Express准备作业。黑帧是具体GPU现象，hopper-24的另一卡及hopper-28已正常完成导出，继续无host策略。\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-10T03:30:57
+FINAL_METRICS_JSON: {"batches": [{"batch": 1, "by_kind": {"direct_flip": 2, "direct_stay": 4, "look_flip": 0, "look_stay": 0}, "pbs_jobid": "709115.hopper-m-02"}, {"batch": 2, "by_kind": {"direct_flip": 2, "direct_stay": 4, "look_flip": 0, "look_stay": 0}, "pbs_jobid": "709089.hopper-m-02"}, {"batch": 3, "by_kind": {"direct_flip": 1, "direct_stay": 2, "look_flip": 0, "look_stay": 3}, "pbs_jobid": "709124.hopper-m-02"}], "charged_gpu_hours_including_black_failures": 0.3958333333333333, "export_complete_cache_pending_by_kind": {"direct_flip": 5, "direct_stay": 10, "look_flip": 0, "look_stay": 3}, "full_T02_count_added_by_this_summary": 0, "pbs_jobs_including_black_failures": {"709028.hopper-m-02": {"allocation_gpu_hours": 0.005555555555555556, "charged_gpu_hours": 0.005555555555555556, "queue_charge_rate": 1.0}, "709029.hopper-m-02": {"allocation_gpu_hours": 0.005277777777777778, "charged_gpu_hours": 0.005277777777777778, "queue_charge_rate": 1.0}, "709049.hopper-m-02": {"allocation_gpu_hours": 0.005833333333333334, "charged_gpu_hours": 0.005833333333333334, "queue_charge_rate": 1.0}, "709051.hopper-m-02": {"allocation_gpu_hours": 0.005555555555555556, "charged_gpu_hours": 0.005555555555555556, "queue_charge_rate": 1.0}, "709074.hopper-m-02": {"allocation_gpu_hours": 0.004722222222222222, "charged_gpu_hours": 0.004722222222222222, "queue_charge_rate": 1.0}, "709089.hopper-m-02": {"allocation_gpu_hours": 0.12944444444444445, "charged_gpu_hours": 0.12944444444444445, "queue_charge_rate": 1.0}, "709115.hopper-m-02": {"allocation_gpu_hours": 0.11166666666666666, "charged_gpu_hours": 0.11166666666666666, "queue_charge_rate": 1.0}, "709124.hopper-m-02": {"allocation_gpu_hours": 0.12777777777777777, "charged_gpu_hours": 0.12777777777777777, "queue_charge_rate": 1.0}}, "scope": "Three completed six-pair export batches; formal cache not yet run for these18; preserves every black attempt and every original source.", "status": "original_completed_batch_records_aggregated", "unique_export_pairs": 18}
+# exit_code: 0

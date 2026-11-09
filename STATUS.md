@@ -1178,3 +1178,18 @@ results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pai
 测试准备709062在hopper-19原gate黑帧86止损，inventory/funnel均未开始；经原strict guard后原样重提709108，仍无host。关于临时指定已验证正常节点的可选询问尚未获人类回复，不能视为批准，现有作业不动。
 
 后续cache载入的原始证据读取复用已推bebe623e：仅单调用内缓存已验bytes，不缓存验收结论，原科学checker逐对执行，成功退出前对全部涉及文件再核SHA，发生变化整批失败。此优化未用于已完成709054，无真实加速数字；正式技术/回归见diag_t02_evidence_read_cpu_01–03。
+
+
+## 2026-11-09 14:30 ET — 三批单卡六对导出完成
+
+原子导出检查全部通过，尚待统一200状态正式缓存复核；不提前增加完整T02训练对数。分项：
+
+|批次|PBS|DF|DS|LF|LS|
+|---|---|---:|---:|---:|---:|
+|1|709115.hopper-m-02|2|4|0|0|
+|2|709089.hopper-m-02|2|4|0|0|
+|3|709124.hopper-m-02|1|2|0|3|
+
+三批含所有黑帧失败的实际计费GPU·小时：0.3958333333333333。详见 results/diag_t02_first_three_six_batches_progress_01.json。正式T02仍为先前首5对；当前18对不能作为试跑已过门槛。
+
+纯CPU PBS尝试709137被集群hook改成1GPU/12CPU/225GB，资源核验立刻退出，inventory/funnel未开始；原请求没有篡改，按实际1GPU、3秒单列补充计费。无法用0GPU请求绕开该集群资源策略；恢复原Express准备作业。黑帧是具体GPU现象，hopper-24的另一卡及hopper-28已正常完成导出，继续无host策略。
