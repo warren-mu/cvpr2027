@@ -1,4 +1,4 @@
-"""Explicit combined-source single-GPU launcher; prior full-grant rules stay."""
+"""Supplement15 v2 single-GPU launcher; prior full1200-second grant stays."""
 from . import t01v2_flip_parallel as original
 from src.envs import pair_v2_flip_ranked_policy as policy
 
