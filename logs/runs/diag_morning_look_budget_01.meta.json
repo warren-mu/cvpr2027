@@ -1,0 +1,28 @@
+{
+  "name": "diag_morning_look_budget_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_morning_look_budget_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,importlib.util,datetime\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd()\nspec=importlib.util.spec_from_file_location(\"phase_budget\",r/\"scripts/pbs/submit_phase.py\");b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)\nfor name in (\"diag_current_pair_inventory_03\",\"diag_morning_look_export_plan_01\",\"diag_look_table_census_combined_01\"):\n d,ref=audited_result(r/\"results\"/(name+\".json\"));assert d[\"_meta\"][\"exit_code\"]==0\ninv=json.loads((r/\"logs/review/diag_current_pair_inventory_03/current_pair_inventory.json\").read_text())\nplan=json.loads((r/\"logs/review/diag_morning_look_export_plan_01/morning_look_plan.json\").read_text())\ncensus=json.loads((r/\"logs/review/diag_look_table_census_combined_01/report.json\").read_text())\nassert inv[\"unique_count\"]==76 and sum(inv[\"by_class\"][k] for k in (\"look_flip\",\"look_stay\"))==36\nassert plan[\"ready_after_CPU_preflight\"] and not plan[\"errors\"]\nassert not [x for x in census[\"additional_runs\"] if x[\"authentication_error\"]]\nstate=b.budget_state(r);b.validate_request(\"T01\",1,3300,\"pilot_pairs_v2_look_morning_a01\",state,\"T01v2\")\nout={\"at_utc\":datetime.datetime.now(datetime.timezone.utc).isoformat(),\"inventory\":{\"file\":\"logs/review/diag_current_pair_inventory_03/current_pair_inventory.json\",\"sha256\":sha_file(r/\"logs/review/diag_current_pair_inventory_03/current_pair_inventory.json\")},\"plan\":{\"file\":\"logs/review/diag_morning_look_export_plan_01/morning_look_plan.json\",\"sha256\":sha_file(r/\"logs/review/diag_morning_look_export_plan_01/morning_look_plan.json\")},\"budget\":state,\"additional_ceiling_GPUh\":3300/3600*state[\"charge_policy\"][\"rates\"][\"smallx\"],\"budget_guard_passed\":True,\"GPU_submitted\":False}\nprint(\"MORNING_LOOK_BUDGET_JSON: \"+json.dumps(out,sort_keys=True))\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\n### Morning checkpoint \"+out[\"at_utc\"]+\"\\n\\n\")\n f.write(\"Inventory03 freezes76 independently construction-accepted unique proposals: \"+json.dumps(inv[\"by_class\"],sort_keys=True)+\". Look36 = prior31 + latest5; no rolling denominator. FP203 LookFlip19 exceeds cap8 and remains surplus inventory, not a frozen training pool. Historical unfixed-label passes remain separate. FOV60 remains the predeclared choice. G01708343 continues the already-pushed bounded new12-scene batch.\\n\\n\")\n f.write(\"Authenticated combined31 full-view diagnostic: \"+json.dumps(census[\"cohorts\"][\"combined31\"][\"counts\"],sort_keys=True)+\". No run/row identity authentication error. Two unknowns (FP301_00049/00072 from retained G01) failed strict metadata distance equality; logged CPU comparison finds one-ULP arithmetic-path differences, no 1.5m predicate changes. Original failures remain failures; no checker, threshold, or fixed E2E pool changed. Full T02/cache acceptance is not implied by the diagnostic. Report: logs/review/diag_look_table_census_combined_01/report.md.\\n\\n\")\n f.write(\"The exact additional5 Look representatives pass real original loader CPU preflight5/5. Planned oneGPU55minute export uses unchanged D4/600s-per-pair/gate rules. Before submission actual-or-reserved chargedGPUh: \"+json.dumps(state[\"accounted_or_reserved_by_subbudget\"],sort_keys=True)+\"; shared \"+str(state[\"accounted_or_reserved_total\"])+\"/60; proposed additional ceiling \"+str(out[\"additional_ceiling_GPUh\"])+\". Live guard passed. Later G01 proposals are outside this explicitly frozen morning census.\\n\\n\")\n f.write(\"E2E remains blocked at original fixed Look pool step1; no replacement of failed inputs or relaxing Look hidden-anchor rule. New frozen T05 actor-KL CPU implementation is ready but its Look T0/T3 GPU steps2–5 and evidence-before training are not yet run. Original first failure is local floor darkening adjacent to offscreen anchor projection; RGB alone cannot distinguish shadow from reflection. Night summary will be updated with final5 outcomes and actual PBS usage.\\n\")\np=r/\"tasks/E2E.report.md\";t=p.read_text();old=\"原固定 17 对的完整视角诊断正在收尾；后续 G01 新增独立 Look 另批记录，不将冻结 17 对称为最新全部库存。以下早期阶段记录、失败和耗时保留。\"\nnew=\"原固定17对已完成：14触发隐藏锚点画面差、3完整导出未触发；随后14对的冻结汇总使总数达到31：15触发、14完整导出未触发、2因严格距离元数据校验失败而未知。报告在 logs/review/diag_look_table_census_combined_01/report.md。今晨库存03另有新5对Look，实际加载器预检通过，完整表诊断尚未完成；因此当前不将31对称为全部36对。上述完整导出仅说明该项诊断，不等于完整T02/cache验收。以下早期阶段记录、失败和耗时保留。\"\nassert old in t;p.write_text(t.replace(old,new,1))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T19:48:43",
+  "log_path": "logs/runs/diag_morning_look_budget_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "4b1119af0ef0f85a98ca5c1640a14b3f41f0f6fc",
+  "git_dirty": false,
+  "end": "2026-11-09T19:49:41",
+  "duration_sec": 56.7,
+  "exit_code": 0,
+  "metrics_sha256": "2b55cc187f47a4b40b063ec381c4ad89b037bade5b9aa9c093f0119a2038e9dd"
+}
