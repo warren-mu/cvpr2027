@@ -33,7 +33,8 @@ def view(state_id, world, *, fresh=False, mismatch=False, synthetic=True):
 def table():
     states = {key: SimpleNamespace(captures=(view(key, 0), view(key, 1)), view=ViewState("v", index))
               for index, key in enumerate(("s0", "s1"))}
-    return SimpleNamespace(pair_id="p", scene="FloorPlan1", anchor_name="X", candidate_names=("A", "B"), states=states)
+    return SimpleNamespace(pair_id="p", scene="FloorPlan1", kind="look_flip", anchor_name="X",
+                           candidate_names=("A", "B"), states=states)
 
 
 class CacheProducerTests(unittest.TestCase):
