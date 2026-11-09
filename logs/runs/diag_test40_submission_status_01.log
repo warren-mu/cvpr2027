@@ -1,0 +1,18 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test40_submission_status_01 -- python3 -c import json,subprocess,importlib.util
+from pathlib import Path
+from datetime import datetime,timezone
+spec=importlib.util.spec_from_file_location('status_submit','scripts/pbs/submit_phase.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+jobs=['708893.hopper-m-02','708894.hopper-m-02','708896.hopper-m-02']
+p=subprocess.run(['qstat','-fx',*jobs],text=True,capture_output=True,timeout=180)
+assert p.returncode==0,p.stderr
+blocks=mod.pbs_blocks(p.stdout,'Job Id')
+keys=['job_state','queue','qtime','stime','exec_host','Exit_status','Resource_List.ngpus','Resource_List.queue_charge_rate','resources_used.walltime','comment']
+rows=[{'job_id':job,**{key:blocks[job].get(key) for key in keys}} for job in jobs]
+print('TEST40_PBS_OBSERVED: '+json.dumps(rows,sort_keys=True))
+status=Path('STATUS.md');text='\n\n## '+datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')+' — 测试场景首批已提交\n\n代码和正式 CPU 回归在 df96c050 推送后，按固定计划提交了三个单卡 Express/autox 作业：708893（A）、708894（B）、708896（C）；各12场景、6进程、walltime 00:48:10，无 host 约束。尾批 D 的4场景计划不变。当前调度器状态：'+ '; '.join(str(r['job_id'])+' '+str(r['job_state'])+' '+str(r['queue']) for r in rows)+'。尚无最终扣费，继续按全部申请时长预留；不是已经完成或独立验收的世界对。原始调度字段见 diag_test40_submission_status_01。\n'
+status.write_text(status.read_text()+text)
+
+# start: 2026-11-10T00:48:04
+TEST40_PBS_OBSERVED: [{"Exit_status": null, "Resource_List.ngpus": "1", "Resource_List.queue_charge_rate": "1", "comment": "Not Running: Insufficient amount of resource: ngpus ", "exec_host": null, "job_id": "708893.hopper-m-02", "job_state": "Q", "qtime": "Tue Nov 10 00:41:39 2026", "queue": "smallx", "resources_used.walltime": null, "stime": null}, {"Exit_status": null, "Resource_List.ngpus": "1", "Resource_List.queue_charge_rate": "1", "comment": "Not Running: Insufficient amount of resource: ngpus ", "exec_host": null, "job_id": "708894.hopper-m-02", "job_state": "Q", "qtime": "Tue Nov 10 00:43:07 2026", "queue": "smallx", "resources_used.walltime": null, "stime": null}, {"Exit_status": null, "Resource_List.ngpus": "1", "Resource_List.queue_charge_rate": "1", "comment": "Not Running: Insufficient amount of resource: ngpus ", "exec_host": null, "job_id": "708896.hopper-m-02", "job_state": "Q", "qtime": "Tue Nov 10 00:45:01 2026", "queue": "smallx", "resources_used.walltime": null, "stime": null}]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 40.21260708401678}
+# exit_code: 0

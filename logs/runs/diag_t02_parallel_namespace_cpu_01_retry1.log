@@ -1,0 +1,23 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_parallel_namespace_cpu_01_retry1 -- python3 -m unittest discover -s tests -p test_pair_table*.py
+# start: 2026-11-10T00:48:55
+................................................................E.....................
+======================================================================
+ERROR: test_pair_table_identity (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_pair_table_identity
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/loader.py", line 436, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/loader.py", line 377, in _get_module_from_name
+    __import__(name)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_pair_table_identity.py", line 12, in <module>
+    from tests.test_pair_table_cache import sample
+ModuleNotFoundError: No module named 'tests.test_pair_table_cache'
+
+
+----------------------------------------------------------------------
+Ran 86 tests in 13.587s
+
+FAILED (errors=1)
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 14.291456981969532}
+# exit_code: 1

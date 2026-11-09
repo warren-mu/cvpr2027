@@ -1,0 +1,13 @@
+diff --git a/STATUS.md b/STATUS.md
+index cf958876..9e45b80d 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1025,3 +1025,8 @@ FirstLook E2E evidence localizes239 >3 pixels to the bottom-right floor near the
+ 已接入 6ca87ceb 的影子规则：Look/Direct 中锚点两边不可见而画面差 >3 的状态均分叉，记录 shadow_divergent_states 与 in_clean_subset；旧表和旧未知记录不改写。距离校验统一为原生成端的平方和开根号算式，仍逐值严格相等；原生 Teleport 碰撞没有强制绕过。旧 60° controller 来源接入原科学检查和逐 Controller 关联，尚未重新导出通过的对不计入合格池。
+ 
+ 固定测试集首批计划 configs/g01_test40_initial.json 覆盖 21–30/221–230/321–330/421–430，60°、seed0、每场景每类上限6，12/12/12/4 场景分批、每卡6场景并发，不用测试结果调搜索参数。9组正式 CPU 回归均通过（diag_shadow_test_generation_cpu_01–09）；单元测试不是 GPU/科学验收。本次尚未提交新的 GPU 作业。当前顺序：测试生成 > T02 导出 > E2E > 训练生成。T02 六进程父调度器正进行单独检查，首次完成后按真实 PBS 扣费报告每对成本和全量预算预测。
++
++
++## 2026-11-09 16:48 UTC — 测试场景首批已提交
++
++代码和正式 CPU 回归在 df96c050 推送后，按固定计划提交了三个单卡 Express/autox 作业：708893（A）、708894（B）、708896（C）；各12场景、6进程、walltime 00:48:10，无 host 约束。尾批 D 的4场景计划不变。当前调度器状态：708893.hopper-m-02 Q smallx; 708894.hopper-m-02 Q smallx; 708896.hopper-m-02 Q smallx。尚无最终扣费，继续按全部申请时长预留；不是已经完成或独立验收的世界对。原始调度字段见 diag_test40_submission_status_01。

@@ -1,0 +1,28 @@
+{
+  "name": "diag_look_collision_existing_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_collision_existing_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\ncases=[('results/t02_look_next_a01_retry1.json',p) for p in ('floorplan210_00022','floorplan210_00044','floorplan210_00052','floorplan210_00062')]+[('results/t02_look_latest_a01.json','floorplan15_00015')]\ncache={}\ndef read(ref):\n p=Path(ref['file']);raw=p.read_bytes()\n assert hashlib.sha256(raw).hexdigest()==ref['sha256']\n if 'bytes' in ref:assert len(raw)==ref['bytes']\n return json.loads(raw)\ndef canon(x):return json.dumps(x,sort_keys=True,allow_nan=False)\ndef posemap(values):\n if isinstance(values,dict):return {name:{k:pose[k] for k in ('position','rotation')} for name,pose in values.items()}\n return {pose['objectName']:{k:pose[k] for k in ('position','rotation')} for pose in values}\ndef object_pose(meta,name):\n rows=[v for v in meta['objects'] if v['name']==name];assert len(rows)==1\n return {k:rows[0][k] for k in ('name','objectId','position','rotation')}\nfor result,pair in cases:\n if result not in cache:cache[result]=audited_result(result)\n data,source=cache[result]\n rows=[r for r in data['metrics']['pairs'] if r['pair_id']==pair];assert len(rows)==1\n row=rows[0];report=read(row['report_reference']);package=read(row['source_package']);index=read(row['raw_index'])\n assert row['error']['type']=='RuntimeError' and 'Collided with:' in row['error']['message']\n anchor=package['anchor_name'];references={Path(v['file']).name:v for v in index['files']}\n world0=posemap(package['worlds'][0]['poses']);world1=posemap(read(references['table_frozen_w1_request.json'])['poses'])\n actions=[v for v in index['files'] if Path(v['file']).name.startswith('action_') and v['file'].endswith('.json')]\n failref=actions[-1];failure=read(failref)\n assert failure['action']=='TeleportFull' and failure['after_metadata']['lastActionSuccess'] is False\n expected=failure['arguments'];assert expected['forceAction'] is False\n last_pose=None;last_pause=None;last_sync=None;matches=[]\n for ref in actions:\n  raw=Path(ref['file']).read_bytes();assert hashlib.sha256(raw).hexdigest()==ref['sha256']\n  # Every action's bytes are authenticated; parse only relevant action types.\n  if not any(raw.startswith(('{\"action\": \"'+a+'\"').encode()) for a in ('SetObjectPoses','PausePhysicsAutoSim','PhysicsSyncTransforms','TeleportFull')):continue\n  action=json.loads(raw);kind=action['action']\n  if kind=='SetObjectPoses':\n   requested=posemap(action['arguments']['objectPoses'])\n   last_pose={'reference':ref,'lastActionSuccess':action['after_metadata']['lastActionSuccess'],'requested_world_matches':[w for w,poses in (('w0',world0),('w1',world1)) if canon(requested)==canon(poses)],'anchor_request':requested[anchor]}\n  elif kind=='PausePhysicsAutoSim':last_pause={'reference':ref,'lastActionSuccess':action['after_metadata']['lastActionSuccess']}\n  elif kind=='PhysicsSyncTransforms':last_sync={'reference':ref,'lastActionSuccess':action['after_metadata']['lastActionSuccess']}\n  elif action['arguments']==expected:\n   matches.append({'action_reference':ref,'arguments':action['arguments'],'lastActionSuccess':action['after_metadata']['lastActionSuccess'],'errorMessage':action['after_metadata']['errorMessage'],'exception':action['exception'],'latest_world_pose':last_pose,'latest_pause':last_pause,'latest_sync':last_sync,'before_agent':action['before_metadata']['agent'],'after_agent':action['after_metadata']['agent'],'before_anchor':object_pose(action['before_metadata'],anchor),'after_anchor':object_pose(action['after_metadata'],anchor),'before_isSceneAtRest':action['before_metadata'].get('isSceneAtRest'),'after_isSceneAtRest':action['after_metadata'].get('isSceneAtRest')})\n assert matches and matches[-1]['action_reference']==failref\n print('COLLISION_EXISTING_ACTIONS: '+json.dumps({'pair_id':pair,'source_result':source,'raw_index':row['raw_index'],'original_report':row['report_reference'],'source_package':row['source_package'],'anchor':anchor,'declared_anchor_poses':{'w0':world0[anchor],'w1':world1[anchor]},'failed_action':failref,'same_arguments_original_actions':matches,'scope':'existing native commands/readbacks only; no new renderer/GPU, no graph-mismatch label assigned and original unknown unchanged'},sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T00:48:31",
+  "log_path": "logs/runs/diag_look_collision_existing_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c17b263daeeded55c3fbeebf900daebb620133f5",
+  "git_dirty": false,
+  "end": "2026-11-10T00:48:58",
+  "duration_sec": 26.5,
+  "exit_code": 0,
+  "metrics_sha256": "b03c0738330156a0de439c61848b0427a2cb885e8f0a55db5f34a6d4f2d74376"
+}

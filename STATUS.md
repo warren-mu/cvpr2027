@@ -1025,3 +1025,17 @@ FirstLook E2E evidence localizes239 >3 pixels to the bottom-right floor near the
 已接入 6ca87ceb 的影子规则：Look/Direct 中锚点两边不可见而画面差 >3 的状态均分叉，记录 shadow_divergent_states 与 in_clean_subset；旧表和旧未知记录不改写。距离校验统一为原生成端的平方和开根号算式，仍逐值严格相等；原生 Teleport 碰撞没有强制绕过。旧 60° controller 来源接入原科学检查和逐 Controller 关联，尚未重新导出通过的对不计入合格池。
 
 固定测试集首批计划 configs/g01_test40_initial.json 覆盖 21–30/221–230/321–330/421–430，60°、seed0、每场景每类上限6，12/12/12/4 场景分批、每卡6场景并发，不用测试结果调搜索参数。9组正式 CPU 回归均通过（diag_shadow_test_generation_cpu_01–09）；单元测试不是 GPU/科学验收。本次尚未提交新的 GPU 作业。当前顺序：测试生成 > T02 导出 > E2E > 训练生成。T02 六进程父调度器正进行单独检查，首次完成后按真实 PBS 扣费报告每对成本和全量预算预测。
+
+
+## 2026-11-09 16:48 UTC — 测试场景首批已提交
+
+代码和正式 CPU 回归在 df96c050 推送后，按固定计划提交了三个单卡 Express/autox 作业：708893（A）、708894（B）、708896（C）；各12场景、6进程、walltime 00:48:10，无 host 约束。尾批 D 的4场景计划不变。当前调度器状态：708893.hopper-m-02 Q smallx; 708894.hopper-m-02 Q smallx; 708896.hopper-m-02 Q smallx。尚无最终扣费，继续按全部申请时长预留；不是已经完成或独立验收的世界对。原始调度字段见 diag_test40_submission_status_01。
+
+
+## 2026-11-09 16:51 UTC — T02 六进程导出与旧碰撞记录复核
+
+同卡六进程导出入口已完成，每对保留独立原 t02_export 命令、run_logged、出图检查、原生证据和结果；父进程不授予科学验收或缓存通过。不同来源的相同 pair_id 使用由原pair路径/SHA派生的dataset_key分开保存，原pair_id、标号种子和原生证据不变；旧唯一ID的E2E接口兼容。正式CPU测试：查表后端91项（diag_t02_parallel_namespace_cpu_01_retry2）、T02含并行41项（02）、预算10项（03）、E2E43项（04）通过；此前两次新测试fixture导入失败记录保留。
+
+首批 configs/t02_export_first6.json 固定6个原来源，包含旧影子拒绝、两项距离算式差异、旧60°controller LookStay及其他场景。计划单卡6并发，parent1200 / unit900 / pair660秒，PBS1230秒。旧完整单对记录中首批FP204_00038曾用381.947881秒、FP207_00009用220.809266秒；六并发未实测，此配置是首次有界测量，不保证全部完成。等测试生成名额释放后提交，实际成本待PBS最终账。
+
+旧5个Teleport碰撞的现有证据已在diag_look_collision_existing_01记录：FP210_00044与FP15_00015在同canonical pose有w0成功、w1与锚点Box/Bread碰撞的直接对照；原程序未产出完整双侧图签名，不把原unknown改写成已通过graph_mismatch检查。FP210_00022/52/62只有w0碰撞，没有同参数成功对照；仍unknown。未强制Teleport、未跳过状态、未改阈值。

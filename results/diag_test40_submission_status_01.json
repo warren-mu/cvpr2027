@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 40.21260708401678
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,subprocess,importlib.util\nfrom pathlib import Path\nfrom datetime import datetime,timezone\nspec=importlib.util.spec_from_file_location('status_submit','scripts/pbs/submit_phase.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)\njobs=['708893.hopper-m-02','708894.hopper-m-02','708896.hopper-m-02']\np=subprocess.run(['qstat','-fx',*jobs],text=True,capture_output=True,timeout=180)\nassert p.returncode==0,p.stderr\nblocks=mod.pbs_blocks(p.stdout,'Job Id')\nkeys=['job_state','queue','qtime','stime','exec_host','Exit_status','Resource_List.ngpus','Resource_List.queue_charge_rate','resources_used.walltime','comment']\nrows=[{'job_id':job,**{key:blocks[job].get(key) for key in keys}} for job in jobs]\nprint('TEST40_PBS_OBSERVED: '+json.dumps(rows,sort_keys=True))\nstatus=Path('STATUS.md');text='\\n\\n## '+datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')+' — 测试场景首批已提交\\n\\n代码和正式 CPU 回归在 df96c050 推送后，按固定计划提交了三个单卡 Express/autox 作业：708893（A）、708894（B）、708896（C）；各12场景、6进程、walltime 00:48:10，无 host 约束。尾批 D 的4场景计划不变。当前调度器状态：'+ '; '.join(str(r['job_id'])+' '+str(r['job_state'])+' '+str(r['queue']) for r in rows)+'。尚无最终扣费，继续按全部申请时长预留；不是已经完成或独立验收的世界对。原始调度字段见 diag_test40_submission_status_01。\\n'\nstatus.write_text(status.read_text()+text)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test40_submission_status_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test40_submission_status_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,subprocess,importlib.util\nfrom pathlib import Path\nfrom datetime import datetime,timezone\nspec=importlib.util.spec_from_file_location('status_submit','scripts/pbs/submit_phase.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)\njobs=['708893.hopper-m-02','708894.hopper-m-02','708896.hopper-m-02']\np=subprocess.run(['qstat','-fx',*jobs],text=True,capture_output=True,timeout=180)\nassert p.returncode==0,p.stderr\nblocks=mod.pbs_blocks(p.stdout,'Job Id')\nkeys=['job_state','queue','qtime','stime','exec_host','Exit_status','Resource_List.ngpus','Resource_List.queue_charge_rate','resources_used.walltime','comment']\nrows=[{'job_id':job,**{key:blocks[job].get(key) for key in keys}} for job in jobs]\nprint('TEST40_PBS_OBSERVED: '+json.dumps(rows,sort_keys=True))\nstatus=Path('STATUS.md');text='\\n\\n## '+datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')+' — 测试场景首批已提交\\n\\n代码和正式 CPU 回归在 df96c050 推送后，按固定计划提交了三个单卡 Express/autox 作业：708893（A）、708894（B）、708896（C）；各12场景、6进程、walltime 00:48:10，无 host 约束。尾批 D 的4场景计划不变。当前调度器状态：'+ '; '.join(str(r['job_id'])+' '+str(r['job_state'])+' '+str(r['queue']) for r in rows)+'。尚无最终扣费，继续按全部申请时长预留；不是已经完成或独立验收的世界对。原始调度字段见 diag_test40_submission_status_01。\\n'\nstatus.write_text(status.read_text()+text)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T00:48:04",
+    "log_path": "logs/runs/diag_test40_submission_status_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "c17b263daeeded55c3fbeebf900daebb620133f5",
+    "git_dirty": false,
+    "end": "2026-11-10T00:48:46",
+    "duration_sec": 40.3,
+    "exit_code": 0,
+    "metrics_sha256": "d05ca13d89eb366359b40cbe64921f1c37686a9bd780775c635e16fb27ba728c"
+  }
+}
