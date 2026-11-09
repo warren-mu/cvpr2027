@@ -152,6 +152,18 @@ def verify_used_geometry(row, pair_path, baseline, read, config, *, root):
     if (row.get('producer_module') != policy.PRODUCER or row.get('flip_unit_version') != policy.VERSION
             or row.get('flip_unit_policy') != policy.POLICY or row.get('kind') != 'look_flip'):
         raise ValueError('Complete geometry verifier requires the explicit new v2 Look Flip source')
+    return verify_geometry_evidence(row, pair_path, baseline, read, config, root=root)
+
+
+def verify_geometry_evidence(row, pair_path, baseline, read, config, *, root):
+    """Shared proposal proof, after the caller authenticates its own producer.
+
+    This verifies used native inputs and complete tuple/retry evidence only.
+    It does not select a producer, authorize a source, or accept an actual class.
+    Both callers must still execute their full original scientific checker.
+    """
+    for module in (sharing, rank, geometry):
+        module.validate_fields(row)
     pool = read(row['projection_pool_reference'])
     for module in (sharing, rank, geometry):
         module.validate_fields(pool)
