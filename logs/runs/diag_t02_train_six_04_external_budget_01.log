@@ -1,0 +1,50 @@
+# run_logged: python3 -c import hashlib,json,math,re
+from pathlib import Path
+from src.tools import phase_watch as watch
+root=Path.cwd().resolve();name='diag_t02_train_six_04_external_budget_01'
+submit=watch.load_module('original_submit_budget',root/'scripts/pbs/submit_phase.py')
+auditor=watch.load_module('original_fee_auditor',root/'scripts/audit_provenance.py')
+def need(value,message):
+ if not value:raise ValueError(message)
+def ref(path):return {'file':str(path.relative_to(root)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+base=root/'logs/pbs/t02_export_train_six_03-20261109T191302Z-b2fbaa16/budget_before_submission.json'
+state=json.loads(base.read_text());need(state['batch']==submit.BATCH,'Wrong snapshot batch')
+need(state['limits_gpu_hours']==submit.LIMITS and state['subbudget_limits_gpu_hours']==submit.SUBBUDGET_LIMITS and state['total_limit_gpu_hours']==submit.TOTAL_LIMIT,'Snapshot limit revision differs')
+known={item['payload'] for item in state['submissions']};job_ids={item['job_id'] for item in state['submissions'] if item['job_id']}
+need('709137.hopper-m-02' not in job_ids,'External actual fee already represented in base')
+used_task=dict(state['accounted_or_reserved_by_task']);used_group=dict(state['accounted_or_reserved_by_subbudget']);total=state['accounted_or_reserved_total'];added=[]
+for path in sorted((root/'logs/pbs').glob('*/payload.json')):
+ payload=json.loads(path.read_text())
+ if payload.get('budget_batch')!=submit.BATCH or payload.get('dry_run'):continue
+ receipt_path=path.with_name('submission.json');receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
+ ids=re.findall(r'\b[0-9]+\.hopper-m-[0-9]+\b',receipt.get('stdout',''));need(len(ids)<=1,'Ambiguous receipt')
+ need('709137.hopper-m-02' not in ids,'External actual fee already in phase payloads')
+ if str(path.relative_to(root)) in known:continue
+ need(not path.stat().st_mode & 0o222,'Phase payload is not immutable')
+ task=payload['task_id'];group=submit.budget_group(task,payload['name'],payload.get('command'),payload.get('budget_group'))
+ rate=max(submit.positive_rate(payload['requested_queue_charge_rate']),submit.positive_rate(state['charge_policy']['rates'][submit.queue_for_gpus(payload['requested_gpu_count'])]))
+ fee=payload['requested_gpu_count']*payload['requested_wall_seconds']/3600*rate
+ need(math.isfinite(fee) and fee>0,'Invalid full request')
+ used_task[task]+=fee;total+=fee
+ if group:used_group[group]+=fee
+ added.append({'payload':ref(path),'receipt':ref(receipt_path) if receipt_path.exists() else None,'name':payload['name'],'job_ids':ids,'full_request_charged_gpu_hours':fee,'task':task,'group':group,'rate':rate,'scope':'full request retained even if job may now be finished'})
+account,aref=watch.load_logged(root,root/'results/g01_round2_cpu_attempt_accounting_01.json',auditor)
+need(account['_meta']['command']==['python3','src/tools/pbs_usage.py','--name','g01_round2_cpu_attempt_accounting_01','709137.hopper-m-02'] and account['_meta']['exit_code']==0 and account['metrics']['complete_allocation_accounting'] is True and account['config']['errors']==[],'External fee lacks canonical accounting')
+need(json.dumps(account['config'],indent=2) in (root/account['_meta']['log_path']).read_text(),'External raw qstat missing from authenticated log')
+rows=[r for r in account['config']['jobs'] if r['job_id']=='709137.hopper-m-02'];need(len(rows)==1 and rows[0]['qstat_exit']==0,'External job mismatch')
+f=rows[0]['fields'];need(f['project']=='CFP04-SF-125' and f['Job_Owner'].split('@')[0]=='e1583364' and f['job_state']=='F' and f['run_count']=='1' and f['Exit_status']=='1' and f['Resource_List.ngpus']=='1' and f['resources_used.walltime']=='00:00:03','Wrong CPU-hook actual allocation')
+actual=account['metrics']['allocation_gpu_hours_by_job']['709137.hopper-m-02'];need(actual==3/3600,'Canonical external allocation calculation differs')
+external=actual*submit.positive_rate(f['Resource_List.queue_charge_rate'])
+new_name='t02_export_train_six_04';need(all(row['name']!=new_name for row in state['submissions']) and all(row['name']!=new_name for row in added),'Original fixed export already reserved')
+proposed=1230/3600*submit.positive_rate(state['charge_policy']['rates'][submit.queue_for_gpus(1)])
+need(proposed==1230/3600,'Expected current one-card rate and original20m30s reservation')
+used_task['T01']+=external+proposed;used_group['G01']+=external;used_group['T02']+=proposed;total+=external+proposed
+need(used_group['T02']<=submit.SUBBUDGET_LIMITS['T02'] and used_group['G01']<=submit.SUBBUDGET_LIMITS['G01'] and used_task['T01']<=submit.LIMITS['T01'] and total<=submit.TOTAL_LIMIT,'Conservative budget plus real external fee exceeds limit')
+metrics={'safe_to_attempt_original_fresh_budget_submit':True,'base_snapshot':ref(base),'added_phase_full_reservations':added,'external_job':'709137.hopper-m-02','external_actual_charged_gpu_hours':external,'external_not_in_phase_payloads':True,'proposed_name':new_name,'proposed_full_request_charged_gpu_hours':proposed,'after_upper_bound_by_task':used_task,'after_upper_bound_by_subbudget':used_group,'after_upper_bound_total':total,'scope':'Conservative extra-fee bound only; original submitter still must perform its fresh full budget check; no fabricated payload'}
+result={'metrics':metrics,'config':{'name':name,'artifacts':[ref(base),*[row['payload'] for row in added]]},'sources':[{'file':r['path'],'sha256':r['sha256'],'metrics_sha256':d['_meta']['metrics_sha256']} for r,d in ((aref,account),)]}
+with (root/'results'/f'{name}.json').open('x') as h:json.dump(result,h,indent=2,allow_nan=False);h.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T03:39:48
+FINAL_METRICS_JSON: {"added_phase_full_reservations": [{"full_request_charged_gpu_hours": 0.2, "group": "G01", "job_ids": ["709160.hopper-m-02"], "name": "gen_test_round2_prepare_01_retry2", "payload": {"file": "logs/pbs/gen_test_round2_prepare_01_retry2-20261109T193706Z-a42b2078/payload.json", "sha256": "49f8490e4551f48ee9d975bbe99cab0b8986b22fb321caa35b4037d97d88b13f"}, "rate": 1.0, "receipt": {"file": "logs/pbs/gen_test_round2_prepare_01_retry2-20261109T193706Z-a42b2078/submission.json", "sha256": "abdcb30afd4afa14fe397fa7854fc507b1c75af9398105d96b1b9f2430beac56"}, "scope": "full request retained even if job may now be finished", "task": "T01"}, {"full_request_charged_gpu_hours": 0.3416666666666667, "group": "T02", "job_ids": ["709124.hopper-m-02"], "name": "t02_export_train_six_03", "payload": {"file": "logs/pbs/t02_export_train_six_03-20261109T191302Z-b2fbaa16/payload.json", "sha256": "aa40c72239c9352b7db85bcc835ba185405969e782a39b8b21e205cf442f0910"}, "rate": 1.0, "receipt": {"file": "logs/pbs/t02_export_train_six_03-20261109T191302Z-b2fbaa16/submission.json", "sha256": "c35b91cf897c37afb0804e2c1084ade4cf38b51ea973bb5901a6612eeadcfdf0"}, "scope": "full request retained even if job may now be finished", "task": "T01"}], "after_upper_bound_by_subbudget": {"E2E": 1.4341666666666666, "E2Epilot": 0.0, "G01": 5.796666666666667, "T01v2": 12.983055555555556, "T02": 1.517777777777778}, "after_upper_bound_by_task": {"T00b": 10.276944444444444, "T01": 23.138055555555546}, "after_upper_bound_total": 33.415, "base_snapshot": {"file": "logs/pbs/t02_export_train_six_03-20261109T191302Z-b2fbaa16/budget_before_submission.json", "sha256": "8baadbbd42e2a6764e3b6892d15093e85fb8205d2a8d06265d3b769be0d2a904"}, "external_actual_charged_gpu_hours": 0.0008333333333333334, "external_job": "709137.hopper-m-02", "external_not_in_phase_payloads": true, "proposed_full_request_charged_gpu_hours": 0.3416666666666667, "proposed_name": "t02_export_train_six_04", "safe_to_attempt_original_fresh_budget_submit": true, "scope": "Conservative extra-fee bound only; original submitter still must perform its fresh full budget check; no fabricated payload"}
+# exit_code: 0

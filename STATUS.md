@@ -1193,3 +1193,8 @@ results/t02_export_cache_first5_01_retry2.json（709054）已完成原native/pai
 三批含所有黑帧失败的实际计费GPU·小时：0.3958333333333333。详见 results/diag_t02_first_three_six_batches_progress_01.json。正式T02仍为先前首5对；当前18对不能作为试跑已过门槛。
 
 纯CPU PBS尝试709137被集群hook改成1GPU/12CPU/225GB，资源核验立刻退出，inventory/funnel未开始；原请求没有篡改，按实际1GPU、3秒单列补充计费。无法用0GPU请求绕开该集群资源策略；恢复原Express准备作业。黑帧是具体GPU现象，hopper-24的另一卡及hopper-28已正常完成导出，继续无host策略。
+
+
+## 2026-11-09 14:47 ET — 已结束的CPU请求按实际GPU分配补账
+
+709137的原始ngpus=0请求、interactive实际分配1GPU以及3秒终态均保留；预算器只为这个已结束的直接qsub记录添加显式登记，恰一次计入G01/T01/shared，不伪造submit_phase payload，也不把它记为premium作业。8项新增和14项当前预算回归均通过（diag_external_gpu_fee_cpu_01/02）。已有3项旧60小时断言在未改代码上亦失败，没有修改断言或宣称全套旧测试通过。后续恢复原Express提交路径。
