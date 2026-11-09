@@ -16,6 +16,7 @@ KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 PER_CLASS = 8
 QUOTA_VERSION = 'g01_static_ticket_proposal_selection_v1'
 CONFIG_VERSION = 'g01_test_configuration_ticket_proposals_v2'
+CONFIG_PRIORITY = ('look_stay', 'look_flip', 'direct_flip', 'direct_stay')
 POLICY = {
     'version': VERSION, 'task': 'G01; approved supplements13/14/15',
     'look_flip': 'supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged',
@@ -42,6 +43,11 @@ def fields(quota=False, configuration=False):
     if configuration:
         if not quota: raise ValueError('Configuration proposal policy requires static tickets')
         spec.update(version=CONFIG_VERSION, configuration=configurations.POLICY,
+            approval='83828652 configuration dispersion; 002d747c human-approved test round2',
+            proposal_priority=list(CONFIG_PRIORITY),
+            pool_order='stable class priority within each finite active-domain round and within each domain; only available unoccupied ticketed classes; no Look/Direct alternation',
+            look_attempt_mix='no Flip/Stay balance constraint in this explicit test configuration version; LookStay has first priority',
+            discovery_schedule_override='preserve one new domain per finite round and at most one visit per active domain; replace only within-round domain preference with available class priority, stable ties',
             collection='one exported actual class per canonical configuration across Controller restarts and authenticated historical inventory; static tickets unchanged')
     return {FIELDS[0]: spec['version'], FIELDS[1]: spec}
 
@@ -95,6 +101,8 @@ class SceneQuota:
                        and self.passed[f'{pool}_{mode}'] < self.limits[f'{pool}_{mode}']
                        and (not self.configuration_enabled or
                             (configurations.validate(configuration)['configuration_id'], f'{pool}_{mode}') not in self.configuration_seen)]
+            if self.configuration_enabled:
+                return sorted(choices, key=lambda mode: CONFIG_PRIORITY.index(f'{pool}_{mode}'))
             if pool == 'look' and len(choices) == 2:
                 preferred = 'flip' if self.attempts['look_flip'] <= self.attempts['look_stay'] else 'stay'
             return sorted(choices, key=lambda mode: mode != preferred)
@@ -269,9 +277,9 @@ class MixedIterator(pools.PoolProposalIterator):
             for pool in ('look', 'direct')}
         self.next_pool, self.yielded, self.quota = 'look', {'look': 0, 'direct': 0}, quota
 
-    def __next__(self):
+    def available_choices(self):
         if self.quota.complete():
-            raise StopIteration
+            return {}
         choices = {}
         for pool, stream in self.streams.items():
             remaining = stream.summary()['remaining']
@@ -279,10 +287,24 @@ class MixedIterator(pools.PoolProposalIterator):
                 available = remaining['flip'] if mode == 'flip' else remaining['stay_a'] or remaining['stay_b']
                 if available:
                     choices[pool] = mode; break
+        return choices
+
+    def priority_choice(self):
+        choices = self.available_choices()
+        if not choices:
+            return None
+        return min(choices.items(), key=lambda choice: CONFIG_PRIORITY.index('_'.join(choice)))
+
+    def __next__(self):
+        choices = self.available_choices()
         if not choices:
             raise StopIteration
         wanted = self.next_pool
-        pool = wanted if wanted in choices else next(iter(choices))
+        if self.quota.configuration_enabled:
+            pool, _ = self.priority_choice()
+            wanted = pool  # class priority, not an abandoned alternation request
+        else:
+            pool = wanted if wanted in choices else next(iter(choices))
         stream = self.streams[pool]; stream.next_kind = choices[pool]
         proposal, view, domain = next(stream)
         if proposal['mode'] != choices[pool]:
@@ -292,9 +314,36 @@ class MixedIterator(pools.PoolProposalIterator):
         domain['projection_pool'] = {'version': pools.POOL_VERSION, 'pool': pool, 'requested_pool': wanted,
             'fallback_due_to_exhaustion': pool != wanted, 'ordinal': self.yielded[pool] - 1,
             'view_index': domain['view_index'], 'role_schedule_scope': 'within this projection pool'}
+        if self.quota.configuration_enabled:
+            domain['projection_pool'].update(class_priority=list(CONFIG_PRIORITY),
+                priority_scope='available unoccupied classes in this canonical configuration; scientific class may cross pools')
         proposal['role_domain'] = copy.deepcopy(domain)
         proposal['projection_pool'] = copy.deepcopy(domain['projection_pool'])
         return proposal, view, domain
+
+
+
+class ConfigurationPriorityRound:
+    """Finite active snapshot; stable available-class priority, no discovery change."""
+    def __init__(self, active):
+        self.pending = list(active)
+        if any(not item['stream'].quota.configuration_enabled for item in self.pending):
+            raise ValueError('Configuration round cannot replace legacy proposal scheduling')
+
+    def __bool__(self):
+        return bool(self.pending)
+
+    def pop(self, requested_pool):
+        if requested_pool not in ('look', 'direct'):
+            raise ValueError('Unknown requested projection pool')
+        if not self.pending:
+            raise StopIteration
+        def priority(item):
+            choice = item['stream'].priority_choice()
+            return CONFIG_PRIORITY.index('_'.join(choice)) if choice is not None else len(CONFIG_PRIORITY)
+        # min is stable: no mutation/consumption when inspecting another stream.
+        selected = min(range(len(self.pending)), key=lambda index: priority(self.pending[index]))
+        return self.pending.pop(selected)
 
 
 def verify_flip_role(row, candidate_positions):

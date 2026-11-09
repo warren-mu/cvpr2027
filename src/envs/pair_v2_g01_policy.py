@@ -68,7 +68,9 @@ def fields(partition='train', quota=False, configuration=False):
     if configuration:
         if partition != 'test' or not quota:
             raise ValueError('Configuration collection requires explicit test tickets')
-        spec.update(version=CONFIG_QUOTA_VERSION, approval='83828652 human approved',
+        spec.update(version=CONFIG_QUOTA_VERSION, approval='83828652 and 002d747c human approved',
+            proposal_priority=list(search.CONFIG_PRIORITY),
+            discovery_schedule_scope='base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only',
             quota=quota_plan.CONFIG_VERSION, search=search.CONFIG_VERSION,
             configuration=copy.deepcopy(quota_plan.configurations.POLICY))
     return {'g01_version': spec['version'], 'g01_policy': spec, 'g01_partition': partition}

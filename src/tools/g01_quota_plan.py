@@ -1,7 +1,8 @@
 """Immutable, conservative scene/class tickets; no live/global quota service.
 
 Test confirmed counts are reconstructed from successfully published G01
-checkpoints and the unchanged full source loader. Training post-T02 counts and
+checkpoints: full source revalidation by default, or the explicit immutable
+receipt adapter for configuration-counting only. Training post-T02 counts and
 nonempty reservation ledgers remain fail-closed until their real adapters exist.
 """
 import copy
@@ -14,6 +15,8 @@ from src.envs.thor_common import ROOT
 
 VERSION = 'g01_static_scene_kind_tickets_v1'
 CONFIG_VERSION = 'g01_static_configuration_tickets_v2'
+RECEIPT_AUTHORITY = 'g01_published_independent_checkpoint_receipt_v1'
+FULL_AUTHORITY = 'full_original_source_loader'
 from src.envs import pair_v2_configuration as configurations
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 FIELDS = ('g01_quota_version', 'g01_quota_assignment', 'allowed_kinds', 'actual_output_caps',
@@ -59,6 +62,11 @@ def validate_structure(plan):
             or plan.get('partition') not in STAGES):
         raise ValueError('Unknown static quota plan/partition')
     partition = plan['partition']
+    authority = plan.get('count_basis_authority', FULL_AUTHORITY)
+    if authority not in (FULL_AUTHORITY, RECEIPT_AUTHORITY):
+        raise ValueError('Unsupported count-basis acceptance authority')
+    if authority == RECEIPT_AUTHORITY and (plan['version'] != CONFIG_VERSION or partition != 'test'):
+        raise ValueError('Checkpoint receipt authority is restricted to explicit test configuration tickets')
     if plan['version'] == CONFIG_VERSION:
         if partition != 'test':
             raise ValueError('Configuration deduplication is restricted to approved test collection')
@@ -139,11 +147,13 @@ def validate_structure(plan):
             'scope': 'structural arithmetic only; reservations are not scientific acceptance'}
 
 
-def reconstruct_test_inventory(count_basis_sources, *, configuration=False):
+def reconstruct_test_inventory(count_basis_sources, *, configuration=False, authority=FULL_AUTHORITY):
     """One shared audited inventory implementation for planning and dispatch."""
     if not isinstance(count_basis_sources, list) or not count_basis_sources:
         raise ValueError('Require an explicit complete published checkpoint cutoff')
     from src.envs import pair_table_source as sources
+    if authority not in (FULL_AUTHORITY, RECEIPT_AUTHORITY) or (authority == RECEIPT_AUTHORITY and not configuration):
+        raise ValueError('Unsupported inventory receipt authority/scope')
     identities, publications, duplicates, source_refs = {}, [], [], set()
     measured = {}
     for expected in count_basis_sources:
@@ -152,7 +162,12 @@ def reconstruct_test_inventory(count_basis_sources, *, configuration=False):
         if key in source_refs:
             raise ValueError('Duplicate checkpoint in the explicit quota cutoff')
         source_refs.add(key)
-        container, actual_ref, entries = sources._container(ROOT / expected['file'])
+        packages = None
+        if authority == RECEIPT_AUTHORITY:
+            from src.tools.g01_checkpoint_receipts import load_checkpoint
+            container, actual_ref, entries, packages = load_checkpoint(expected, root=ROOT)
+        else:
+            container, actual_ref, entries = sources._container(ROOT / expected['file'])
         if (any(actual_ref.get(field) != expected[field] for field in ('file', 'sha256'))
                 or sources._checkpoint_module(container['_meta']['command']) != sources.G01_CHECKPOINT_MODULE):
             raise ValueError('Test quota basis must be the exact successfully published G01 checkpoint')
@@ -161,8 +176,11 @@ def reconstruct_test_inventory(count_basis_sources, *, configuration=False):
             raise ValueError('Test checkpoint publication is incomplete')
         local_counts = {kind: 0 for kind in KINDS}
         for entry in entries:
-            package = sources.load_reviewed_pair(ROOT / expected['file'], entry['pair_id'],
-                                                pair_file=entry['pair_reference']['file'])
+            if packages is None:
+                package = sources.load_reviewed_pair(ROOT / expected['file'], entry['pair_id'],
+                                                    pair_file=entry['pair_reference']['file'])
+            else:
+                package = packages[str((ROOT / entry['pair_reference']['file']).resolve())]
             kind, scene = package['kind'], package['scene']
             identity = package['independent_verification']['proposal_identity']
             if (kind not in KINDS or not scene_allowed(scene, 'test')
@@ -205,14 +223,19 @@ def reconstruct_test_inventory(count_basis_sources, *, configuration=False):
         'confirmed_by_kind': summed(measured.values()), 'confirmed_by_scene': measured,
         'checkpoint_references': publications, 'unique_proposals': list(identities.values()),
         'duplicate_occurrences': duplicates, 'outstanding_reservations': [],
+        **({'count_basis_authority': RECEIPT_AUTHORITY, 'native_scientific_revalidation_performed': False,
+            'receipt_scope': 'successful original independent construction receipt reused only for quota/configuration counts; T02/source loader unchanged; no training permission'}
+           if authority == RECEIPT_AUTHORITY else {}),
         **({'raw_unique_proposals_by_kind': summed(raw_measured.values()),
             'raw_unique_proposals_by_scene': raw_measured, 'configuration_selection': selection}
            if selection is not None else {}),
-        'scope': 'independently rechecked test construction; before T02; no human image approval or training permission inferred'}
+        'scope': ('authenticated original independent construction receipts reused only for quota/configuration counts; native/T02 checks not rerun; no training permission'
+                  if authority == RECEIPT_AUTHORITY else
+                  'independently rechecked test construction; before T02; no human image approval or training permission inferred')}
 
 
 def authenticate_count_basis(plan):
-    """Recheck every published test pair; raw or failed checkpoint counts never count.
+    """Authenticate every published test pair; raw/failed checkpoint counts never count.
 
     This grants collection capacity, not image-review or training permission.
     Training requires a separate actual post-T02/Stay/ratio adapter. Nonempty
@@ -223,7 +246,8 @@ def authenticate_count_basis(plan):
         raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
     if plan['outstanding_reservations']:
         raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
-    proof = reconstruct_test_inventory(plan['count_basis_sources'], configuration=plan['version'] == CONFIG_VERSION)
+    proof = reconstruct_test_inventory(plan['count_basis_sources'], configuration=plan['version'] == CONFIG_VERSION,
+                                       authority=plan.get('count_basis_authority', FULL_AUTHORITY))
     if (proof['confirmed_by_scene'] != plan['confirmed_by_scene']
             or proof['confirmed_by_kind'] != plan['confirmed_by_kind']):
         raise ValueError('Plan confirmed counts differ from independent unique test construction evidence')

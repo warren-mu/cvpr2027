@@ -190,6 +190,8 @@ def installed(config=None):
             (marked, '_BASE_WRITE', write), (marked, 'summary', summary),
             (marked, 'export_pair', export), (marked, 'discover_view', discover),
             (marked, 'construct_observer', observer), (marked, 'run_search', cadence.run_search)]
+        if quota.configuration_enabled:
+            targets.append((cadence, 'DiscoveryRound', search.ConfigurationPriorityRound))
         previous = [(module, key, getattr(module, key)) for module, key, _ in targets]
         try:
             for module, key, value in targets:

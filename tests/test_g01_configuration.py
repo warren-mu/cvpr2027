@@ -11,6 +11,7 @@ from src.envs import pair_v2_g01_policy as policy
 from src.envs import pair_v2_g01_search as search
 from src.envs import pair_v2_g01_shard as shard
 from src.envs import pair_v2_stay_order as stay
+from src.envs import pair_v2_flip_rounds_search as cadence
 from src.tools import g01_quota_plan as quota
 from src.tools import t01v2_g01_review_checkpoint as review
 from test_g01_quota import counts, plan, write
@@ -125,8 +126,56 @@ class ConfigurationRuntimeTests(unittest.TestCase):
         quota = self.quota([{'configuration': value, 'kind': 'look_flip'}])
         self.assertEqual(quota.desired_modes('look', 'flip', value), ['stay'])
         self.assertEqual(quota.desired_modes('direct', 'flip', value), ['flip', 'stay'])
-        self.assertEqual(quota.desired_modes('look', 'flip', measured(x=1)['g01_configuration']), ['flip', 'stay'])
+        self.assertEqual(quota.desired_modes('look', 'flip', measured(x=1)['g01_configuration']), ['stay', 'flip'])
         self.assertEqual(quota.passed, counts())
+
+    def test_new_configuration_priority_ignores_old_attempt_balance_and_pool_request(self):
+        quota = self.quota()
+        stream = search.MixedIterator([self.catalog()], quota)
+        quota.attempts['look_stay'] = 100  # no Flip credit requirement in explicit v2
+        for index, kind in enumerate(search.CONFIG_PRIORITY):
+            stream.next_pool = 'direct'  # outer legacy cadence cannot reverse the priority
+            proposal, _, _ = next(stream)
+            pool, mode = kind.split('_')
+            self.assertEqual((proposal['projection_pool']['pool'], proposal['mode']), (pool, mode))
+            self.assertEqual(proposal['projection_pool']['class_priority'], list(search.CONFIG_PRIORITY))
+            quota.record('counted' + str(index), measured(kind))
+        with self.assertRaises(StopIteration): next(stream)
+
+    def test_priority_round_stable_ties_finite_visits_and_no_peek_consumption(self):
+        quota = self.quota()
+        catalogs = [self.catalog(x=i) for i in range(5)]
+        # Deliberately reverse priority. Two LS domains tie in original order.
+        available = ['direct_stay', 'look_flip', 'direct_flip', 'look_stay', 'look_stay']
+        active = []
+        for index, (catalog, first) in enumerate(zip(catalogs, available)):
+            value = configuration.from_inputs(quota.scene, catalog['view'], catalog['identity'])
+            for blocked in search.CONFIG_PRIORITY[:search.CONFIG_PRIORITY.index(first)]:
+                quota.configuration_seen[(value['configuration_id'], blocked)] = value
+            active.append({'id': index, 'stream': search.MixedIterator([catalog], quota)})
+        before = [copy.deepcopy(item['stream'].summary()) for item in active]
+        current = search.ConfigurationPriorityRound(active)
+        order = [current.pop('direct')['id'] for _ in active]
+        self.assertEqual(order, [3, 4, 1, 2, 0])
+        self.assertFalse(current)
+        self.assertEqual([item['stream'].summary() for item in active], before)
+        with self.assertRaises(StopIteration): current.pop('look')
+        # Only domain ordering changes. Every discovered domain got one visit.
+        self.assertEqual(sorted(order), list(range(5)))
+
+    def test_old_ticketed_pool_alternation_and_flip_preference_stay_unchanged(self):
+        quota = search.SceneQuota(6, actual_output_caps=counts(look_flip=2, look_stay=2, direct_flip=2, direct_stay=2),
+                                  allowed_kinds=list(search.KINDS))
+        catalog = mixed_record(); catalog.update(search.fields(True))
+        stream = search.MixedIterator([catalog], quota)
+        observed = []
+        for _ in range(2):
+            proposal, _, _ = next(stream)
+            observed.append((proposal['projection_pool']['pool'], proposal['mode']))
+            self.assertNotIn('class_priority', proposal['projection_pool'])
+        self.assertEqual(observed, [('look', 'flip'), ('direct', 'flip')])
+        self.assertEqual(quota.desired_modes('look', 'stay'), ['flip', 'stay'])
+        with self.assertRaises(ValueError): search.ConfigurationPriorityRound([{'stream': stream}])
 
     def test_actual_crossover_duplicate_is_capacity_skip_after_science(self):
         value = measured('look_stay')['g01_configuration']
@@ -152,11 +201,14 @@ class ConfigurationRuntimeTests(unittest.TestCase):
             root = Path(temporary)
             seen = [{'configuration': measured()['g01_configuration'], 'kind': 'look_flip'}]
             plan_value, ref, config = cfg(root, seen=seen)
+            original_round = cadence.DiscoveryRound
             with patch.object(quota, 'ROOT', root):
                 policy.validate_source(config, config)
                 with shard.installed(config) as state:
                     self.assertEqual(state.configuration_seen[(seen[0]['configuration']['configuration_id'], 'look_flip')], seen[0]['configuration'])
                     self.assertEqual(shard.marked.tags()['g01_search_version'], search.CONFIG_VERSION)
+                    self.assertIs(cadence.DiscoveryRound, search.ConfigurationPriorityRound)
+                self.assertIs(cadence.DiscoveryRound, original_round)
                 changed = copy.deepcopy(config); changed['g01_seen_configurations'] = []
                 with self.assertRaises(ValueError): policy.validate_source(changed)
             wrong = copy.deepcopy(plan_value); wrong['confirmed_by_kind'] = counts()
