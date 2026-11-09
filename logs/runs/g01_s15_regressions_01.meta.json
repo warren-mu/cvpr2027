@@ -1,0 +1,28 @@
+{
+  "name": "g01_s15_regressions_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "g01_s15_regressions_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T14:12:09",
+  "log_path": "logs/runs/g01_s15_regressions_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "e909350b4bfeef9e39343103a3039a0cd736e38e",
+  "git_dirty": false,
+  "end": "2026-11-09T14:12:27",
+  "duration_sec": 18.0,
+  "exit_code": 0,
+  "metrics_sha256": "7165820741a511d8e989b744a1a70802e86e3a91e32c82d95f385e3b196357a3"
+}

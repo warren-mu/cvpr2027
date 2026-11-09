@@ -1,0 +1,29 @@
+{
+  "name": "diag_flip_s15_account_report_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_flip_s15_account_report_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib,importlib.util\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd()\nd,ref=audited_result(r/'results/t01v2_flip_s15_accounting_01.json')\nassert d['_meta']['exit_code']==0 and d['metrics']['complete_allocation_accounting']\nlines=['','### Supplement15 allocation accounting','','| Job | GPUs | Queue wait (minutes) | Allocation GPU-hours | Recorded billing multiplier | Charged GPU-hours |','|---|---:|---:|---:|---:|---:|']\ntotal=0\nfor job in d['config']['jobs']:\n j=job['job_id'];f=job['fields'];h=d['metrics']['allocation_gpu_hours_by_job'][j];rate=float(f['Resource_List.queue_charge_rate'])\n assert rate>0 and f['job_state']=='F'\n total+=h*rate\n lines.append('| '+' | '.join(map(str,[j,int(f['Resource_List.ngpus']),job['queue_wait_seconds']/60,h,rate,h*rate]))+' |')\nspec=importlib.util.spec_from_file_location('phase_budget',r/'scripts/pbs/submit_phase.py')\nmodule=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)\nbudget=module.budget_state(r)\nlines+=['',f'This round consumed {total} scheduler-charged GPU-hours. Current accounted-or-reserved ledger: '+json.dumps(budget['accounted_or_reserved_by_subbudget'],sort_keys=True)+', shared T00b+T01 '+str(budget['accounted_or_reserved_total'])+'/60. Source: '+ref['file']+'. Billing uses the scheduler multiplier, not an independent project-credit reconciliation.']\np=r/'STATUS.md'; text=p.read_text()\na='\\n\\nDetailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp203_s15_r01.md.\\n'\nb='\\n\\nDetailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp204_s15_r01.md.'\nassert text.count(a)==1 and text.count(b)==1\ntext=text.replace(a,'\\n').replace(b,a.rstrip()+'\\n'+b.lstrip())\nassert '### Supplement15 allocation accounting' not in text\np.write_text(text+'\\n'.join(lines)+'\\n')\nprint('S15_ACCOUNTING_SUMMARY: '+json.dumps({'round_charged_gpu_hours':total,'budget':budget},sort_keys=True))\nprint('\\n'.join(lines))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T14:07:42",
+  "log_path": "logs/runs/diag_flip_s15_account_report_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "a6edf7442cf0dc31231421fc2dd0e4ce85e78601",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_flip_s15_account_report_01.diff",
+  "end": "2026-11-09T14:08:59",
+  "duration_sec": 76.3,
+  "exit_code": 0,
+  "metrics_sha256": "4642716fb089fa2ceaaf176648d36cce04fc72866670f9cf9628ca120ef50cd4"
+}

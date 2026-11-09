@@ -1,0 +1,66 @@
+# run_logged: python3 -m src.tools.record_command --name diag_flip_s15_funnel_report_01 -- python3 -c import json,pathlib
+from src.tools.t01_partition import audited_result
+r=pathlib.Path.cwd()
+reports=[]
+for scene,job in [('fp203','707737'),('fp204','707740')]:
+ n='diag_flip_sealed_'+scene+'_s15_r01'
+ d,ref=audited_result(r/'results'/(n+'.json'))
+ assert d['_meta']['exit_code']==0
+ marker='SEALED_FLIP_ANCHOR_FUNNEL_JSON: '
+ lines=[x[len(marker):] for x in (r/d['_meta']['log_path']).read_text().splitlines() if x.startswith(marker)]
+ assert len(lines)==1
+ f=json.loads(lines[0]); src,sref=audited_result(r/f['source']['file'])
+ assert all(sref[k]==f['source'][k] for k in ('file','sha256','metrics_sha256','exit_code','git_commit'))
+ assert f['sealed_terminal'] is True and f['source_artifacts_modified'] is False and f['thresholds_changed'] is False
+ assert f['job_id']==job+'.hopper-m-02'
+ def cell(v):return str(v).replace('|','\\|').replace('\n',' ')
+ def example(e):
+  v=e['values']; ev=[a.get('evidence',{}).get('evidence_pixels') for a in v.get('first_actions',[])]
+  physical={w:{'reasons':m.get('reasons'),'edits':{key:z.get('position_error_m') for key,z in (m.get('edits') or {}).items()},'other_max_m':m.get('max_other_position_change_m')} for w,m in (v.get('physical_by_world') or {}).items()}
+  return cell(e['pair_id']+': '+json.dumps({'X':v.get('prefix_anchor_pixels'),'RGBmax':v.get('prefix_max_abs_diff'),'evidence':ev,'solvable':v.get('solvable_by_world'),'physical':physical},sort_keys=True))
+ lines=['# '+f['scene']+' / '+job+' / supplement15 funnel','',
+  'Source ended '+f['status']+' (exit '+str(f['exit_code'])+'): '+cell(f['error'])+'. Counted attempts '+str(f['source_attempts'])+', Flip/Stay '+str(f['verified_actual_quota']['counted_flip'])+'/'+str(f['verified_actual_quota']['counted_stay'])+'. These are source observations, not independent acceptance. Unknown gates remain unknown. No threshold changed.','',
+  '| Mode | Gate | Pass | Fail | Unknown | First recorded rejected examples |','|---|---|---:|---:|---:|---|']
+ for group in f['groups']:
+  for gate in ('hidden_both','prefix_le3','first_evidence_ge250','solvable_both','physical_both','witness_both'):
+   x=group['funnel']['stages'][gate]
+   lines.append('| '+' | '.join([group['mode'],gate,*[str(x[k]) for k in ('gate_pass','gate_fail','gate_unknown')],'<br>'.join(example(e) for e in x['rejected_examples']) or 'No recorded failing example'])+' |')
+ lines+=['','## w0 physical check by anchor','',
+  '| Anchor | Passed | Measured attempts | Unknown |','|---|---:|---:|---:|']
+ for a,c in src['metrics']['w0_by_anchor'].items():
+  lines.append('| '+cell(a)+' | '+str(c['passed'])+' | '+str(c['measured_attempts'])+' | '+str(c['measurement_unavailable'])+' |')
+ lines+=['','Rejections: '+json.dumps(f['discard_reason_counts'],sort_keys=True)+'.','',
+  'Source: '+ref['file']+'. Original raw attempts, failed run and terminal record are retained. Independent results are reported separately.']
+ out=r/'logs/review'/(n+'.md'); assert not out.exists(); out.write_text('\n'.join(lines)+'\n')
+ reports.append((f,ref,str(out.relative_to(r))))
+status=r/'STATUS.md'; heading='### Supplement15 sealed pilot funnels'
+assert heading not in status.read_text()
+lines=['',heading,'','Both sources ended at their bounded deadlines with clean cleanup. Complete source journals and the first recorded failed examples are preserved. Independent pair acceptance is separate; the table below is source-reported, and each gate is pass/fail/unknown.','',
+ '| Scene | Mode | Counted | Reported Look | Hidden | Prefix | Evidence | Solvable | Physical | Witness |','|---|---|---:|---:|---|---|---|---|---|---|']
+for f,ref,out in reports:
+ for g in f['groups']:
+  z=g['funnel']; vals=[f['scene'],g['mode'],str(z['observed_attempts']),str(z['source_reported_look_passed'])]
+  vals+=['/'.join(str(z['stages'][s][k]) for k in ('gate_pass','gate_fail','gate_unknown')) for s in ('hidden_both','prefix_le3','first_evidence_ge250','solvable_both','physical_both','witness_both')]
+  lines.append('| '+' | '.join(vals)+' |')
+ lines+=['','Detailed real rejected examples and w0 per-anchor passed/measured/unknown counts: '+out+'.']
+status.write_text(status.read_text()+'\n'.join(lines)+'\n')
+print('\n'.join(lines))
+
+# start: 2026-11-09T14:06:09
+
+### Supplement15 sealed pilot funnels
+
+Both sources ended at their bounded deadlines with clean cleanup. Complete source journals and the first recorded failed examples are preserved. Independent pair acceptance is separate; the table below is source-reported, and each gate is pass/fail/unknown.
+
+| Scene | Mode | Counted | Reported Look | Hidden | Prefix | Evidence | Solvable | Physical | Witness |
+|---|---|---:|---:|---|---|---|---|---|---|
+| FloorPlan203 | flip | 55 | 16 | 28/0/27 | 28/0/27 | 16/12/27 | 16/12/27 | 40/15/0 | 16/0/39 |
+| FloorPlan203 | stay | 55 | 0 | 4/20/31 | 2/22/31 | 0/2/53 | 0/2/53 | 35/19/1 | 0/0/55 |
+
+Detailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp203_s15_r01.md.
+| FloorPlan204 | flip | 52 | 1 | 4/0/48 | 2/2/48 | 1/1/50 | 1/1/50 | 7/44/1 | 1/0/51 |
+| FloorPlan204 | stay | 51 | 0 | 16/15/20 | 15/16/20 | 0/15/36 | 0/15/36 | 32/19/0 | 0/0/51 |
+
+Detailed real rejected examples and w0 per-anchor passed/measured/unknown counts: logs/review/diag_flip_sealed_fp204_s15_r01.md.
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.9969260630314238}
+# exit_code: 0

@@ -1,0 +1,72 @@
+# run_logged: python3 -m src.tools.record_command --name g01_s15_cpu_01 -- python3 -c import unittest
+suite=unittest.TestSuite()
+for pattern in ('test_g01*.py','test_pair_v2_g01.py','test_t01v2_flip_geometry_checkpoint.py','test_t01v2_controller_association.py'):
+ suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))
+raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
+
+# start: 2026-11-09T14:11:14
+test_authenticated_pair_matching_still_calls_full_controller_and_lease_association (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_direct_pool_cross_over_keeps_original_surface_role_without_look_claim (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_geometry_native_proof_and_original_scientific_failure_cannot_be_bypassed (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_identity_pool_and_admission_errors_fail_closed (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_look_pool_uses_center_proof_and_preserves_full_scientific_kwargs (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_shared_evidence_handles_look_pool_cross_over_without_ranked_identity_spoof (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_stay_delegates_to_original_role_and_science (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_missing_or_unverified_cleanup_report_cannot_admit_a_source (test_g01_parallel.BridgeTests) ... ok
+test_receive_failure_still_cleans_and_initial_setsid_race_does_not_fake_failure (test_g01_parallel.BridgeTests) ... ok
+test_uncertain_cleanup_poison_never_releases_lease (test_g01_parallel.BridgeTests) ... ok
+test_dead_owner_poison_retains_slot_and_disallows_reclaim (test_g01_parallel.LeaseTests) ... ok
+test_other_scene_cannot_release_owned_lease (test_g01_parallel.LeaseTests) ... ok
+test_six_constructors_admit_only_two_witnesses_and_release_requires_proof (test_g01_parallel.LeaseTests) ... ok
+test_full_scene_grant_never_shortens_to_remaining_allocation (test_g01_parallel.PlanningTests) ... ok
+test_plan_hash_lane_gpu_and_cpu_cannot_be_silently_reassigned (test_g01_parallel.PlanningTests) ... ok
+test_same_six_training_scenes_full_twelve_cpu_and_one_real_gpu_each_stage (test_g01_parallel.PlanningTests) ... ok
+test_collection_replays_real_counted_journal_and_rejects_forged_totals (test_pair_v2_g01.G01SourceTests) ... ok
+test_direct_pair_uses_the_same_strict_controller_native_proof (test_pair_v2_g01.G01SourceTests) ... ok
+test_early_failure_stays_unknown_and_collector_bindings_restore (test_pair_v2_g01.G01SourceTests) ... ok
+test_missing_resource_report_is_only_a_zero_claim_failed_ledger (test_pair_v2_g01.G01SourceTests) ... ok
+test_new_source_or_role_cannot_bypass_authentication (test_pair_v2_g01.G01SourceTests) ... ok
+test_original_scientific_failure_and_all_arguments_are_preserved (test_pair_v2_g01.G01SourceTests) ... ok
+test_actual_quota_survives_controller_restart_and_native_failure (test_pair_v2_g01.MixedProductionTests) ... ok
+test_complete_caps_stop_discovery_without_native_call_and_hooks_restore (test_pair_v2_g01.MixedProductionTests) ... ok
+test_complete_flip_domains_with_original_stay_caps_and_native_inputs (test_pair_v2_g01.MixedProductionTests) ... ok
+test_fixed_label_context_keeps_direct_branch_and_new_spawn_replay (test_pair_v2_g01.MixedProductionTests) ... ok
+test_full_three_dimensional_role_keeps_seed0_and_independent_geometry_check (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_keeps_same_side_native_point_that_surface_role_would_drop (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_precheck_happens_before_build_and_does_not_override_measured_class (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_retry_guard_binds_real_failed_native_fallbacks_and_direct_stays_original (test_pair_v2_g01.MixedProductionTests) ... ok
+test_mixed_stream_alternates_pools_and_preserves_stay_sides (test_pair_v2_g01.MixedProductionTests) ... ok
+test_native_spawn_installs_mixed_hooks_and_keeps_no_clone_eight_cap (test_pair_v2_g01.MixedProductionTests) ... ok
+test_one_sided_look_never_backfills_unearned_stay_but_direct_continues (test_pair_v2_g01.MixedProductionTests) ... ok
+test_only_fixed_training_partition_and_no_clone (test_pair_v2_g01.MixedProductionTests) ... ok
+test_original_soft_deadline_prevents_partial_g01_pool (test_pair_v2_g01.MixedProductionTests) ... ok
+test_per_actual_class_cap_allows_balance_attempts_but_not_more_exports (test_pair_v2_g01.MixedProductionTests) ... ok
+test_proposal_pool_and_actual_output_class_remain_separate (test_pair_v2_g01.MixedProductionTests) ... ok
+test_quota_skip_preserves_scientific_verdict_in_compact_raw (test_pair_v2_g01.MixedProductionTests) ... ok
+test_baseline_camera_native_membership_and_controller_index_are_authenticated (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_independent_role_does_not_use_old_native_surface_ratio (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_initial_successful_and_failed_retry_guards_cannot_be_substituted (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_original_failed_retry_action_must_match_recorded_unchanged_state (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_real_retry_ledgers_initial_final_and_seed_orientation_are_recomputed (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_source_support_preserves_full_checker_and_restores_role_after_failure (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_stay_delegates_to_existing_checker_without_flip_geometry_reinterpretation (test_t01v2_flip_geometry_checkpoint.GeometryCheckpointTests) ... ok
+test_collection_still_calls_full_pair_validator_and_propagates_failure (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_foreign_baseline_cannot_be_substituted_even_when_both_inline_records_agree (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_index_size_and_portable_sha_tamper_fail (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_missing_and_duplicate_visits_fail (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_missing_index_membership_and_duplicate_files_fail (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_nonlook_source_is_not_admitted (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_original_preflight_failure_propagates (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_pair_raw_controller_disagreement_never_uses_hash_fallback (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_prior_controller_is_bound_without_rewriting_final_source (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_same_forged_controller_id_does_not_accept_foreign_preflight (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_source_final_preflight_must_still_bind_final_selected_visit (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_worker_identity_and_cleanup_failure_are_rejected (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+test_zero_pair_nonlook_source_fails_before_eligibility_or_legacy_handling (test_t01v2_controller_association.ControllerAssociationTests) ... ok
+
+----------------------------------------------------------------------
+Ran 58 tests in 10.072s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 10.77296336402651}
+# exit_code: 0
