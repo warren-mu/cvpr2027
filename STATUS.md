@@ -484,3 +484,8 @@ Child ended at10:52:40Asia/Singapore,exit1/status incomplete with verified termi
 Look60continues onhopper30; additional provisional original images are published as they appear. E2E707555step3passed actualoriginal-model evaluation; report/accounting are being finalized beforeT0.
 
 E2E step3passed:30actualepisodes,10perstrategy; originalQwen2.5-VL-3B,complete episode logs. PBS707555 actual0.10388888888888889GPUh,queue106s; initial accounting03 failed becauseqstat was absent fromPATH, and the logged corrected03_retry1 succeeded; both preserved. Reportupdated. NextT0 is exactly5updates×64episodes,5turns,max256tokens,explicit_task_zero reward,noformatbonus,critic_offload=false first. Request1GPU/1hour ceiling within4GPUh E2E subbudget; this is a protective cap for the first measured training run, not a claimed runtime. Existing Direct/tau0 pool means证据前逻辑未覆盖.
+
+
+### Second ended Look-only unit:60degrees/FloorPlan203
+The source ended at11:07:03Asia/Singapore,exit1, with28recorded attempts (allStay,Flip0). Source-recorded cumulative funnel14 ->14 ->10 ->6 ->6 ->6; physical gates21pass/6fail/1unknown. Six generator-passed LookStay pairs remain provisional: independent checkpoint rejected allsix with Portable pair preflight differs from the logged source preflight; independently verified count0. Both successful funnel and failedcheckpoint records are preserved. Investigating the actual controller/preflight association using existing evidence; no threshold changes, source rewriting, or automatic acceptance. See logs/review/diag_look_funnel60_fp203_01.md.
+T0smoke is707594,1GPU,5updates,explicit_task_zero reward,1hourcap. It started and passed its native gate; no training-update result yet.

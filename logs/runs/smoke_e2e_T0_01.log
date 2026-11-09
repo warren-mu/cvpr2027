@@ -1,0 +1,27 @@
+# run_logged: python3 -u -m src.tools.smoke_e2e_train --name smoke_e2e_T0_01 --eval results/smoke_e2e_eval_03.json --arm T0 --format-policy explicit_task_zero --timeout-seconds 3540
+# start: 2026-11-09T11:06:28
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO 11-09 11:11:16 [__init__.py:239] Automatically detected platform cuda.
+2026-11-09 11:11:17,658	WARNING authentication_token_setup.py:85 -- Token authentication is enabled for this Ray cluster. Set RAY_AUTH_MODE=disabled to opt out. For more information, see https://docs.ray.io/en/latest/ray-security/token-auth.html
+2026-11-09 11:11:22,319	INFO worker.py:2038 -- Started a local Ray instance.
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/thor_common.py", line 220, in _worker_entry
+    result = fn(config, connection)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_train.py", line 182, in train_worker
+    trainer.init_workers()
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/third_party/VAGEN/vagen/trainer/ppo/ray_trainer.py", line 876, in init_workers
+    worker_dict_cls = create_colocated_worker_cls(class_dict=class_dict)
+  File "/scratch/e1583364/cvpr2027/sources/verl-3f55021e08b98315213e10d10b709c7f6bbe84f7/verl/single_controller/ray/base.py", line 452, in create_colocated_worker_cls
+    assert worker_cls == cls.cls.__ray_actor_class__.__base__, \
+AssertionError: the worker class should be the same when share the same process
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_train.py", line 253, in main
+    raise RuntimeError('PPO worker did not finish: ' + str(worker.error))
+RuntimeError: PPO worker did not finish: {'type': 'AssertionError', 'message': 'the worker class should be the same when share the same process'}
+FINAL_METRICS_JSON: {"black_frame_detected": false, "cleanup_errors": [], "errors": ["RuntimeError: PPO worker did not finish: {'type': 'AssertionError', 'message': 'the worker class should be the same when share the same process'}"], "formal_T04_T05_acceptance": null, "gate": {"audit": {"fail": [], "file": "results/smoke_e2e_T0_01_gate.json", "warn": []}, "exit_code": 0, "file": "results/smoke_e2e_T0_01_gate.json", "git_commit": "81eac0eb2ebd18e7b991549f3066b3891511a387", "metrics_sha256": "366247b2ceb643176fccbecea93d57eff284bd7327350cd992ae78ed08137fc4", "sha256": "01d7577a3571c706fe0c4cf8a25c3478fcdd3bd5190b971156e6f7df55547794"}, "kind": "smoke_e2e_training", "paper_result": false, "producer_exit_code": 1, "step4_passed": false, "step5_passed": false, "training_logs": [{"bytes": 807, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_T0_01/ray_temp.json", "sha256": "4a35c4b2fb3b4acd3bdc24e9a4b5824ef891f6d8b42479c0771a8d09ddcb73f6"}, {"bytes": 11972, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_T0_01/resolved_smoke_config.json", "sha256": "6b37c87fd8ea641a63878886bb00c9da18c0e57b8621ea9140449a1c350740a0"}]}
+# exit_code: 1
