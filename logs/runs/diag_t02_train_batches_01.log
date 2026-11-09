@@ -1,0 +1,35 @@
+# run_logged: python3 -c import json,hashlib,math
+from pathlib import Path
+from collections import Counter
+from src.tools.t02_export import audited_result
+name='diag_t02_train_batches_01'
+full_path=Path('configs/t02_export_current_train.json');first_path=Path('configs/t02_export_first6.json')
+full_bytes=full_path.read_bytes();first_bytes=first_path.read_bytes()
+assert hashlib.sha256(full_bytes).hexdigest()=='c55ba5f7a8125cdfb132077d816a97e3f35bc9f869455bf9f432d09dd5d60b2a'
+assert hashlib.sha256(first_bytes).hexdigest()=='8d2a976390214f30b8bfe74254e7e53f91aa88c64d816b5c90727a87cb464637'
+full=json.loads(full_bytes);first=json.loads(first_bytes)
+keys=lambda rows:[(r['pair']['file'],r['pair']['sha256']) for r in rows]
+assert len(full['entries'])==161 and len(set(keys(full['entries'])))==161
+done=set(keys(first['entries']));assert len(done)==6 and done<=set(keys(full['entries']))
+remaining=[r for r in full['entries'] if (r['pair']['file'],r['pair']['sha256']) not in done];assert len(remaining)==155
+cost,cref=audited_result('results/diag_t02_first6_cost_01.json')
+counts=dict(Counter(r['kind'] for r in cost['metrics']['rows'] if r['export_complete']))
+assert sum(counts.values())==5
+batches=[]
+for i in range(0,len(remaining),18):
+ rows=remaining[i:i+18];path=Path('configs')/('t02_export_train_batch_'+str(i//18+1).zfill(2)+'.json')
+ manifest={'version':full['version'],'partition':'train','entries':rows,'original_inventory':{'file':str(full_path),'sha256':hashlib.sha256(full_bytes).hexdigest()},'selection':'original manifest order excluding exactly the first six attempted source identities; no outcome-based reordering','first_six_attempts_kept_separately':True}
+ raw=(json.dumps(manifest,indent=2,sort_keys=True)+'\n').encode()
+ with path.open('xb') as f:f.write(raw)
+ waves=math.ceil(len(rows)/6);parent=2160 if waves==3 else 1650
+ batches.append({'manifest':str(path),'sha256':hashlib.sha256(raw).hexdigest(),'unit_count':len(rows),'concurrency':6,'parent_seconds':parent,'PBS_walltime_seconds':parent+30,'unit_seconds':900,'pair_seconds':660,'gate_seconds':180})
+metrics={'first_six_export_checked_by_kind':counts,'first_six_formal_T02_passed_by_kind':{k:0 for k in ('direct_flip','direct_stay','look_flip','look_stay')},'remaining_attempts':155,'batches':batches,'first_six_unknowns_retained':1,'walltime_rationale':'Keep initial full900-second unit/660-second render grants; batch horizon reserves full last unit after earlier waves at observed maximum unit walltime times1.3 plus gate/cleanup, rounded upward. Actual PBS usage is billed, not the reservation. Six-pair sample does not bound larger graphs.'}
+with (Path('results')/(name+'.json')).open('x') as f:json.dump({'config':{'name':name,'seed':0,'scope':'fixed remaining inventory and submission parameters, not measured batch results'},'metrics':metrics,'sources':[cref]},f,indent=2);f.write('\n')
+p=Path('STATUS.md');s=p.read_text().replace('Five LookFlip pairs completed original export/native/pair checks','Five pairs (LookFlip4, LookStay1) completed original export/native/pair checks')
+s+='\n\nRemaining155 train units are frozen in9 explicit manifests,18 per full batch, singleGPU/six processes. Only one further train-export batch is submitted while the first formal cache run occupies the other T02 slot; one small-job slot stays available for priority test generation. The first6 result rows establish4LookFlip+1LookStay export checks, not5LookFlip. Full T02 cache counts remain0 until measured validation.\n'
+p.write_text(s)
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-10T02:18:32
+FINAL_METRICS_JSON: {"batches": [{"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_01.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "da1847362af2dc4ac3ccbf415ae198a79a2130f75dd555916d7582393b663570", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_02.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "e018a0dfe6e4912c13e5f59e810a39532373fb349e23ee01b675604eb1b59e37", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_03.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "20f7fabe6a5eacc54b9b01d8a8a04d6f10deb6206514b5bf520422753cf5c639", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_04.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "f7b0537e2fa8002481144ee755095795d5242056ff0a394efe1b4f9f7f26122b", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_05.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "05577a7ff70376326629fd6c693c6f45ec27dc19253d44ae85eac61407e3198f", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_06.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "e1880b5ccd4c6a7787b175175a29f038af9367669cc9c13cc6847a306e27a5dd", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_07.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "110c7e75dab6a03e380b85a0cc62f32a6cdef30539b372c336b9f559e5488d19", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 2190, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_08.json", "pair_seconds": 660, "parent_seconds": 2160, "sha256": "94488397c9819e7d19ec604274de01cb40e228a0d13a1b7617f7a08612a34872", "unit_count": 18, "unit_seconds": 900}, {"PBS_walltime_seconds": 1680, "concurrency": 6, "gate_seconds": 180, "manifest": "configs/t02_export_train_batch_09.json", "pair_seconds": 660, "parent_seconds": 1650, "sha256": "8915bf99a1a0bf833afccd296265f8c6c7af19ca8235c3e0f9e9bebcd549d78d", "unit_count": 11, "unit_seconds": 900}], "first_six_export_checked_by_kind": {"look_flip": 4, "look_stay": 1}, "first_six_formal_T02_passed_by_kind": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "first_six_unknowns_retained": 1, "remaining_attempts": 155, "walltime_rationale": "Keep initial full900-second unit/660-second render grants; batch horizon reserves full last unit after earlier waves at observed maximum unit walltime times1.3 plus gate/cleanup, rounded upward. Actual PBS usage is billed, not the reservation. Six-pair sample does not bound larger graphs."}
+# exit_code: 0

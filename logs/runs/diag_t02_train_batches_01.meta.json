@@ -1,0 +1,23 @@
+{
+  "name": "diag_t02_train_batches_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib,math\nfrom pathlib import Path\nfrom collections import Counter\nfrom src.tools.t02_export import audited_result\nname='diag_t02_train_batches_01'\nfull_path=Path('configs/t02_export_current_train.json');first_path=Path('configs/t02_export_first6.json')\nfull_bytes=full_path.read_bytes();first_bytes=first_path.read_bytes()\nassert hashlib.sha256(full_bytes).hexdigest()=='c55ba5f7a8125cdfb132077d816a97e3f35bc9f869455bf9f432d09dd5d60b2a'\nassert hashlib.sha256(first_bytes).hexdigest()=='8d2a976390214f30b8bfe74254e7e53f91aa88c64d816b5c90727a87cb464637'\nfull=json.loads(full_bytes);first=json.loads(first_bytes)\nkeys=lambda rows:[(r['pair']['file'],r['pair']['sha256']) for r in rows]\nassert len(full['entries'])==161 and len(set(keys(full['entries'])))==161\ndone=set(keys(first['entries']));assert len(done)==6 and done<=set(keys(full['entries']))\nremaining=[r for r in full['entries'] if (r['pair']['file'],r['pair']['sha256']) not in done];assert len(remaining)==155\ncost,cref=audited_result('results/diag_t02_first6_cost_01.json')\ncounts=dict(Counter(r['kind'] for r in cost['metrics']['rows'] if r['export_complete']))\nassert sum(counts.values())==5\nbatches=[]\nfor i in range(0,len(remaining),18):\n rows=remaining[i:i+18];path=Path('configs')/('t02_export_train_batch_'+str(i//18+1).zfill(2)+'.json')\n manifest={'version':full['version'],'partition':'train','entries':rows,'original_inventory':{'file':str(full_path),'sha256':hashlib.sha256(full_bytes).hexdigest()},'selection':'original manifest order excluding exactly the first six attempted source identities; no outcome-based reordering','first_six_attempts_kept_separately':True}\n raw=(json.dumps(manifest,indent=2,sort_keys=True)+'\\n').encode()\n with path.open('xb') as f:f.write(raw)\n waves=math.ceil(len(rows)/6);parent=2160 if waves==3 else 1650\n batches.append({'manifest':str(path),'sha256':hashlib.sha256(raw).hexdigest(),'unit_count':len(rows),'concurrency':6,'parent_seconds':parent,'PBS_walltime_seconds':parent+30,'unit_seconds':900,'pair_seconds':660,'gate_seconds':180})\nmetrics={'first_six_export_checked_by_kind':counts,'first_six_formal_T02_passed_by_kind':{k:0 for k in ('direct_flip','direct_stay','look_flip','look_stay')},'remaining_attempts':155,'batches':batches,'first_six_unknowns_retained':1,'walltime_rationale':'Keep initial full900-second unit/660-second render grants; batch horizon reserves full last unit after earlier waves at observed maximum unit walltime times1.3 plus gate/cleanup, rounded upward. Actual PBS usage is billed, not the reservation. Six-pair sample does not bound larger graphs.'}\nwith (Path('results')/(name+'.json')).open('x') as f:json.dump({'config':{'name':name,'seed':0,'scope':'fixed remaining inventory and submission parameters, not measured batch results'},'metrics':metrics,'sources':[cref]},f,indent=2);f.write('\\n')\np=Path('STATUS.md');s=p.read_text().replace('Five LookFlip pairs completed original export/native/pair checks','Five pairs (LookFlip4, LookStay1) completed original export/native/pair checks')\ns+='\\n\\nRemaining155 train units are frozen in9 explicit manifests,18 per full batch, singleGPU/six processes. Only one further train-export batch is submitted while the first formal cache run occupies the other T02 slot; one small-job slot stays available for priority test generation. The first6 result rows establish4LookFlip+1LookStay export checks, not5LookFlip. Full T02 cache counts remain0 until measured validation.\\n'\np.write_text(s)\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T02:18:32",
+  "log_path": "logs/runs/diag_t02_train_batches_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ea8826926709b186a4c3b364db374ba7cc373dcb",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_t02_train_batches_01.diff",
+  "end": "2026-11-10T02:18:34",
+  "duration_sec": 0.4,
+  "exit_code": 0,
+  "metrics_sha256": "e4a6b2a3ffa708ad7e86a53bcee0bc99a9a77e9b992a65654241c4e534f3cacc"
+}

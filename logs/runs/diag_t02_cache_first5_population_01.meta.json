@@ -1,0 +1,29 @@
+{
+  "name": "diag_t02_cache_first5_population_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_t02_cache_first5_population_01",
+    "--",
+    "python3",
+    "-c",
+    "import copy,json,hashlib\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.t02_export import save_json\nfrom src.tools.t02_export_parallel import read_manifest,child_outcome\nname='diag_t02_cache_first5_population_01'\nparent,pref=audited_result(Path('results/t02_export_first6_01_retry2.json'))\ncfg,m=parent['config'],parent['metrics']\nassert parent['_meta'].get('end') and m['all_units_ended'] is True and m['cleanup_errors']==[] and m['unstarted_unit_indices']==[]\nmanifest,mref=read_manifest(Path(cfg['manifest']),cfg['manifest_sha256'])\nassert manifest['entries']==cfg['planned_units'] and len(manifest['entries'])==6\nunits=sorted(m['units'],key=lambda u:u['unit_index'])\nassert [u['unit_index'] for u in units]==list(range(6))\nsources=[pref];ledger=[];selected=[]\nfor i,u in enumerate(units):\n d,r=audited_result(Path('results')/(u['run_name']+'.json'));sources.append(r)\n assert d['_meta'].get('end') and u['entry']==manifest['entries'][i]\n checked=child_outcome(u,d,cfg,u['command'],u['entry'])\n assert not u.get('authentication_error') and checked['cleanup_errors']==[]\n assert len(d['metrics']['pairs'])==1\n row=d['metrics']['pairs'][0]\n usable=(d['_meta']['exit_code']==0 and d['metrics']['producer_exit_code']==0 and checked['export_checks_complete'] is True and row['status']=='exported' and row.get('table_complete') is True and row.get('native_evidence_verified') is True and row.get('pair_checks_passed') is True and row.get('error') is None and not row.get('raw_index_error') and d['metrics']['errors']==[] and d['metrics']['unstarted_pair_ids']==[])\n if usable:\n  ref=row['table_manifest'];assert hashlib.sha256(Path(ref['file']).read_bytes()).hexdigest()==ref['sha256'];selected.append(r['file'])\n ledger.append({'unit_index':i,'source_result':r,'input_entry':copy.deepcopy(u['entry']),'export_row':copy.deepcopy(row),'population_membership':'complete_export_table_pending_formal_cache' if usable else 'unknown_incomplete_export_not_usable','formal_cache_verified':False,'full_T02_acceptance':None})\nassert selected==['results/t02_export_first6_01_retry2_u%04d.json'%i for i in (0,1,2,4,5)]\nassert ledger[3]['export_row']['status']=='error' and 'Collided with: Book' in ledger[3]['export_row']['error']['message']\nchosen=[row for row in ledger if row['population_membership']=='complete_export_table_pending_formal_cache']\nclasses={kind:sum(row['export_row']['kind']==kind for row in chosen) for kind in ('direct_flip','direct_stay','look_flip','look_stay')}\nreport={'version':'t02_first6_complete_export_screening_v1','parent':pref,'parent_exit_code':parent['_meta']['exit_code'],'original_input_manifest':mref,'all_input_units':ledger,'cache_population_sources':selected,'cache_population_count':len(chosen),'cache_population_by_kind':classes,'declared_exported_state_count':sum(row['export_row']['export_measurements']['state_count'] for row in chosen),'cache_sampling':{'seed':0,'sample_size':200,'no_failure_resampling':True},'requested_deadlines':{'parent_seconds':1200,'per_pair_seconds':180,'gate_seconds':180,'pbs_walltime':'00:20:30'},'deadline_basis':'First formal fresh-cache engineering ceiling, not a measured fresh-cache speed; bound startup/authentication/render/cleanup. Original export was concurrent6 and is not treated as sequential fresh timing. Any incomplete fixed sample stops downstream.','scope':'Five complete original export tables only; sixth collision remains unknown; no claim about complete161 inventory, full T02 pool balancing, throughput or training permission'}\ndirectory=Path('logs/review')/name;directory.mkdir(parents=True,exist_ok=False)\nref=save_json(directory/'ledger.json',report)\nprint('T02_FIRST5_CACHE_POPULATION_JSON: '+json.dumps({'ledger':ref,'cache_population_sources':selected,'cache_population_count':len(chosen),'cache_population_by_kind':classes,'declared_exported_state_count':report['declared_exported_state_count'],'sixth_status':'unknown_preserved'},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T02:21:42",
+  "log_path": "logs/runs/diag_t02_cache_first5_population_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ea8826926709b186a4c3b364db374ba7cc373dcb",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_t02_cache_first5_population_01.diff",
+  "end": "2026-11-10T02:21:46",
+  "duration_sec": 3.8,
+  "exit_code": 0,
+  "metrics_sha256": "c29ad7a3faf7e2a1aaa8c8e49358c3e5b43a44146ba89d597fad66afbe278c74"
+}

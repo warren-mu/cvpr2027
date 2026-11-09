@@ -1,0 +1,18 @@
+diff --git a/STATUS.md b/STATUS.md
+index a62c446f..b23d4daa 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1145,3 +1145,13 @@ Human approved83828652: fixed room-stratified held-out scenes replace pair-level
+ Independent test B checkpoint t01v2_checkpoint_test_b_full_01 has24 published construction pairs (DF2,DS11,LF11,LS0), before new configuration deduplication and T02 filtering; its review images are pushed. A full checkpoint continues; its measured long CPU/I/O work is not treated as login-light. No additional full inventory revalidation will be started on login; subsequent heavy inventory/pool checks run underPBS resource limits.
+ 
+ T02 retry708980 hit the same pure black gate onhopper-17/GPU-2a86a7f5-c15a-8370-668f-62ac65860780, actual23seconds/0.006388888888888889GPUh, queue117seconds, zero units launched. It was verified and resubmitted as708997 (retry2); the new parent gate passed onhopper-22 and the six units are now executing. Per-pair cost and T02-qualified counts remain unavailable until completed checks.
++
++
++## 2026-11-09 first6 export cost
++
++{"PBS_GPU_hours_including_black_retries": 0.12388888888888888, "actual_export_attempted_pairs": 6, "export_checked_pairs": 5, "formal_T02_cache_checked_pairs": 0, "GPU_hours_per_attempted_pair_including_retries": 0.020648148148148148, "GPU_hours_per_export_checked_pair_including_retries": 0.024777777777777777, "forecast_only": {"current_train_manifest_count": 161, "projected_161_export_GPU_hours_at_first6_attempt_cost": 3.324351851851852, "projected_remaining155_export_GPU_hours_at_first6_attempt_cost": 3.200462962962963, "limitations": "six selected Look pairs only; not a representative class sample; excludes future cache validation, repair, new generation and further queue/hardware changes; not an observed full workload cost"}, "full_T02_qualified_counts_by_kind": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}}
++
++Five pairs (LookFlip4, LookStay1) completed original export/native/pair checks; the legacy LookStay floorplan203_00001 failed TeleportFull against Book and remains unknown/incomplete, not a passing or silently repaired graph. Cache validation remains pending. Its failure is preserved; downstream training is not authorized.
++
++
++Remaining155 train units are frozen in9 explicit manifests,18 per full batch, singleGPU/six processes. Only one further train-export batch is submitted while the first formal cache run occupies the other T02 slot; one small-job slot stays available for priority test generation. The first6 result rows establish4LookFlip+1LookStay export checks, not5LookFlip. Full T02 cache counts remain0 until measured validation.

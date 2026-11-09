@@ -1,0 +1,38 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_first5_population_01 -- python3 -c import copy,json,hashlib
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+from src.tools.t02_export import save_json
+from src.tools.t02_export_parallel import read_manifest,child_outcome
+name='diag_t02_cache_first5_population_01'
+parent,pref=audited_result(Path('results/t02_export_first6_01_retry2.json'))
+cfg,m=parent['config'],parent['metrics']
+assert parent['_meta'].get('end') and m['all_units_ended'] is True and m['cleanup_errors']==[] and m['unstarted_unit_indices']==[]
+manifest,mref=read_manifest(Path(cfg['manifest']),cfg['manifest_sha256'])
+assert manifest['entries']==cfg['planned_units'] and len(manifest['entries'])==6
+units=sorted(m['units'],key=lambda u:u['unit_index'])
+assert [u['unit_index'] for u in units]==list(range(6))
+sources=[pref];ledger=[];selected=[]
+for i,u in enumerate(units):
+ d,r=audited_result(Path('results')/(u['run_name']+'.json'));sources.append(r)
+ assert d['_meta'].get('end') and u['entry']==manifest['entries'][i]
+ checked=child_outcome(u,d,cfg,u['command'],u['entry'])
+ assert not u.get('authentication_error') and checked['cleanup_errors']==[]
+ assert len(d['metrics']['pairs'])==1
+ row=d['metrics']['pairs'][0]
+ usable=(d['_meta']['exit_code']==0 and d['metrics']['producer_exit_code']==0 and checked['export_checks_complete'] is True and row['status']=='exported' and row.get('table_complete') is True and row.get('native_evidence_verified') is True and row.get('pair_checks_passed') is True and row.get('error') is None and not row.get('raw_index_error') and d['metrics']['errors']==[] and d['metrics']['unstarted_pair_ids']==[])
+ if usable:
+  ref=row['table_manifest'];assert hashlib.sha256(Path(ref['file']).read_bytes()).hexdigest()==ref['sha256'];selected.append(r['file'])
+ ledger.append({'unit_index':i,'source_result':r,'input_entry':copy.deepcopy(u['entry']),'export_row':copy.deepcopy(row),'population_membership':'complete_export_table_pending_formal_cache' if usable else 'unknown_incomplete_export_not_usable','formal_cache_verified':False,'full_T02_acceptance':None})
+assert selected==['results/t02_export_first6_01_retry2_u%04d.json'%i for i in (0,1,2,4,5)]
+assert ledger[3]['export_row']['status']=='error' and 'Collided with: Book' in ledger[3]['export_row']['error']['message']
+chosen=[row for row in ledger if row['population_membership']=='complete_export_table_pending_formal_cache']
+classes={kind:sum(row['export_row']['kind']==kind for row in chosen) for kind in ('direct_flip','direct_stay','look_flip','look_stay')}
+report={'version':'t02_first6_complete_export_screening_v1','parent':pref,'parent_exit_code':parent['_meta']['exit_code'],'original_input_manifest':mref,'all_input_units':ledger,'cache_population_sources':selected,'cache_population_count':len(chosen),'cache_population_by_kind':classes,'declared_exported_state_count':sum(row['export_row']['export_measurements']['state_count'] for row in chosen),'cache_sampling':{'seed':0,'sample_size':200,'no_failure_resampling':True},'requested_deadlines':{'parent_seconds':1200,'per_pair_seconds':180,'gate_seconds':180,'pbs_walltime':'00:20:30'},'deadline_basis':'First formal fresh-cache engineering ceiling, not a measured fresh-cache speed; bound startup/authentication/render/cleanup. Original export was concurrent6 and is not treated as sequential fresh timing. Any incomplete fixed sample stops downstream.','scope':'Five complete original export tables only; sixth collision remains unknown; no claim about complete161 inventory, full T02 pool balancing, throughput or training permission'}
+directory=Path('logs/review')/name;directory.mkdir(parents=True,exist_ok=False)
+ref=save_json(directory/'ledger.json',report)
+print('T02_FIRST5_CACHE_POPULATION_JSON: '+json.dumps({'ledger':ref,'cache_population_sources':selected,'cache_population_count':len(chosen),'cache_population_by_kind':classes,'declared_exported_state_count':report['declared_exported_state_count'],'sixth_status':'unknown_preserved'},sort_keys=True))
+
+# start: 2026-11-10T02:21:42
+T02_FIRST5_CACHE_POPULATION_JSON: {"cache_population_by_kind": {"direct_flip": 0, "direct_stay": 0, "look_flip": 4, "look_stay": 1}, "cache_population_count": 5, "cache_population_sources": ["results/t02_export_first6_01_retry2_u0000.json", "results/t02_export_first6_01_retry2_u0001.json", "results/t02_export_first6_01_retry2_u0002.json", "results/t02_export_first6_01_retry2_u0004.json", "results/t02_export_first6_01_retry2_u0005.json"], "declared_exported_state_count": 408, "ledger": {"bytes": 34403, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/diag_t02_cache_first5_population_01/ledger.json", "sha256": "cfbd207d780ec9294df4b46ba357c6fc224525f472dcdbdff1cb8a85af51dd25"}, "sixth_status": "unknown_preserved"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.741792730987072}
+# exit_code: 0

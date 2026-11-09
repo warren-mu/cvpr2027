@@ -1,0 +1,22 @@
+{
+  "name": "diag_t02_first6_cost_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json\nfrom pathlib import Path\nfrom src.tools.t02_export import audited_result\nname='diag_t02_first6_cost_01'\nsources=[]\ndef read(run):\n d,r=audited_result(Path('results')/(run+'.json'));sources.append(r);return d\naccounts=[read('diag_pbs_usage_'+j+'_final') for j in ['708944','708980','708997']]\nfor a in accounts:\n assert a['metrics']['complete_allocation_accounting'] is True and a['config']['errors']==[]\n assert float(a['config']['jobs'][0]['fields']['Resource_List.queue_charge_rate'])==1\nparent=read('t02_export_first6_01_retry2');units=parent['metrics']['units']\nassert parent['metrics']['all_units_ended'] is True and len(units)==6\nrows=[]\nfor u in units:\n d=read(u['run_name']);assert len(d['metrics']['pairs'])==1\n r=d['metrics']['pairs'][0]\n rows.append({'pair_id':r['pair_id'],'kind':r['kind'],'scene':r['scene'],'export_complete':d['metrics']['export_checks_complete'],'status':r['status'],'error':r.get('error'),'rejection_reasons':r.get('rejection_reasons'),'state_count':r.get('export_measurements',{}).get('state_count'),'render_export_seconds':r.get('export_measurements',{}).get('elapsed_seconds'),'unit_wall_seconds':u['wall_seconds_observed'],'table_bytes':(r.get('table_manifest') or {}).get('bytes'),'table_payload_bytes':(r.get('table_manifest') or {}).get('payload_bytes'),'shadow_divergent_states':r.get('shadow_divergent_states'),'cache_matches_live':None})\nhours=sum(a['metrics']['total_allocation_gpu_hours'] for a in accounts);success=sum(r['export_complete'] is True for r in rows)\nmetrics={'PBS_GPU_hours_including_black_retries':hours,'actual_export_attempted_pairs':len(rows),'export_checked_pairs':success,'formal_T02_cache_checked_pairs':0,'GPU_hours_per_attempted_pair_including_retries':hours/len(rows),'GPU_hours_per_export_checked_pair_including_retries':hours/success,'rows':rows,'forecast_only':{'current_train_manifest_count':161,'projected_161_export_GPU_hours_at_first6_attempt_cost':hours/len(rows)*161,'projected_remaining155_export_GPU_hours_at_first6_attempt_cost':hours/len(rows)*155,'limitations':'six selected Look pairs only; not a representative class sample; excludes future cache validation, repair, new generation and further queue/hardware changes; not an observed full workload cost'},'full_T02_qualified_counts_by_kind':{'direct_flip':0,'direct_stay':0,'look_flip':0,'look_stay':0}}\nwith (Path('results')/(name+'.json')).open('x') as f:json.dump({'config':{'name':name,'scope':'first six selected train-pair export costs; no training authorization'},'metrics':metrics,'sources':sources},f,indent=2);f.write('\\n')\nPath('STATUS.md').write_text(Path('STATUS.md').read_text()+'\\n\\n## 2026-11-09 first6 export cost\\n\\n'+json.dumps({k:v for k,v in metrics.items() if k!='rows'},ensure_ascii=False)+'\\n\\nFive LookFlip pairs completed original export/native/pair checks; the legacy LookStay floorplan203_00001 failed TeleportFull against Book and remains unknown/incomplete, not a passing or silently repaired graph. Cache validation remains pending. Its failure is preserved; downstream training is not authorized.\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T02:13:22",
+  "log_path": "logs/runs/diag_t02_first6_cost_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ea8826926709b186a4c3b364db374ba7cc373dcb",
+  "git_dirty": false,
+  "end": "2026-11-10T02:13:26",
+  "duration_sec": 2.3,
+  "exit_code": 0,
+  "metrics_sha256": "731a299f7057f1b4047b63371ef94d1784c5f4fd4273b74e12390bc779380812"
+}
