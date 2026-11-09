@@ -13,6 +13,19 @@ from src.tools import merge_pair_v2 as merge
 from src.tools.t01_partition import audited_result
 from src.tools.t01v2_posthoc_solvability import verified_passed_rows
 
+RANKED_CHECKPOINT_MODULE = 'src.tools.t01v2_flip_ranked_review_checkpoint'
+
+
+def _checkpoint_module(command):
+    """Only explicit independently checked producers, never an argument hint."""
+    for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE):
+        try:
+            merge.producer_arguments(command, module)
+        except ValueError:
+            continue
+        return module
+    raise ValueError('Unsupported independent checkpoint producer')
+
 
 def _point(value):
     if (not isinstance(value, dict) or set(value) != set('xyz')
@@ -128,7 +141,7 @@ def _container(path):
             or any('could not run git' in item for item in reference['audit'].get('warn', []))):
         raise ValueError('Require a successfully ended audited checkpoint or final pilot')
     if measured.get('kind') == 't01v2_review_checkpoint':
-        module = 'src.tools.t01v2_review_checkpoint'
+        module = _checkpoint_module(meta.get('command'))
         if (measured.get('status') != 'checkpoint_ready_for_human_review' or measured.get('errors') != []
                 or measured.get('final_pilot_acceptance') is not False):
             raise ValueError('Checkpoint did not publish independently checked candidates')
@@ -154,14 +167,13 @@ def _container(path):
     return data, reference, entries
 
 
-def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
+def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file=None, ranked=False):
     """Return immutable evidence inputs; caller separately owns review/GPU gates.
 
     ``pair_file`` disambiguates repeated pair IDs across explicit source runs.
     A Direct pair has no measured all-action catalogue: reachable=None means
     the renderer must make and authenticate a fresh native query, not invent it.
     """
-    container, container_ref, entries = _container(source_result)
     matches = [entry for entry in entries if entry.get('pair_id') == pair_id
                and (pair_file is None or entry['pair_reference']['file'] == pair_file)]
     if len(matches) != 1:
@@ -169,6 +181,9 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
     entry = matches[0]
     data, source_ref = merge.load_source(merge.ROOT / entry['source_file'])
     cfg, measured = data['config'], data['metrics']
+    if ranked:
+        from . import pair_v2_flip_ranked_policy as ranked_policy
+        ranked_policy.validate_source(cfg, measured)
     if (source_ref['metrics_sha256'] != entry['source_metrics_sha256']
             or ('source_sha256' in entry and source_ref['sha256'] != entry['source_sha256'])):
         raise ValueError('Published pair names a changed source result')
@@ -187,9 +202,26 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
             or any(row.get(key) != entry.get(key) for key in ('pair_id', 'scene', 'kind', 'target_w0', 'target_w1'))
             or not merge.final_pair_eligible(row.get('kind'), cfg.get('solvability_version'))):
         raise ValueError('Published pair identity or required current construction policy differs')
-    merge.reference_path(measured['scene_preflight_reference'], within=cfg['raw_evidence_dir'])
-    if row['scene_preflight_reference']['sha256'] != measured['scene_preflight_reference']['sha256']:
-        raise ValueError('Pair preflight differs from its source')
+    association = None
+    if ranked:
+        from src.tools import t01v2_controller_association as controllers
+        previous_policy = controllers.policy
+        try:
+            controllers.policy = ranked_policy
+            association = controllers.verify_pair_controller(data, source_ref, compact, row, pair_path)
+        finally:
+            controllers.policy = previous_policy
+        published = entry.get('controller_preflight_association')
+        if (not isinstance(published, dict)
+                or any(published.get(key) != value for key, value in association.items() if key != 'source_reference')):
+            raise ValueError('Published Controller association differs from independent reconstruction')
+        for key in ('file', 'sha256', 'metrics_sha256', 'git_commit'):
+            if published.get('source_reference', {}).get(key) != source_ref.get(key):
+                raise ValueError('Published Controller association names another scene source')
+    else:
+        merge.reference_path(measured['scene_preflight_reference'], within=cfg['raw_evidence_dir'])
+        if row['scene_preflight_reference']['sha256'] != measured['scene_preflight_reference']['sha256']:
+            raise ValueError('Pair preflight differs from its source')
     ledger = None
     read = lambda ref: merge.read_reference(ref, within=cfg['raw_evidence_dir'])
     if cfg.get('search_version') is not None:
@@ -234,7 +266,7 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
     else:
         t01.update(selected_action=None, anchor_visible_actions_w0=None, anchor_visible_actions_w1=None)
     start = canonical_start(row, worlds)
-    return {'schema_version': 1, 'pair_id': pair_id, 'scene': row['scene'], 'kind': row['kind'],
+    package = {'schema_version': 1, 'pair_id': pair_id, 'scene': row['scene'], 'kind': row['kind'],
         'instruction': row['instruction'], 'anchor_name': row['identities']['anchor_name'],
         'candidate_names': copy.deepcopy(row['identities']['candidate_names']),
         'target_names': [row['target_w0'], row['target_w1']], **start,
@@ -248,6 +280,28 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
         'independent_verification': checked, 'partial_source': eligibility['partial_source'],
         'human_review_status': 'not_inferred', 'human_review_approved': None,
         'execution_authorized': False, 'full_t02_acceptance': None}
+    if ranked:
+        from .pair_v2_fixed_labels import validate_table_package
+        package['controller_preflight_association'] = association
+        package['fixed_label_verification'] = validate_table_package(package)
+    return package
+
+
+def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
+    """Load old sources unchanged, or explicitly opt into ranked v2 proofs.
+
+    The context encloses both load_source and check_pair: the independent
+    checker binds the exact authenticated source in its private cache. Merely
+    trusting a checkpoint's saved success flag never authorizes an export.
+    """
+    container, reference, entries = _container(source_result)
+    ranked = (container.get('metrics', {}).get('kind') == 't01v2_review_checkpoint'
+        and _checkpoint_module(container['_meta'].get('command')) == RANKED_CHECKPOINT_MODULE)
+    if ranked:
+        from src.tools.t01v2_flip_ranked_review_checkpoint import source_support
+        with source_support():
+            return _load_reviewed_pair(container, reference, entries, pair_id, pair_file=pair_file, ranked=True)
+    return _load_reviewed_pair(container, reference, entries, pair_id, pair_file=pair_file)
 
 
 load_pair_source = load_reviewed_pair
