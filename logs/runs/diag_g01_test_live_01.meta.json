@@ -1,0 +1,27 @@
+{
+  "name": "diag_g01_test_live_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,sys\nfrom pathlib import Path\nfrom datetime import datetime,timezone\nfrom src.tools.t01v2_live_progress import read_prefix,archive,observed_counts\nfrom src.tools.t01_partition import ROOT\nname=sys.argv[1]; parents=sys.argv[2:]\nplan=json.loads((ROOT/'configs/g01_test40_initial.json').read_text());units={u['name']:u for u in plan['units']}\ndirectory=ROOT/'logs/runs'/name/'evidence';directory.mkdir(parents=True,exist_ok=False)\nrows=[]\nfor parent in parents:\n original=parent.split('_retry')[0];unit=units[original]\n for scene in unit['scenes']:\n  child=parent+'_c6_'+scene.lower();journal=ROOT/'data/world_pairs/v2'/(child+'_attempts.jsonl')\n  row={'run_name':child,'scene':scene,'observed_counts':None,'ended':False,'scientific_acceptance':None}\n  final=ROOT/'results'/(child+'.json')\n  if final.exists():\n   data=json.loads(final.read_text());row.update(ended=bool(data.get('_meta',{}).get('end')),status=data.get('metrics',{}).get('status'),scene_excluded=data.get('metrics',{}).get('scene_excluded'))\n  if journal.exists():\n   raw,extent=read_prefix(journal)\n   row.update(journal_prefix={**extent,'snapshot':archive(raw,directory,child+'.jsonl')},observed_counts=observed_counts(raw,scene))\n  rows.append(row)\nmetrics={'snapshot_utc':datetime.now(timezone.utc).isoformat(),'scene_runs':rows,'scope':'complete archived journal-prefix producer-reported counts only; not independently accepted T02 pairs','task_acceptance':None}\nresult={'config':{'name':name,'parents':parents,'snapshot_cap_per_source_bytes':8*1024*1024},'metrics':metrics}\nwith (ROOT/'results'/(name+'.json')).open('x') as f:json.dump(result,f,indent=2);f.write('\\n')\np=ROOT/'STATUS.md';summary=[]\nfor r in rows:\n if r['observed_counts'] is not None:summary.append(r['run_name']+': '+json.dumps(r['observed_counts']['observed_reported_passed_by_class'],sort_keys=True)+'; observed attempts='+str(r['observed_counts']['observed_complete_attempts'])+('; ended' if r['ended'] else '; running snapshot'))\np.write_text(p.read_text()+'\\n\\n## '+datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')+' — 测试生成运行中计数\\n\\n'+('\\n'.join(summary) if summary else '尚未观察到完整尝试行；不是零产出结论。')+'\\n\\n以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 '+name+'。\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True),flush=True)\n",
+    "diag_g01_test_live_01",
+    "gen_test_fixed40_60_b01",
+    "gen_test_fixed40_60_d01",
+    "gen_test_fixed40_60_a01_retry1",
+    "gen_test_fixed40_60_c01_retry1"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T01:02:15",
+  "log_path": "logs/runs/diag_g01_test_live_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ce1ebe118fcb9b08059c3abe17f2e18944da35dd",
+  "git_dirty": false,
+  "end": "2026-11-10T01:02:18",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "5435be579158a2c329ccd2bd0dfad9a55e5bb4afc2fb6dc28581f66abc8ebb20"
+}

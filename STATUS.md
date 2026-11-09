@@ -1039,3 +1039,22 @@ FirstLook E2E evidence localizes239 >3 pixels to the bottom-right floor near the
 首批 configs/t02_export_first6.json 固定6个原来源，包含旧影子拒绝、两项距离算式差异、旧60°controller LookStay及其他场景。计划单卡6并发，parent1200 / unit900 / pair660秒，PBS1230秒。旧完整单对记录中首批FP204_00038曾用381.947881秒、FP207_00009用220.809266秒；六并发未实测，此配置是首次有界测量，不保证全部完成。等测试生成名额释放后提交，实际成本待PBS最终账。
 
 旧5个Teleport碰撞的现有证据已在diag_look_collision_existing_01记录：FP210_00044与FP15_00015在同canonical pose有w0成功、w1与锚点Box/Bread碰撞的直接对照；原程序未产出完整双侧图签名，不把原unknown改写成已通过graph_mismatch检查。FP210_00022/52/62只有w0碰撞，没有同参数成功对照；仍unknown。未强制Teleport、未跳过状态、未改阈值。
+
+
+## 2026-11-09 17:02 UTC — 测试生成运行中计数
+
+gen_test_fixed40_60_b01_c6_floorplan24: {"direct_flip": 0, "direct_stay": 0, "look_flip": 4, "look_stay": 0}; observed attempts=62; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan224: {"direct_flip": 0, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=40; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan324: {"direct_flip": 0, "direct_stay": 0, "look_flip": 1, "look_stay": 0}; observed attempts=20; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan424: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=61; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan25: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=31; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan225: {"direct_flip": 0, "direct_stay": 2, "look_flip": 3, "look_stay": 0}; observed attempts=49; running snapshot
+
+以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 diag_g01_test_live_01。
+
+
+## 2026-11-09 17:05 UTC — 黑帧止损、原参数重提与完整导出输入
+
+708893(A)和708896(C)分别在30秒、23秒后以86退出；严格原生双黑PNG、GPU UUID、节点、PBS最终状态及清理证据均通过复核。二者同为 hopper-16 / GPU-80df2717-b2e5-ed5b-9586-275e993cc7aa。最终账见diag_pbs_usage_708893_final与diag_pbs_usage_708896_final；黑帧proof见diag_black_guard_708893_01/708896_01。保持原参数重提：708893 → 708912（gen_test_fixed40_60_a01_retry1），708896 → 708918（gen_test_fixed40_60_c01_retry1）；均无host限制。固定尾批D已提交708909，4场景、单卡、00:27:10。B的708894在hopper-30通过出图门槛并开始6路采集；运行中计数见diag_g01_test_live_01，不把生成端passed当独立验收。
+
+后续T02完整训练来源输入快照 configs/t02_export_current_train.json 由diag_t02_current_train_manifest_01生成：161个唯一proposal（DF33/DS58/LF41/LS29），全部原source/shard/metrics为60°，包含11个旧controller LookStay；4组plain pair_id冲突全部按不同原来源保留。这里是待导出输入，不是合格训练池。旧24触发/28完整/7未知保持原分类，首批6项全部保留。总清单须切成受限并发批次，不能直接作为一个>64项parent。
