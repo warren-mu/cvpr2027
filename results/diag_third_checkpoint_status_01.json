@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 2.7397611259948462
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json,datetime\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd()\nd,ref=audited_result(r/\"results/t01v2_checkpoint_g01_next12_03.json\")\nm=d[\"metrics\"];assert d[\"_meta\"][\"exit_code\"]==0 and not m[\"errors\"]\nassert m[\"independently_verified_pair_count\"]==49 and m[\"unknown_attempt_source_count\"]==0\ndiag,diagref=audited_result(r/\"results/diag_g01_new_baseline_failures_01.json\");assert diag[\"_meta\"][\"exit_code\"]==0\nstamp=datetime.datetime.now(datetime.timezone.utc).isoformat()\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\n### \"+stamp+\" — third G01 checkpoint and remaining Look diagnostics\\n\\n\")\n f.write(\"Original independent checkpoint t01v2_checkpoint_g01_next12_03 completed: \"+str(m[\"independently_verified_pair_count\"])+\" unique construction pairs, class counts \"+json.dumps(m[\"independently_verified_by_class\"],sort_keys=True)+\". All12 sources are retained;802 attempts verified;3 duplicate proposals excluded by original identity. Formal review images: logs/review/t01v2_checkpoint_g01_next12_03/. This is construction and recorded solvability acceptance only; fullT02/cache remains unmeasured. New9 Look pairs will be a separate cohort; frozen36 and50 denominators remain unchanged.\\n\\n\")\n f.write(\"Baseline failures in FloorPlan18/214 are diagnosed from original evidence in results/diag_g01_new_baseline_failures_01.json: the same canonical TeleportFull arguments produce small nonzero agent-y readback differences after successful SetObjectPoses; non-anchor object poses and inventory remain exact. This is not the earlier signed-zero-only case. The original exact-agent baseline failure is retained; no tolerance or physics rule was changed.\\n\\n\")\n f.write(\"New14 full-view checks: A retries708455→708547; B retries708475→708549→708566. Terminal black attempts keep native frames, UUID, cleanup proof and canonical allocation accounting. Retry708547 and708566 passed their own fresh per-GPU gates. FP210 pairs currently end with original native TeleportFull/Box collision errors and cannot be counted as no hidden-anchor trigger. Final authenticated census waits for all ended sources. No queued/running job was cancelled.\\n\")\nprint(\"THIRD_CHECKPOINT_STATUS_JSON: \"+json.dumps({\"created_at_utc\":stamp,\"checkpoint\":ref,\"counts\":m[\"independently_verified_by_class\"],\"baseline_diagnosis\":diagref},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_third_checkpoint_status_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_third_checkpoint_status_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json,datetime\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd()\nd,ref=audited_result(r/\"results/t01v2_checkpoint_g01_next12_03.json\")\nm=d[\"metrics\"];assert d[\"_meta\"][\"exit_code\"]==0 and not m[\"errors\"]\nassert m[\"independently_verified_pair_count\"]==49 and m[\"unknown_attempt_source_count\"]==0\ndiag,diagref=audited_result(r/\"results/diag_g01_new_baseline_failures_01.json\");assert diag[\"_meta\"][\"exit_code\"]==0\nstamp=datetime.datetime.now(datetime.timezone.utc).isoformat()\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\n### \"+stamp+\" — third G01 checkpoint and remaining Look diagnostics\\n\\n\")\n f.write(\"Original independent checkpoint t01v2_checkpoint_g01_next12_03 completed: \"+str(m[\"independently_verified_pair_count\"])+\" unique construction pairs, class counts \"+json.dumps(m[\"independently_verified_by_class\"],sort_keys=True)+\". All12 sources are retained;802 attempts verified;3 duplicate proposals excluded by original identity. Formal review images: logs/review/t01v2_checkpoint_g01_next12_03/. This is construction and recorded solvability acceptance only; fullT02/cache remains unmeasured. New9 Look pairs will be a separate cohort; frozen36 and50 denominators remain unchanged.\\n\\n\")\n f.write(\"Baseline failures in FloorPlan18/214 are diagnosed from original evidence in results/diag_g01_new_baseline_failures_01.json: the same canonical TeleportFull arguments produce small nonzero agent-y readback differences after successful SetObjectPoses; non-anchor object poses and inventory remain exact. This is not the earlier signed-zero-only case. The original exact-agent baseline failure is retained; no tolerance or physics rule was changed.\\n\\n\")\n f.write(\"New14 full-view checks: A retries708455→708547; B retries708475→708549→708566. Terminal black attempts keep native frames, UUID, cleanup proof and canonical allocation accounting. Retry708547 and708566 passed their own fresh per-GPU gates. FP210 pairs currently end with original native TeleportFull/Box collision errors and cannot be counted as no hidden-anchor trigger. Final authenticated census waits for all ended sources. No queued/running job was cancelled.\\n\")\nprint(\"THIRD_CHECKPOINT_STATUS_JSON: \"+json.dumps({\"created_at_utc\":stamp,\"checkpoint\":ref,\"counts\":m[\"independently_verified_by_class\"],\"baseline_diagnosis\":diagref},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T21:36:33",
+    "log_path": "logs/runs/diag_third_checkpoint_status_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "b477d751507608f5e5afd11d4e622d0d7863b40e",
+    "git_dirty": false,
+    "end": "2026-11-09T21:36:38",
+    "duration_sec": 2.9,
+    "exit_code": 0,
+    "metrics_sha256": "e452964d2c023f480bb1a38464c5c02330f13970b74d9a67d3a4a975f911b088"
+  }
+}
