@@ -1,0 +1,29 @@
+{
+  "name": "g01_construction_metadata_regression_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "g01_construction_metadata_regression_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nraise SystemExit(not unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T16:36:46",
+  "log_path": "logs/runs/g01_construction_metadata_regression_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "53865bf721b816fc7b283244bc0d519b19822ca5",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/g01_construction_metadata_regression_01.diff",
+  "end": "2026-11-09T16:37:13",
+  "duration_sec": 26.7,
+  "exit_code": 0,
+  "metrics_sha256": "3896e5f7365ed418691018bec68b9dd2f71d5aaa0fd66afc02a49d684fdd52a0"
+}

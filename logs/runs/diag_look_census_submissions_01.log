@@ -1,0 +1,21 @@
+# run_logged: python3 -m src.tools.record_command --name diag_look_census_submissions_01 -- python3 -c import pathlib,json,re,importlib.util,datetime
+r=pathlib.Path.cwd(); plan=json.loads((r/'logs/review/diag_look_census_plan_01/census_plan.json').read_text()); jobs=[]
+for group in plan['groups']:
+ f,=list((r/'logs/pbs').glob(group['outer_name']+'-*'));p=json.loads((f/'payload.json').read_text());s=json.loads((f/'submission.json').read_text())
+ assert s['returncode']==0
+ job,=re.findall(r'\b\d+\.hopper-m-\d+\b',s['stdout'])
+ assert p['requested_gpu_count']==1 and p['requested_host'] is None and p['queue']=='autox' and p['budget_group']=='T01v2'
+ assert p['requested_wall_seconds']==group['wall_seconds']
+ jobs.append({'job':job,'name':group['outer_name'],'inner':group['inner_name'],'receipt':str(f.relative_to(r)),'requested_wall_seconds':p['requested_wall_seconds'],'pair_ids':group['pair_ids']})
+m=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(m);m.loader.exec_module(phase);b=phase.budget_state(r)
+assert b['accounted_or_reserved_by_subbudget']['T01v2']<=16 and b['accounted_or_reserved_total']<=60
+note='\n### Look D4 diagnostic census submitted after VPN restoration\n\n'
+note+='VPN connectivity restored; queued/running PBS jobs were not signalled. The previously pushed fixed plan (02196e0) covers 17 unique current-standard independently constructed LookFlip pairs: one authentic original rejection reused plus 7/6/3 new diagnostic exports. Three no-host, oneGPU Express/autox submissions: '+json.dumps(jobs,sort_keys=True)+'. Combined requested ceiling 1.7666666666666666 chargedGPUh. Ordinary table rejections remain rejections; black/timeout/error/unstarted outcomes remain explicit; no cache/training permission or rule change.\n\n'
+note+='Accounted-or-reserved chargedGPUh: '+json.dumps(b['accounted_or_reserved_by_subbudget'],sort_keys=True)+'; shared '+str(b['accounted_or_reserved_total'])+'/60 (queued/running jobs use requested ceilings). Full-view outcomes pending.\n'
+with (r/'STATUS.md').open('a') as f:f.write(note)
+print('CENSUS_SUBMISSIONS: '+json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':jobs,'budget':b['accounted_or_reserved_by_subbudget'],'total':b['accounted_or_reserved_total']},sort_keys=True))
+
+# start: 2026-11-09T16:35:13
+CENSUS_SUBMISSIONS: {"budget": {"E2E": 1.4341666666666666, "G01": 1.948611111111111, "T01v2": 11.4075}, "jobs": [{"inner": "t02_look_table_a01", "job": "708051.hopper-m-02", "name": "pilot_pairs_v2_look_table_a01", "pair_ids": ["floorplan203_00004", "floorplan203_00010", "floorplan203_00020", "floorplan203_00024", "floorplan203_00030", "floorplan203_00034", "floorplan203_00038"], "receipt": "logs/pbs/pilot_pairs_v2_look_table_a01-20261109T082617Z-ba6ec584", "requested_wall_seconds": 2700}, {"inner": "t02_look_table_b01", "job": "708054.hopper-m-02", "name": "pilot_pairs_v2_look_table_b01", "pair_ids": ["floorplan203_00054", "floorplan203_00064", "floorplan203_00080", "floorplan203_00086", "floorplan203_00092", "floorplan204_00038"], "receipt": "logs/pbs/pilot_pairs_v2_look_table_b01-20261109T082852Z-34e0c58b", "requested_wall_seconds": 2340}, {"inner": "t02_look_table_c01", "job": "708071.hopper-m-02", "name": "pilot_pairs_v2_look_table_c01", "pair_ids": ["floorplan203_00104", "floorplan203_00114", "floorplan203_00116"], "receipt": "logs/pbs/pilot_pairs_v2_look_table_c01-20261109T083153Z-5aa2279d", "requested_wall_seconds": 1320}], "total": 26.47361111111111, "utc": "2026-11-09T08:36:24.986765+00:00"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 70.82628990599187}
+# exit_code: 0

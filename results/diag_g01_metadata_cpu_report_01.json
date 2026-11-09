@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.129877828003373
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib,re\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd(); checked=[]\nfor n,expected in [('g01_construction_metadata_cpu_01',7),('g01_construction_metadata_regression_01',620)]:\n d,ref=audited_result(r/'results'/f'{n}.json');assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0\n text=(r/'logs/runs'/f'{n}.log').read_text();counts=re.findall(r'Ran (\\d+) tests in ([\\d.]+)s',text);assert counts and int(counts[-1][0])==expected\n checked.append({'result':ref,'tests':int(counts[-1][0]),'suite_seconds':float(counts[-1][1]),'passed':True})\na,ar=audited_result(r/'results/g01_concurrency_final_accounting_01.json');assert a['_meta']['exit_code']==0 and a['metrics']['complete_allocation_accounting']\nnote='\\n### Original construction metadata retention fixed for future runs\\n\\n'\nnote+='After all 18 G01 benchmark children ended, commit 53865bf adds a separate bounded reserve for original Controller scene_preflight.json/evidence_index.json only (16 MiB/file,64 MiB/scene). It does not reconstruct old missing files, fund scientific payloads after the existing raw cap, or change independent acceptance. Metadata IO/limit failures remain explicit. Logged CPU validation: '+json.dumps(checked,sort_keys=True)+'.\\n\\n'\nnote+='G01 benchmark PBS 707841 actual allocation/chargedGPUh at current scheduler multiplier1: '+str(a['metrics']['total_allocation_gpu_hours'])+'; recorded queue wait '+str(a['metrics']['queue_wait_seconds_by_job']['707841.hopper-m-02'])+' seconds. Original incomplete/deadline records remain; source-reported candidates are not independently accepted.\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('METADATA_FIX_VALIDATION: '+json.dumps({'tests':checked,'accounting':ar,'metrics':a['metrics']},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_g01_metadata_cpu_report_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_g01_metadata_cpu_report_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib,re\nfrom src.tools.t01_partition import audited_result\nr=pathlib.Path.cwd(); checked=[]\nfor n,expected in [('g01_construction_metadata_cpu_01',7),('g01_construction_metadata_regression_01',620)]:\n d,ref=audited_result(r/'results'/f'{n}.json');assert d['_meta']['exit_code']==0 and d['metrics']['command_exit_code']==0\n text=(r/'logs/runs'/f'{n}.log').read_text();counts=re.findall(r'Ran (\\d+) tests in ([\\d.]+)s',text);assert counts and int(counts[-1][0])==expected\n checked.append({'result':ref,'tests':int(counts[-1][0]),'suite_seconds':float(counts[-1][1]),'passed':True})\na,ar=audited_result(r/'results/g01_concurrency_final_accounting_01.json');assert a['_meta']['exit_code']==0 and a['metrics']['complete_allocation_accounting']\nnote='\\n### Original construction metadata retention fixed for future runs\\n\\n'\nnote+='After all 18 G01 benchmark children ended, commit 53865bf adds a separate bounded reserve for original Controller scene_preflight.json/evidence_index.json only (16 MiB/file,64 MiB/scene). It does not reconstruct old missing files, fund scientific payloads after the existing raw cap, or change independent acceptance. Metadata IO/limit failures remain explicit. Logged CPU validation: '+json.dumps(checked,sort_keys=True)+'.\\n\\n'\nnote+='G01 benchmark PBS 707841 actual allocation/chargedGPUh at current scheduler multiplier1: '+str(a['metrics']['total_allocation_gpu_hours'])+'; recorded queue wait '+str(a['metrics']['queue_wait_seconds_by_job']['707841.hopper-m-02'])+' seconds. Original incomplete/deadline records remain; source-reported candidates are not independently accepted.\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('METADATA_FIX_VALIDATION: '+json.dumps({'tests':checked,'accounting':ar,'metrics':a['metrics']},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T16:38:07",
+    "log_path": "logs/runs/diag_g01_metadata_cpu_report_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "53865bf721b816fc7b283244bc0d519b19822ca5",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_g01_metadata_cpu_report_01.diff",
+    "end": "2026-11-09T16:38:09",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "70e375ca67248869e0df573106f977451a43a6d5e83f8b1fef87a2483e1d10b4"
+  }
+}

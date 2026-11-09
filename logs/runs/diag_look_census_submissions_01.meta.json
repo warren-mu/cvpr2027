@@ -1,0 +1,29 @@
+{
+  "name": "diag_look_census_submissions_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_look_census_submissions_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,re,importlib.util,datetime\nr=pathlib.Path.cwd(); plan=json.loads((r/'logs/review/diag_look_census_plan_01/census_plan.json').read_text()); jobs=[]\nfor group in plan['groups']:\n f,=list((r/'logs/pbs').glob(group['outer_name']+'-*'));p=json.loads((f/'payload.json').read_text());s=json.loads((f/'submission.json').read_text())\n assert s['returncode']==0\n job,=re.findall(r'\\b\\d+\\.hopper-m-\\d+\\b',s['stdout'])\n assert p['requested_gpu_count']==1 and p['requested_host'] is None and p['queue']=='autox' and p['budget_group']=='T01v2'\n assert p['requested_wall_seconds']==group['wall_seconds']\n jobs.append({'job':job,'name':group['outer_name'],'inner':group['inner_name'],'receipt':str(f.relative_to(r)),'requested_wall_seconds':p['requested_wall_seconds'],'pair_ids':group['pair_ids']})\nm=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(m);m.loader.exec_module(phase);b=phase.budget_state(r)\nassert b['accounted_or_reserved_by_subbudget']['T01v2']<=16 and b['accounted_or_reserved_total']<=60\nnote='\\n### Look D4 diagnostic census submitted after VPN restoration\\n\\n'\nnote+='VPN connectivity restored; queued/running PBS jobs were not signalled. The previously pushed fixed plan (02196e0) covers 17 unique current-standard independently constructed LookFlip pairs: one authentic original rejection reused plus 7/6/3 new diagnostic exports. Three no-host, oneGPU Express/autox submissions: '+json.dumps(jobs,sort_keys=True)+'. Combined requested ceiling 1.7666666666666666 chargedGPUh. Ordinary table rejections remain rejections; black/timeout/error/unstarted outcomes remain explicit; no cache/training permission or rule change.\\n\\n'\nnote+='Accounted-or-reserved chargedGPUh: '+json.dumps(b['accounted_or_reserved_by_subbudget'],sort_keys=True)+'; shared '+str(b['accounted_or_reserved_total'])+'/60 (queued/running jobs use requested ceilings). Full-view outcomes pending.\\n'\nwith (r/'STATUS.md').open('a') as f:f.write(note)\nprint('CENSUS_SUBMISSIONS: '+json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':jobs,'budget':b['accounted_or_reserved_by_subbudget'],'total':b['accounted_or_reserved_total']},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T16:35:13",
+  "log_path": "logs/runs/diag_look_census_submissions_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_look_census_submissions_01.diff",
+  "end": "2026-11-09T16:36:25",
+  "duration_sec": 70.9,
+  "exit_code": 0,
+  "metrics_sha256": "913ab75f7740ffb55e9a46a53751477714d82d89c3a11b70d61982fc3dbbd877"
+}
