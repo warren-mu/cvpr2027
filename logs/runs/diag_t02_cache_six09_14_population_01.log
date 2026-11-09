@@ -1,0 +1,152 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_six09_14_population_01 -- python3 -c """One-off fixed09–14 metadata plan; NOT executed and NOT a cache certificate.
+
+Root may inline this exact file via run_logged + record_command. It only reads
+ended result/manifest bytes. The original cache producer independently audits
+and scientifically verifies every selected export again, and samples seed0/200
+once. All original attempts, black history and unknowns remain in the plan.
+"""
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import signal
+from collections import Counter
+
+ROOT = Path.cwd().resolve()
+NAME = 'diag_t02_cache_six09_14_population_01'
+CACHE_NAME = 't02_export_cache_six09_14_01'
+OUTPUT = ROOT / 'configs/t02_cache_six09_14_fixed.json'
+GROUPS = [
+    (9, 't02_export_train_six_09_retry1', 'f97c07e8bdbdd6e4bd9e095d0c92dd902ef7c45a06724221b7caee708b8a155e', ['t02_export_train_six_09']),
+    (10, 't02_export_train_six_10', '2e0a380f75ff892c05fd6f413d985bd00baefd70a95055dd9818b8bc6ab580c1', []),
+    (11, 't02_export_train_six_11', '285400dc44bba685740a80703ae679ffd1e0b90343eec7a7d2b2bce0670f802a', []),
+    (12, 't02_export_train_six_12', 'b7f154f894426b736da7bfdaf31da5e2c6a5a2fa8c2960455bed52919471bac2', []),
+    (13, 't02_export_train_six_13', '2c39b5a69475cd00b0bbc8da87bf7df07273cd14037e13056212cc2b12ede43c', []),
+    (14, 't02_export_train_six_14', 'fd01efe725cdc5d6999b9db3209c16315838b9d1af12fa5c03c4745c80f0b85d', []),
+]
+KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def read(path, expected_sha=None):
+    path = (ROOT / path).resolve()
+    require(path.is_relative_to(ROOT), 'Only immutable repository result/manifest inputs')
+    raw = path.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()
+    require(expected_sha is None or sha == expected_sha, 'Original input SHA mismatch: ' + str(path))
+    return json.loads(raw), {'file': str(path.relative_to(ROOT)), 'sha256': sha, 'bytes': len(raw)}
+
+
+def ended(name):
+    data, ref = read('results/' + name + '.json')
+    meta, side_ref = read('logs/runs/' + name + '.meta.json')
+    require(data['_meta'].get('name') == name and data['config'].get('name') == name
+        and isinstance(data['_meta'].get('end'), str) and bool(data['_meta']['end'])
+        and meta.get('end') == data['_meta']['end'] and meta.get('exit_code') == data['_meta']['exit_code'],
+        'Input must have original matching final result and metadata: ' + name)
+    return data, ref, side_ref
+
+
+def same_ref(first, second):
+    return ((ROOT / first['file']).resolve() == (ROOT / second['file']).resolve()
+        and first['sha256'] == second['sha256'])
+
+
+def main():
+    require(os.environ.get('CVPR_RUN_NAME') == NAME, 'Use this exact uniquely logged operation')
+    require(not OUTPUT.exists(), 'Do not replace an existing frozen cutoff')
+    signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError('Metadata plan exceeded12 seconds; preserve failure, do not expand login scan')))
+    signal.setitimer(signal.ITIMER_REAL, 12)
+    attempts, histories, sources = [], [], []
+    keys, proposals = set(), set()
+    counts, unknown = Counter(), Counter()
+    for batch, parent_name, manifest_sha, prior_names in GROUPS:
+        manifest, manifest_ref = read('configs/t02_export_train_six_%02d.json' % batch, manifest_sha)
+        require(manifest['partition'] == 'train' and len(manifest['entries']) == 6, 'Fixed batch must retain every original six entries')
+        for prior in prior_names:
+            old, ref, side = ended(prior)
+            require(old['_meta']['exit_code'] == 86 and old['metrics'].get('units') == []
+                and old['metrics'].get('black_frame_detected') is True
+                and old['metrics'].get('cleanup_errors') == [], 'Preserve the original zero-business black attempt')
+            histories.append({'result': ref, 'meta': side, 'original_metrics': old['metrics'],
+                'scope': 'historical failure retained; this plan does not authorize a retry'})
+        parent, parent_ref, parent_meta = ended(parent_name)
+        pc, pm = parent['config'], parent['metrics']
+        require(same_ref(pc['manifest_reference'], manifest_ref) and pc['planned_units'] == manifest['entries']
+            and pm.get('all_units_ended') is True and pm.get('unstarted_unit_indices') == []
+            and pm.get('errors') == [] and pm.get('cleanup_errors') == []
+            and sorted(u['unit_index'] for u in pm['units']) == list(range(6)), 'Whole fixed batch must be ended, with no lost unit')
+        histories.append({'result': parent_ref, 'meta': parent_meta, 'manifest': manifest_ref,
+            'original_exit_code': parent['_meta']['exit_code'], 'shared_queue_claim': pc.get('shared_queue_claim'),
+            'scope': 'original parent failure status preserved; per-pair exports are not cache acceptance'})
+        for unit in sorted(pm['units'], key=lambda u: u['unit_index']):
+            index = unit['unit_index']; entry = manifest['entries'][index]
+            child_name = parent_name + '_u%04d' % index
+            data, reference, side = ended(child_name)
+            cm = data['metrics']; pairs = cm.get('pairs', [])
+            require(unit['run_name'] == child_name and unit['entry'] == entry
+                and same_ref(unit['source'], reference) and unit['original_pairs'] == pairs
+                and unit['export_checks_complete'] == cm.get('export_checks_complete')
+                and cm.get('cleanup_errors') == [] and cm.get('errors') == [], 'Stored parent/child identity or complete verdict changed')
+            key, proposal, kind = entry['dataset_key'], entry['proposal_identity'], entry['kind']
+            require(key not in keys and proposal not in proposals and kind in KINDS, 'Fixed cutoff identity duplicates')
+            keys.add(key); proposals.add(proposal)
+            complete = (data['_meta']['exit_code'] == 0 and cm.get('export_checks_complete') is True
+                and cm.get('unstarted_pair_ids') == [] and len(pairs) == 1
+                and pairs[0].get('status') == 'exported' and pairs[0].get('table_complete') is True
+                and pairs[0].get('native_evidence_verified') is True and pairs[0].get('pair_checks_passed') is True
+                and pairs[0].get('error') is None and pairs[0].get('cleanup_errors') == [])
+            attempt = {'batch': batch, 'entry': entry, 'parent': parent_ref, 'result': reference,
+                'meta': side, 'original_exit_code': data['_meta']['exit_code'],
+                'original_pairs': pairs, 'original_unstarted_pair_ids': cm.get('unstarted_pair_ids'),
+                'export_complete_pending_cache': complete, 'cache_matches_live': None}
+            attempts.append(attempt)
+            if complete:
+                sources.append(reference['file']); counts[kind] += 1
+            else:
+                unknown[kind] += 1
+    require(len(attempts) == 36 and sources, 'All fixed36 attempts must be retained')
+    benchmark, benchmark_ref, benchmark_meta = ended('t02_export_cache_remaining24_01')
+    require(benchmark_ref['sha256'] == 'a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70'
+        and benchmark['_meta']['duration_sec'] == 4251.2
+        and benchmark['metrics']['cache_matches_live'] is True, 'Original measured engineering baseline changed')
+    timeout = math.ceil(4251.2 * 1.3 * len(sources) / 24)
+    pbs = timeout + 30
+    walltime = '%02d:%02d:%02d' % (pbs // 3600, pbs % 3600 // 60, pbs % 60)
+    command = ['python3', '-u', '-m', 'src.tools.t02_cache_check', '--name', CACHE_NAME]
+    for source in sources: command += ['--source', source]
+    command += ['--sample-size', '200', '--seed', '0', '--timeout-seconds', str(timeout),
+        '--pair-timeout-seconds', '180', '--gate-timeout-seconds', '180']
+    plan = {'name': CACHE_NAME, 'status': 'fixed_cutoff_pending_cache', 'batches': list(range(9, 15)),
+        'original_attempt_count': len(attempts), 'attempt_ledger': attempts, 'original_parent_history': histories,
+        'source': sources, 'complete_counts_pending_cache': {k:counts[k] for k in KINDS},
+        'unknown_counts_preserved': {k:unknown[k] for k in KINDS}, 'seed': 0, 'sample_size': 200,
+        'no_population_replacement_after_sampling': True, 'full_training_authorization': False,
+        'engineering_request_basis': {'measured_source': benchmark_ref, 'meta': benchmark_meta,
+            'duration_seconds': 4251.2, 'original_population_pairs': 24, 'new_complete_population_pairs': len(sources),
+            'margin': 1.3, 'pbs_extra_seconds': 30, 'scope': 'conservative request bound only; no claimed optimization or measured new cost'},
+        'timeout_seconds': timeout, 'walltime': walltime, 'command': command}
+    plan['submission_command'] = ['python3', 'scripts/pbs/submit_phase.py', '--name', CACHE_NAME,
+        '--task', 'T01', '--gpus', '1', '--walltime', walltime, '--budget-group', 'T02', '--', *command]
+    encoded = (json.dumps(plan, sort_keys=True, indent=2, allow_nan=False) + '\n').encode()
+    with OUTPUT.open('xb') as stream: stream.write(encoded)
+    signal.setitimer(signal.ITIMER_REAL, 0)
+    print('CACHE_FIXED_CUTOFF_JSON: ' + json.dumps({'config': str(OUTPUT.relative_to(ROOT)),
+        'sha256': hashlib.sha256(encoded).hexdigest(), 'attempts': len(attempts),
+        'cache_pending_tables': len(sources), 'complete_by_kind': plan['complete_counts_pending_cache'],
+        'unknown_by_kind': plan['unknown_counts_preserved'], 'timeout_seconds': timeout,
+        'walltime': walltime, 'cache_passed': False}, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()
+
+# start: 2026-11-10T07:13:30
+CACHE_FIXED_CUTOFF_JSON: {"attempts": 36, "cache_passed": false, "cache_pending_tables": 31, "complete_by_kind": {"direct_flip": 2, "direct_stay": 10, "look_flip": 8, "look_stay": 11}, "config": "configs/t02_cache_six09_14_fixed.json", "sha256": "03888e80a440e6fc28a7847b9aa4cdc4cdd44cd1591538d8a13fac0431994f9f", "timeout_seconds": 7139, "unknown_by_kind": {"direct_flip": 0, "direct_stay": 0, "look_flip": 3, "look_stay": 2}, "walltime": "01:59:29"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.19548403995577246}
+# exit_code: 0
