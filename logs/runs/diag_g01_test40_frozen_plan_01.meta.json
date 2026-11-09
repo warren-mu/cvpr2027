@@ -1,0 +1,28 @@
+{
+  "name": "diag_g01_test40_frozen_plan_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_test40_frozen_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import copy,importlib.util,json\nfrom pathlib import Path\nfrom src.tools import g01_collect_parallel as collect\nfrom src.envs import pair_v2_g01_policy as policy\nfrom src.tools.t01_partition import ROOT,sha_file\npath=ROOT/'configs/g01_test40_initial.json'\nplan=json.loads(path.read_text())\nscenes=[scene for unit in plan['units'] for scene in unit['scenes']]\nassert len(scenes)==len(set(scenes)) and set(scenes)==policy.TEST_SCENES\nassert not set(scenes)&policy.TRAIN_SCENES\nassert plan['policy_version']==policy.TEST_VERSION and plan['per_scene_class_cap']==6\nassert plan['field_of_view']==60 and plan['seed']==0 and plan['max_unity_instances']==8\nbenchmark=collect.benchmark_stage('results/gen_train_concurrency_s15_02.json',6)\nspec=importlib.util.spec_from_file_location('g01_test_plan_submit',ROOT/'scripts/pbs/submit_phase.py')\nsubmit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)\nobserved=submit.budget_state(ROOT)\nreserved=copy.deepcopy(observed);units=[]\nfor unit in plan['units']:\n collect.validate_selection(unit['scenes'],unit['concurrency'],'test')\n assert unit['parent_timeout_seconds']==collect.required_timeout(unit['scenes'],6,'test')\n assert unit['gpus']==1 and unit['concurrency']==6 and unit['requested_host'] is None\n assert unit['command']==['python3','-u','-m',collect.MODULE,'--name',unit['name'],'--scenes',*unit['scenes'],'--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json','--timeout-seconds',str(unit['parent_timeout_seconds']),'--partition','test']\n seconds=submit.wall_seconds(unit['pbs_walltime']);assert seconds>=unit['parent_timeout_seconds']+30\n assert submit.budget_group('T01',unit['name'],unit['command'],'G01')=='G01'\n submit.validate_request('T01',1,seconds,unit['name'],reserved,'G01')\n cost=seconds/3600*submit.positive_rate(observed['charge_policy']['rates'][submit.queue_for_gpus(1)])\n reserved['accounted_or_reserved_by_task']['T01']+=cost\n reserved['accounted_or_reserved_by_subbudget']['G01']+=cost\n reserved['accounted_or_reserved_total']+=cost\n reserved['submissions'].append({'name':unit['name']})\n units.append({**unit,'requested_wall_seconds':seconds,'planned_full_reservation_charged_gpu_hours':cost})\nprint('G01_TEST40_FROZEN_PLAN: '+json.dumps({'config_file':str(path.relative_to(ROOT)),'config_sha256':sha_file(path),'benchmark':benchmark,'observed_budget':observed,'units':units,'planned_after_all_units_reserved_by_subbudget':reserved['accounted_or_reserved_by_subbudget'],'planned_after_all_units_total':reserved['accounted_or_reserved_total'],'train_test_overlap':sorted(set(scenes)&policy.TRAIN_SCENES),'scope':'fixed evaluation generation plan and full-wall reservations, not executed outcomes; actual submitter rechecks live budget per job'},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T00:35:05",
+  "log_path": "logs/runs/diag_g01_test40_frozen_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "b29bbb7631fdf553d08b95cf2a761382e6a22f96",
+  "git_dirty": false,
+  "end": "2026-11-10T00:35:45",
+  "duration_sec": 37.8,
+  "exit_code": 0,
+  "metrics_sha256": "cf4f34583fcdd567d51d1eb7dfb10f32d8c3165597afa3e9f2e8a711f107722d"
+}

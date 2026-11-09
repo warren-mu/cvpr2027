@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 8.928941307007335
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.envs.pair_table_source import _container\nfrom src.tools.t01_partition import sha_file\npicks=[[\"results/t01v2_checkpoint_flip_geometry_01.json\",\"floorplan203_00002\",\"data/world_pairs/v2/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203/floorplan203_00002/pair.json\"],[\"results/t01v2_checkpoint_g01_retained_01.json\",\"floorplan301_00049\",\"data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan301/floorplan301_00049/pair.json\"],[\"results/t01v2_checkpoint_g01_retained_01.json\",\"floorplan301_00072\",\"data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan301/floorplan301_00072/pair.json\"],[\"results/t01v2_checkpoint_look60_fp203_02.json\",\"floorplan203_00001\",\"data/world_pairs/v2/pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203/floorplan203_00001/pair.json\"],[\"results/t01v2_checkpoint_flip_geometry_01.json\",\"floorplan204_00038\",\"data/world_pairs/v2/pilot_pairs_v2_flip60_fp204_s15_r01_j707740_hopper_m_02_g0_floorplan204/floorplan204_00038/pair.json\"],[\"results/t01v2_checkpoint_g01_next12_01.json\",\"floorplan207_00009\",\"data/world_pairs/v2/gen_train_next12_60_01_retry1_c6_floorplan207/floorplan207_00009/pair.json\"]]\nentries=[]\nfor source,pair_id,pair_file in picks:\n data,ref,rows=_container(source)\n matched=[row for row in rows if row['pair_id']==pair_id and row['pair_reference']['file']==pair_file]\n assert len(matched)==1\n row=matched[0]\n assert sha_file(pair_file)==row['pair_reference']['sha256']\n pair=json.loads(Path(pair_file).read_text())\n assert pair['scene']==row['scene'] and pair['kind']==row['kind']\n entries.append({'source':{'file':ref['file'],'sha256':ref['sha256']},'pair':{'file':pair_file,'sha256':row['pair_reference']['sha256']},'pair_id':pair_id,'proposal_identity':row['proposal_identity'],'scene':row['scene'],'field_of_view':60})\nmanifest={'version':'t02_explicit_source_units_v1','partition':'train','scope':'first six existing source exports under new shadow rule, including legacy controller and prior distance/hidden-anchor cases; no scientific pass inferred','entries':entries}\npath=Path('configs/t02_export_first6.json')\nwith path.open('x') as stream: json.dump(manifest,stream,indent=2,sort_keys=True);stream.write('\\n')\nprint('PREPARED_T02_MANIFEST: '+json.dumps({'file':str(path),'sha256':sha_file(path),'entries':entries},sort_keys=True))"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_t02_first6_source_manifest_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_t02_first6_source_manifest_01",
+      "--",
+      "python3",
+      "-c",
+      "import json\nfrom pathlib import Path\nfrom src.envs.pair_table_source import _container\nfrom src.tools.t01_partition import sha_file\npicks=[[\"results/t01v2_checkpoint_flip_geometry_01.json\",\"floorplan203_00002\",\"data/world_pairs/v2/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203/floorplan203_00002/pair.json\"],[\"results/t01v2_checkpoint_g01_retained_01.json\",\"floorplan301_00049\",\"data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan301/floorplan301_00049/pair.json\"],[\"results/t01v2_checkpoint_g01_retained_01.json\",\"floorplan301_00072\",\"data/world_pairs/v2/gen_train_concurrency_s15_02_c2_floorplan301/floorplan301_00072/pair.json\"],[\"results/t01v2_checkpoint_look60_fp203_02.json\",\"floorplan203_00001\",\"data/world_pairs/v2/pilot_pairs_v2_look60_seq_01_j707558_hopper_m_02_g0_floorplan203/floorplan203_00001/pair.json\"],[\"results/t01v2_checkpoint_flip_geometry_01.json\",\"floorplan204_00038\",\"data/world_pairs/v2/pilot_pairs_v2_flip60_fp204_s15_r01_j707740_hopper_m_02_g0_floorplan204/floorplan204_00038/pair.json\"],[\"results/t01v2_checkpoint_g01_next12_01.json\",\"floorplan207_00009\",\"data/world_pairs/v2/gen_train_next12_60_01_retry1_c6_floorplan207/floorplan207_00009/pair.json\"]]\nentries=[]\nfor source,pair_id,pair_file in picks:\n data,ref,rows=_container(source)\n matched=[row for row in rows if row['pair_id']==pair_id and row['pair_reference']['file']==pair_file]\n assert len(matched)==1\n row=matched[0]\n assert sha_file(pair_file)==row['pair_reference']['sha256']\n pair=json.loads(Path(pair_file).read_text())\n assert pair['scene']==row['scene'] and pair['kind']==row['kind']\n entries.append({'source':{'file':ref['file'],'sha256':ref['sha256']},'pair':{'file':pair_file,'sha256':row['pair_reference']['sha256']},'pair_id':pair_id,'proposal_identity':row['proposal_identity'],'scene':row['scene'],'field_of_view':60})\nmanifest={'version':'t02_explicit_source_units_v1','partition':'train','scope':'first six existing source exports under new shadow rule, including legacy controller and prior distance/hidden-anchor cases; no scientific pass inferred','entries':entries}\npath=Path('configs/t02_export_first6.json')\nwith path.open('x') as stream: json.dump(manifest,stream,indent=2,sort_keys=True);stream.write('\\n')\nprint('PREPARED_T02_MANIFEST: '+json.dumps({'file':str(path),'sha256':sha_file(path),'entries':entries},sort_keys=True))"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T00:38:30",
+    "log_path": "logs/runs/diag_t02_first6_source_manifest_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "b29bbb7631fdf553d08b95cf2a761382e6a22f96",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_t02_first6_source_manifest_01.diff",
+    "end": "2026-11-10T00:38:41",
+    "duration_sec": 9.0,
+    "exit_code": 0,
+    "metrics_sha256": "6a8920cc53e5355046b16d189c0c1ec08942de9f513c0bf458bd7c7f9c2a8d0a"
+  }
+}
