@@ -1136,3 +1136,12 @@ T02 first6 708944 exited86 on hopper-17 / GPU-2a86a7f5-c15a-8370-668f-62ac658607
 Same six-pair manifest resubmitted as708980 (t02_export_first6_01_retry1), oneGPU/six processes, walltime00:20:30, budgetT02. No measured per-pair export cost yet. All nine formal CPU groups diag_day_quota_binding_cpu_01..09 passed for final-failed-preflight association, class tickets, historical compatibility and independent E2Epilot6GPUh budget. Full B/A independent checkpoints retain all source scenes.
 
 Merged Claude83828652; human confirmation requested because scene-level holdout replaces the latest human20% pair-level instruction. No split or new configuration-deduplicated dispatch is frozen pending confirmation. T4 consistency reduction and unavailable-candidate policy remain null in the draft; requested explicit definitions before T4 GPU execution.
+
+
+## 2026-11-09 18:05 UTC — Human approvals and current execution
+
+Human approved83828652: fixed room-stratified held-out scenes replace pair-level20%; evaluation construction is deduplicated by scene/start/anchor/unordered candidates and freezes Wednesday20:00EST before test-scene evaluation. Human also approvedfa24c4e8 T4§4b and E2E6 learning diagnostics: compare equal-weight means across updates1–10 versus41–50, using Look own-anchor-seen-before-select rate and task episode return; auxiliary action rate does not decide learning; held-out evaluation is greedy. The separate6GPUh pilot budget remains. Tuesday10:00EST report must include deduplicated test pair and scene counts by class.
+
+Independent test B checkpoint t01v2_checkpoint_test_b_full_01 has24 published construction pairs (DF2,DS11,LF11,LS0), before new configuration deduplication and T02 filtering; its review images are pushed. A full checkpoint continues; its measured long CPU/I/O work is not treated as login-light. No additional full inventory revalidation will be started on login; subsequent heavy inventory/pool checks run underPBS resource limits.
+
+T02 retry708980 hit the same pure black gate onhopper-17/GPU-2a86a7f5-c15a-8370-668f-62ac65860780, actual23seconds/0.006388888888888889GPUh, queue117seconds, zero units launched. It was verified and resubmitted as708997 (retry2); the new parent gate passed onhopper-22 and the six units are now executing. Per-pair cost and T02-qualified counts remain unavailable until completed checks.

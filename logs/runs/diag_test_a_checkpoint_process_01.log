@@ -1,0 +1,68 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_a_checkpoint_process_01 -- python3 -c import json,os,subprocess,time
+from pathlib import Path
+for sample in range(2):
+ for p in Path('/proc').iterdir():
+  if not p.name.isdigit():continue
+  try:
+   if p.stat().st_uid!=os.getuid():continue
+   args=p.joinpath('cmdline').read_bytes().split(bytes([0]));decoded=[x.decode(errors='replace') for x in args if x]
+   if 'src.tools.t01v2_g01_review_checkpoint' not in decoded or 't01v2_checkpoint_test_a_full_01' not in decoded:continue
+   print('PROCESS_SAMPLE',sample,subprocess.check_output(['ps','-p',p.name,'-o','pid,ppid,etime,time,pcpu,rss,stat,wchan:40'],text=True).strip(),flush=True)
+   print('IO_SAMPLE',sample,p.name,p.joinpath('io').read_text().strip(),flush=True)
+  except (OSError,subprocess.CalledProcessError) as e:print('PROCESS_READ_ERROR',repr(e),flush=True)
+ if sample==0:time.sleep(2)
+
+# start: 2026-11-10T02:02:58
+PROCESS_SAMPLE 0 PID    PPID     ELAPSED     TIME %CPU   RSS STAT WCHAN
+2430451 2430324       11:05 00:00:00  0.0 17416 S    pipe_read
+IO_SAMPLE 0 2430451 rchar: 1124165
+wchar: 6412574
+syscr: 252
+syscw: 55
+read_bytes: 6434816
+write_bytes: 6418432
+cancelled_write_bytes: 0
+PROCESS_SAMPLE 0 PID    PPID     ELAPSED     TIME %CPU   RSS STAT WCHAN
+2430842 2430451       11:04 00:05:19 48.0 616928 Dl  rpc_wait_bit_killable
+IO_SAMPLE 0 2430842 rchar: 35019935505
+wchar: 89855
+syscr: 219453
+syscw: 8
+read_bytes: 2128568320
+write_bytes: 0
+cancelled_write_bytes: 0
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_SAMPLE 1 PID    PPID     ELAPSED     TIME %CPU   RSS STAT WCHAN
+2430451 2430324       11:07 00:00:00  0.0 17416 S    pipe_read
+IO_SAMPLE 1 2430451 rchar: 1124165
+wchar: 6412574
+syscr: 252
+syscw: 55
+read_bytes: 6434816
+write_bytes: 6418432
+cancelled_write_bytes: 0
+PROCESS_SAMPLE 1 PID    PPID     ELAPSED     TIME %CPU   RSS STAT WCHAN
+2430842 2430451       11:06 00:05:19 47.9 622128 Dl  rpc_wait_bit_killable
+IO_SAMPLE 1 2430842 rchar: 35028605107
+wchar: 89855
+syscr: 219496
+syscw: 8
+read_bytes: 2128568320
+write_bytes: 0
+cancelled_write_bytes: 0
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+PROCESS_READ_ERROR FileNotFoundError(2, 'No such file or directory')
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 2.5325100109912455}
+# exit_code: 0

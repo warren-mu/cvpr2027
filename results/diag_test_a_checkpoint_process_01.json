@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 2.5325100109912455
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,os,subprocess,time\nfrom pathlib import Path\nfor sample in range(2):\n for p in Path('/proc').iterdir():\n  if not p.name.isdigit():continue\n  try:\n   if p.stat().st_uid!=os.getuid():continue\n   args=p.joinpath('cmdline').read_bytes().split(bytes([0]));decoded=[x.decode(errors='replace') for x in args if x]\n   if 'src.tools.t01v2_g01_review_checkpoint' not in decoded or 't01v2_checkpoint_test_a_full_01' not in decoded:continue\n   print('PROCESS_SAMPLE',sample,subprocess.check_output(['ps','-p',p.name,'-o','pid,ppid,etime,time,pcpu,rss,stat,wchan:40'],text=True).strip(),flush=True)\n   print('IO_SAMPLE',sample,p.name,p.joinpath('io').read_text().strip(),flush=True)\n  except (OSError,subprocess.CalledProcessError) as e:print('PROCESS_READ_ERROR',repr(e),flush=True)\n if sample==0:time.sleep(2)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_a_checkpoint_process_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_a_checkpoint_process_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,os,subprocess,time\nfrom pathlib import Path\nfor sample in range(2):\n for p in Path('/proc').iterdir():\n  if not p.name.isdigit():continue\n  try:\n   if p.stat().st_uid!=os.getuid():continue\n   args=p.joinpath('cmdline').read_bytes().split(bytes([0]));decoded=[x.decode(errors='replace') for x in args if x]\n   if 'src.tools.t01v2_g01_review_checkpoint' not in decoded or 't01v2_checkpoint_test_a_full_01' not in decoded:continue\n   print('PROCESS_SAMPLE',sample,subprocess.check_output(['ps','-p',p.name,'-o','pid,ppid,etime,time,pcpu,rss,stat,wchan:40'],text=True).strip(),flush=True)\n   print('IO_SAMPLE',sample,p.name,p.joinpath('io').read_text().strip(),flush=True)\n  except (OSError,subprocess.CalledProcessError) as e:print('PROCESS_READ_ERROR',repr(e),flush=True)\n if sample==0:time.sleep(2)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T02:02:58",
+    "log_path": "logs/runs/diag_test_a_checkpoint_process_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "498391315d9644d8a5d9abc134ec64b3749eabb4",
+    "git_dirty": false,
+    "end": "2026-11-10T02:03:06",
+    "duration_sec": 2.7,
+    "exit_code": 0,
+    "metrics_sha256": "ba251be78dbdef9062f228a0ab97cd24c1a2a47a8977b8019f916435211a137b"
+  }
+}
