@@ -1,0 +1,22 @@
+diff --git a/STATUS.md b/STATUS.md
+index a45287f..adb1437 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -684,3 +684,17 @@ This round consumed 0.6530555555555555 scheduler-charged GPU-hours. Current acco
+ ### G01 initial concurrency benchmark ready
+ 
+ The supplement14 expansion gate is met by 14 unique independently checked LookFlip pairs. G01 now uses the successful supplement15 LookFlip proposal geometry and retains the original Direct/Stay scientific gates, fixed labels, far-first Stay, and actual per-class cap8. Focused G01/source/resource checks:58 passed (g01_s15_cpu_01); complete generation/checkpoint regression:600 passed (g01_s15_regressions_01). The first job will repeat the same six training scenes (1,7,203,204,301,401) on one GPU at2,4,6 scene concurrency, each scene receiving a full1200-second cap. All lanes share the allocated12CPU; persistent witness admission limits total AI2-THOR instances to8. The allocation execution ceiling is7840seconds plus30seconds PBS wrapper margin; this is a scheduling bound, not a measured throughput. No scaling claim or further bulk submission is made before the real benchmark. G01 total cap remains20chargedGPUh and shared phase cap60.
++
++
++### Blocker limited to Look E2E credit backfill; G01 continues
++
++The completed Direct E2E T0/T3 smoke remains valid for its declared scope (tasks/E2E.report.md), with pre-evidence logic explicitly uncovered. configs/smoke_e2e_training.json is direct_only and explicitly not the T04 public-configuration freeze. The actual resolved masked_gae branch uses gamma=1 and lam=1; high_level_gamma=.95 is not used by that branch. Its executed ordering is token environment reward minus fixed .001 KL, token GAE/critic returns, then masked whitening.
++
++tasks/T05.md defines decision-level G-Q and GAE fallback, while configs/t05_credit_draft.json still leaves the token-to-decision adapter, realized-return definition and normalization order unfilled. Before executing Look T3, Claude/human must specify: (1) which token GAE or aggregation defines fallback decision GAE, and how a scalar decision advantage is applied over the full reply token span; (2) whether G includes token KL shaping and how the shared KL term is retained after prefix replacement; (3) replacement versus whitening order/statistical domain, preserving identical paired pre-evidence advantages and unchanged post-evidence GAE. Critic targets remain the existing targets. These choices are not inferred by deleting the Direct guard. A question has been sent asynchronously to the human; G01 proceeds independently.
++
++The actual E2E common hash includes the evaluation/source pool. A new Look pool therefore requires a matched new T0 baseline before reporting a same-config T3/T0 timing ratio; the old Direct T0 baseline will not be silently reused. CPU-only source/export preparation can proceed. No thresholds, research-contract text or training method were modified.
++
++
++### Stay evidence diagnosis after supplement 15
++
++只读既有记录诊断见 `results/diag_stay_existing_s15_compare_02.json`；首条 `_01` 参数错误失败记录保留。新 FP203/204 的 Stay 尝试为 55/51；可查 w1 排序证明 40/32 份，远到近尾序列验证 40/32，实际原生尝试与记录顺序相符 40/32；未到 w1 的尝试不补判，因此没有发现补充11未接入。原规则在 w0 未 fallback 时保留计划 w1 首点，其余才按实际 w0 距离排序，并非每次重复全池最远点。新 FP203 证据阶段仅两例 CreditCard：00017 水平位移 0.21078948194113034 m，move3 证据 146、锚点掩码 69/77；旧独立通过 Book 00001 移动 0.07780965510747653 m，move1 证据 1370。新 FP204 CellPhone 00043 移动 0.0598363876361773 m，六个已观察动作两边锚点掩码均0；旧独立通过同类00004移动 0.2826513530216032 m，move1掩码 397/369、证据 766。两轮视角、候选组合不同，旧对照仅含独立通过样例，不能作受控因果归因；证据支持先改善 Stay 组合的观察可见性，不能只继续加大位移。G01 基准后的最小顺序建议：仅对已有 Stay 组合按两世界各自最好一步预测投影面积的较小值降序优先；组合内远点规则、全部原生点、Flip顺序及实际尝试配额保持。此建议未实现或运行，真实掩码250、证据通道差10、前缀差3等阈值均不改。

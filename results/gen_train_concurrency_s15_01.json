@@ -1,0 +1,199 @@
+{
+  "metrics": {
+    "kind": "g01_parallel_benchmark",
+    "status": "orchestration_failed",
+    "acceptance_passed": false,
+    "gate": null,
+    "stages": [],
+    "scene_runs": [],
+    "started_shards": [],
+    "cleanup_errors": [],
+    "black_frame_detected": false,
+    "error": "ValueError: Use a unique pilot_pairs_ name with only letters, digits and underscores",
+    "admission_final": [],
+    "unstarted_assignments": [
+      {
+        "scene": "FloorPlan1",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan1"
+      },
+      {
+        "scene": "FloorPlan7",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan7"
+      },
+      {
+        "scene": "FloorPlan203",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan203"
+      },
+      {
+        "scene": "FloorPlan204",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan204"
+      },
+      {
+        "scene": "FloorPlan301",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan301"
+      },
+      {
+        "scene": "FloorPlan401",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c2_floorplan401"
+      },
+      {
+        "scene": "FloorPlan1",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan1"
+      },
+      {
+        "scene": "FloorPlan7",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan7"
+      },
+      {
+        "scene": "FloorPlan203",
+        "lane_index": 2,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan203"
+      },
+      {
+        "scene": "FloorPlan204",
+        "lane_index": 3,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan204"
+      },
+      {
+        "scene": "FloorPlan301",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan301"
+      },
+      {
+        "scene": "FloorPlan401",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c4_floorplan401"
+      },
+      {
+        "scene": "FloorPlan1",
+        "lane_index": 0,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan1"
+      },
+      {
+        "scene": "FloorPlan7",
+        "lane_index": 1,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan7"
+      },
+      {
+        "scene": "FloorPlan203",
+        "lane_index": 2,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan203"
+      },
+      {
+        "scene": "FloorPlan204",
+        "lane_index": 3,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan204"
+      },
+      {
+        "scene": "FloorPlan301",
+        "lane_index": 4,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan301"
+      },
+      {
+        "scene": "FloorPlan401",
+        "lane_index": 5,
+        "child_run_name": "gen_train_concurrency_s15_01_c6_floorplan401"
+      }
+    ],
+    "unfinished_run_names": [],
+    "stop_reasons": [],
+    "all_planned_assignments_finished": false,
+    "exit_code": 1
+  },
+  "config": {
+    "name": "gen_train_concurrency_s15_01",
+    "pbs_jobid": "707807.hopper-m-02",
+    "node": "hopper-17",
+    "budget_group": "G01",
+    "gpus": 1,
+    "seed": 0,
+    "resolution": 255,
+    "field_of_view": 60,
+    "scenes": [
+      "FloorPlan1",
+      "FloorPlan7",
+      "FloorPlan203",
+      "FloorPlan204",
+      "FloorPlan301",
+      "FloorPlan401"
+    ],
+    "concurrencies": [
+      2,
+      4,
+      6
+    ],
+    "cpu_cores_per_gpu": 12,
+    "scene_timeout_seconds": 1200,
+    "child_finalization_seconds": 60,
+    "gate_timeout_seconds": 120,
+    "gate_wrapper_seconds": 10,
+    "stage_finalization_seconds": 30,
+    "parent_cleanup_seconds": 60,
+    "timeout_seconds": 7840,
+    "required_timeout_seconds": 7840,
+    "deadline_scope": "fixed full scene grants plus bounded startup/finalization/cleanup allowances; not measured speed",
+    "pool_scope": "three repeated throughput trials on the same six scenes; deduplicate actual proposals across stages and enforce total8 per scene/class before training-pool freeze",
+    "producer_module": "src.envs.pair_v2_g01_shard",
+    "stage_plans": [],
+    "submission": {
+      "file": "logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e/payload.json",
+      "sha256": "5e5d11efbb6331f75e65c0532b09178a764185000ae85041639b40c6feb84e67",
+      "requested_wall_seconds": 7870,
+      "budget_group": "G01"
+    },
+    "parent_cuda_visible_devices": "GPU-2a86a7f5-c15a-8370-668f-62ac65860780",
+    "cpu_affinity": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23
+    ]
+  },
+  "sources": [],
+  "_meta": {
+    "name": "gen_train_concurrency_s15_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_parallel",
+      "--name",
+      "gen_train_concurrency_s15_01",
+      "--timeout-seconds",
+      "7840"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-17",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T14:24:09",
+    "log_path": "logs/runs/gen_train_concurrency_s15_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "19d8c4a77cab4c436ffe6f5447aaad537d9cd2fb",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/gen_train_concurrency_s15_01.diff",
+    "end": "2026-11-09T14:24:11",
+    "duration_sec": 1.0,
+    "exit_code": 1,
+    "metrics_sha256": "cc4fb68de9557c0fd7dbf441312ca670048e80901ac285169915e91746a11cb8"
+  }
+}

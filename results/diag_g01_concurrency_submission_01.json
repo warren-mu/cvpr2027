@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 67.02789616497466
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib,importlib.util,re\nr=pathlib.Path.cwd(); folder=r/'logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e'\np=json.loads((folder/'payload.json').read_text()); receipt=json.loads((folder/'submission.json').read_text())\nassert receipt['returncode']==0\nassert re.findall(r'\\b\\d+\\.hopper-m-\\d+\\b',receipt['stdout'])==['707807.hopper-m-02']\nassert p['requested_gpu_count']==1 and p['requested_wall_seconds']==7870 and p['queue']=='autox' and p['requested_host'] is None and p['budget_group']=='G01'\nspec=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py'); module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)\nstate=module.budget_state(r)\nreserve=p['requested_gpu_count']*p['requested_wall_seconds']/3600*p['requested_queue_charge_rate']\ns=r/'STATUS.md'\nnote=f'''\n### G01 first benchmark submitted\n\nPBS707807.hopper-m-02 is the first G01 concurrency benchmark: oneGPU/12CPU, premium/autox, no host pin, walltime02:11:10. Its requested ceiling reserves {reserve} chargedGPUh; actual runtime will replace this only after final PBS accounting. It repeats the same six training scenes under2/4/6 concurrency; each GPU will first pass the original render gate. No additional bulk jobs are submitted before actual throughput/stability results.\n\nCurrent accounted-or-reserved subbudgets are {json.dumps(state['accounted_or_reserved_by_subbudget'],sort_keys=True)}; shared phase {state['accounted_or_reserved_total']}/60. The earlier S15 accounting measurements remain preserved, but the budget's strict producer check only recognizes its canonical file-path invocation; t01v2_flip_s15_accounting_canonical now supplies that original-entry final record without changing any accounting tool.\n\nReceipt: logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e. Code and CPU evidence were pushed before submission (19d8c4a). Queue wait remains pending until PBS records a start/final history.\n'''\nassert '### G01 first benchmark submitted' not in s.read_text()\ns.write_text(s.read_text()+note)\nprint('G01_SUBMISSION: '+json.dumps({'job_id':'707807.hopper-m-02','reserved_charged_gpu_hours':reserve,'budget':state},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_g01_concurrency_submission_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_g01_concurrency_submission_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib,importlib.util,re\nr=pathlib.Path.cwd(); folder=r/'logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e'\np=json.loads((folder/'payload.json').read_text()); receipt=json.loads((folder/'submission.json').read_text())\nassert receipt['returncode']==0\nassert re.findall(r'\\b\\d+\\.hopper-m-\\d+\\b',receipt['stdout'])==['707807.hopper-m-02']\nassert p['requested_gpu_count']==1 and p['requested_wall_seconds']==7870 and p['queue']=='autox' and p['requested_host'] is None and p['budget_group']=='G01'\nspec=importlib.util.spec_from_file_location('phase',r/'scripts/pbs/submit_phase.py'); module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)\nstate=module.budget_state(r)\nreserve=p['requested_gpu_count']*p['requested_wall_seconds']/3600*p['requested_queue_charge_rate']\ns=r/'STATUS.md'\nnote=f'''\n### G01 first benchmark submitted\n\nPBS707807.hopper-m-02 is the first G01 concurrency benchmark: oneGPU/12CPU, premium/autox, no host pin, walltime02:11:10. Its requested ceiling reserves {reserve} chargedGPUh; actual runtime will replace this only after final PBS accounting. It repeats the same six training scenes under2/4/6 concurrency; each GPU will first pass the original render gate. No additional bulk jobs are submitted before actual throughput/stability results.\n\nCurrent accounted-or-reserved subbudgets are {json.dumps(state['accounted_or_reserved_by_subbudget'],sort_keys=True)}; shared phase {state['accounted_or_reserved_total']}/60. The earlier S15 accounting measurements remain preserved, but the budget's strict producer check only recognizes its canonical file-path invocation; t01v2_flip_s15_accounting_canonical now supplies that original-entry final record without changing any accounting tool.\n\nReceipt: logs/pbs/gen_train_concurrency_s15_01-20261109T061808Z-d55c575e. Code and CPU evidence were pushed before submission (19d8c4a). Queue wait remains pending until PBS records a start/final history.\n'''\nassert '### G01 first benchmark submitted' not in s.read_text()\ns.write_text(s.read_text()+note)\nprint('G01_SUBMISSION: '+json.dumps({'job_id':'707807.hopper-m-02','reserved_charged_gpu_hours':reserve,'budget':state},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T14:24:52",
+    "log_path": "logs/runs/diag_g01_concurrency_submission_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "19d8c4a77cab4c436ffe6f5447aaad537d9cd2fb",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_g01_concurrency_submission_01.diff",
+    "end": "2026-11-09T14:26:00",
+    "duration_sec": 67.1,
+    "exit_code": 0,
+    "metrics_sha256": "4efe64135134debc4d55be7db4d027dcc0380d384a6365a5f5f5e9c8f9dc9e17"
+  }
+}

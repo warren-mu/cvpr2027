@@ -1,0 +1,17 @@
+diff --git a/STATUS.md b/STATUS.md
+index a45287f..f9157d9 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -684,3 +684,12 @@ This round consumed 0.6530555555555555 scheduler-charged GPU-hours. Current acco
+ ### G01 initial concurrency benchmark ready
+ 
+ The supplement14 expansion gate is met by 14 unique independently checked LookFlip pairs. G01 now uses the successful supplement15 LookFlip proposal geometry and retains the original Direct/Stay scientific gates, fixed labels, far-first Stay, and actual per-class cap8. Focused G01/source/resource checks:58 passed (g01_s15_cpu_01); complete generation/checkpoint regression:600 passed (g01_s15_regressions_01). The first job will repeat the same six training scenes (1,7,203,204,301,401) on one GPU at2,4,6 scene concurrency, each scene receiving a full1200-second cap. All lanes share the allocated12CPU; persistent witness admission limits total AI2-THOR instances to8. The allocation execution ceiling is7840seconds plus30seconds PBS wrapper margin; this is a scheduling bound, not a measured throughput. No scaling claim or further bulk submission is made before the real benchmark. G01 total cap remains20chargedGPUh and shared phase cap60.
++
++
++### Blocker limited to Look E2E credit backfill; G01 continues
++
++The completed Direct E2E T0/T3 smoke remains valid for its declared scope (tasks/E2E.report.md), with pre-evidence logic explicitly uncovered. configs/smoke_e2e_training.json is direct_only and explicitly not the T04 public-configuration freeze. The actual resolved masked_gae branch uses gamma=1 and lam=1; high_level_gamma=.95 is not used by that branch. Its executed ordering is token environment reward minus fixed .001 KL, token GAE/critic returns, then masked whitening.
++
++tasks/T05.md defines decision-level G-Q and GAE fallback, while configs/t05_credit_draft.json still leaves the token-to-decision adapter, realized-return definition and normalization order unfilled. Before executing Look T3, Claude/human must specify: (1) which token GAE or aggregation defines fallback decision GAE, and how a scalar decision advantage is applied over the full reply token span; (2) whether G includes token KL shaping and how the shared KL term is retained after prefix replacement; (3) replacement versus whitening order/statistical domain, preserving identical paired pre-evidence advantages and unchanged post-evidence GAE. Critic targets remain the existing targets. These choices are not inferred by deleting the Direct guard. A question has been sent asynchronously to the human; G01 proceeds independently.
++
++The actual E2E common hash includes the evaluation/source pool. A new Look pool therefore requires a matched new T0 baseline before reporting a same-config T3/T0 timing ratio; the old Direct T0 baseline will not be silently reused. CPU-only source/export preparation can proceed. No thresholds, research-contract text or training method were modified.

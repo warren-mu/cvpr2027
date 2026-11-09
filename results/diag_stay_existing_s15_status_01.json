@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.06483729201136157
+  },
+  "config": {
+    "command": [
+      "/usr/bin/python3",
+      "-c",
+      "\nimport json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\ndata,ref=audited_result(Path('results/diag_stay_existing_s15_compare_02.json'))\nassert data['_meta']['exit_code']==0 and data['metrics']['command_exit_code']==0\nprefix='STAY_EXISTING_COMPARISON_JSON: '\nlines=[line[len(prefix):] for line in Path(data['_meta']['log_path']).read_text().splitlines() if line.startswith(prefix)]\nassert len(lines)==1\nreport=json.loads(lines[0]);units={(u['scene'],u['era']):u for u in report['units']}\nn203=units['FloorPlan203','new_all_stay']['summary'];n204=units['FloorPlan204','new_all_stay']['summary']\nrow=lambda scene,era,pair:next(r for r in units[scene,era]['rows'] if r['pair_id']==pair)\na=row('FloorPlan203','new_all_stay','floorplan203_00017');b=row('FloorPlan203','old_passed','floorplan203_00001')\nc=row('FloorPlan204','new_all_stay','floorplan204_00043');d=row('FloorPlan204','old_passed','floorplan204_00004')\naction=lambda r,key:next(x for x in r['actions'] if x['action']==key)['evidence']\nmarker='### Stay evidence diagnosis after supplement 15'\np=Path('STATUS.md');assert marker not in p.read_text()\nparts=[f\"只读既有记录诊断见 `{ref['file']}`；首条 `_01` 参数错误失败记录保留。\",\nf\"新 FP203/204 的 Stay 尝试为 {n203['attempts']}/{n204['attempts']}；可查 w1 排序证明 {n203['far_order_present']}/{n204['far_order_present']} 份，远到近尾序列验证 {n203['far_order_tail_verified']}/{n204['far_order_tail_verified']}，实际原生尝试与记录顺序相符 {n203['actual_retry_order_matches']}/{n204['actual_retry_order_matches']}；未到 w1 的尝试不补判，因此没有发现补充11未接入。\",\n\"原规则在 w0 未 fallback 时保留计划 w1 首点，其余才按实际 w0 距离排序，并非每次重复全池最远点。\",\nf\"新 FP203 证据阶段仅两例 CreditCard：00017 水平位移 {a['horizontal_displacement']['distance_m']} m，move3 证据 {action(a,'move 3')['evidence_pixels']}、锚点掩码 {action(a,'move 3')['anchor_pixels_w0']}/{action(a,'move 3')['anchor_pixels_w1']}；旧独立通过 Book 00001 移动 {b['horizontal_displacement']['distance_m']} m，move1 证据 {action(b,'move 1')['evidence_pixels']}。\",\nf\"新 FP204 CellPhone 00043 移动 {c['horizontal_displacement']['distance_m']} m，六个已观察动作两边锚点掩码均0；旧独立通过同类00004移动 {d['horizontal_displacement']['distance_m']} m，move1掩码 {action(d,'move 1')['anchor_pixels_w0']}/{action(d,'move 1')['anchor_pixels_w1']}、证据 {action(d,'move 1')['evidence_pixels']}。\",\n\"两轮视角、候选组合不同，旧对照仅含独立通过样例，不能作受控因果归因；证据支持先改善 Stay 组合的观察可见性，不能只继续加大位移。\",\n\"G01 基准后的最小顺序建议：仅对已有 Stay 组合按两世界各自最好一步预测投影面积的较小值降序优先；组合内远点规则、全部原生点、Flip顺序及实际尝试配额保持。此建议未实现或运行，真实掩码250、证据通道差10、前缀差3等阈值均不改。\"]\ntext='\\n\\n'+marker+'\\n\\n'+''.join(parts)+'\\n'\nwith p.open('a') as stream:stream.write(text)\nprint(text)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_stay_existing_s15_status_01",
+    "command": [
+      "/usr/bin/python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_stay_existing_s15_status_01",
+      "--",
+      "/usr/bin/python3",
+      "-c",
+      "\nimport json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\ndata,ref=audited_result(Path('results/diag_stay_existing_s15_compare_02.json'))\nassert data['_meta']['exit_code']==0 and data['metrics']['command_exit_code']==0\nprefix='STAY_EXISTING_COMPARISON_JSON: '\nlines=[line[len(prefix):] for line in Path(data['_meta']['log_path']).read_text().splitlines() if line.startswith(prefix)]\nassert len(lines)==1\nreport=json.loads(lines[0]);units={(u['scene'],u['era']):u for u in report['units']}\nn203=units['FloorPlan203','new_all_stay']['summary'];n204=units['FloorPlan204','new_all_stay']['summary']\nrow=lambda scene,era,pair:next(r for r in units[scene,era]['rows'] if r['pair_id']==pair)\na=row('FloorPlan203','new_all_stay','floorplan203_00017');b=row('FloorPlan203','old_passed','floorplan203_00001')\nc=row('FloorPlan204','new_all_stay','floorplan204_00043');d=row('FloorPlan204','old_passed','floorplan204_00004')\naction=lambda r,key:next(x for x in r['actions'] if x['action']==key)['evidence']\nmarker='### Stay evidence diagnosis after supplement 15'\np=Path('STATUS.md');assert marker not in p.read_text()\nparts=[f\"只读既有记录诊断见 `{ref['file']}`；首条 `_01` 参数错误失败记录保留。\",\nf\"新 FP203/204 的 Stay 尝试为 {n203['attempts']}/{n204['attempts']}；可查 w1 排序证明 {n203['far_order_present']}/{n204['far_order_present']} 份，远到近尾序列验证 {n203['far_order_tail_verified']}/{n204['far_order_tail_verified']}，实际原生尝试与记录顺序相符 {n203['actual_retry_order_matches']}/{n204['actual_retry_order_matches']}；未到 w1 的尝试不补判，因此没有发现补充11未接入。\",\n\"原规则在 w0 未 fallback 时保留计划 w1 首点，其余才按实际 w0 距离排序，并非每次重复全池最远点。\",\nf\"新 FP203 证据阶段仅两例 CreditCard：00017 水平位移 {a['horizontal_displacement']['distance_m']} m，move3 证据 {action(a,'move 3')['evidence_pixels']}、锚点掩码 {action(a,'move 3')['anchor_pixels_w0']}/{action(a,'move 3')['anchor_pixels_w1']}；旧独立通过 Book 00001 移动 {b['horizontal_displacement']['distance_m']} m，move1 证据 {action(b,'move 1')['evidence_pixels']}。\",\nf\"新 FP204 CellPhone 00043 移动 {c['horizontal_displacement']['distance_m']} m，六个已观察动作两边锚点掩码均0；旧独立通过同类00004移动 {d['horizontal_displacement']['distance_m']} m，move1掩码 {action(d,'move 1')['anchor_pixels_w0']}/{action(d,'move 1')['anchor_pixels_w1']}、证据 {action(d,'move 1')['evidence_pixels']}。\",\n\"两轮视角、候选组合不同，旧对照仅含独立通过样例，不能作受控因果归因；证据支持先改善 Stay 组合的观察可见性，不能只继续加大位移。\",\n\"G01 基准后的最小顺序建议：仅对已有 Stay 组合按两世界各自最好一步预测投影面积的较小值降序优先；组合内远点规则、全部原生点、Flip顺序及实际尝试配额保持。此建议未实现或运行，真实掩码250、证据通道差10、前缀差3等阈值均不改。\"]\ntext='\\n\\n'+marker+'\\n\\n'+''.join(parts)+'\\n'\nwith p.open('a') as stream:stream.write(text)\nprint(text)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T14:17:50",
+    "log_path": "logs/runs/diag_stay_existing_s15_status_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "19d8c4a77cab4c436ffe6f5447aaad537d9cd2fb",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_stay_existing_s15_status_01.diff",
+    "end": "2026-11-09T14:17:50",
+    "duration_sec": 0.1,
+    "exit_code": 0,
+    "metrics_sha256": "ef0c623a3687aaf805ea58e22527f90695ea2ee85be7940c5430dd61212ac33b"
+  }
+}

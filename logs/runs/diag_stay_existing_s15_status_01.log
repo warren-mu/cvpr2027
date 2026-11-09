@@ -1,0 +1,37 @@
+# run_logged: /usr/bin/python3 -m src.tools.record_command --name diag_stay_existing_s15_status_01 -- /usr/bin/python3 -c 
+import json
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+data,ref=audited_result(Path('results/diag_stay_existing_s15_compare_02.json'))
+assert data['_meta']['exit_code']==0 and data['metrics']['command_exit_code']==0
+prefix='STAY_EXISTING_COMPARISON_JSON: '
+lines=[line[len(prefix):] for line in Path(data['_meta']['log_path']).read_text().splitlines() if line.startswith(prefix)]
+assert len(lines)==1
+report=json.loads(lines[0]);units={(u['scene'],u['era']):u for u in report['units']}
+n203=units['FloorPlan203','new_all_stay']['summary'];n204=units['FloorPlan204','new_all_stay']['summary']
+row=lambda scene,era,pair:next(r for r in units[scene,era]['rows'] if r['pair_id']==pair)
+a=row('FloorPlan203','new_all_stay','floorplan203_00017');b=row('FloorPlan203','old_passed','floorplan203_00001')
+c=row('FloorPlan204','new_all_stay','floorplan204_00043');d=row('FloorPlan204','old_passed','floorplan204_00004')
+action=lambda r,key:next(x for x in r['actions'] if x['action']==key)['evidence']
+marker='### Stay evidence diagnosis after supplement 15'
+p=Path('STATUS.md');assert marker not in p.read_text()
+parts=[f"只读既有记录诊断见 `{ref['file']}`；首条 `_01` 参数错误失败记录保留。",
+f"新 FP203/204 的 Stay 尝试为 {n203['attempts']}/{n204['attempts']}；可查 w1 排序证明 {n203['far_order_present']}/{n204['far_order_present']} 份，远到近尾序列验证 {n203['far_order_tail_verified']}/{n204['far_order_tail_verified']}，实际原生尝试与记录顺序相符 {n203['actual_retry_order_matches']}/{n204['actual_retry_order_matches']}；未到 w1 的尝试不补判，因此没有发现补充11未接入。",
+"原规则在 w0 未 fallback 时保留计划 w1 首点，其余才按实际 w0 距离排序，并非每次重复全池最远点。",
+f"新 FP203 证据阶段仅两例 CreditCard：00017 水平位移 {a['horizontal_displacement']['distance_m']} m，move3 证据 {action(a,'move 3')['evidence_pixels']}、锚点掩码 {action(a,'move 3')['anchor_pixels_w0']}/{action(a,'move 3')['anchor_pixels_w1']}；旧独立通过 Book 00001 移动 {b['horizontal_displacement']['distance_m']} m，move1 证据 {action(b,'move 1')['evidence_pixels']}。",
+f"新 FP204 CellPhone 00043 移动 {c['horizontal_displacement']['distance_m']} m，六个已观察动作两边锚点掩码均0；旧独立通过同类00004移动 {d['horizontal_displacement']['distance_m']} m，move1掩码 {action(d,'move 1')['anchor_pixels_w0']}/{action(d,'move 1')['anchor_pixels_w1']}、证据 {action(d,'move 1')['evidence_pixels']}。",
+"两轮视角、候选组合不同，旧对照仅含独立通过样例，不能作受控因果归因；证据支持先改善 Stay 组合的观察可见性，不能只继续加大位移。",
+"G01 基准后的最小顺序建议：仅对已有 Stay 组合按两世界各自最好一步预测投影面积的较小值降序优先；组合内远点规则、全部原生点、Flip顺序及实际尝试配额保持。此建议未实现或运行，真实掩码250、证据通道差10、前缀差3等阈值均不改。"]
+text='\n\n'+marker+'\n\n'+''.join(parts)+'\n'
+with p.open('a') as stream:stream.write(text)
+print(text)
+
+# start: 2026-11-09T14:17:50
+
+
+### Stay evidence diagnosis after supplement 15
+
+只读既有记录诊断见 `results/diag_stay_existing_s15_compare_02.json`；首条 `_01` 参数错误失败记录保留。新 FP203/204 的 Stay 尝试为 55/51；可查 w1 排序证明 40/32 份，远到近尾序列验证 40/32，实际原生尝试与记录顺序相符 40/32；未到 w1 的尝试不补判，因此没有发现补充11未接入。原规则在 w0 未 fallback 时保留计划 w1 首点，其余才按实际 w0 距离排序，并非每次重复全池最远点。新 FP203 证据阶段仅两例 CreditCard：00017 水平位移 0.21078948194113034 m，move3 证据 146、锚点掩码 69/77；旧独立通过 Book 00001 移动 0.07780965510747653 m，move1 证据 1370。新 FP204 CellPhone 00043 移动 0.0598363876361773 m，六个已观察动作两边锚点掩码均0；旧独立通过同类00004移动 0.2826513530216032 m，move1掩码 397/369、证据 766。两轮视角、候选组合不同，旧对照仅含独立通过样例，不能作受控因果归因；证据支持先改善 Stay 组合的观察可见性，不能只继续加大位移。G01 基准后的最小顺序建议：仅对已有 Stay 组合按两世界各自最好一步预测投影面积的较小值降序优先；组合内远点规则、全部原生点、Flip顺序及实际尝试配额保持。此建议未实现或运行，真实掩码250、证据通道差10、前缀差3等阈值均不改。
+
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.06483729201136157}
+# exit_code: 0
