@@ -1,0 +1,20 @@
+# run_logged: python3 -u -m src.tools.smoke_e2e_views --name smoke_e2e_views_01 --review-plan configs/smoke_e2e_reviewed_five.json --timeout-seconds 3480 --pair-timeout-seconds 480 --gate-timeout-seconds 180 --max-raw-mib 2048 --max-table-mib 512
+# start: 2026-11-09T08:11:57
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 157, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 120, in export_checked
+    table = build_table(renderer, **{key: package[key] for key in (
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table_export.py", line 102, in build_table
+    measurement = classify_views(captures, anchor_name)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table.py", line 68, in classify_views
+    raise ValueError('non_anchor_divergent')
+ValueError: non_anchor_divergent
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_views.py", line 312, in main
+    table, checked, pair_checks = reload_export(row, package, target)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_views.py", line 117, in reload_export
+    raise ValueError("Every selected pair must complete export checks; no subset filtering")
+ValueError: Every selected pair must complete export checks; no subset filtering
+FINAL_METRICS_JSON: {"black_frame_detected": false, "cleanup_errors": [], "errors": ["ValueError: Every selected pair must complete export checks; no subset filtering"], "exports": [{"actual_action_records": 412, "actual_frame_records": 413, "black_frame_reference": null, "cache_matches_live": null, "cleanup_errors": [], "downstream_allowed": false, "error": {"message": "non_anchor_divergent", "type": "ValueError"}, "kind": "direct_flip", "pair_id": "floorplan203_00038", "raw_incremental_index": {"bytes": 389670, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/raw/evidence_index.jsonl", "sha256": "2796cbffe5e55fec0a162f0e43d40b9a00804e91dc5b95381a93d0d415523450"}, "raw_index": {"bytes": 391318, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/raw/evidence_index.json", "sha256": "9c28ecb1a1ccf14735f4b84ea0e3f94954d51955aa3a63206aba096ff1213ddd"}, "rejection_reasons": ["non_anchor_divergent"], "report_reference": {"bytes": 1049, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/pair_report.json", "sha256": "c34e6b2d6a372e4632803b6527e44259d5dd71ad2b7b8fcdba76432378f20a26"}, "scene": "FloorPlan203", "scratch_directory": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000", "source_package": {"bytes": 3356083, "file": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/authenticated_source.json", "sha256": "d56712e4aa5f3f45de42d04752f4125afbf9233b8af62915138017f7493fa8fe"}, "status": "rejected", "table_complete": false, "task_acceptance": null, "unity_identity": {"pgid": 2687032, "pid": 2687794, "sid": 2687032, "start_ticks": 76607722}, "worker_elapsed_seconds": 61.170814926037565, "worker_identity": {"pgid": 2684957, "pid": 2687032, "sid": 2684957, "start_ticks": 76607660}}], "formal_T02_acceptance": null, "formal_cache_matches_live": null, "fresh_runs": [], "gate": {"audit": {"fail": [], "file": "results/smoke_e2e_views_01_gate.json", "warn": []}, "exit_code": 0, "file": "results/smoke_e2e_views_01_gate.json", "git_commit": "6fa8b8274141b064d5e43a31b9fa87ce1a8bfcd6", "metrics_sha256": "90d4e0c25d62835eb8a9b98cb9ff24733eba543907cb8365679fa89f264e112f", "sha256": "48f42f2185b063db44805cbc1056d3434683bf4e96940cae78fa96666c8df892"}, "kind": "smoke_e2e_views", "paper_result": false, "producer_exit_code": 1, "status": "incomplete", "step1_passed": false, "steps_3_to_5_started": false}
+# exit_code: 1
