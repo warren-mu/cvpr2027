@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.09346508397720754
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json,datetime\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd();d,ref=audited_result(r/\"results/diag_look_table_census_next_01.json\");assert d[\"_meta\"][\"exit_code\"]==0\np=r/\"logs/review/diag_look_table_census_next_01/report.json\";assert sha_file(p)==\"8c5d3821fcde7672d5e7263ac857a268da3400456d88af8babc2f1b24ff6bfd0\"\nc=json.loads(p.read_text())\ndef verify(v):\n if isinstance(v,dict):\n  for k,x in v.items():\n   if k in (\"authentication_error\",\"authentication_errors\"):assert not x,(k,x)\n   verify(x)\n elif isinstance(v,list):\n  for x in v:verify(x)\nverify(c)\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\n### \"+datetime.datetime.now(datetime.timezone.utc).isoformat()+\" — completed50 and final9\\n\\n\")\n f.write(\"The fixed50 construction-qualified Look census is complete under the unchanged exporter: \"+json.dumps(c[\"cohorts\"][\"next\"],sort_keys=True)+\". Original36 records are preserved; the additional14 contribute3 triggers,7 complete tables without this trigger,4 native TeleportFull/Box collision unknowns. Original2 strict distance failures remain unknown; separate predicate-only diagnostics do not upgrade them. Report: logs/review/diag_look_table_census_next_01/report.md.\\n\\n\")\n f.write(\"Frozen inventory05 has150 unique construction pairs, including59 Look. Last9 exact representatives passed original CPU source checks and are now in1-GPU Express/autox708720 (receipt logs/pbs/pilot_pairs_v2_look_latest_a01-20261109T135027Z-b0ed8656). Submission used the original actual-charge budget guard with running/queued ceilings; its native gate passed. No fourth generation batch was submitted and no running/queued job was cancelled. Final59 awaits these original exports. G01 stage report: tasks/G01.report.md; source-defined9 finished allocations total4.252777777777778chargedGPUh, with full queue table and unmet goals retained.\\n\")\nprint(\"COMPLETED50_STATUS_JSON: \"+json.dumps({\"report\":str(p.relative_to(r)),\"report_sha256\":sha_file(p),\"counts\":c[\"cohorts\"][\"next\"]},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_completed50_status_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_completed50_status_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json,datetime\nfrom src.tools.t01_partition import audited_result,sha_file\nr=pathlib.Path.cwd();d,ref=audited_result(r/\"results/diag_look_table_census_next_01.json\");assert d[\"_meta\"][\"exit_code\"]==0\np=r/\"logs/review/diag_look_table_census_next_01/report.json\";assert sha_file(p)==\"8c5d3821fcde7672d5e7263ac857a268da3400456d88af8babc2f1b24ff6bfd0\"\nc=json.loads(p.read_text())\ndef verify(v):\n if isinstance(v,dict):\n  for k,x in v.items():\n   if k in (\"authentication_error\",\"authentication_errors\"):assert not x,(k,x)\n   verify(x)\n elif isinstance(v,list):\n  for x in v:verify(x)\nverify(c)\nwith (r/\"STATUS.md\").open(\"a\") as f:\n f.write(\"\\n\\n### \"+datetime.datetime.now(datetime.timezone.utc).isoformat()+\" — completed50 and final9\\n\\n\")\n f.write(\"The fixed50 construction-qualified Look census is complete under the unchanged exporter: \"+json.dumps(c[\"cohorts\"][\"next\"],sort_keys=True)+\". Original36 records are preserved; the additional14 contribute3 triggers,7 complete tables without this trigger,4 native TeleportFull/Box collision unknowns. Original2 strict distance failures remain unknown; separate predicate-only diagnostics do not upgrade them. Report: logs/review/diag_look_table_census_next_01/report.md.\\n\\n\")\n f.write(\"Frozen inventory05 has150 unique construction pairs, including59 Look. Last9 exact representatives passed original CPU source checks and are now in1-GPU Express/autox708720 (receipt logs/pbs/pilot_pairs_v2_look_latest_a01-20261109T135027Z-b0ed8656). Submission used the original actual-charge budget guard with running/queued ceilings; its native gate passed. No fourth generation batch was submitted and no running/queued job was cancelled. Final59 awaits these original exports. G01 stage report: tasks/G01.report.md; source-defined9 finished allocations total4.252777777777778chargedGPUh, with full queue table and unmet goals retained.\\n\")\nprint(\"COMPLETED50_STATUS_JSON: \"+json.dumps({\"report\":str(p.relative_to(r)),\"report_sha256\":sha_file(p),\"counts\":c[\"cohorts\"][\"next\"]},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T21:55:34",
+    "log_path": "logs/runs/diag_completed50_status_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "93b462fd36eebc9619dfb154ea3618a17bc14aaa",
+    "git_dirty": false,
+    "end": "2026-11-09T21:55:36",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "2637783cc4953d399b55e04d7c1217b328c6465c7e13972106dc955429dfa09d"
+  }
+}

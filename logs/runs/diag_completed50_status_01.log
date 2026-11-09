@@ -1,0 +1,23 @@
+# run_logged: python3 -m src.tools.record_command --name diag_completed50_status_01 -- python3 -c import pathlib,json,datetime
+from src.tools.t01_partition import audited_result,sha_file
+r=pathlib.Path.cwd();d,ref=audited_result(r/"results/diag_look_table_census_next_01.json");assert d["_meta"]["exit_code"]==0
+p=r/"logs/review/diag_look_table_census_next_01/report.json";assert sha_file(p)=="8c5d3821fcde7672d5e7263ac857a268da3400456d88af8babc2f1b24ff6bfd0"
+c=json.loads(p.read_text())
+def verify(v):
+ if isinstance(v,dict):
+  for k,x in v.items():
+   if k in ("authentication_error","authentication_errors"):assert not x,(k,x)
+   verify(x)
+ elif isinstance(v,list):
+  for x in v:verify(x)
+verify(c)
+with (r/"STATUS.md").open("a") as f:
+ f.write("\n\n### "+datetime.datetime.now(datetime.timezone.utc).isoformat()+" — completed50 and final9\n\n")
+ f.write("The fixed50 construction-qualified Look census is complete under the unchanged exporter: "+json.dumps(c["cohorts"]["next"],sort_keys=True)+". Original36 records are preserved; the additional14 contribute3 triggers,7 complete tables without this trigger,4 native TeleportFull/Box collision unknowns. Original2 strict distance failures remain unknown; separate predicate-only diagnostics do not upgrade them. Report: logs/review/diag_look_table_census_next_01/report.md.\n\n")
+ f.write("Frozen inventory05 has150 unique construction pairs, including59 Look. Last9 exact representatives passed original CPU source checks and are now in1-GPU Express/autox708720 (receipt logs/pbs/pilot_pairs_v2_look_latest_a01-20261109T135027Z-b0ed8656). Submission used the original actual-charge budget guard with running/queued ceilings; its native gate passed. No fourth generation batch was submitted and no running/queued job was cancelled. Final59 awaits these original exports. G01 stage report: tasks/G01.report.md; source-defined9 finished allocations total4.252777777777778chargedGPUh, with full queue table and unmet goals retained.\n")
+print("COMPLETED50_STATUS_JSON: "+json.dumps({"report":str(p.relative_to(r)),"report_sha256":sha_file(p),"counts":c["cohorts"]["next"]},sort_keys=True))
+
+# start: 2026-11-09T21:55:34
+COMPLETED50_STATUS_JSON: {"counts": {"counts": {"completed_without_this_trigger": 25, "triggered_non_anchor_divergent": 19, "unknown_timeout_or_other_error": 6}, "denominator": 50, "triggered_fraction_of_frozen_cohort": 0.38}, "report": "logs/review/diag_look_table_census_next_01/report.json", "report_sha256": "8c5d3821fcde7672d5e7263ac857a268da3400456d88af8babc2f1b24ff6bfd0"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.09346508397720754}
+# exit_code: 0

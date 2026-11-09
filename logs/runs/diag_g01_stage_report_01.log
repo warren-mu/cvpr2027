@@ -1,0 +1,221 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_stage_report_01 -- python3 -c """One-off logged G01 stage report from fixed ended evidence; no GPU or mutation of source evidence."""
+from collections import Counter, defaultdict
+from decimal import Decimal
+import datetime
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+sys.path.insert(0, str(Path.cwd()))
+from src.tools import merge_pair_v2 as merge
+from src.tools.t01_partition import audited_result, sha_file
+
+ROOT = merge.ROOT
+NAME = 'diag_g01_stage_report_01'
+INVENTORY = {'file': 'logs/review/diag_current_pair_inventory_05/current_pair_inventory.json',
+             'sha256': 'a9e18a4c1eda52e272099358b0bfc4f2ca6f587ad0706f570bfbb9783f850a1f'}
+ACCOUNT_NAMES = (
+    'g01_concurrency_failed_start_accounting_01', 'g01_concurrency_final_accounting_01',
+    'diag_g01_metadata_black_accounting_01', 'g01_metadata_revalidation_accounting_01',
+    'diag_g01_next12_black_accounting_01', 'g01_next12_final_accounting_01',
+    'g01_next12_02_final_accounting_01', 'g01_next12_03_final_accounting_01',
+    'g01_next12_03_retry1_final_accounting_01')
+JOBS = ('707807', '707841', '708092', '708126', '708224', '708238', '708343', '708394', '708409')
+CLASSES = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+def success(name):
+    data, ref = audited_result(ROOT / 'results' / (name + '.json'))
+    require(data['_meta']['exit_code'] == 0 and data['_meta'].get('end'), 'Unsuccessful or unfinished source ' + name)
+    return data, ref
+
+
+def marker(data, prefix):
+    rows = [json.loads(line[len(prefix):]) for line in (ROOT / data['_meta']['log_path']).read_text().splitlines()
+            if line.startswith(prefix)]
+    require(len(rows) == 1, 'Missing or ambiguous original marker ' + prefix)
+    return rows[0]
+
+
+def room(scene):
+    require(re.fullmatch(r'FloorPlan[0-9]+', scene), 'Malformed scene')
+    n = int(scene[9:])
+    for lower, upper, label in ((1,20,'kitchen'), (201,220,'living'), (301,320,'bedroom'), (401,420,'bathroom')):
+        if lower <= n <= upper:
+            return label
+    raise ValueError('Non-training scene in stage inventory: ' + scene)
+
+
+require(os.environ.get('CVPR_RUN_NAME') == NAME, 'Exact logged name required')
+inventory = merge.read_reference(INVENTORY, within=ROOT / 'logs/review')
+inventory_run, inventory_ref = success('diag_current_pair_inventory_05')
+require(marker(inventory_run, 'CURRENT_PAIR_INVENTORY_SUMMARY: ')['inventory'] == INVENTORY,
+        'Inventory not bound to original successful log')
+pairs = inventory['pairs']
+require(len(pairs) == inventory['unique_count'] == 150 and len({r['proposal_identity'] for r in pairs}) == len(pairs),
+        'Frozen inventory identity count changed')
+counts = Counter(row['kind'] for row in pairs)
+require(dict(counts) == inventory['by_class'] and counts['look_flip'] + counts['look_stay'] == inventory['look_count'] == 59,
+        'Frozen inventory class counts differ')
+require(inventory['training_pool_frozen'] is False and inventory['thresholds_changed'] is False
+        and inventory['source_artifacts_modified'] is False, 'Inventory scope changed')
+by_room = {name: Counter() for name in ('kitchen','living','bedroom','bathroom')}
+by_scene_class = Counter()
+for row in pairs:
+    by_room[room(row['scene'])][row['kind']] += 1
+    by_scene_class[(row['scene'], row['kind'])] += 1
+over_cap = [{'scene': s, 'kind': k, 'inventory_count': n, 'cap': 8}
+            for (s,k),n in sorted(by_scene_class.items()) if n > 8]
+
+benchmark_run, benchmark_ref = success('diag_g01_concurrency_analysis_01')
+benchmark = marker(benchmark_run, 'G01_BENCHMARK_ANALYSIS: ')
+benchmark_path = ROOT / 'logs/review/diag_g01_concurrency_analysis_01/analysis.json'
+require(json.loads(benchmark_path.read_text()) == benchmark, 'Benchmark file differs from logged complete content')
+require([s['concurrency'] for s in benchmark['stages']] == [2,4,6], 'Changed benchmark stages')
+
+accounting = []
+charged_total = Decimal('0')
+for account_name, expected in zip(ACCOUNT_NAMES, JOBS):
+    data, ref = success(account_name)
+    metrics, config = data['metrics'], data['config']
+    require(metrics['complete_allocation_accounting'] is True and config['errors'] == [] and len(config['jobs']) == 1,
+            'Incomplete canonical accounting')
+    job = config['jobs'][0]
+    jobid, fields = job['job_id'], job['fields']
+    require(jobid == expected + '.hopper-m-02' and fields['job_state'] == 'F' and fields['run_count'] == '1'
+            and int(fields['Resource_List.ngpus']) == 1, 'Wrong ended single-GPU job')
+    require(data['_meta']['command'] == ['python3', 'src/tools/pbs_usage.py', '--name', account_name, jobid],
+            'Require original canonical pbs_usage invocation')
+    rate = Decimal(fields['Resource_List.queue_charge_rate'])
+    require(rate > 0, 'Invalid actual queue multiplier')
+    h,m,s = map(int, fields['resources_used.walltime'].split(':'))
+    seconds = h*3600 + m*60 + s
+    actual = Decimal(seconds) / Decimal(3600)
+    require(abs(float(actual) - metrics['allocation_gpu_hours_by_job'][jobid]) < 1e-12, 'Original allocation accounting mismatch')
+    charged = actual * rate
+    charged_total += charged
+    wait = metrics['queue_wait_seconds_by_job'][jobid]
+    require(isinstance(wait,int) and wait >= 0, 'Queue wait unavailable')
+    accounting.append({'source':ref, 'jobid':jobid, 'gpu_count':1, 'wall_seconds':seconds,
+        'walltime':fields['resources_used.walltime'], 'queue_wait_seconds':wait,
+        'queue_wait_minutes':wait/60, 'queue_multiplier':str(rate), 'charged_gpu_hours':float(charged),
+        'allocation_gpu_hours':float(actual), 'exit_status':int(fields['Exit_status']),
+        'node':fields.get('exec_host'), 'scope':'PBS allocation times recorded queue multiplier; project-credit reconciliation not independently available'})
+
+batches = []
+for index in (1,2,3):
+    name = f't01v2_checkpoint_g01_next12_0{index}'
+    data, ref = success(name)
+    metrics = data['metrics']
+    require(metrics['errors'] == [] and metrics['unknown_attempt_source_count'] == 0 and len(metrics['source_runs']) == 12,
+            'Batch incomplete or unknown attempt denominator')
+    require(metrics['independently_verified_by_class'] == metrics['published_by_class']
+            and metrics['independently_verified_pair_count'] == metrics['published_pair_count'], 'Batch publication count ambiguity')
+    sources = []
+    for source in metrics['source_runs']:
+        room(source['scene'])
+        sources.append({k:source.get(k) for k in ('source','scene','status','error','exit_code','eligible','ledger_only',
+            'cleanup_errors','scene_excluded','recorded_attempts','recorded_passed_by_class','recorded_rejection_counts')})
+    balance = metrics['target_balance_unique_qualified']
+    require(balance['rho'] == 0.5 and balance['balance_certified'] is None, 'Bias scope changed')
+    bias = []
+    for kind in CLASSES:
+        rows = [r for r in balance['rows'] if r['kind'] == kind and r['pair_denominator']]
+        denominator = sum(r['pair_denominator'] for r in rows)
+        require(denominator == metrics['published_by_class'][kind], 'Bias denominator differs from unique publication')
+        a0 = sum(r['w0_target_a_count'] for r in rows)
+        a1 = sum(r['w1_target_a_count'] for r in rows)
+        bias.append({'kind':kind, 'pairs':denominator, 'w0_A':a0, 'w1_A':a1,
+            'P_target_A_rho_half':(a0+a1)/(2*denominator) if denominator else None})
+    published_rooms = Counter(room(row['scene']) for row in metrics['candidate_pairs'])
+    require(sum(published_rooms.values()) == metrics['published_pair_count'], 'Unexpected candidate list scope')
+    batches.append({'checkpoint':ref, 'batch':index, 'attempts':metrics['attempts'],
+        'unique_pairs':metrics['published_pair_count'], 'by_class':metrics['published_by_class'],
+        'duplicates_preserved':len(metrics['duplicate_pairs']), 'rejection_counts':metrics['rejection_counts'],
+        'by_room':dict(published_rooms), 'target_bias':bias, 'target_A_definition':balance['candidate_a_definition'],
+        'source_rows':sources})
+
+census_run, census_ref = success('diag_look_table_census_morning_01')
+census = marker(census_run, 'MORNING_LOOK_TABLE_CENSUS_SUMMARY: ')
+summary = {'name':NAME, 'created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'scope':'Stage only, fixed inventory05; original failed sources and duplicated/over-cap stock retained. No full pool or G01 PASS claimed.',
+    'inventory':INVENTORY, 'inventory_logged_result':inventory_ref,
+    'unique_construction_pairs':len(pairs), 'by_class':dict(counts), 'Look_pairs':inventory['look_count'],
+    'by_room':{k:dict(v) for k,v in by_room.items()}, 'over_cap8_inventory':over_cap,
+    'all_inventory_scenes_in_training_split':True, 'test_pairs_in_inventory':0,
+    'training_target':1700, 'raw_inventory_shortfall_before_T02_and_balancing':1700-len(pairs),
+    'test_target':650, 'test_generation_performed_in_this_G01_stage':False,
+    'benchmark_logged_result':benchmark_ref,
+    'benchmark_artifact':{'file':str(benchmark_path.relative_to(ROOT)), 'sha256':sha_file(benchmark_path)},
+    'benchmark_stages':benchmark['stages'], 'benchmark_planning_estimates':benchmark['planning_estimates'],
+    'batches':batches, 'accounting':accounting, 'charged_gpu_hours_total':float(charged_total),
+    'charged_gpu_hours_total_decimal':str(charged_total), 'G01_budget_cap':20,
+    'charged_scope':'Only fixed nine ended G01 jobs; no T01v2/E2E/Look-table export double charge. Not an independent project balance reconciliation.',
+    'completed_census36':{'logged_result':census_ref, 'summary':census},
+    'final_census59':'pending; no projection from the completed36 subset',
+    'training_pool_frozen':False, 'formal_full_T02_acceptance':None, 'thresholds_changed':False}
+folder = ROOT/'logs/review'/NAME
+folder.mkdir(parents=True, exist_ok=False)
+artifact = folder/'stage_summary.json'
+artifact.write_text(json.dumps(summary,sort_keys=True,indent=2,allow_nan=False)+'\n')
+lines = ['# G01 阶段报告（未完成正式验收）','',
+    f'截至固定 inventory05，累计独立构造合格、按原 proposal_identity 去重的库存为 {len(pairs)} 对（Look {inventory["look_count"]} 对）。这包含先前 T01v2 试点和 G01 来源，不等于本阶段新增量，也不是已冻结训练池。1700 对训练生成目标仍差 {1700-len(pairs)} 对，且尚未扣除完整 T02、场景/类别 cap 和平衡损耗；650 对测试目标未开始生成。',
+    '',f'原始库存：[inventory05](../{INVENTORY["file"]})；可核对的本报告汇总：[stage_summary.json](../logs/review/{NAME}/stage_summary.json)。所有当前库存场景均在 G01 预定训练划分，测试场景没有用于本阶段生成或调参。',
+    '', '| 类别 | 当前独立构造库存 |', '|---|---:|']
+for kind in CLASSES: lines.append(f'| {kind} | {counts[kind]} |')
+lines += ['', '单场景单类超过8的记录继续作为库存保存，不计作合规冻结池：'+('; '.join(f'{r["scene"]}/{r["kind"]}={r["inventory_count"]}' for r in over_cap) or '无')+'。未做 T02 §7 平衡；未宣称所有新审查图已获人类/Claude批准。', '',
+    '## 三批有界训练来源', '', '| 批次 / 独立 checkpoint | 尝试 | DF / DS / LF / LS | 唯一对 | 去重保留 |', '|---|---:|---|---:|---:|']
+for b in batches:
+    cls=' / '.join(str(b['by_class'][k]) for k in CLASSES)
+    lines.append(f'| {b["batch"]}：[原结果](../{b["checkpoint"]["file"]}) | {b["attempts"]} | {cls} | {b["unique_pairs"]} | {b["duplicates_preserved"]} |')
+lines += ['', '每批12个预定训练场景；保留零产出、deadline、原生动作 TimeoutError 和不完整但已封存来源。构造候选经原来源、Controller、物理、像素、见证及固定标号检查后才进入独立库存；未知或缺证据不能通过。拒因分布如下（原 checkpoint 口径，可能有同一尝试的多个标签，不作为互斥概率）：', '',
+    '| 拒绝标签 | 批1 | 批2 | 批3 |', '|---|---:|---:|---:|']
+reasons = sorted(set().union(*(b['rejection_counts'] for b in batches)))
+for reason in reasons: lines.append('| '+reason+' | '+' | '.join(str(b['rejection_counts'].get(reason,0)) for b in batches)+' |')
+lines += ['', '主要阻塞为 w0/w1 落定物理检查，其次为目标距离/唯一性和可见证据。FloorPlan18/214 在候选发现前就因同一 TeleportFull 调用的 agent-y 非零微差不满足原严格基线恢复而停止，原记录未改；这是已定位的读回差异，不能据此推断 Unity 内部原因或擅自加容差。[诊断](../results/diag_g01_new_baseline_failures_01.json)。',
+    '', '偏差按补充5原口径报告：A 是原稳定候选名称排序中的第一个，并非画面左边或数字标号。以下 P(A) 使用ρ=0.5两世界等权，属于构造库存偏差；未执行平衡或给出合格认证。', '',
+    '| 批次 | 类别 | 分母 | w0目标A | w1目标A | P(A), ρ=0.5 |', '|---|---|---:|---:|---:|---:|']
+for b in batches:
+    for v in b['target_bias']:
+        p='unknown' if v['P_target_A_rho_half'] is None else f'{v["P_target_A_rho_half"]:.4f}'
+        lines.append(f'| {b["batch"]} | {v["kind"]} | {v["pairs"]} | {v["w0_A"]} | {v["w1_A"]} | {p} |')
+lines += ['', '训练房型产出也不均衡；每批独立对的厨房/客厅/卧室/浴室分布见下表。零产出的训练房型保留，不用测试场景替代。', '', '| 批次 | 厨房 | 客厅 | 卧室 | 浴室 |', '|---|---:|---:|---:|---:|']
+for b in batches: lines.append('| '+str(b['batch'])+' | '+' | '.join(str(b['by_room'].get(k,0)) for k in ('kitchen','living','bedroom','bathroom'))+' |')
+lines += ['', '## 同卡2/4/6场景吞吐', '',
+    '同一 H200/12 CPU、固定 FP1/7/203/204/301/401；每档完整1200秒场景额度。阶段计时含该阶段启动/清理，不等于PBS费用。三档重复场景不能相加成独立新增样本。下表是源报告候选吞吐，未称独立合格速度。', '',
+    '| 场景并发 | 阶段秒 | 源候选数 | 候选/卡时 | 黑帧场景 | 明确deadline | 原生动作超时 |', '|---:|---:|---:|---:|---:|---:|---:|']
+for s in benchmark['stages']:
+    lines.append(f'| {s["concurrency"]} | {s["wall_seconds"]:.3f} | {s["source_reported_pair_count"]} | {s["source_reported_pairs_per_gpu_hour"]:.2f} | {s["black_rate"]["numerator"]}/{s["black_rate"]["denominator"]} | {s["explicit_deadline_rate"]["numerator"]}/6 | {s["native_action_timeout_rate"]["numerator"]}/6 |')
+lines += ['', '据此选择6场景/卡做有界复验及后三批；最多6个主实例+2个受租约限制的见证实例，共享真实单GPU和12 CPU。资源清理成功不证明模拟器稳定，TimeoutError不称作Unity崩溃。旧 benchmark 达存储上限时部分 Controller 终结元数据未落盘，原独立验收失败保留；仅对未来运行追加有界终结元数据保留，未补造旧证据。',
+    '', '原吞吐外推：6并发下1700未平衡源候选约13.13 GPU·小时，按四类各425的瓶颈约34.48 GPU·小时；均是已记录的规划估算，不是已完成结果，后者超过当前20 GPU·小时上限。独立验收、T02损耗、cap和平衡会进一步影响成本，不能承诺1700/650。原公式和局限见[吞吐分析](../logs/review/diag_g01_concurrency_analysis_01/analysis.md)。',
+    '', '## 已结束PBS费用与排队', '',
+    f'固定9个G01作业合计 **{float(charged_total):.9f} GPU·小时**。每项使用原PBS实际walltime×分配卡数×记录的队列倍率（本表均为1）；这是调度器计费口径，不是另行核对项目总余额。黑帧、启动失败和不完整任务都计入，不含另属T01v2/E2E的视角导出或训练费用。', '',
+    '| 作业 | 卡数 | 排队分钟 | 实际walltime | 倍率 | 计费GPU·小时 | 原canonical记录 |', '|---|---:|---:|---|---:|---:|---|']
+for a in accounting:
+    lines.append(f'| {a["jobid"]} | 1 | {a["queue_wait_minutes"]:.4f} | {a["walltime"]} | {a["queue_multiplier"]} | {a["charged_gpu_hours"]:.9f} | [记录](../{a["source"]["file"]}) |')
+lines += ['', '排队采用原单次运行的stime−qtime；PBS原时间含Asia/Singapore偏移，不把无时区run_logged时间当UTC。所有作业为Express/autox，不加host。下一批未提交；若要扩到完整数量，需先确认原科学规则下的可用率及预算，超过20 GPU·小时先报告审批。',
+    '', '## 当前阻塞与后续', '',
+    '独立构造只认证起点和记录的见证动作，不能代替完整D4可达视角检查。已完成的固定36对普查为16触发non_anchor_divergent、18完整原生表未触发该项、2严格距离校验失败未知；后续50/59截止尚待汇总，不把36外推为全库存。[固定36报告](../logs/review/diag_look_table_census_morning_01/report.md)。两个距离失败的另外CPU像素谓词诊断不提升严格T02状态。',
+    '', '完整表中触发、原生动作碰撞/超时、严格元数据距离校验失败及反复GPU黑帧均保留。当前原T02规则仍阻塞冻结训练池；不能把“未触发这一项”写成缓存/训练验收通过。测试集650对未生成，训练池1000+留出约100未冻结，未进行最终场景cap/类别/目标平衡。',
+    '', f'本报告数字由 `run_logged --name {NAME} -- python3 -m src.tools.record_command ...` 的完整一次性内联代码生成；原命令与引用在[日志结果](../results/{NAME}.json)。独立检查继续使用原 `src.tools.t01v2_g01_review_checkpoint`，生成使用原 `src.tools.g01_collect_parallel`；未改变阈值、任务结构或测试划分。root完成本次 provenance审计和推送后交Claude审查；这是一份阶段报告，不宣告G01 PASS。']
+report_path = ROOT/'tasks/G01.report.md'
+require(not report_path.exists(), 'Do not overwrite an existing G01 report')
+report_path.write_text('\n'.join(lines)+'\n')
+print('G01_STAGE_REPORT_SUMMARY: '+json.dumps({'report':{'file':'tasks/G01.report.md','sha256':sha_file(report_path)},
+    'summary':{'file':str(artifact.relative_to(ROOT)),'sha256':sha_file(artifact)},
+    'charged_gpu_hours_total':float(charged_total), 'inventory':INVENTORY, 'by_class':dict(counts),
+    'unique_construction_pairs':len(pairs),'Look_pairs':inventory['look_count'], 'all_inventory_scenes_in_training_split':True,
+    'batches':[{k:b[k] for k in ('batch','attempts','unique_pairs','by_class','duplicates_preserved','target_bias','by_room')} for b in batches]},
+    sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-09T21:49:30
+G01_STAGE_REPORT_SUMMARY: {"Look_pairs": 59, "all_inventory_scenes_in_training_split": true, "batches": [{"attempts": 1550, "batch": 1, "by_class": {"direct_flip": 7, "direct_stay": 11, "look_flip": 1, "look_stay": 4}, "by_room": {"bedroom": 13, "kitchen": 1, "living": 9}, "duplicates_preserved": 1, "target_bias": [{"P_target_A_rho_half": 0.5, "kind": "direct_flip", "pairs": 7, "w0_A": 5, "w1_A": 2}, {"P_target_A_rho_half": 0.5454545454545454, "kind": "direct_stay", "pairs": 11, "w0_A": 6, "w1_A": 6}, {"P_target_A_rho_half": 0.5, "kind": "look_flip", "pairs": 1, "w0_A": 1, "w1_A": 0}, {"P_target_A_rho_half": 1.0, "kind": "look_stay", "pairs": 4, "w0_A": 4, "w1_A": 4}], "unique_pairs": 23}, {"attempts": 1613, "batch": 2, "by_class": {"direct_flip": 1, "direct_stay": 10, "look_flip": 9, "look_stay": 5}, "by_room": {"bedroom": 12, "kitchen": 3, "living": 10}, "duplicates_preserved": 1, "target_bias": [{"P_target_A_rho_half": 0.5, "kind": "direct_flip", "pairs": 1, "w0_A": 0, "w1_A": 1}, {"P_target_A_rho_half": 0.7, "kind": "direct_stay", "pairs": 10, "w0_A": 7, "w1_A": 7}, {"P_target_A_rho_half": 0.5, "kind": "look_flip", "pairs": 9, "w0_A": 6, "w1_A": 3}, {"P_target_A_rho_half": 0.4, "kind": "look_stay", "pairs": 5, "w0_A": 2, "w1_A": 2}], "unique_pairs": 25}, {"attempts": 802, "batch": 3, "by_class": {"direct_flip": 20, "direct_stay": 20, "look_flip": 4, "look_stay": 5}, "by_room": {"kitchen": 18, "living": 31}, "duplicates_preserved": 3, "target_bias": [{"P_target_A_rho_half": 0.5, "kind": "direct_flip", "pairs": 20, "w0_A": 11, "w1_A": 9}, {"P_target_A_rho_half": 0.6, "kind": "direct_stay", "pairs": 20, "w0_A": 12, "w1_A": 12}, {"P_target_A_rho_half": 0.5, "kind": "look_flip", "pairs": 4, "w0_A": 3, "w1_A": 1}, {"P_target_A_rho_half": 0.8, "kind": "look_stay", "pairs": 5, "w0_A": 4, "w1_A": 4}], "unique_pairs": 49}], "by_class": {"direct_flip": 33, "direct_stay": 58, "look_flip": 41, "look_stay": 18}, "charged_gpu_hours_total": 4.252777777777778, "inventory": {"file": "logs/review/diag_current_pair_inventory_05/current_pair_inventory.json", "sha256": "a9e18a4c1eda52e272099358b0bfc4f2ca6f587ad0706f570bfbb9783f850a1f"}, "report": {"file": "tasks/G01.report.md", "sha256": "5af2a989575b427825e9ff72fa955984c47d24356e52e84642034a453f7758ac"}, "summary": {"file": "logs/review/diag_g01_stage_report_01/stage_summary.json", "sha256": "a1285a407202ecb1f9931eb42af9c4c2d6b454711f91bab2f02c8561a91cc464"}, "unique_construction_pairs": 150}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 5.547266936046071}
+# exit_code: 0
