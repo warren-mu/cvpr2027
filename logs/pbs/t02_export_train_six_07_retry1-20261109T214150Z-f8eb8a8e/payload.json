@@ -1,0 +1,65 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "t02_export_train_six_07_retry1",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.t02_export_parallel",
+    "--name",
+    "t02_export_train_six_07_retry1",
+    "--manifest",
+    "configs/t02_export_train_six_07.json",
+    "--manifest-sha256",
+    "f97f1da3b710c6b490ad7fa6afd89faf0b9cf5c7f2247e74c41e7fb21d426952",
+    "--concurrency",
+    "6",
+    "--timeout-seconds",
+    "1200",
+    "--unit-timeout-seconds",
+    "900",
+    "--pair-timeout-seconds",
+    "660",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1230,
+  "requested_host": "hopper-28",
+  "dry_run": false,
+  "budget_revision": "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40",
+  "queue": "autox",
+  "retry_of": "709274.hopper-m-02",
+  "budget_group": "T02",
+  "requested_queue_charge_rate": 1.0,
+  "black_retry_host_authorization": {
+    "version": "c912aeab_opening_black_retry_host_v1",
+    "evidence": {
+      "file": "results/diag_t02_train_six_black_host_guard_709274_01.json",
+      "sha256": "5dc7dae39e13de273c4dd81a0c6b9a4f8f80d4f39ccbcddfcfb302ed8f71e8ba"
+    },
+    "retry_of": "709274.hopper-m-02",
+    "requested_host": "hopper-28",
+    "previous_requested_host": null,
+    "rotation_index": 1,
+    "rotation_previous": {
+      "payload": {
+        "file": "logs/pbs/gen_test_config_round2_40_s01_retry1-20261109T213828Z-96ccba59/payload.json",
+        "sha256": "0b552a00359c3309cab07c8920750aa2746051042bc36e9d7779c02dadb8132b"
+      },
+      "receipt": {
+        "file": "logs/pbs/gen_test_config_round2_40_s01_retry1-20261109T213828Z-96ccba59/submission.json",
+        "sha256": "170816aa814559ffe91cdd8b967a1a30cbfc8d02907a72b07d2deb736eb8e500"
+      }
+    },
+    "original_node": "hopper-16",
+    "original_gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d",
+    "queue_fallback_after_seconds": 1200,
+    "scope": "opening black gate retry only; no scientific acceptance"
+  }
+}

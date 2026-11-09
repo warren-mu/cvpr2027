@@ -1,0 +1,67 @@
+# run_logged: python3 -c import json,hashlib
+from pathlib import Path
+from PIL import Image
+from src.tools import phase_watch as p
+root=Path.cwd().resolve();job='709289.hopper-m-02';parent='t02_export_train_six_09';name='diag_t02_train_six_black_host_guard_709289_01'
+auditor=p.load_module('original_auditor',root/'scripts/audit_provenance.py')
+outer,oref=p.load_logged(root,root/'results'/f'{parent}.json',auditor)
+gate,gref=p.load_logged(root,root/'results'/f'{parent}_gate.json',auditor)
+account,aref=p.load_logged(root,root/'results/diag_t02_train_six_709289_accounting_01.json',auditor)
+directory=next((root/'logs/pbs').glob(parent+'-*'));payload=json.loads((directory/'payload.json').read_text());receipt=json.loads((directory/'submission.json').read_text())
+assert receipt['returncode']==0 and job in receipt['stdout']
+assert account['_meta']['command']==['python3','src/tools/pbs_usage.py','--name','diag_t02_train_six_709289_accounting_01',job]
+fields=account['config']['jobs'][0]['fields']
+cfg,m=outer['config'],outer['metrics']
+assert payload['budget_group']=='T02' and payload['task_id']=='T01' and payload['requested_gpu_count']==1 and payload['requested_host'] is None
+assert cfg['version']=='t02_single_gpu_parallel_original_exports_v1' and cfg['concurrency']==6 and cfg['gpus']==1
+assert m['kind']=='t02_parallel_export' and m['status']=='blocked_by_render_gate' and m['units']==[] and m['errors']==[] and m['cleanup_errors']==[] and m['unstarted_unit_indices']==list(range(6)) and m['producer_exit_code']==86
+assert m['gate']['sha256']==gref['sha256']
+assert cfg['manifest_sha256']==hashlib.sha256((root/cfg['manifest']).read_bytes()).hexdigest()
+assert 'src.tools.t02_export_parallel' in payload['command'] and cfg['planned_units']==json.loads((root/cfg['manifest']).read_text())['entries']
+reason=p.validate_black_retry(payload,job,fields,outer,gate,parent+'_gate','t02_export_parallel')
+assert gate['config']['resolution']==255 and gate['config']['segmentation'] is True
+assert cfg['cpu_affinity']==gate['config']['allocation']['cpu_affinity'] and len(cfg['cpu_affinity'])==12
+evidence=[]
+for row in gate['metrics']['devices']:
+ ob=row['observation'];assert ob['node']==cfg['node'] and ob['gpu_identity']['gpu_uuid']==cfg['cuda_visible_devices']
+ assert ob['actual_fresh_rgb_payload_count']>0 and any(w['stage']=='Pass' and w['fresh_main_rgb_payloads']>0 and w['cached_metadata'] is False for w in ob['wire_packets'])
+ for capture in ob['captures']:
+  ref=capture['png'];path=Path(ref['path']);assert path.is_relative_to(root/'logs/runs'/f'{parent}_gate')
+  assert hashlib.sha256(path.read_bytes()).hexdigest()==ref['sha256']
+  with Image.open(path) as im:assert im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3
+  evidence.append(ref)
+metrics={'eligible_for_same_manifest_retry':True,'reason':reason,'job_id':job,'node':cfg['node'],'gpu_uuid':cfg['cuda_visible_devices'],'units_started':0,'black_pngs':evidence,'allocation_gpu_hours':account['metrics']['total_allocation_gpu_hours'],'queue_wait_seconds':account['metrics']['queue_wait_seconds_by_job'][job]}
+
+def complete_reference(path, data=None):
+ path=Path(path).resolve();body=path.read_bytes()
+ r={'file':str(path.relative_to(root)),'sha256':hashlib.sha256(body).hexdigest(),'bytes':len(body)}
+ if data is not None:
+  log=(root/data['_meta']['log_path']).resolve();log.relative_to(root/'logs/runs')
+  r.update(metrics_sha256=data['_meta']['metrics_sha256'],log_path=str(log.relative_to(root)),log_sha256=hashlib.sha256(log.read_bytes()).hexdigest())
+ return r
+assert len(list((root/'logs/pbs').glob(parent+'-*')))==1
+assert (directory/'payload.json').stat().st_mode & 0o222 == 0
+assert (directory/'job.pbs').stat().st_mode & 0o222 == 0
+assert receipt['stdout'].strip()==job and not receipt.get('stderr')
+assert fields['run_count']=='1' and fields['Resource_List.ngpus']=='1' and fields['Resource_List.ncpus']=='12'
+assert fields['queue']=='smallx' and 'PBS_O_QUEUE=autox' in fields['Variable_List']
+assert payload['queue']=='autox' and payload['requested_wall_seconds']==1230
+metrics['strict_black_gate_proof']={
+ 'eligible_proven_black_gate_retry':reason=='render_gate_black_capture',
+ 'job_id':job,'native_kind':m['kind'],
+ 'original_payload':complete_reference(directory/'payload.json'),
+ 'original_job_script':complete_reference(directory/'job.pbs'),
+ 'original_receipt':complete_reference(directory/'submission.json'),
+ 'original_command_unchanged':payload['command'],
+ 'pbs_accounting':complete_reference(root/'results/diag_t02_train_six_709289_accounting_01.json',account),
+ 'source_results':[complete_reference(root/'results'/f'{parent}.json',outer),complete_reference(root/'results'/f'{parent}_gate.json',gate)],
+ 'node':cfg['node'],'gpu_uuid':cfg['cuda_visible_devices'],
+ 'captures':[complete_reference(Path(r['path'])) for r in evidence]}
+
+result={'config':{'name':name,'scope':'original completed black gate only; no scientific acceptance'},'metrics':metrics,'sources':[{'file':r['path'],'sha256':r['sha256'],'metrics_sha256':d['_meta']['metrics_sha256']} for r,d in ((oref,outer),(gref,gate),(aref,account))]}
+with (root/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2);f.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-10T05:39:26
+FINAL_METRICS_JSON: {"allocation_gpu_hours": 0.005277777777777778, "black_pngs": [{"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t02_export_train_six_09_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/t02_export_train_six_09_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_for_same_manifest_retry": true, "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d", "job_id": "709289.hopper-m-02", "node": "hopper-16", "queue_wait_seconds": 28, "reason": "render_gate_black_capture", "strict_black_gate_proof": {"captures": [{"bytes": 269, "file": "logs/runs/t02_export_train_six_09_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"bytes": 269, "file": "logs/runs/t02_export_train_six_09_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d", "job_id": "709289.hopper-m-02", "native_kind": "t02_parallel_export", "node": "hopper-16", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_train_six_09", "--manifest", "configs/t02_export_train_six_09.json", "--manifest-sha256", "f97c07e8bdbdd6e4bd9e095d0c92dd902ef7c45a06724221b7caee708b8a155e", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180"], "original_job_script": {"bytes": 1105, "file": "logs/pbs/t02_export_train_six_09-20261109T213513Z-072dcd63/job.pbs", "sha256": "d3e8af1cae511a284eea55996fd2abaae14e5e428280c584fa6e595c21700f95"}, "original_payload": {"bytes": 1021, "file": "logs/pbs/t02_export_train_six_09-20261109T213513Z-072dcd63/payload.json", "sha256": "ae7951227202f3ed2d0501b3cf46bbd1207ca60a3cfe7f051a4f9fdcf3c97cda"}, "original_receipt": {"bytes": 413, "file": "logs/pbs/t02_export_train_six_09-20261109T213513Z-072dcd63/submission.json", "sha256": "319d6f05075aa32c66e4254685d40f54ea20c4482e25eff145e1ae12ec134ff4"}, "pbs_accounting": {"bytes": 6127, "file": "results/diag_t02_train_six_709289_accounting_01.json", "log_path": "logs/runs/diag_t02_train_six_709289_accounting_01.log", "log_sha256": "c6d2b060a4be145ee1bdeab5b8bb73e4a33159c25f46ae589efe73ef97b1dc90", "metrics_sha256": "7a3bcbbb7e6de64bac770b5e51a2eb9f2b100c5a0d2d81beb09c3da1b8d8494c", "sha256": "2205c60b6072bdcdbcf8a2a830ccb64a9cc88364f13fd9ee6c23f0d96824708d"}, "source_results": [{"bytes": 12236, "file": "results/t02_export_train_six_09.json", "log_path": "logs/runs/t02_export_train_six_09.log", "log_sha256": "d6040df401185b10c8e7a12a37f89d702a4ac599050a44f0ff441ff9ce3b3ea1", "metrics_sha256": "f1e1da774ddb5782f37162510d64c0328fc959cd3c24effa42b0269ad7d7fbde", "sha256": "1771b1528c6bf558c1c5cd254cf1c20287bf63ce83508409c5aa93a7355b01b8"}, {"bytes": 9508, "file": "results/t02_export_train_six_09_gate.json", "log_path": "logs/runs/t02_export_train_six_09_gate.log", "log_sha256": "4f852eb9d31bf3b66e05e3c2a2edb06e639d6f281f0fee50de7d0e53116dc7a3", "metrics_sha256": "30d49ecb1f27bef9449a2fb6f2e16bf80a19eab0696605ea4f47b3c281f85eb0", "sha256": "1be83e16bde8117af604b808dd26ce764cac90ac8b43bb3ae55d7cdec527a3dc"}]}, "units_started": 0}
+# exit_code: 0

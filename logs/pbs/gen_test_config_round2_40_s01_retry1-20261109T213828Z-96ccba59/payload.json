@@ -1,0 +1,61 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "gen_test_config_round2_40_s01_retry1",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.g01_collect_parallel",
+    "--name",
+    "gen_test_config_round2_40_s01_retry1",
+    "--scenes",
+    "FloorPlan21",
+    "FloorPlan221",
+    "FloorPlan321",
+    "FloorPlan421",
+    "FloorPlan22",
+    "FloorPlan222",
+    "--concurrency",
+    "6",
+    "--benchmark-source",
+    "results/gen_train_concurrency_s15_02.json",
+    "--timeout-seconds",
+    "1600",
+    "--partition",
+    "test",
+    "--quota-plan",
+    "configs/gen_test_config_round2_40_s01_retry1_quota.json",
+    "--quota-plan-sha256",
+    "f79f07eabe001d3ecef1ce90deccb758673127883dd16ae2bac5a044be4f6a9d"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1630,
+  "requested_host": "hopper-22",
+  "dry_run": false,
+  "budget_revision": "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40",
+  "queue": "autox",
+  "retry_of": "709207.hopper-m-02",
+  "budget_group": "G01",
+  "requested_queue_charge_rate": 1.0,
+  "black_retry_host_authorization": {
+    "version": "c912aeab_opening_black_retry_host_v1",
+    "evidence": {
+      "file": "results/diag_g01_test_round2_s01_black_retry_plan_01.json",
+      "sha256": "a4d3cc50d3e83662b59edb6aa34f2909befe1a3e959f74917e212a8a46965834"
+    },
+    "retry_of": "709207.hopper-m-02",
+    "requested_host": "hopper-22",
+    "previous_requested_host": null,
+    "rotation_index": 0,
+    "rotation_previous": null,
+    "original_node": "hopper-24",
+    "original_gpu_uuid": "GPU-0b97c030-7a1b-585d-5e41-28c0e5e3dd70",
+    "queue_fallback_after_seconds": 1200,
+    "scope": "opening black gate retry only; no scientific acceptance"
+  }
+}
