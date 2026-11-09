@@ -1,0 +1,22 @@
+{
+  "name": "diag_cluster_four_gpu_decision_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib,os\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nname=os.environ['CVPR_RUN_NAME']; src,ref=audited_result('results/diag_cluster_four_gpu_snapshot_02.json')\nr=src['metrics']['snapshot'];b=Path(r['file']).read_bytes();assert hashlib.sha256(b).hexdigest()==r['sha256'];snapshot=json.loads(b)\nfor k in ('medium_jobs','own_jobs','nodes'):assert snapshot[k]['exit_code']==0 and not snapshot[k]['timed_out']\nmedium=json.loads(snapshot['medium_jobs']['stdout']); jobs=medium.get('Jobs',{});assert isinstance(jobs,dict)\nstates={s:sum(j.get('job_state')==s for j in jobs.values()) for s in ('Q','R','H','W','S')}\ngroup_jobs=[{'job_id':key,'state':v.get('job_state'),'project':v.get('project'),'user':v.get('Job_Owner','').split('@')[0]} for key,v in jobs.items() if v.get('project')=='CFP04-SF-125']\nnodes=json.loads(snapshot['nodes']['stdout'])['nodes'];free=[]\nfor node,v in nodes.items():\n a=v.get('resources_available',{}); used=v.get('resources_assigned',{}); total=a.get('ngpus');busy=used.get('ngpus',0)\n if type(total) not in (int,float) or type(busy) not in (int,float):continue\n n=total-busy;st=v.get('state','')\n if n>=4 and not any(x in st.split(',') for x in ('offline','down','unknown','maintenance','job-exclusive')):\n  free.append({'node':node,'state':st,'gpu_model':a.get('gpu_model'),'gpu_total':total,'gpu_assigned':busy,'gpu_unassigned':n,'cpu_unassigned':a.get('ncpus',0)-used.get('ncpus',0),'memory_available':a.get('mem'),'memory_assigned':used.get('mem'),'scope':'PBS unassigned resources, not proven usable rendering GPUs'})\nown=[]\nfor line in snapshot['own_jobs']['stdout'].splitlines():\n cols=line.split()\n if len(cols)>=11 and cols[0].split('.')[0].isdigit():own.append({'job_id_display':cols[0],'queue':cols[2],'job_name_display':cols[3],'state':cols[-2],'requested_cpus':cols[6],'elapsed_display':cols[-1]})\nwaits=[];sources=[ref]\nfor n in ('diag_t02_train_six_709195_accounting_01','g01_test_round2_s01_black_accounting_01','diag_t02_train_six_709274_accounting_01','diag_t02_train_six_709279_accounting_01','diag_t02_train_six_709289_accounting_01','g01_test_round2_s01_black_accounting_02','diag_t02_train_six_709294_accounting_01'):\n d,rf=audited_result('results/'+n+'.json');sources.append(rf)\n for job,seconds in d['metrics']['queue_wait_seconds_by_job'].items():\n  wait=next(j for j in d['config']['jobs'] if j['job_id']==job);fields=wait['fields'];assert fields['Resource_List.ngpus']=='1'\n  waits.append({'job_id':job,'queue':fields['queue'],'wait_seconds':seconds,'wait_minutes':seconds/60,'host':fields.get('exec_host','').split('/')[0],'source':rf})\nm={'status':'snapshot_read','mediumx_state_counts':states,'project_mediumx_jobs':group_jobs,'eligible_nodes_with_ge4_unassigned_gpus':free,'own_jobs':own,'smallx_counts':{s:sum(j['queue']=='smallx' and j['state']==s for j in own) for s in ('Q','R','H','W','S')},'smallx_user_limit':3,'recent_single_gpu_waits':waits,'queue_full_attribute_query_timed_out':True,'decision':'Prepare and submit one unpinned 4-GPU shared-queue job after unchanged-unit checks and mixed-budget guard pass; cancel if still never started at 2026-11-09 22:00 America/New_York. Empty queue exits immediately; bad cards retired; same priority/claims as singles.','limitations':'Snapshot only; unassigned GPUs do not prove renderer health or guarantee a start. mediumx Jobs absent in successful destination query means no returned jobs. qstat-Qf timed out; no queue limits inferred from it.'}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'name':name,'snapshot':r},'sources':sources},indent=2,sort_keys=True)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T06:02:47",
+  "log_path": "logs/runs/diag_cluster_four_gpu_decision_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "248f12c042b25687ed703117c1a4d45e8c640847",
+  "git_dirty": false,
+  "end": "2026-11-10T06:02:50",
+  "duration_sec": 0.2,
+  "exit_code": 0,
+  "metrics_sha256": "ee050285e86c81c7db35530646b7173d85610c29dc2e928d942635ab648d9644"
+}

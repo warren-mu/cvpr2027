@@ -1,0 +1,370 @@
+{
+  "config": {
+    "name": "diag_cluster_four_gpu_decision_01",
+    "snapshot": {
+      "file": "logs/review/diag_cluster_four_gpu_snapshot_02/query_snapshot.json",
+      "sha256": "415c785f9c7b9c25f00162c7e1102878887d90cdc1a071a5a6c66739a786132f"
+    }
+  },
+  "metrics": {
+    "decision": "Prepare and submit one unpinned 4-GPU shared-queue job after unchanged-unit checks and mixed-budget guard pass; cancel if still never started at 2026-11-09 22:00 America/New_York. Empty queue exits immediately; bad cards retired; same priority/claims as singles.",
+    "eligible_nodes_with_ge4_unassigned_gpus": [
+      {
+        "cpu_unassigned": 112,
+        "gpu_assigned": 0,
+        "gpu_model": "H100",
+        "gpu_total": 8,
+        "gpu_unassigned": 8,
+        "memory_assigned": null,
+        "memory_available": "2063682mb",
+        "node": "hopper-04",
+        "scope": "PBS unassigned resources, not proven usable rendering GPUs",
+        "state": "free"
+      },
+      {
+        "cpu_unassigned": 108,
+        "gpu_assigned": 4,
+        "gpu_model": "H200",
+        "gpu_total": 8,
+        "gpu_unassigned": 4,
+        "memory_assigned": "134217728kb",
+        "memory_available": "2063686mb",
+        "node": "hopper-35",
+        "scope": "PBS unassigned resources, not proven usable rendering GPUs",
+        "state": "free"
+      },
+      {
+        "cpu_unassigned": 108,
+        "gpu_assigned": 4,
+        "gpu_model": "H200",
+        "gpu_total": 8,
+        "gpu_unassigned": 4,
+        "memory_assigned": "134217728kb",
+        "memory_available": "2063686mb",
+        "node": "hopper-33",
+        "scope": "PBS unassigned resources, not proven usable rendering GPUs",
+        "state": "free"
+      },
+      {
+        "cpu_unassigned": 112,
+        "gpu_assigned": 0,
+        "gpu_model": "H200",
+        "gpu_total": 8,
+        "gpu_unassigned": 8,
+        "memory_assigned": null,
+        "memory_available": "2063686mb",
+        "node": "hopper-41",
+        "scope": "PBS unassigned resources, not proven usable rendering GPUs",
+        "state": "free"
+      },
+      {
+        "cpu_unassigned": 112,
+        "gpu_assigned": 0,
+        "gpu_model": "H200",
+        "gpu_total": 8,
+        "gpu_unassigned": 8,
+        "memory_assigned": null,
+        "memory_available": "2063686mb",
+        "node": "hopper-45",
+        "scope": "PBS unassigned resources, not proven usable rendering GPUs",
+        "state": "free"
+      }
+    ],
+    "limitations": "Snapshot only; unassigned GPUs do not prove renderer health or guarantee a start. mediumx Jobs absent in successful destination query means no returned jobs. qstat-Qf timed out; no queue limits inferred from it.",
+    "mediumx_state_counts": {
+      "H": 0,
+      "Q": 0,
+      "R": 0,
+      "S": 0,
+      "W": 0
+    },
+    "own_jobs": [
+      {
+        "elapsed_display": "--",
+        "job_id_display": "706017.hopper-*",
+        "job_name_display": "gpu_hold",
+        "queue": "small",
+        "requested_cpus": "24",
+        "state": "Q"
+      },
+      {
+        "elapsed_display": "--",
+        "job_id_display": "709300.hopper-*",
+        "job_name_display": "cvpr27_7a*",
+        "queue": "smallx",
+        "requested_cpus": "12",
+        "state": "Q"
+      }
+    ],
+    "project_mediumx_jobs": [],
+    "queue_full_attribute_query_timed_out": true,
+    "recent_single_gpu_waits": [
+      {
+        "host": "hopper-16",
+        "job_id": "709195.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/diag_t02_train_six_709195_accounting_01.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/diag_t02_train_six_709195_accounting_01.json",
+          "git_commit": "9e664c5e0e84abdf3d321f454d29283af5be4e53",
+          "metrics_sha256": "4e779ecffa1a2d434bd4fdfe3fd17490ca150289f92680168c6bcdcb0992ae8a",
+          "sha256": "90615602ba2b1679a7c1e4ffbbdf51b8abe73cbe50077d76220e29e9a3c88490"
+        },
+        "wait_minutes": 0.1,
+        "wait_seconds": 6
+      },
+      {
+        "host": "hopper-24",
+        "job_id": "709207.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/g01_test_round2_s01_black_accounting_01.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/g01_test_round2_s01_black_accounting_01.json",
+          "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+          "metrics_sha256": "8f48cf00cffd519135a6b1ac729617acc7b010d192d55834489c69bad74c8ecb",
+          "sha256": "c5b1f394d3c15096b45d0991c0625a4e60f65897ec0cf2b3a752d00cb60ddd55"
+        },
+        "wait_minutes": 0.11666666666666667,
+        "wait_seconds": 7
+      },
+      {
+        "host": "hopper-16",
+        "job_id": "709274.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/diag_t02_train_six_709274_accounting_01.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/diag_t02_train_six_709274_accounting_01.json",
+          "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+          "metrics_sha256": "7f1d2446c5b7441279787d0000142b2bff0c803e8b5752d590788eeb055562de",
+          "sha256": "4a8efa423eb45046a7e7123e5bf5f130b491cec67b6add2ded73c65f7f4b7113"
+        },
+        "wait_minutes": 0.03333333333333333,
+        "wait_seconds": 2
+      },
+      {
+        "host": "hopper-25",
+        "job_id": "709279.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/diag_t02_train_six_709279_accounting_01.json",
+            "warn": [
+              "P5 run used uncommitted changes; see logs/runs/diag_t02_train_six_709279_accounting_01.diff"
+            ]
+          },
+          "exit_code": 0,
+          "file": "results/diag_t02_train_six_709279_accounting_01.json",
+          "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+          "metrics_sha256": "c93b8f48f65dd04e7ed57a07bc6444f66a68f0bdbc5a5ec0fbc3cebe81118b09",
+          "sha256": "f20537d9db1690760a58c3753062740394cc51e36b8bb3005e09526cc0a119f2"
+        },
+        "wait_minutes": 0.6166666666666667,
+        "wait_seconds": 37
+      },
+      {
+        "host": "hopper-16",
+        "job_id": "709289.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/diag_t02_train_six_709289_accounting_01.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/diag_t02_train_six_709289_accounting_01.json",
+          "git_commit": "f6f6d3dcc426f43c508b4dbb3e2cd7729762ab2a",
+          "metrics_sha256": "7a3bcbbb7e6de64bac770b5e51a2eb9f2b100c5a0d2d81beb09c3da1b8d8494c",
+          "sha256": "2205c60b6072bdcdbcf8a2a830ccb64a9cc88364f13fd9ee6c23f0d96824708d"
+        },
+        "wait_minutes": 0.4666666666666667,
+        "wait_seconds": 28
+      },
+      {
+        "host": "hopper-22",
+        "job_id": "709293.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/g01_test_round2_s01_black_accounting_02.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/g01_test_round2_s01_black_accounting_02.json",
+          "git_commit": "19dd077d7cf90f05e8e0e4427d15bb2ae64e00cf",
+          "metrics_sha256": "3607c6e54f5c1708087d84968fb6cc9f6370cd1f93c97d2f88c9493ea38077dd",
+          "sha256": "edaa808173fe701f1f5cc32c97e0643a6f39b950a29ca9b172328313bb635a49"
+        },
+        "wait_minutes": 11.416666666666666,
+        "wait_seconds": 685
+      },
+      {
+        "host": "hopper-28",
+        "job_id": "709294.hopper-m-02",
+        "queue": "smallx",
+        "source": {
+          "audit": {
+            "fail": [],
+            "file": "results/diag_t02_train_six_709294_accounting_01.json",
+            "warn": []
+          },
+          "exit_code": 0,
+          "file": "results/diag_t02_train_six_709294_accounting_01.json",
+          "git_commit": "19dd077d7cf90f05e8e0e4427d15bb2ae64e00cf",
+          "metrics_sha256": "c80347f00dc2825015730c56888d0fa7871b7d1497180ef914cf52278b6f6d8b",
+          "sha256": "3e0df42147ded0a7354c1498a59798dc8f08b9286e496e60f4beea6a325d4501"
+        },
+        "wait_minutes": 0.85,
+        "wait_seconds": 51
+      }
+    ],
+    "smallx_counts": {
+      "H": 0,
+      "Q": 1,
+      "R": 0,
+      "S": 0,
+      "W": 0
+    },
+    "smallx_user_limit": 3,
+    "status": "snapshot_read"
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_cluster_four_gpu_snapshot_02.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_cluster_four_gpu_snapshot_02.json",
+      "git_commit": "a6cf292e10cd7f6a08e5e23e489d164c0768fcc2",
+      "metrics_sha256": "7fdd4a59d660f7e1d2f23d4544cd97dfdbdf05d670ab0543a29e6c0c593c63d6",
+      "sha256": "3f68a006bcb3cb789d854e69c41614699cd07fd6d9c06dd2579723a83ba491ce"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_709195_accounting_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_709195_accounting_01.json",
+      "git_commit": "9e664c5e0e84abdf3d321f454d29283af5be4e53",
+      "metrics_sha256": "4e779ecffa1a2d434bd4fdfe3fd17490ca150289f92680168c6bcdcb0992ae8a",
+      "sha256": "90615602ba2b1679a7c1e4ffbbdf51b8abe73cbe50077d76220e29e9a3c88490"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/g01_test_round2_s01_black_accounting_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/g01_test_round2_s01_black_accounting_01.json",
+      "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+      "metrics_sha256": "8f48cf00cffd519135a6b1ac729617acc7b010d192d55834489c69bad74c8ecb",
+      "sha256": "c5b1f394d3c15096b45d0991c0625a4e60f65897ec0cf2b3a752d00cb60ddd55"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_709274_accounting_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_709274_accounting_01.json",
+      "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+      "metrics_sha256": "7f1d2446c5b7441279787d0000142b2bff0c803e8b5752d590788eeb055562de",
+      "sha256": "4a8efa423eb45046a7e7123e5bf5f130b491cec67b6add2ded73c65f7f4b7113"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_709279_accounting_01.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/diag_t02_train_six_709279_accounting_01.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_709279_accounting_01.json",
+      "git_commit": "c912aeab383a83542d3b3a47c9cd6bc22593f3c4",
+      "metrics_sha256": "c93b8f48f65dd04e7ed57a07bc6444f66a68f0bdbc5a5ec0fbc3cebe81118b09",
+      "sha256": "f20537d9db1690760a58c3753062740394cc51e36b8bb3005e09526cc0a119f2"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_709289_accounting_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_709289_accounting_01.json",
+      "git_commit": "f6f6d3dcc426f43c508b4dbb3e2cd7729762ab2a",
+      "metrics_sha256": "7a3bcbbb7e6de64bac770b5e51a2eb9f2b100c5a0d2d81beb09c3da1b8d8494c",
+      "sha256": "2205c60b6072bdcdbcf8a2a830ccb64a9cc88364f13fd9ee6c23f0d96824708d"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/g01_test_round2_s01_black_accounting_02.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/g01_test_round2_s01_black_accounting_02.json",
+      "git_commit": "19dd077d7cf90f05e8e0e4427d15bb2ae64e00cf",
+      "metrics_sha256": "3607c6e54f5c1708087d84968fb6cc9f6370cd1f93c97d2f88c9493ea38077dd",
+      "sha256": "edaa808173fe701f1f5cc32c97e0643a6f39b950a29ca9b172328313bb635a49"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_t02_train_six_709294_accounting_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_t02_train_six_709294_accounting_01.json",
+      "git_commit": "19dd077d7cf90f05e8e0e4427d15bb2ae64e00cf",
+      "metrics_sha256": "c80347f00dc2825015730c56888d0fa7871b7d1497180ef914cf52278b6f6d8b",
+      "sha256": "3e0df42147ded0a7354c1498a59798dc8f08b9286e496e60f4beea6a325d4501"
+    }
+  ],
+  "_meta": {
+    "name": "diag_cluster_four_gpu_decision_01",
+    "command": [
+      "python3",
+      "-c",
+      "import json,hashlib,os\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nname=os.environ['CVPR_RUN_NAME']; src,ref=audited_result('results/diag_cluster_four_gpu_snapshot_02.json')\nr=src['metrics']['snapshot'];b=Path(r['file']).read_bytes();assert hashlib.sha256(b).hexdigest()==r['sha256'];snapshot=json.loads(b)\nfor k in ('medium_jobs','own_jobs','nodes'):assert snapshot[k]['exit_code']==0 and not snapshot[k]['timed_out']\nmedium=json.loads(snapshot['medium_jobs']['stdout']); jobs=medium.get('Jobs',{});assert isinstance(jobs,dict)\nstates={s:sum(j.get('job_state')==s for j in jobs.values()) for s in ('Q','R','H','W','S')}\ngroup_jobs=[{'job_id':key,'state':v.get('job_state'),'project':v.get('project'),'user':v.get('Job_Owner','').split('@')[0]} for key,v in jobs.items() if v.get('project')=='CFP04-SF-125']\nnodes=json.loads(snapshot['nodes']['stdout'])['nodes'];free=[]\nfor node,v in nodes.items():\n a=v.get('resources_available',{}); used=v.get('resources_assigned',{}); total=a.get('ngpus');busy=used.get('ngpus',0)\n if type(total) not in (int,float) or type(busy) not in (int,float):continue\n n=total-busy;st=v.get('state','')\n if n>=4 and not any(x in st.split(',') for x in ('offline','down','unknown','maintenance','job-exclusive')):\n  free.append({'node':node,'state':st,'gpu_model':a.get('gpu_model'),'gpu_total':total,'gpu_assigned':busy,'gpu_unassigned':n,'cpu_unassigned':a.get('ncpus',0)-used.get('ncpus',0),'memory_available':a.get('mem'),'memory_assigned':used.get('mem'),'scope':'PBS unassigned resources, not proven usable rendering GPUs'})\nown=[]\nfor line in snapshot['own_jobs']['stdout'].splitlines():\n cols=line.split()\n if len(cols)>=11 and cols[0].split('.')[0].isdigit():own.append({'job_id_display':cols[0],'queue':cols[2],'job_name_display':cols[3],'state':cols[-2],'requested_cpus':cols[6],'elapsed_display':cols[-1]})\nwaits=[];sources=[ref]\nfor n in ('diag_t02_train_six_709195_accounting_01','g01_test_round2_s01_black_accounting_01','diag_t02_train_six_709274_accounting_01','diag_t02_train_six_709279_accounting_01','diag_t02_train_six_709289_accounting_01','g01_test_round2_s01_black_accounting_02','diag_t02_train_six_709294_accounting_01'):\n d,rf=audited_result('results/'+n+'.json');sources.append(rf)\n for job,seconds in d['metrics']['queue_wait_seconds_by_job'].items():\n  wait=next(j for j in d['config']['jobs'] if j['job_id']==job);fields=wait['fields'];assert fields['Resource_List.ngpus']=='1'\n  waits.append({'job_id':job,'queue':fields['queue'],'wait_seconds':seconds,'wait_minutes':seconds/60,'host':fields.get('exec_host','').split('/')[0],'source':rf})\nm={'status':'snapshot_read','mediumx_state_counts':states,'project_mediumx_jobs':group_jobs,'eligible_nodes_with_ge4_unassigned_gpus':free,'own_jobs':own,'smallx_counts':{s:sum(j['queue']=='smallx' and j['state']==s for j in own) for s in ('Q','R','H','W','S')},'smallx_user_limit':3,'recent_single_gpu_waits':waits,'queue_full_attribute_query_timed_out':True,'decision':'Prepare and submit one unpinned 4-GPU shared-queue job after unchanged-unit checks and mixed-budget guard pass; cancel if still never started at 2026-11-09 22:00 America/New_York. Empty queue exits immediately; bad cards retired; same priority/claims as singles.','limitations':'Snapshot only; unassigned GPUs do not prove renderer health or guarantee a start. mediumx Jobs absent in successful destination query means no returned jobs. qstat-Qf timed out; no queue limits inferred from it.'}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'name':name,'snapshot':r},'sources':sources},indent=2,sort_keys=True)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T06:02:47",
+    "log_path": "logs/runs/diag_cluster_four_gpu_decision_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "248f12c042b25687ed703117c1a4d45e8c640847",
+    "git_dirty": false,
+    "end": "2026-11-10T06:02:50",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "ee050285e86c81c7db35530646b7173d85610c29dc2e928d942635ab648d9644"
+  }
+}

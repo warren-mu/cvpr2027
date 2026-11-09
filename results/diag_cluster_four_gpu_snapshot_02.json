@@ -1,0 +1,83 @@
+{
+  "metrics": {
+    "status": "query_incomplete",
+    "queries": {
+      "medium_jobs": {
+        "command": [
+          "qstat",
+          "-f",
+          "-F",
+          "json",
+          "mediumx"
+        ],
+        "elapsed_seconds": 20.074983449012507,
+        "exit_code": 0,
+        "timed_out": false
+      },
+      "queues": {
+        "command": [
+          "qstat",
+          "-Qf",
+          "mediumx",
+          "smallx"
+        ],
+        "elapsed_seconds": 30.02414327301085,
+        "exit_code": null,
+        "timed_out": true
+      },
+      "own_jobs": {
+        "command": [
+          "qstat",
+          "-u",
+          "e1583364"
+        ],
+        "elapsed_seconds": 25.07735573797254,
+        "exit_code": 0,
+        "timed_out": false
+      },
+      "nodes": {
+        "command": [
+          "pbsnodes",
+          "-av",
+          "-F",
+          "json"
+        ],
+        "elapsed_seconds": 25.079825557011645,
+        "exit_code": 0,
+        "timed_out": false
+      }
+    },
+    "snapshot": {
+      "file": "logs/review/diag_cluster_four_gpu_snapshot_02/query_snapshot.json",
+      "sha256": "415c785f9c7b9c25f00162c7e1102878887d90cdc1a071a5a6c66739a786132f"
+    },
+    "gpu_used": false
+  },
+  "config": {
+    "name": "diag_cluster_four_gpu_snapshot_02",
+    "query_timeout_seconds": 30,
+    "scope": "current PBS read-only snapshot; unknown queries are not zero queue or idle resources"
+  },
+  "_meta": {
+    "name": "diag_cluster_four_gpu_snapshot_02",
+    "command": [
+      "python3",
+      "-c",
+      "import concurrent.futures,subprocess,time,json,hashlib,os\nfrom pathlib import Path\nname=os.environ['CVPR_RUN_NAME']; out=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)\nqueries={'medium_jobs':['qstat','-f','-F','json','mediumx'],'queues':['qstat','-Qf','mediumx','smallx'],'own_jobs':['qstat','-u','e1583364'],'nodes':['pbsnodes','-av','-F','json']}\ndef query(item):\n label,cmd=item; t=time.monotonic()\n try:\n  p=subprocess.run(cmd,capture_output=True,text=True,timeout=30);return label,dict(command=cmd,elapsed_seconds=time.monotonic()-t,exit_code=p.returncode,stdout=p.stdout,stderr=p.stderr,timed_out=False)\n except subprocess.TimeoutExpired as e:\n  return label,dict(command=cmd,elapsed_seconds=time.monotonic()-t,exit_code=None,stdout=(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else (e.stdout or ''),stderr=(e.stderr or b'').decode() if isinstance(e.stderr,bytes) else (e.stderr or ''),timed_out=True)\nwith concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: observed=dict(pool.map(query,queries.items()))\np=out/'query_snapshot.json';b=(json.dumps(observed,indent=2,sort_keys=True)+'\\n').encode();p.write_bytes(b)\nmetrics={'status':'complete' if all(v['exit_code']==0 and not v['timed_out'] for v in observed.values()) else 'query_incomplete','queries':{k:{f:v[f] for f in ('command','elapsed_seconds','exit_code','timed_out')} for k,v in observed.items()},'snapshot':{'file':str(p),'sha256':hashlib.sha256(b).hexdigest()},'gpu_used':False}\nPath('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'name':name,'query_timeout_seconds':30,'scope':'current PBS read-only snapshot; unknown queries are not zero queue or idle resources'}},indent=2)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T05:59:41",
+    "log_path": "logs/runs/diag_cluster_four_gpu_snapshot_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "a6cf292e10cd7f6a08e5e23e489d164c0768fcc2",
+    "git_dirty": false,
+    "end": "2026-11-10T06:00:14",
+    "duration_sec": 30.2,
+    "exit_code": 0,
+    "metrics_sha256": "7fdd4a59d660f7e1d2f23d4544cd97dfdbdf05d670ab0543a29e6c0c593c63d6"
+  }
+}
