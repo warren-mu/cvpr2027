@@ -15,11 +15,13 @@ from src.tools.t01v2_posthoc_solvability import verified_passed_rows
 
 RANKED_CHECKPOINT_MODULE = 'src.tools.t01v2_flip_ranked_review_checkpoint'
 STAY_CHECKPOINT_MODULE = 'src.tools.t01v2_stay_priority_review_checkpoint'
+G01_CHECKPOINT_MODULE = 'src.tools.t01v2_g01_review_checkpoint'
 
 
 def _checkpoint_module(command):
     """Only explicit independently checked producers, never an argument hint."""
-    for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE, STAY_CHECKPOINT_MODULE):
+    for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE,
+                   STAY_CHECKPOINT_MODULE, G01_CHECKPOINT_MODULE):
         try:
             merge.producer_arguments(command, module)
         except ValueError:
@@ -168,13 +170,16 @@ def _container(path):
     return data, reference, entries
 
 
-def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file=None, ranked=False, source_policy=None):
+def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file=None,
+                        ranked=False, source_policy=None, g01=False):
     """Return immutable evidence inputs; caller separately owns review/GPU gates.
 
     ``pair_file`` disambiguates repeated pair IDs across explicit source runs.
     A Direct pair has no measured all-action catalogue: reachable=None means
     the renderer must make and authenticate a fresh native query, not invent it.
     """
+    if ranked and g01:
+        raise ValueError('G01 and ranked source authentication cannot be combined')
     matches = [entry for entry in entries if entry.get('pair_id') == pair_id
                and (pair_file is None or entry['pair_reference']['file'] == pair_file)]
     if len(matches) != 1:
@@ -182,7 +187,10 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
     entry = matches[0]
     data, source_ref = merge.load_source(merge.ROOT / entry['source_file'])
     cfg, measured = data['config'], data['metrics']
-    if ranked:
+    if g01:
+        from . import pair_v2_g01_policy
+        pair_v2_g01_policy.validate_source(cfg, measured)
+    elif ranked:
         if source_policy is None:
             from . import pair_v2_flip_ranked_policy as source_policy
         ranked_policy = source_policy
@@ -206,7 +214,10 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
             or not merge.final_pair_eligible(row.get('kind'), cfg.get('solvability_version'))):
         raise ValueError('Published pair identity or required current construction policy differs')
     association = None
-    if ranked:
+    if g01:
+        from src.tools import t01v2_g01_association
+        association = t01v2_g01_association.verify_pair_controller(data, source_ref, compact, row, pair_path)
+    elif ranked:
         from src.tools import t01v2_controller_association as controllers
         previous_policy = controllers.policy
         try:
@@ -214,6 +225,7 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
             association = controllers.verify_pair_controller(data, source_ref, compact, row, pair_path)
         finally:
             controllers.policy = previous_policy
+    if ranked or g01:
         published = entry.get('controller_preflight_association')
         if (not isinstance(published, dict)
                 or any(published.get(key) != value for key, value in association.items() if key != 'source_reference')):
@@ -283,7 +295,7 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
         'independent_verification': checked, 'partial_source': eligibility['partial_source'],
         'human_review_status': 'not_inferred', 'human_review_approved': None,
         'execution_authorized': False, 'full_t02_acceptance': None}
-    if ranked:
+    if ranked or g01:
         from .pair_v2_fixed_labels import validate_table_package
         package['controller_preflight_association'] = association
         package['fixed_label_verification'] = validate_table_package(package)
@@ -291,7 +303,7 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
 
 
 def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
-    """Load old sources unchanged, or explicitly opt into ranked v2 proofs.
+    """Load old sources unchanged, or opt into their exact checkpoint proof.
 
     The context encloses both load_source and check_pair: the independent
     checker binds the exact authenticated source in its private cache. Merely
@@ -300,6 +312,10 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
     container, reference, entries = _container(source_result)
     module = (_checkpoint_module(container['_meta'].get('command'))
               if container.get('metrics', {}).get('kind') == 't01v2_review_checkpoint' else None)
+    if module == G01_CHECKPOINT_MODULE:
+        from src.tools.t01v2_g01_review_checkpoint import source_support
+        with source_support():
+            return _load_reviewed_pair(container, reference, entries, pair_id, pair_file=pair_file, g01=True)
     if module == STAY_CHECKPOINT_MODULE:
         from src.tools.t01v2_stay_priority_review_checkpoint import source_support
         from . import pair_v2_stay_priority_policy as source_policy
