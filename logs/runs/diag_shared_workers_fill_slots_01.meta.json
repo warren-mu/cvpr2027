@@ -1,0 +1,28 @@
+{
+  "name": "diag_shared_workers_fill_slots_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_shared_workers_fill_slots_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib,subprocess\nfor n in ['t02_export_cache_six05_08_01_retry1','t02_export_train_six_11','t02_export_train_six_12']:\n p=pathlib.Path('results')/(n+'.json')\n if p.exists():\n  d=json.loads(p.read_text());m=d.get('metrics',{});print(json.dumps({'name':n,'meta':{k:d.get('_meta',{}).get(k) for k in ['end','exit_code','duration_sec','host']},'status':m.get('status'),'black_frame_detected':m.get('black_frame_detected'),'cleanup_errors':m.get('cleanup_errors')},sort_keys=True))\nr=subprocess.run(['qstat','-u','e1583364'],capture_output=True,text=True,timeout=30);print(r.stdout);print(r.stderr)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T06:46:45",
+  "log_path": "logs/runs/diag_shared_workers_fill_slots_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "2a3b10eb20361bb467918a9017d5e579d78b79d9",
+  "git_dirty": false,
+  "end": "2026-11-10T06:47:12",
+  "duration_sec": 25.3,
+  "exit_code": 0,
+  "metrics_sha256": "157eeee40e677b5669c76366af7d3d4f37ba8946ee401544c6dc8201bba597f0"
+}

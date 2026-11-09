@@ -1,0 +1,21 @@
+# run_logged: python3 -m src.tools.record_command --name diag_shared_workers_fill_slots_01 -- python3 -c import json,pathlib,subprocess
+for n in ['t02_export_cache_six05_08_01_retry1','t02_export_train_six_11','t02_export_train_six_12']:
+ p=pathlib.Path('results')/(n+'.json')
+ if p.exists():
+  d=json.loads(p.read_text());m=d.get('metrics',{});print(json.dumps({'name':n,'meta':{k:d.get('_meta',{}).get(k) for k in ['end','exit_code','duration_sec','host']},'status':m.get('status'),'black_frame_detected':m.get('black_frame_detected'),'cleanup_errors':m.get('cleanup_errors')},sort_keys=True))
+r=subprocess.run(['qstat','-u','e1583364'],capture_output=True,text=True,timeout=30);print(r.stdout);print(r.stderr)
+
+# start: 2026-11-10T06:46:45
+
+hopper-m-02: 
+                                                            Req'd  Req'd   Elap
+Job ID          Username Queue    Jobname    SessID NDS TSK Memory Time  S Time
+--------------- -------- -------- ---------- ------ --- --- ------ ----- - -----
+706017.hopper-* e1583364 small    gpu_hold      --    1  24  450gb 12:00 Q   -- 
+709335.hopper-* e1583364 smallx   cvpr27_4e*    --    1  12  225gb 01:28 Q   -- 
+709339.hopper-* e1583364 smallx   cvpr27_31* 25846*   1  12  225gb 00:20 R 00:05
+709341.hopper-* e1583364 smallx   cvpr27_80* 899434   1  12  225gb 00:20 R 00:05
+
+
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 25.15566851798212}
+# exit_code: 0
