@@ -17,3 +17,21 @@ E2E 已用 0.023333333333333334 / 4 GPU·小时。下一次 GPU 运行的用量�
 原第1步失败完整保留。人类现已批准 Direct 的隐藏锚点差异状态作为分叉、不丢弃；修订代码后将重新导出同一固定五对，然后按步骤继续，不删除失败输入。
 
 首对失败发生在已有帧 000409/000412。锚点 TissueBox 和两本候选 Book 的掩码均为 0；158 个像素的通道差超过 3，最大差 177，集中在画面右下方两把椅子及餐桌边缘。两把椅子的已记录位置分别相差约 0.122 mm、0.052 mm，分割边界也有变化。因此主要差异并不落在被锚点压住的候选本体上，更符合非候选物体的细微位姿及边缘渲染差异；仅凭现有两帧不能确认锚点阴影的因果贡献。来源：results/smoke_e2e_existing_difference_01.json 及其 run_logged 日志；未新增工具、未另行渲染。
+
+
+## Supplement8/9 continuation: E2E step1 PASS
+
+PBS707497 on hopper-26 completed the same five reviewed 100-degree Direct pairs, D=4, native checks1–4 and the approved20-state fresh-process cache smoke. Exit0, no errors, no cleanup errors. Formal T02 200-state acceptance remains unclaimed.
+
+| Pair | Exported states | Worker seconds | Hidden-anchor divergent Direct states |
+|---|---:|---:|---:|
+| floorplan203_00038 | 73 | 268.8341847109841 | 4 |
+| floorplan203_00039 | 73 | 268.2378776760306 | 10 |
+| floorplan203_00041 | 73 | 268.1510090410011 | 7 |
+| floorplan203_00080 | 73 | 268.00961209391244 | 2 |
+| floorplan203_00081 | 73 | 270.50699310505297 | 1 |
+
+These Direct divergent states retain their own world images under supplement8; they are counted, not filtered. Rendering uses supplement9 paused/frozen construction and retains readback deviations.
+PBS accounting:0.4675 GPUh and67 seconds queue wait for707497. Failed707395 and black-gate707488 remain preserved;707488→707497 is recorded in the existing retry evidence.
+Sources: results/smoke_e2e_views_02_r8335e243.json, results/smoke_e2e_views_accounting_02.json, results/smoke_e2e_contract_cpu_02.json (64 tests passed).
+Step2 is next; steps3–5 remain unrun. T0/T3 reward confirmed by human: select correct1/wrong0, observe−0.05, invalid0, no format bonus. The five pairs are direct/tau0: **证据前逻辑未覆盖**; Look requires a later step5 run.
