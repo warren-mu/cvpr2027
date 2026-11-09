@@ -1,0 +1,121 @@
+# run_logged: python3 -m src.tools.record_command --name diag_final_look_reports_01 -- python3 -c """Publish the ended, authenticated frozen59 diagnosis into existing task reports."""
+import datetime
+import json
+import os
+from collections import Counter
+from pathlib import Path
+from src.tools.t01_partition import audited_result, sha_file
+
+root = Path.cwd()
+name = 'diag_final_look_reports_01'
+assert os.environ.get('CVPR_RUN_NAME') == name
+refs = {}
+source_results = {}
+for run in ('diag_look_table_census_latest_01', 'diag_look_latest_accounting_report_01',
+            'diag_g01_stage_report_01', 'diag_e2e_look_non_anchor_01',
+            'diag_e2e_look_anchor_projection_01'):
+    data, ref = audited_result(root / 'results' / (run + '.json'))
+    assert data['_meta']['exit_code'] == 0 and data['_meta'].get('end')
+    refs[run] = ref
+    source_results[run] = data
+
+census_path = root / 'logs/review/diag_look_table_census_latest_01/report.json'
+census = json.loads(census_path.read_text())
+usage_path = root / 'logs/review/diag_look_latest_accounting_report_01/report.json'
+usage = json.loads(usage_path.read_text())
+def original_summary(run, marker):
+    log_path = root / source_results[run]['_meta']['log_path']
+    rows = [json.loads(line[len(marker):]) for line in log_path.read_text().splitlines()
+            if line.startswith(marker)]
+    assert len(rows) == 1
+    return rows[0]
+
+census_summary = original_summary('diag_look_table_census_latest_01', 'LATEST_LOOK_TABLE_CENSUS_SUMMARY: ')
+usage_summary = original_summary('diag_look_latest_accounting_report_01', 'LOOK_LATEST_ACCOUNTING_SUMMARY_JSON: ')
+assert census_summary['report'] == {'file': str(census_path.relative_to(root)), 'sha256': sha_file(census_path)}
+assert usage_summary['report'] == {'file': str(usage_path.relative_to(root)), 'sha256': sha_file(usage_path)}
+assert census_summary['cohorts'] == census['cohorts']
+assert usage_summary['new_diagnostic_charged_GPUh'] == usage['new_diagnostic_charged_GPUh']
+assert usage_summary['job_count'] == len(usage['jobs'])
+assert usage['census_report'] == {'file': str(census_path.relative_to(root)), 'sha256': sha_file(census_path)}
+assert census['cohorts']['latest']['denominator'] == len(census['pairs']) == 59
+assert census['thresholds_changed'] is False and census['cache_or_training_authorized'] is False
+assert census['full_T02_acceptance'] is None
+
+def check_proofs(value):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in ('authentication_error', 'authentication_errors'):
+                assert not item, (key, item)
+            if key == 'conflicting_trigger_and_complete_observations':
+                assert item is False
+            check_proofs(item)
+    elif isinstance(value, list):
+        for item in value:
+            check_proofs(item)
+
+check_proofs(census)
+inventory_path = root / census['frozen_inventory']['file']
+assert sha_file(inventory_path) == census['frozen_inventory']['sha256']
+inventory = json.loads(inventory_path.read_text())
+classes = dict(Counter(item['kind'] for item in inventory['pairs']))
+assert inventory['unique_count'] == len(inventory['pairs']) == 150
+assert classes == {'direct_flip': 33, 'direct_stay': 58, 'look_flip': 41, 'look_stay': 18}
+
+count = census['cohorts']['latest']['counts']
+trigger = count['triggered_non_anchor_divergent']
+complete = count['completed_without_this_trigger']
+unknown = count['unknown_timeout_or_other_error']
+cost = usage['new_diagnostic_charged_GPUh']
+timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+heading = '## 最终夜间 Look 诊断（固定 inventory05，59 对）'
+overview = f'''{heading}
+
+截至 inventory05，按原 proposal_identity 去重的独立构造库存为150对：DirectFlip33、DirectStay58、LookFlip41、LookStay18。本次完整视角诊断覆盖其中全部59对Look；原36和50快照原样保留。
+
+| 原规则下的诊断结果 | 对数 |
+|---|---:|
+| 确认触发锚点不可见且画面通道差 >3 | {trigger} |
+| 完整原生视角表未触发该项 | {complete} |
+| 原严格检查失败或导出未完成，无法判定 | {unknown} |
+
+[最终59对逐对报告](../logs/review/diag_look_table_census_latest_01/report.md)保留全部失败、未知及重试来源。未知不算未触发；未触发这一项也不授予完整T02、缓存或训练池验收。两个严格距离失败的CPU像素谓词诊断仍单列，没有提升主表状态。
+
+首个Look E2E失败对FloorPlan203_00002在后续D4视角出现239个通道差>3的像素，最大差77，集中在右下角地面（x241–254、y235–254）。45个非锚点物体位姿完全一致，变化区域位于地面内部，邻近离屏w1锚点Box的投影；差异通道均在w1变暗。证据支持局部光照变化，但不能仅凭现有RGB区分阴影或反光、或确认唯一光路。[原图与差异](../logs/review/diag_e2e_look_non_anchor_01/original_frames_and_difference.png)。
+
+本轮视角诊断实际计费{cost:.9f} GPU·小时，涵盖{len(usage['jobs'])}次PBS分配及全部黑帧重试；复用的原E2E707904不重复计费。[逐作业排队与费用](../logs/review/diag_look_latest_accounting_report_01/report.md)。原16 GPU·小时子预算及60共享预算未变。
+
+科学阈值、任务结构和固定五对Look E2E输入均未变。固定Look E2E仍停在第1步；新Look池上第2–5步及新KL设置的T0/T3训练尚未运行。G01阶段报告已单列150对构造库存与未达到的正式数量、cap和平衡目标；没有冻结训练池。等待人类决定后续规则处理。
+
+---
+
+以下为此前固定快照和阶段记录，按各自截止范围解读。
+
+'''
+
+for task in ('T01v2', 'E2E'):
+    path = root / 'tasks' / (task + '.report.md')
+    original = path.read_text()
+    assert heading not in original
+    path.write_text(overview + original)
+
+path = root / 'tasks/G01.report.md'
+original = path.read_text()
+start = original.index('独立构造只认证起点和记录的见证动作')
+end = original.index('\n\n完整表中触发', start)
+replacement = f'''独立构造只认证起点和记录的见证动作，不能代替完整D4可达视角检查。固定inventory05的全部59对Look已完成本轮诊断归档：{trigger}确认触发、{complete}完整原生表未触发该项、{unknown}严格失败或未完成而无法判定。全部来源认证无错误、无相互冲突分类；原36/50历史快照保留。[最终59报告](../logs/review/diag_look_table_census_latest_01/report.md)。两个距离失败的另行CPU像素谓词诊断不提升主表或严格T02状态。该诊断额外实际计费{cost:.9f}GPU·小时（另属T01v2，不包含在本报告4.252777778 G01费用中），[费用与排队表](../logs/review/diag_look_latest_accounting_report_01/report.md)。'''
+path.write_text(original[:start] + replacement + original[end:])
+
+state = usage['budget_snapshot']
+with (root / 'STATUS.md').open('a') as stream:
+    stream.write('\n\n### ' + timestamp + ' — final frozen59 Look diagnosis, awaiting human review\n\n')
+    stream.write(f'Inventory05:150 independent construction pairs (DF33/DS58/LF41/LS18),59 Look. Final original-rule diagnostic: {trigger} confirmed non_anchor_divergent, {complete} complete native tables without this trigger, {unknown} original strict failures/incomplete exports retained as unknown. No run/row authentication errors or trigger/complete conflicts. Original36/50 records unchanged. Final report: logs/review/diag_look_table_census_latest_01/report.md.\n\n')
+    stream.write(f'All {len(usage["jobs"])} explicit diagnostic allocations have canonical final accounting, total {cost} chargedGPUh including all black retries, excluding reused originalE2E707904. G01 ended allocation total remains4.252777777777778GPUh. Actual-or-reserved phase snapshot: '+json.dumps(state['accounted_or_reserved_by_subbudget'],sort_keys=True)+f'; shared {state["accounted_or_reserved_total"]}/60. Queue/cost table: logs/review/diag_look_latest_accounting_report_01/report.md.\n\n')
+    stream.write('FirstLook E2E evidence localizes239 >3 pixels to the bottom-right floor near the offscreen anchor projection, with45 other object poses exact; shadow versus reflection remains unproven. Rules and fixed E2E input unchanged; newLook T0/T3 remains unrun because step1 is blocked. No fourth G01 generation batch or test-scene generation was submitted. T01v2/E2E/G01 reports updated for morning review. The original08:15 ET night summary is retained unchanged.\n')
+
+print('FINAL_LOOK_REPORTS_JSON: ' + json.dumps({'created_at_utc': timestamp, 'census': census['cohorts']['latest'], 'diagnostic_charged_GPUh': cost, 'source_results': refs, 'task_reports': ['tasks/T01v2.report.md','tasks/E2E.report.md','tasks/G01.report.md']}, sort_keys=True))
+
+# start: 2026-11-09T22:24:29
+FINAL_LOOK_REPORTS_JSON: {"census": {"counts": {"completed_without_this_trigger": 28, "triggered_non_anchor_divergent": 24, "unknown_timeout_or_other_error": 7}, "denominator": 59, "triggered_fraction_of_frozen_cohort": 0.4067796610169492}, "created_at_utc": "2026-11-09T14:24:31.453446+00:00", "diagnostic_charged_GPUh": 3.3422222222222224, "source_results": {"diag_e2e_look_anchor_projection_01": {"audit": {"fail": [], "file": "results/diag_e2e_look_anchor_projection_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_e2e_look_anchor_projection_01.diff"]}, "exit_code": 0, "file": "results/diag_e2e_look_anchor_projection_01.json", "git_commit": "b3db9bff4871fc638f602c58e437057d16a7830c", "metrics_sha256": "a787094a047eb0cea7a158490b2bc3effb789a7a88f7ca2d41265add22f2fac8", "sha256": "4ecbaa302a8c9a121c506a2fca45de0b151cf4c356d2c23f7722b1796ff0702c"}, "diag_e2e_look_non_anchor_01": {"audit": {"fail": [], "file": "results/diag_e2e_look_non_anchor_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_e2e_look_non_anchor_01.diff"]}, "exit_code": 0, "file": "results/diag_e2e_look_non_anchor_01.json", "git_commit": "b3db9bff4871fc638f602c58e437057d16a7830c", "metrics_sha256": "9ff3c3ed338e7b1d6d970f412e5130dfc9ff009472f5217b9a9888f844d33029", "sha256": "fee237f2ad5b203413bd24b0999f694e106b01c202f442c27213a32795838727"}, "diag_g01_stage_report_01": {"audit": {"fail": [], "file": "results/diag_g01_stage_report_01.json", "warn": []}, "exit_code": 0, "file": "results/diag_g01_stage_report_01.json", "git_commit": "93b462fd36eebc9619dfb154ea3618a17bc14aaa", "metrics_sha256": "0679eb92a3d2501775858cfe8a20c8066df48f100cfd89cef2581a7c037221b2", "sha256": "7c1ceb5e5ade55cf2dcb8bd819006de18ec63e8e3d895c29b0a9f1d5d5592aef"}, "diag_look_latest_accounting_report_01": {"audit": {"fail": [], "file": "results/diag_look_latest_accounting_report_01.json", "warn": []}, "exit_code": 0, "file": "results/diag_look_latest_accounting_report_01.json", "git_commit": "5492a61fd92842887dbaf25a96b98ea4e0a39c14", "metrics_sha256": "5e7ac694598de5ef4924aa5f72b01d390b93206c2ef94155d8c4beed6ce5d753", "sha256": "962b3381384f02f640098d93c6df8aadaa90c8aa2e0a9b7c1716b75cea540237"}, "diag_look_table_census_latest_01": {"audit": {"fail": [], "file": "results/diag_look_table_census_latest_01.json", "warn": []}, "exit_code": 0, "file": "results/diag_look_table_census_latest_01.json", "git_commit": "5492a61fd92842887dbaf25a96b98ea4e0a39c14", "metrics_sha256": "0fb1a2cda24a713c281de26d7bc7873c1068cc2984acdca3a4b2d7c7b10de8de", "sha256": "9db2909892d395605b4beda616d06c879b89569ff17ec357a5e3b04914dac187"}}, "task_reports": ["tasks/T01v2.report.md", "tasks/E2E.report.md", "tasks/G01.report.md"]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.18086851300904527}
+# exit_code: 0
