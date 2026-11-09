@@ -1,0 +1,22 @@
+{
+  "name": "diag_g01_physics_distance_report_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib,os\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nname=os.environ['CVPR_RUN_NAME'];d,ref=audited_result('results/diag_g01_physics_first_round_02.json');assert d['_meta']['exit_code']==0 and d['metrics']['status']=='complete'\nr=d['metrics']['report'];b=Path(r['file']).read_bytes();assert hashlib.sha256(b).hexdigest()==r['sha256'];data=json.loads(b)\ndef dist(v):\n return '未知' if not v['observed'] else f\"{v['median_m']:.3f} [{v['min_m']:.3f}, {v['max_m']:.3f}] (n={v['observed']})\"\nlines=['# 首轮物理拒绝细分（CPU读取原记录）','','原始计次提议与未计次的放置重试分开；锚点/其他物体超限可重叠。这些是源日志记载的位移检查，不证明碰撞因果；未保留的落定坐标不补齐。','','|批次/类别|提议|物理拒绝|锚点>2cm|其他>1cm|重叠|已测其他拒因/未知|放置失败调用/有引用调用|','|---|---:|---:|---:|---:|---:|---:|---:|']\nfor g in data['groups']:\n f=g['failure_subtypes_nonexclusive'];c=g['native_call_status'];lines.append(f\"|{g['batch']}/{g['proposal_class']}|{g['counted_proposals']}|{g['physical_failures']}|{f['anchor_above_2cm']}|{f['other_above_1cm']}|{f['both_anchor_and_other']}|{f['neither_of_these_measured_displacements']}/{g['physical_failures_without_positive_excess_and_with_unknown_measurement']}|{c.get('failed',0)}/{sum(c.values())}|\")\nlines+=['','以下列每组最常出现的五种非锚点物体；按不同计次提议数排序。距离单位米，格式为中位数[min,max]和有实际记录的样本数。请求位置距离是单独的几何记录，不是落定后距离。','','|批次/类别|物体类型|涉及提议数|落定后到锚点的实际中心距离|基准物体到请求锚点位置距离|','|---|---|---:|---|---|']\nfor g in data['groups']:\n for v in g['other_object_types'][:5]:lines.append(f\"|{g['batch']}/{g['proposal_class']}|{v['object_type']}|{v['distinct_counted_proposals']}|{dist(v['post_settling_center_distance'])}|{dist(v['requested_anchor_to_baseline_object_distance'])}|\")\nlines+=['','原快照/Controller/PID绑定、完整逐例引用及未知覆盖见 '+r['file']+'。没有修改阈值或执行新的渲染。','']\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False);p=out/'report.md';p.write_text('\\n'.join(lines))\nm={'status':'complete','report':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'groups':d['metrics']['groups'],'scope':'Formatting original CPU diagnostic values; no new data or acceptance'}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'name':name},'sources':[ref]},indent=2,sort_keys=True)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T06:20:16",
+  "log_path": "logs/runs/diag_g01_physics_distance_report_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "1d2f5b61073c678662063e77188313b93a69432c",
+  "git_dirty": false,
+  "end": "2026-11-10T06:20:18",
+  "duration_sec": 2.0,
+  "exit_code": 0,
+  "metrics_sha256": "f1dcbd214bb3e0cf5d534eee9ad227aa6edc8a966f54d6a3b2557aa959589a79"
+}

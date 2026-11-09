@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "status": "original_invalid_aggregate_preserved",
+    "archive": {
+      "file": "results/_archive/diag_g01_physics_first_round_01.missing_source_metrics_sha256.json",
+      "sha256": "ab2a90b3a8fa1850569aafd083768d29938ecb493c32683beb3f700376175943"
+    },
+    "original_audit": {
+      "file": "results/diag_g01_physics_first_round_01.json",
+      "fail": [
+        "P8 source changed since aggregation: results/gen_test_round2_prepare_01_retry3_funnel.json"
+      ],
+      "warn": []
+    },
+    "original_source_file_hash_unchanged": true,
+    "reason": "Diagnostic producer omitted parent metrics_sha256 reference. Original numeric metrics/log/meta/review remain unchanged; corrected producer will run under a new name.",
+    "original_log": "logs/runs/diag_g01_physics_first_round_01.log",
+    "original_meta": "logs/runs/diag_g01_physics_first_round_01.meta.json",
+    "original_review": "logs/review/diag_g01_physics_first_round_01/",
+    "research_results_changed": false
+  },
+  "config": {
+    "name": "diag_g01_physics_source_schema_archive_01",
+    "scope": "byte-preserving archival of original provenance failure, not scientific acceptance"
+  },
+  "_meta": {
+    "name": "diag_g01_physics_source_schema_archive_01",
+    "command": [
+      "python3",
+      "-c",
+      "import importlib.util,json,hashlib,os\nfrom pathlib import Path\nname=os.environ['CVPR_RUN_NAME'];p=Path('results/diag_g01_physics_first_round_01.json');body=p.read_bytes();data=json.loads(body)\nspec=importlib.util.spec_from_file_location('original_provenance_audit',Path('scripts/audit_provenance.py'));mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)\nverdict=mod.audit_file(str(p.resolve()))\nassert verdict['fail']==['P8 source changed since aggregation: results/gen_test_round2_prepare_01_retry3_funnel.json']\nref=next(s for s in data['sources'] if s['file']=='results/gen_test_round2_prepare_01_retry3_funnel.json');assert 'metrics_sha256' not in ref\nassert hashlib.sha256(Path(ref['file']).read_bytes()).hexdigest()==ref['sha256'],'Original source changed; do not classify as metadata omission'\narchive=Path('results/_archive/diag_g01_physics_first_round_01.missing_source_metrics_sha256.json');assert not archive.exists();archive.parent.mkdir(exist_ok=True);p.rename(archive)\nassert archive.read_bytes()==body\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False);(out/'original_audit.json').write_text(json.dumps(verdict,indent=2)+'\\n')\nm={'status':'original_invalid_aggregate_preserved','archive':{'file':str(archive),'sha256':hashlib.sha256(body).hexdigest()},'original_audit':verdict,'original_source_file_hash_unchanged':True,'reason':'Diagnostic producer omitted parent metrics_sha256 reference. Original numeric metrics/log/meta/review remain unchanged; corrected producer will run under a new name.','original_log':data['_meta']['log_path'],'original_meta':'logs/runs/diag_g01_physics_first_round_01.meta.json','original_review':'logs/review/diag_g01_physics_first_round_01/','research_results_changed':False}\nPath('results',name+'.json').write_text(json.dumps({'metrics':m,'config':{'name':name,'scope':'byte-preserving archival of original provenance failure, not scientific acceptance'}},indent=2)+'\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(m,sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T06:15:04",
+    "log_path": "logs/runs/diag_g01_physics_source_schema_archive_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "1d2f5b61073c678662063e77188313b93a69432c",
+    "git_dirty": false,
+    "end": "2026-11-10T06:15:06",
+    "duration_sec": 1.6,
+    "exit_code": 0,
+    "metrics_sha256": "e80241333a4ca9a12f69fa4eb1881c210b25d609325e23d15adeba12bc7a8070"
+  }
+}
