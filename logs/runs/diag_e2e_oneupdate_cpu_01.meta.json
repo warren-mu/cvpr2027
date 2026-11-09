@@ -1,0 +1,28 @@
+{
+  "name": "diag_e2e_oneupdate_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_e2e_oneupdate_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest,sys\nloader=unittest.TestLoader()\nsuite=unittest.TestSuite([loader.discover('tests',pattern=p) for p in ['test_smoke_e2e_pilot.py','test_smoke_e2e_pilot_contract.py']])\nr=unittest.TextTestRunner(verbosity=1).run(suite)\nsys.exit(not r.wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T07:53:35",
+  "log_path": "logs/runs/diag_e2e_oneupdate_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "4466e7a9e78381449f946dc91089c2ef937cdf44",
+  "git_dirty": false,
+  "end": "2026-11-10T07:53:40",
+  "duration_sec": 4.2,
+  "exit_code": 0,
+  "metrics_sha256": "0ea0be1a8b84aa335d03b8a96f931706d53b219343d2eaad4d2a847672b8dd96"
+}

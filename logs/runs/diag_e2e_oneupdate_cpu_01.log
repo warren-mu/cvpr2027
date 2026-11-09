@@ -1,0 +1,13 @@
+# run_logged: python3 -m src.tools.record_command --name diag_e2e_oneupdate_cpu_01 -- python3 -c import unittest,sys
+loader=unittest.TestLoader()
+suite=unittest.TestSuite([loader.discover('tests',pattern=p) for p in ['test_smoke_e2e_pilot.py','test_smoke_e2e_pilot_contract.py']])
+r=unittest.TextTestRunner(verbosity=1).run(suite)
+sys.exit(not r.wasSuccessful())
+# start: 2026-11-10T07:53:35
+.....................
+----------------------------------------------------------------------
+Ran 21 tests in 1.998s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.853267015016172}
+# exit_code: 0

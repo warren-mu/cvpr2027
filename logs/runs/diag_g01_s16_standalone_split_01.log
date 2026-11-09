@@ -1,0 +1,159 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_s16_standalone_split_01 -- python3 -c """One-off immutable config split; no source revalidation, run, or result output.
+
+The root agent may inline these exact bytes through run_logged + record_command.
+CVPR_CONFIG_PREPARATION_ROOT is only a local-draft destination override; on Hopper
+omit it and run from the repository. The original parent still authenticates the
+count basis before generation. This script does not grant scientific acceptance.
+"""
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path
+
+SOURCE = {
+    'file': 'configs/gen_test_config_round2_40_01_retry2_quota.json',
+    'sha256': '80e2fec4ad9a6e472fe9d8498aa93d0026c89260036f01d1ee2bce154819012b',
+}
+SIZES = (6, 6, 6, 6, 6, 6, 4)
+KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def encode(value):
+    return (json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + '\n').encode()
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def prepare(root):
+    root = Path(root).resolve()
+    original_path = root / SOURCE['file']
+    require(not original_path.is_symlink(), 'Original plan cannot be a symlink')
+    original_bytes = original_path.read_bytes()
+    require(sha(original_bytes) == SOURCE['sha256'], 'Original plan bytes changed')
+    original = json.loads(original_bytes)
+    require(original['version'] == 'g01_static_configuration_tickets_v2'
+            and original['partition'] == 'test'
+            and original['parent_run_name'] == 'gen_test_config_round2_40_01_retry2'
+            and original['count_basis_authority'] == 'g01_published_independent_checkpoint_receipt_v1'
+            and original['outstanding_reservations'] == []
+            and 'shared_ticket_bank' not in original,
+            'Require the original standalone configuration-counting plan')
+    require(original['field_of_view'] == 60 and original['seed'] == 0
+            and original['scene_concurrency'] == 6 and original['cpu_cores_per_gpu'] == 12
+            and original['targets'] == dict.fromkeys(KINDS, 60)
+            and original['count_stage'] == 'independent_unique_construction_before_T02_filtering',
+            'Original settings differ from the approved immutable cutoff')
+    expected_scenes = [f'FloorPlan{offset + number}' for number in range(21, 31)
+                       for offset in (0, 200, 300, 400)]
+    assignments = original['assignments']
+    require([row['scene'] for row in assignments] == expected_scenes,
+            'Require all original40 interleaved scene assignments exactly once')
+    for row in assignments:
+        limits = row['actual_output_caps']
+        require(set(limits) == set(KINDS)
+                and all(type(limits[kind]) is int and limits[kind] >= 0 for kind in KINDS),
+                'Original scene tickets must be nonnegative integers')
+        require(row['allowed_kinds'] == [kind for kind in KINDS if limits[kind] > 0],
+                'Original allowed classes differ from the preserved tickets')
+        for kind in KINDS:
+            existing = original['confirmed_by_scene'].get(row['scene'], {}).get(kind, 0)
+            require(limits[kind] + existing <= 6, 'Original aggregate scene/class limit exceeds6')
+    for kind in KINDS:
+        require(sum(row['actual_output_caps'][kind] for row in assignments)
+                <= max(0, 60 - original['confirmed_by_kind'][kind]),
+                'Original whole40 allocation exceeds global remaining capacity')
+
+    products, slices, flattened = [], [], []
+    cursor = 0
+    for index, size in enumerate(SIZES, 1):
+        name = f'gen_test_s16_round2_s{index:02d}'
+        indices = list(range(cursor, cursor + size))
+        selected = copy.deepcopy(assignments[cursor:cursor + size])
+        value = copy.deepcopy(original)
+        value.update(parent_run_name=name, assignments=selected)
+        require({key: item for key, item in value.items() if key not in ('parent_run_name', 'assignments')}
+                == {key: item for key, item in original.items() if key not in ('parent_run_name', 'assignments')},
+                'Only the technical parent name and disjoint assignment subset may change')
+        flattened.extend(selected)
+        file = f'configs/{name}_quota.json'
+        raw = encode(value)
+        ref = {'file': file, 'sha256': sha(raw)}
+        command = ['python3', '-u', '-m', 'src.tools.g01_collect_parallel',
+                   '--name', name, '--scenes', *[row['scene'] for row in selected],
+                   '--concurrency', '6', '--benchmark-source', 'results/gen_train_concurrency_s15_02.json',
+                   '--timeout-seconds', '1600', '--partition', 'test',
+                   '--quota-plan', file, '--quota-plan-sha256', ref['sha256'], '--nearby-physics']
+        slices.append({'parent_run_name': name, 'quota_reference': ref,
+                       'original_assignment_indices_zero_based': indices,
+                       'scenes': [row['scene'] for row in selected], 'command': command})
+        products.append((file, raw))
+        cursor += size
+    require(cursor == len(assignments) and flattened == assignments
+            and len({row['scene'] for row in flattened}) == len(assignments),
+            'The seven slices must partition the original assignments exactly once')
+    require(len({item['parent_run_name'] for item in slices}) == len(SIZES), 'Repeated technical parent name')
+    mapping = {
+        'version': 'g01_s16_standalone_fixed40_config_split_v1',
+        'original_plan_reference': SOURCE,
+        'count_basis_sources': copy.deepcopy(original['count_basis_sources']),
+        'scope': 'Non-result standalone configuration preparation only; original published count basis and assigned tickets preserved; not source or T02 acceptance.',
+        'slices': slices,
+        'execution_requirements': {
+            'original_smoke_does_not_enter_quota': True,
+            'each_assignment_may_be_submitted_once': True,
+            'failed_nonblack_slice_must_not_be_reissued_as_fresh_full_tickets': True,
+            'newly_accepted_configuration_cutoff_requires_a_new_authenticated_plan': True,
+            'original_count_basis_authenticated_again_by_parent': True,
+            'shared_queue_claim_required': False,
+            'shared_training_queue_unchanged': True,
+            'gpus': 1, 'cpu_cores': 12, 'concurrency': 6,
+            'nearby_physics_explicit_opt_in': True,
+            'proposal_priority': ['look_stay', 'look_flip', 'direct_flip', 'direct_stay'],
+        },
+        'timing': {
+            'scene_grant_seconds': 1200,
+            'parent_required_timeout_seconds': 1600,
+            'requested_pbs_wall_seconds_if_approved': 1630,
+            'requested_pbs_walltime_if_approved': '00:27:10',
+            'formula': '120 benchmark authentication + 120 gate + 10 gate wrapper + 1*(1200 scene + 60 child finalization) + 30 stage finalization + 60 parent cleanup; PBS +30',
+            'basis': 'Existing exact entry engineering upper bound for one <=6-scene wave; NOT observed supplement16 runtime or a measured runtime multiplied by1.3.',
+            'budget_and_walltime_confirmation_pending': True,
+        },
+        'gpu_submission_performed': False,
+        'scientific_counts_recomputed': False,
+    }
+    mapping_file = 'configs/g01_s16_round2_standalone_split.json'
+    products.append((mapping_file, encode(mapping)))
+    for file, _ in products:
+        path = root / file
+        require(not path.exists() and not path.is_symlink(), 'Preserve existing artifact: ' + file)
+        require(path.parent == root / 'configs' and path.parent.is_dir(), 'Require the existing repository configs directory')
+    references = []
+    for file, raw in products:
+        path = root / file
+        with path.open('xb') as stream:
+            stream.write(raw)
+        path.chmod(0o444)
+        references.append({'file': file, 'sha256': sha(raw)})
+    require(original_path.read_bytes() == original_bytes, 'Original plan changed during preparation')
+    print('G01_S16_STANDALONE_CONFIGS_JSON: ' + json.dumps({
+        'original_plan_reference': SOURCE, 'artifacts': references,
+        'scope': mapping['scope'], 'gpu_submission_performed': False,
+        'scientific_counts_recomputed': False}, sort_keys=True, allow_nan=False))
+
+
+if __name__ == '__main__':
+    prepare(os.environ.get('CVPR_CONFIG_PREPARATION_ROOT', os.getcwd()))
+
+# start: 2026-11-10T07:54:00
+G01_S16_STANDALONE_CONFIGS_JSON: {"artifacts": [{"file": "configs/gen_test_s16_round2_s01_quota.json", "sha256": "9e0d4d12f0b2598097da54c6a1bf430567582f425c103ce77d54048657cebb65"}, {"file": "configs/gen_test_s16_round2_s02_quota.json", "sha256": "65a8758965d6b892dc29823dbf2540556255c0eefbefacc30dc81f1887e6bc68"}, {"file": "configs/gen_test_s16_round2_s03_quota.json", "sha256": "8b244c93608c51a076dd33b1ab0104ac34ef916f9391ccb35d379bd632ee91ac"}, {"file": "configs/gen_test_s16_round2_s04_quota.json", "sha256": "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6"}, {"file": "configs/gen_test_s16_round2_s05_quota.json", "sha256": "0e07394b1cc1eae1f4dd5532b9c85dd081e17d3819310b5a6ce19129e1969056"}, {"file": "configs/gen_test_s16_round2_s06_quota.json", "sha256": "89cf84a0b5e6b1e1cc4c34889f4222a603e78674e8fdc84662ba37934f0168a8"}, {"file": "configs/gen_test_s16_round2_s07_quota.json", "sha256": "8ee8bafe1adab80f67c4482f12f73af7d1eb17188f03553c975fb482b14bbae8"}, {"file": "configs/g01_s16_round2_standalone_split.json", "sha256": "f46265de72eafca69b8a2b48a868d7edfd58f0116e12c307088758eae1cbb774"}], "gpu_submission_performed": false, "original_plan_reference": {"file": "configs/gen_test_config_round2_40_01_retry2_quota.json", "sha256": "80e2fec4ad9a6e472fe9d8498aa93d0026c89260036f01d1ee2bce154819012b"}, "scientific_counts_recomputed": false, "scope": "Non-result standalone configuration preparation only; original published count basis and assigned tickets preserved; not source or T02 acceptance."}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.12368608900578693}
+# exit_code: 0
