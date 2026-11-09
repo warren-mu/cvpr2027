@@ -93,7 +93,7 @@ def fixture(*, legacy=False, kind='look_flip'):
 
 
 @contextmanager
-def boundaries(test, f, *, fail_science=False, fail_association=False):
+def boundaries(test, f, *, fail_science=False, fail_association=False, expected_policy=policy, support_module=ranked):
     active = {'entered': False}
     calls = {'load': [], 'science': [], 'association': []}
     original_policy = controllers.policy
@@ -109,7 +109,7 @@ def boundaries(test, f, *, fail_science=False, fail_association=False):
         return f['data'], f['source_ref']
     def association(*args):
         test.assertTrue(active['entered'])
-        test.assertIs(controllers.policy, policy)
+        test.assertIs(controllers.policy, expected_policy)
         test.assertEqual(args, (f['data'], f['source_ref'], f['compact'], f['row'], f['pair_path']))
         calls['association'].append(True)
         if fail_association:
@@ -122,7 +122,7 @@ def boundaries(test, f, *, fail_science=False, fail_association=False):
             raise ValueError('original scientific gate failed')
         return {'proposal_identity': 'authenticated-proposal', 'fixture': 'full-checker boundary'}
     with patch.object(source, 'audited_result', return_value=(f['container'], f['container_ref'])), \
-            patch.object(ranked, 'source_support', side_effect=support), \
+            patch.object(support_module, 'source_support', side_effect=support), \
             patch.object(source.merge, 'load_source', side_effect=load), \
             patch.object(source, 'verified_passed_rows', return_value=(
                 {'eligible': True, 'partial_source': True}, f['journal_ref'],
@@ -141,6 +141,35 @@ def boundaries(test, f, *, fail_science=False, fail_association=False):
 
 
 class RankedTableSourceTests(unittest.TestCase):
+    def test_stay_priority_source_uses_exact_policy_and_full_scientific_chain(self):
+        from src.envs import pair_v2_stay_priority_policy as stay_policy
+        from src.tools import t01v2_stay_priority_review_checkpoint as stay_checker
+        f = fixture()
+        f['container']['_meta']['command'][2] = source.STAY_CHECKPOINT_MODULE
+        fields = stay_policy.camera_fields(60, 'FloorPlan203')
+        cfg = f['data']['config']
+        cfg.update(fields, producer_module=stay_policy.PRODUCER)
+        cfg['shard'].update(fields, producer_module=stay_policy.PRODUCER)
+        f['data']['metrics'].update(fields, producer_module=stay_policy.PRODUCER)
+        for failure in (False, True):
+            with self.subTest(scientific_failure=failure):
+                with boundaries(self, f, expected_policy=stay_policy, support_module=stay_checker,
+                                fail_science=failure) as calls:
+                    if failure:
+                        with self.assertRaisesRegex(ValueError, 'original scientific gate failed'):
+                            source.load_reviewed_pair('unused', f['pair_id'])
+                    else:
+                        package = source.load_reviewed_pair('unused', f['pair_id'])
+                        self.assertTrue(package['fixed_label_verification']['t01_t02_assignment_equal'])
+                        self.assertEqual(package['source_config']['producer_module'], stay_policy.PRODUCER)
+                        self.assertFalse(package['execution_authorized'])
+                self.assertEqual(calls['load'], [True])
+                self.assertEqual(calls['association'], [True])
+        f['container']['_meta']['command'] = ['python3', '-m', 'src.tools.unknown', '--hint', source.STAY_CHECKPOINT_MODULE]
+        with patch.object(source, 'audited_result', return_value=(f['container'], f['container_ref'])):
+            with self.assertRaises(ValueError):
+                source._container('unused')
+
     def test_new_checkpoint_exact_command_whitelist(self):
         f = fixture()
         with patch.object(source, 'audited_result', return_value=(f['container'], f['container_ref'])):

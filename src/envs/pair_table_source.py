@@ -14,11 +14,12 @@ from src.tools.t01_partition import audited_result
 from src.tools.t01v2_posthoc_solvability import verified_passed_rows
 
 RANKED_CHECKPOINT_MODULE = 'src.tools.t01v2_flip_ranked_review_checkpoint'
+STAY_CHECKPOINT_MODULE = 'src.tools.t01v2_stay_priority_review_checkpoint'
 
 
 def _checkpoint_module(command):
     """Only explicit independently checked producers, never an argument hint."""
-    for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE):
+    for module in ('src.tools.t01v2_review_checkpoint', RANKED_CHECKPOINT_MODULE, STAY_CHECKPOINT_MODULE):
         try:
             merge.producer_arguments(command, module)
         except ValueError:
@@ -167,7 +168,7 @@ def _container(path):
     return data, reference, entries
 
 
-def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file=None, ranked=False):
+def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file=None, ranked=False, source_policy=None):
     """Return immutable evidence inputs; caller separately owns review/GPU gates.
 
     ``pair_file`` disambiguates repeated pair IDs across explicit source runs.
@@ -182,7 +183,9 @@ def _load_reviewed_pair(container, container_ref, entries, pair_id, *, pair_file
     data, source_ref = merge.load_source(merge.ROOT / entry['source_file'])
     cfg, measured = data['config'], data['metrics']
     if ranked:
-        from . import pair_v2_flip_ranked_policy as ranked_policy
+        if source_policy is None:
+            from . import pair_v2_flip_ranked_policy as source_policy
+        ranked_policy = source_policy
         ranked_policy.validate_source(cfg, measured)
     if (source_ref['metrics_sha256'] != entry['source_metrics_sha256']
             or ('source_sha256' in entry and source_ref['sha256'] != entry['source_sha256'])):
@@ -295,9 +298,15 @@ def load_reviewed_pair(source_result, pair_id, *, pair_file=None):
     trusting a checkpoint's saved success flag never authorizes an export.
     """
     container, reference, entries = _container(source_result)
-    ranked = (container.get('metrics', {}).get('kind') == 't01v2_review_checkpoint'
-        and _checkpoint_module(container['_meta'].get('command')) == RANKED_CHECKPOINT_MODULE)
-    if ranked:
+    module = (_checkpoint_module(container['_meta'].get('command'))
+              if container.get('metrics', {}).get('kind') == 't01v2_review_checkpoint' else None)
+    if module == STAY_CHECKPOINT_MODULE:
+        from src.tools.t01v2_stay_priority_review_checkpoint import source_support
+        from . import pair_v2_stay_priority_policy as source_policy
+        with source_support():
+            return _load_reviewed_pair(container, reference, entries, pair_id,
+                pair_file=pair_file, ranked=True, source_policy=source_policy)
+    if module == RANKED_CHECKPOINT_MODULE:
         from src.tools.t01v2_flip_ranked_review_checkpoint import source_support
         with source_support():
             return _load_reviewed_pair(container, reference, entries, pair_id, pair_file=pair_file, ranked=True)
