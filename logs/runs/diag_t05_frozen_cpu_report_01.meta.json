@@ -1,0 +1,29 @@
+{
+  "name": "diag_t05_frozen_cpu_report_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_t05_frozen_cpu_report_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json,re\nr=pathlib.Path.cwd();a=json.loads((r/'results/t05_frozen_training_cpu_01.json').read_text())\nassert a['_meta']['exit_code']==0 and a['metrics']['command_exit_code']==0\nlog=(r/a['_meta']['log_path']).read_text();assert re.search(r'Ran 81 tests in ',log) and '\\nOK\\n' in log\np=r/'STATUS.md';note='\\n### Frozen T05 section1b implementation CPU validation\\n\\nNew explicit --credit-pipeline t05_section1b preserves the legacy Direct gate and uses task-only rewards, common actor low_var_kl loss, original raw token GAE/critic returns, prefix replacement and exactly one whole-batch masked whitening. Actual pinned VAGEN/verl CPU regression and runtime integration passed81 tests (t05_frozen_training_cpu_01), including float32 reward/bfloat16 value promotion, empty unparsable reply fallback, exact shared token credit, actual batch reorder, complete source authentication and the unchanged old worker wiring.\\n\\nThe bounded E2E adapter remains T0/T3 with rho=.5; unequal world weights are produced by the core helper and CPU-tested but not falsely advertised as complete actor integration. Every actual prefix token vector and independent unit membership is retained for S1; no fallback token aggregation or variance endpoint is invented. Five updates do not reach the20-update S2 evaluation interval. New same-pool Look T0/T3 GPU runs still wait for successful export, replay and model evaluation.\\n'\nassert '### Frozen T05 section1b implementation CPU validation' not in p.read_text();p.write_text(p.read_text()+note)\nprint('FROZEN_CPU_VALIDATION: '+json.dumps({'result':'results/t05_frozen_training_cpu_01.json','tests':81,'gpu_runs_started':False},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T15:32:26",
+  "log_path": "logs/runs/diag_t05_frozen_cpu_report_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "13e686676fb28455918ee40faf9c95d69756c1d3",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_t05_frozen_cpu_report_01.diff",
+  "end": "2026-11-09T15:32:27",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "696dfe22ef47e81a89226f34b2d675e90d27ab953576eebc4ea8faa06f1bac80"
+}

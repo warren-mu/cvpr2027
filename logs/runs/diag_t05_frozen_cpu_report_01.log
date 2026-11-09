@@ -1,0 +1,12 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t05_frozen_cpu_report_01 -- python3 -c import pathlib,json,re
+r=pathlib.Path.cwd();a=json.loads((r/'results/t05_frozen_training_cpu_01.json').read_text())
+assert a['_meta']['exit_code']==0 and a['metrics']['command_exit_code']==0
+log=(r/a['_meta']['log_path']).read_text();assert re.search(r'Ran 81 tests in ',log) and '\nOK\n' in log
+p=r/'STATUS.md';note='\n### Frozen T05 section1b implementation CPU validation\n\nNew explicit --credit-pipeline t05_section1b preserves the legacy Direct gate and uses task-only rewards, common actor low_var_kl loss, original raw token GAE/critic returns, prefix replacement and exactly one whole-batch masked whitening. Actual pinned VAGEN/verl CPU regression and runtime integration passed81 tests (t05_frozen_training_cpu_01), including float32 reward/bfloat16 value promotion, empty unparsable reply fallback, exact shared token credit, actual batch reorder, complete source authentication and the unchanged old worker wiring.\n\nThe bounded E2E adapter remains T0/T3 with rho=.5; unequal world weights are produced by the core helper and CPU-tested but not falsely advertised as complete actor integration. Every actual prefix token vector and independent unit membership is retained for S1; no fallback token aggregation or variance endpoint is invented. Five updates do not reach the20-update S2 evaluation interval. New same-pool Look T0/T3 GPU runs still wait for successful export, replay and model evaluation.\n'
+assert '### Frozen T05 section1b implementation CPU validation' not in p.read_text();p.write_text(p.read_text()+note)
+print('FROZEN_CPU_VALIDATION: '+json.dumps({'result':'results/t05_frozen_training_cpu_01.json','tests':81,'gpu_runs_started':False},sort_keys=True))
+
+# start: 2026-11-09T15:32:26
+FROZEN_CPU_VALIDATION: {"gpu_runs_started": false, "result": "results/t05_frozen_training_cpu_01.json", "tests": 81}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.10519475600449368}
+# exit_code: 0

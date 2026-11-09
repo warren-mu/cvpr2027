@@ -1,0 +1,29 @@
+{
+  "name": "t05_frozen_training_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t05_frozen_training_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest\ns=unittest.TestSuite()\nfor p in ('test_token_credit.py','test_credit.py','test_smoke_e2e*.py'):\n s.addTests(unittest.defaultTestLoader.discover('tests',pattern=p))\nraise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T15:26:59",
+  "log_path": "logs/runs/t05_frozen_training_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "13e686676fb28455918ee40faf9c95d69756c1d3",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/t05_frozen_training_cpu_01.diff",
+  "end": "2026-11-09T15:28:22",
+  "duration_sec": 83.3,
+  "exit_code": 0,
+  "metrics_sha256": "e87e488f42df2590627f89c1e0adcc82090fc56ec2209fdbbac6696ae22a14a0"
+}

@@ -1,0 +1,101 @@
+# run_logged: python3 -m src.tools.record_command --name t05_frozen_training_cpu_01 -- python3 -c import unittest
+s=unittest.TestSuite()
+for p in ('test_token_credit.py','test_credit.py','test_smoke_e2e*.py'):
+ s.addTests(unittest.defaultTestLoader.discover('tests',pattern=p))
+raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())
+# start: 2026-11-09T15:26:59
+test_common_config_matches_approved_actor_kl_and_actual_vagen_default (test_token_credit.FrozenTokenCredit) ... ok
+test_fallback_is_same_position_raw_tokens_not_decision_mean (test_token_credit.FrozenTokenCredit) ... ok
+test_no_replacement_exactly_matches_actual_pinned_function_including_mixed_dtype (test_token_credit.FrozenTokenCredit) ... ok
+test_q_credit_broadcast_prefix_equal_and_post_uses_same_global_affine (test_token_credit.FrozenTokenCredit) ... ok
+test_select_credit_uses_immediate_reward_and_task_G_is_verified (test_token_credit.FrozenTokenCredit) ... ok
+test_single_world_fallback_and_semantic_unavailable_action_are_distinct (test_token_credit.FrozenTokenCredit) ... ok
+test_unproven_alignment_masks_or_reward_extras_fail_closed (test_token_credit.FrozenTokenCredit) ... ok
+test_Q_scores_cover_the_whole_public_domain_and_stay_stable_at_tiny_mass (test_credit.CreditMathTests) ... ok
+test_T1_T3_gamma_lambda_one_differ_only_by_value_versus_Q_baseline (test_credit.CreditMathTests) ... ok
+test_T4_auxiliary_only_after_evidence_on_select (test_credit.CreditMathTests) ... ok
+test_T4_uses_own_inclusive_seen_boundary_not_tau_or_the_other_world (test_credit.CreditMathTests) ... ok
+test_all_five_arms_allocate_64_episodes (test_credit.CreditMathTests) ... ok
+test_eligible_Stay_uses_actual_candidate_normalization_and_stable_name_support (test_credit.CreditMathTests) ... ok
+test_flip_log_hinges_and_stay_KL_align_stable_names (test_credit.CreditMathTests) ... ok
+test_identical_information_gets_identical_T3_T4_but_independent_T1 (test_credit.CreditMathTests) ... ok
+test_lucky_commit_and_observation_credit (test_credit.CreditMathTests) ... ok
+test_no_marks_and_invalid_outputs_use_the_specified_gae_fallback (test_credit.CreditMathTests) ... ok
+test_noise_fork_or_unknown_evidence_is_not_an_information_set (test_credit.CreditMathTests) ... ok
+test_post_evidence_steps_keep_upstream_gae_for_every_arm (test_credit.CreditMathTests) ... ok
+test_rho_weights_are_not_hardcoded_half (test_credit.CreditMathTests) ... ok
+test_scalar_gae_terminal_and_truncated_bootstrap (test_credit.CreditMathTests) ... ok
+test_select_conditional_Q_keeps_raw_mass_and_complete_action_scoring (test_credit.CreditMathTests) ... ok
+test_unnecessary_look_stay_is_negative (test_credit.CreditMathTests) ... ok
+test_world_token_weights_are_separate_from_shared_advantages (test_credit.CreditMathTests) ... ok
+test_P_cached_source_identity_is_private_and_shared_tokens_count_once (test_credit.PairedRolloutTests) ... ok
+test_different_full_history_stays_different_despite_equal_current_frame (test_credit.PairedRolloutTests) ... ok
+test_exact_actual_prompt_can_reshare_without_a_permanent_fork_latch (test_credit.PairedRolloutTests) ... ok
+test_mock_requires_explicit_opt_in (test_credit.PairedRolloutTests) ... ok
+test_prompt_tokens_and_all_images_not_just_a_digest_control_sharing (test_credit.PairedRolloutTests) ... ok
+test_public_text_and_marks_are_part_of_exact_input (test_credit.PairedRolloutTests) ... ok
+test_S1_independent_units_keep_world_weights_and_observed_zero_pre_steps (test_credit.RawRecordingTests) ... ok
+test_S2_cannot_use_frozen_test_or_training_pairs (test_credit.RawRecordingTests) ... ok
+test_actual_update_counter_and_shared_applied_advantage_are_guarded (test_credit.RawRecordingTests) ... ok
+test_raw_S1_from_first_update_and_S2_only_actual_twentieth_update (test_credit.RawRecordingTests) ... ok
+test_recorded_episode_and_physical_token_counts_are_consistent (test_credit.RawRecordingTests) ... ok
+test_flip_satisfied_margin_has_exact_zero_loss_and_gradient (test_credit.TorchGradientTests) ... ok
+test_flip_violated_margin_gradients_favor_each_world_correct_target (test_credit.TorchGradientTests) ... ok
+test_stay_equal_distributions_and_zero_support_without_epsilon (test_credit.TorchGradientTests) ... ok
+test_stay_normalized_logit_gradients_are_finite_and_symmetric (test_credit.TorchGradientTests) ... ok
+test_black_gate_never_starts_export (test_smoke_e2e_entry.EntryTests) ... ok
+test_black_plus_finalization_failure_stays_exit1 (test_smoke_e2e_entry.EntryTests) ... ok
+test_contract_source_requires_real_suite_command_and_nonempty_ok (test_smoke_e2e_entry.EntryTests) ... ok
+test_exact_command_rejects_tail_module_or_changed_identity (test_smoke_e2e_entry.EntryTests) ... ok
+test_rejected_selected_pair_stops_instead_of_filtering (test_smoke_e2e_entry.EntryTests) ... ok
+test_worker_cleanup_errors_are_preserved (test_smoke_e2e_entry.EntryTests) ... ok
+test_always_fixed_roundtrip_uses_model_only_after_four_observations (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_diag_invalid_model_output_is_executed_and_logged_without_repair (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_import_does_not_load_gpu_dependencies (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_incomplete_model_batch_and_bad_forced_select_fail (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_never_is_one_batched_real_select_per_world (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_public_prompt_contains_complete_history_and_no_privileged_info (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_replay_authentication_rejects_another_producer (test_smoke_e2e_eval.EvaluationTests) ... ok
+test_unconstrained_diag_accepts_empty_final_turn_action_domain (test_smoke_e2e_eval.EvaluationTests) ... ok
+INFO 11-09 15:27:46 [__init__.py:243] No platform detected, vLLM is running on UnspecifiedPlatform
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+test_actual_batch_reordering_keeps_paired_credit_and_original_critic_returns (test_smoke_e2e_frozen_training.FrozenRuntime) ... ok
+test_frozen_configuration_retains_common_actor_kl_and_task_only_rewards (test_smoke_e2e_frozen_training.FrozenRuntime) ... ok
+test_opt_in_keeps_legacy_direct_boundary (test_smoke_e2e_frozen_training.FrozenScope) ... ok
+test_dispatcher_preserves_original_direct_plan_and_only_opts_in_exact_version (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_duplicate_changed_checkpoint_or_wrong_image_source_blocks (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_entry_records_actual_look_ids_before_gate_and_starts_no_export_on_black (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_frozen_plan_loads_exact_first_five_without_claiming_review (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_real_synthetic_look_table_replay_records_late_tau_without_formal_certificate (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_scope_order_review_and_sample_size_cannot_be_silently_changed (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_three_evaluation_strategies_keep_actual_look_temporal_logs (test_smoke_e2e_look_plan.LookPlanTests) ... ok
+test_shared_physical_sample_keeps_both_logical_world_decisions (test_smoke_e2e_report.E2EReportTests) ... ok
+test_syntax_failure_and_valid_unavailable_action_are_separate (test_smoke_e2e_report.E2EReportTests) ... ok
+test_unfinished_update_does_not_acquire_imputed_time (test_smoke_e2e_report.E2EReportTests) ... ok
+test_cpu_environment_replay_keeps_formal_flag_false_and_tau0_limit (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_exact_twenty_repeatable_and_formal_minimum_unchanged (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_missing_state_is_unknown_and_no_replacement_is_permitted (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_one_mask_mismatch_blocks_whole_sample (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_reusing_export_process_or_fresh_render_is_rejected (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_synthetic_pass_never_authorizes_live_or_formal_path (test_smoke_e2e_scope.SmokeScopeTests) ... ok
+test_actual_colocated_factory_builds_and_dispatches_all_three_roles (test_smoke_e2e_training.PinnedWorkerWiring) ... ok
+test_actual_registered_model_init_seeds_then_dispatches_upstream (test_smoke_e2e_training.PinnedWorkerWiring) ... ok
+test_actual_workers_share_base_and_preserve_upstream_constructors (test_smoke_e2e_training.PinnedWorkerWiring) ... ok
+test_complete_token_spans_and_no_silent_truncation (test_smoke_e2e_training.TrainingContracts) ... ok
+test_dedup_only_exact_history_within_same_pair (test_smoke_e2e_training.TrainingContracts) ... ok
+test_direct_smoke_cannot_claim_look_credit_coverage (test_smoke_e2e_training.TrainingContracts) ... ok
+test_empty_final_turn_public_action_domain_is_valid (test_smoke_e2e_training.TrainingContracts) ... ok
+test_fixed_budget_and_paired_worlds (test_smoke_e2e_training.TrainingContracts) ... ok
+test_reward_choice_cannot_be_inferred (test_smoke_e2e_training.TrainingContracts) ... ok
+
+----------------------------------------------------------------------
+Ran 81 tests in 77.382s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 83.16039567202097}
+# exit_code: 0

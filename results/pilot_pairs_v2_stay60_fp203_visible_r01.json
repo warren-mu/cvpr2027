@@ -1,0 +1,752 @@
+{
+  "metrics": {
+    "kind": "pair_v2_parallel",
+    "status": "completed_with_failures",
+    "acceptance_passed": false,
+    "gate": {
+      "run_name": "pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate",
+      "exit_code": 0,
+      "wall_seconds_observed": 8.210679742041975,
+      "result_path": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.json",
+      "launcher_log": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_stay60_fp203_visible_r01/707865_hopper_m_02/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.launcher.log",
+      "launcher_log_sha256": "1f82d48d819dfaa6e97eef4ce981d1fd698299f6c7e301fb292056d0bdb4f11f",
+      "source": {
+        "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.json",
+        "sha256": "4372cd2b09f90a029150289f3fcec8b17ae933d6806a5b12be217d0ee1d43754",
+        "metrics_sha256": "104665488fb4678636fc158c097b29d13829a611b8164d5827c2550547fff08b",
+        "exit_code": 0,
+        "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+        "audit": {
+          "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.json",
+          "fail": [],
+          "warn": [
+            "P5 run used uncommitted changes; see logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.diff"
+          ]
+        }
+      },
+      "source_status": null
+    },
+    "scene_runs": [
+      {
+        "run_name": "pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203",
+        "exit_code": 1,
+        "wall_seconds_observed": 1163.6005209090654,
+        "result_path": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.json",
+        "launcher_log": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_stay60_fp203_visible_r01/707865_hopper_m_02/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.launcher.log",
+        "launcher_log_sha256": "43c157712e12925f2bf23a8331ae1ed7b936a07e21ba72100e01cc9b1caaa355",
+        "source": {
+          "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.json",
+          "sha256": "c7c9920ac5973058057bd90c2960481aacf835369ba5cc9d9fb3915eb45a5579",
+          "metrics_sha256": "7eec8373c1b28d516406b70debd2b1110ee40603fba79de08fa059e4b16e46dd",
+          "exit_code": 1,
+          "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+          "audit": {
+            "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.json",
+            "fail": [],
+            "warn": [
+              "P5 run used uncommitted changes; see logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.diff",
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        "source_status": "incomplete",
+        "scene": "FloorPlan203",
+        "logical_index": 0,
+        "gpu_uuid": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+        "granted_timeout_seconds": 1200.0
+      }
+    ],
+    "started_shards": [
+      {
+        "scene": "FloorPlan203",
+        "run_name": "pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203",
+        "logical_index": 0,
+        "gpu_uuid": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+        "wrapper_pid": 1707183,
+        "shard_config": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_stay60_fp203_visible_r01/707865_hopper_m_02/FloorPlan203/shard_config.json",
+        "shard_config_sha256": "75d19b87892f875ad5023e814755cc691da807b4aee953ca0e08f2fef343aed0"
+      }
+    ],
+    "cleanup_errors": [],
+    "black_frame_detected": false,
+    "unstarted_scenes": [],
+    "unfinished_scenes": [],
+    "stop_reasons": [],
+    "all_planned_scenes_finished": true,
+    "exit_code": 1,
+    "scene_producer_module": "src.envs.pair_v2_stay_priority_shard",
+    "candidate_policy": "two_marked_pickupables_v1",
+    "candidate_policy_spec": {
+      "version": "two_marked_pickupables_v1",
+      "candidate_domain": "exactly the two stable-name marked pickupables A/B; other objects are not selectable targets",
+      "v0": "each actual mask >=250 at255 and 3D metadata centre distance from agent <=1.5m",
+      "ordering": "for each actual v0: same-category pairs first, then different-category pairs; stable names within pairs",
+      "anchor": "one object of its category in full inventory; category differs from both candidates; unchanged nonrolling moved-object filter",
+      "instruction": "Select the marked object closest to the <anchor_type>.",
+      "marks": "only A/B receive marks; unchanged actual mask/mark rendering",
+      "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+      "closest_separation_ratio": 1.5,
+      "default_cloning": false,
+      "same_class_is_acceptance_filter": false,
+      "scope": "construction-stage qualification; T02 table/BFS/cache checks remain separate",
+      "nonrolling_anchor_exclusions": {
+        "excluded_moved_object_types": [
+          "Apple",
+          "Tomato",
+          "Potato",
+          "Egg",
+          "Lettuce",
+          "BasketBall",
+          "BaseballBat",
+          "Pen",
+          "Pencil"
+        ],
+        "excluded_native_variant_types": [
+          "AppleSliced",
+          "TomatoSliced",
+          "BreadSliced",
+          "PotatoSliced",
+          "LettuceSliced",
+          "EggCracked",
+          "EggShell"
+        ],
+        "excluded_type_suffixes": [
+          "Sliced",
+          "Cracked",
+          "Broken"
+        ],
+        "excluded_state_flags": [
+          "isBroken",
+          "isSliced"
+        ],
+        "category_matching": "exact case-sensitive metadata.objectType; suffixes apply to every category",
+        "native_category_source": "https://github.com/allenai/ai2thor/blob/f0825767cd50d69f666c7f282e54abfe58f1e917/unity/Assets/Scripts/SimObjType.cs",
+        "native_state_source": "https://github.com/allenai/ai2thor/blob/f0825767cd50d69f666c7f282e54abfe58f1e917/unity/Assets/Scripts/BaseFPSAgentController.cs#L1481"
+      }
+    },
+    "projection_pool_version": "native_projection_look_direct_pools_v1",
+    "projection_pool_policy": {
+      "version": "native_projection_look_direct_pools_v1",
+      "camera": "actual metadata cameraPosition, agent yaw and cameraHorizon, vertical fov, screenWidth/screenHeight",
+      "projection": "Unity +Z forward/+X right/+Y up; positive horizon looks down; image edge coordinates [0,width) x [0,height)",
+      "proposal_point": "native selected_position plus anchor AABB half-height in Y; placement input remains native point",
+      "direct": "projected point in the starting frame; original horizontal near-to-far order; at most 40 per side",
+      "look": "positive camera depth, >=10px beyond at least one starting-frame edge; in frame after an existing observation action; native point <=3m from agent; at most 12 per side",
+      "schedule": "Look/Direct alternate globally; each pool independently retains Flip/Stay and expanded Stay A/B alternation; truthful exhaustion fallback",
+      "orientation": "unchanged seed0 SHA256(scene, actual global attempt index); applied by caller after scheduling",
+      "retry": "selected unchanged native token first, then remaining same-side pool tokens in recorded order; at most 40 total",
+      "scope": "proposal prefilter only; does not establish visibility, action feasibility, physics, evidence or acceptance"
+    },
+    "attempt_setup_version": "common_baseline_before_each_attempt_v1",
+    "attempt_setup_policy": {
+      "version": "common_baseline_before_each_attempt_v1",
+      "timing": "restore common baseline before each frozen build_pair positions the agent at v0",
+      "baseline": "same validated settled or clone common baseline supplied to every attempt",
+      "verification": "unchanged restoration_state: all movable/pickupable positions <=1cm and encoded full agent pose exact",
+      "signed_zero": "unchanged encoded comparison; signed-zero differences remain mismatches",
+      "paired_prefix": "no additional restore/reset/agent action between w0 and w1",
+      "setup_failure": "record rejected attempt; no w0 physical measurement invented",
+      "terminal_failure": "black frame, deadline and process interrupt propagate through existing cleanup",
+      "retention": "existing accepted/first-three-reason/terminal evidence policy and byte caps unchanged"
+    },
+    "frozen_render_version": "w0_nonanchor_frozen_render_v1",
+    "frozen_render_policy": {
+      "version": "w0_nonanchor_frozen_render_v1",
+      "physics": "unchanged two native placements and settling checks; retain both original physical snapshots",
+      "requested_render_worlds": "complete physical w0 pose list for both worlds; replace only X position and rotation with physically settled w1 X",
+      "render_actions": "PausePhysicsAutoSim; SetObjectPoses(placeStationary=True), PhysicsSyncTransforms, Pass for w0 then w1; no agent action or physics advance between captures",
+      "readback": "all requested editable poses checked against actual metadata; exact equality and maximum position/rotation differences recorded",
+      "acceptance": "unchanged restoration position<=1cm/exact agent and physical/image/witness criteria; no new exact-pose acceptance threshold",
+      "actual_cross_world": "all nonanchor native position/rotation differences recorded without replacing measurements by zero"
+    },
+    "enable_candidate_clone": false,
+    "budget_limit_charged_gpu_hours": 16,
+    "field_of_view": 60,
+    "fov_contrast_version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+    "fov_contrast_policy": {
+      "version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+      "approved_task_commit": "47ea528",
+      "search_approval": "5a50999",
+      "field_of_view": 60,
+      "camera_selection": "completed same-scene supplement12 comparison; selected60; do not repeat the contrast",
+      "unit_gpu_count": 1,
+      "unit_timeout_seconds": 1200,
+      "parent_timeout_seconds": 1350,
+      "gate_timeout_seconds": 120,
+      "allocation_walltime_seconds": 1380,
+      "timing_scope": "one full1200-second scene grant; native deadline1190s; gate and finalization separate",
+      "partial_grant_policy": "fail before launch if full1200-second child grant is unavailable",
+      "scene_scope": "one explicit scene from the fixed40 training scenes",
+      "minimum_eligible_attempts": null,
+      "search": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "fixed_labels": "pair_stable_object_labels_v1",
+      "discovery_schedule": "one_discovery_then_full_active_round_v1",
+      "discovery_scope": "discover one additional domain per complete round of previously active domains; preserve all domains and acceptance thresholds",
+      "scope": "existing pending Stay domain order only; full original ranked geometry/physics/render/witness checks unchanged",
+      "previous_source_version": "look_flip_rounds_shared_native_complete_geometry_selected60_v2",
+      "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+      "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "approval": "human-authorized independent Stay-order trial after the recorded supplement15 diagnosis",
+      "proposal_domain": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "search_policy_override": "flip_search_policy retains scheduling/quota/seed/view ordering only; its native-surface role and point projection domain are superseded by flip_geometry_policy for Flip; Stay unchanged",
+      "rank_deadline": "check the original config.deadline before every ranked point; timeout propagates without a partial pool",
+      "stay_priority": "stay_pending_domain_min_world_one_step_area_v1"
+    },
+    "fov_contrast_group": "selected60_flip_unit",
+    "flip_unit_version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+    "flip_unit_policy": {
+      "version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+      "approved_task_commit": "47ea528",
+      "search_approval": "5a50999",
+      "field_of_view": 60,
+      "camera_selection": "completed same-scene supplement12 comparison; selected60; do not repeat the contrast",
+      "unit_gpu_count": 1,
+      "unit_timeout_seconds": 1200,
+      "parent_timeout_seconds": 1350,
+      "gate_timeout_seconds": 120,
+      "allocation_walltime_seconds": 1380,
+      "timing_scope": "one full1200-second scene grant; native deadline1190s; gate and finalization separate",
+      "partial_grant_policy": "fail before launch if full1200-second child grant is unavailable",
+      "scene_scope": "one explicit scene from the fixed40 training scenes",
+      "minimum_eligible_attempts": null,
+      "search": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "fixed_labels": "pair_stable_object_labels_v1",
+      "discovery_schedule": "one_discovery_then_full_active_round_v1",
+      "discovery_scope": "discover one additional domain per complete round of previously active domains; preserve all domains and acceptance thresholds",
+      "scope": "existing pending Stay domain order only; full original ranked geometry/physics/render/witness checks unchanged",
+      "previous_source_version": "look_flip_rounds_shared_native_complete_geometry_selected60_v2",
+      "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+      "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "approval": "human-authorized independent Stay-order trial after the recorded supplement15 diagnosis",
+      "proposal_domain": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "search_policy_override": "flip_search_policy retains scheduling/quota/seed/view ordering only; its native-surface role and point projection domain are superseded by flip_geometry_policy for Flip; Stay unchanged",
+      "rank_deadline": "check the original config.deadline before every ranked point; timeout propagates without a partial pool",
+      "stay_priority": "stay_pending_domain_min_world_one_step_area_v1"
+    },
+    "flip_unit_scene": "FloorPlan203",
+    "flip_unit_plan": [
+      {
+        "scene": "FloorPlan203",
+        "field_of_view": 60,
+        "gpu_count": 1,
+        "timeout_seconds": 1200
+      }
+    ],
+    "flip_search_version": "look_flip_full_pool_edge_views_measured_quota_v1",
+    "flip_search_policy": {
+      "version": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "approved_task_commit": "5a50999",
+      "domain": "all queried native points separated by3D distance ratio1.5,10px-outside,one-step-projection and3m filters; no old horizontal-side, proximity, overlap-proposal or12-point cap for Flip",
+      "receptacles": "all original eligible scene receptacles in deterministic original order",
+      "flip_order": "native3D near/far ratio, then stable native key; actual settled3D acceptance remains mandatory",
+      "prediction": "native selected coordinate is only proposal geometry; PlaceObjectAtPoint resolves its own surface and pivot, so actual settled metadata is authoritative",
+      "views": "existing allowed views reordered toward actual-geometric candidate centres at opposite left/right image edges; actual native visibility still required",
+      "identities": "opposite-edge candidate pairs first, then original same-category/name order",
+      "stay": "original first12 near points per side and supplement11 far-first retries",
+      "quota": "across the entire scene, including Controller restarts: counted Flip attempts >= counted Stay attempts; failed native placement does not earn quota",
+      "no_flip_domain": "continue other combinations/views; never fill a required Flip turn with Stay",
+      "unchanged": "seed0 world-side assignment, StayA/B alternation, physical10-rejection skip, all acceptance thresholds"
+    },
+    "flip_selected_field_of_view": 60,
+    "fixed_label_version": "pair_stable_object_labels_v1",
+    "fixed_label_policy": {
+      "version": "pair_stable_object_labels_v1",
+      "approved_task_commit": "5a50999",
+      "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+      "scope": "one object keeps its number across both worlds and all views of one pair",
+      "visible_subset": "draw only currently visible declared candidates; never renumber a subset",
+      "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+      "legacy": "absent policy means the original spatial policy; no retrospective upgrades"
+    },
+    "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_policy": {
+      "version": "one_discovery_then_full_active_round_v1",
+      "round": "discover at most one new combination, then process each combination active at that round start once",
+      "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+      "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order",
+      "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+      "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+      "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+      "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim"
+    },
+    "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+    "spawn_token_storage_policy": {
+      "version": "native_token_shared_json_exact_sha256_v1",
+      "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+      "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+      "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+      "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+      "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+      "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes"
+    },
+    "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "bbox_proposal_rank_policy": {
+      "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+      "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+      "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+      "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+      "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+      "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+      "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+      "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+      "scope": "proposal prediction only; no acceptance result or measured visibility is produced"
+    },
+    "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "flip_geometry_policy": {
+      "version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "approval": "T01v2 supplement15;5a0a138",
+      "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+      "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+      "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+      "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+      "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+      "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+      "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+      "unknown": "unknown projection/geometry never counts as a passing prediction",
+      "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+      "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+      "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+      "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+      "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+      "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim"
+    },
+    "stay_priority_version": "stay_pending_domain_min_world_one_step_area_v1",
+    "stay_priority_policy": {
+      "version": "stay_pending_domain_min_world_one_step_area_v1",
+      "score": "minimum of the two planned worlds best known one-action projected AABB rectangle areas",
+      "scope": "predicted planned native proposals only; not actual fallback, rendered visibility, mask area or scientific acceptance",
+      "selection": "only when the existing scene-wide counted quota requests Stay; highest known score among this finite round pending Stay domains; stable original-domain ties; unknown retained last",
+      "peek": "read the original next Stay row without advancing any cursor, side alternation or quota",
+      "within_domain": "unchanged original Stay A/B alternation, fixed-w0 far-first combinations and actual native fallback order",
+      "round": "one visit per original round domain; original discovery order restored at each round boundary; Flip selection delegates to original pop",
+      "domain": "no added/deleted points, proposals, combinations or views; no score threshold",
+      "deadline": "original finite scene soft deadline checked before every pending domain and each world prediction"
+    },
+    "stay_w1_order_version": "stay_w1_far_first_without_repeat_v1",
+    "stay_w1_order_policy": {
+      "version": "stay_w1_far_first_without_repeat_v1",
+      "enumeration": "same unordered Stay combinations; for each fixed w0, order its remaining w1 suffix far-to-near",
+      "distance": "3D Euclidean native position; descending; deterministic ascending native-key ties",
+      "native_origin": "actual physically settled w0 anchor metadata.position, including successful native fallback",
+      "native_order": "scheduled w1 first when w0 did not fall back and that point is untried; remaining retries far-to-near from actual w0",
+      "fallback_order": "when w0 fell back or scheduled w1 was already tried, remaining eligible same-side points far-to-near",
+      "exploration": "per Controller/common baseline/view/identity/pool/side/successful w0 point, skip only ledger-recorded w1 attempts",
+      "unchanged": "native tokens, pool membership/caps, Flip sequence, Stay A/B alternation, Look/Direct alternation, seed0, all acceptance thresholds"
+    }
+  },
+  "config": {
+    "name": "pilot_pairs_v2_stay60_fp203_visible_r01",
+    "pbs_jobid": "707865.hopper-m-02",
+    "node": "hopper-15",
+    "budget_group": "T01v2",
+    "budget_limit_charged_gpu_hours": 16,
+    "phase_limit_charged_gpu_hours": 60,
+    "resolution": 255,
+    "seed": 0,
+    "pilot_scenes": [
+      "FloorPlan203"
+    ],
+    "scene_shards": [
+      [
+        "FloorPlan203"
+      ]
+    ],
+    "field_of_view": 60,
+    "gpus": 1,
+    "cpu_cores_per_gpu": 12,
+    "scene_shard_processes_per_gpu": 1,
+    "instances_per_gpu": 2,
+    "instance_scope": "one construction controller plus one sequential independent replay; never two replay workers concurrently",
+    "timeout_seconds": 1350.0,
+    "scene_timeout_seconds": 1200.0,
+    "gate_timeout_seconds": 120.0,
+    "submission": {
+      "file": "logs/pbs/pilot_pairs_v2_stay60_fp203_visible_r01-20261109T065700Z-800714aa/payload.json",
+      "sha256": "49cdec7aee530cc48e8c895b7115a810c3e164fc04aae8e8cbde9ef971086df2",
+      "requested_wall_seconds": 1380,
+      "budget_group": "T01v2"
+    },
+    "parent_cuda_visible_devices": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+    "cpu_shards": [
+      [
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61,
+        63,
+        65,
+        67,
+        69,
+        71
+      ]
+    ],
+    "allocation": {
+      "name": "pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate",
+      "pbs_jobid": "707865.hopper-m-02",
+      "cuda_visible_devices": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+      "devices": [
+        {
+          "logical_index": 0,
+          "gpu_index": 0,
+          "gpu_uuid": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+          "gpu_name": "NVIDIA H200",
+          "vulkan_device_index": 0,
+          "mig_mode": "Disabled"
+        }
+      ],
+      "cuda_driver_uuids": [
+        "GPU-03239cdc-e1bd-b09a-c550-604191d6d680"
+      ],
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "log_dir": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate",
+      "ai2thor_version": "5.0.0",
+      "cpu_affinity": [
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61,
+        63,
+        65,
+        67,
+        69,
+        71
+      ]
+    },
+    "scene_producer_module": "src.envs.pair_v2_stay_priority_shard",
+    "candidate_policy": "two_marked_pickupables_v1",
+    "candidate_policy_spec": {
+      "version": "two_marked_pickupables_v1",
+      "candidate_domain": "exactly the two stable-name marked pickupables A/B; other objects are not selectable targets",
+      "v0": "each actual mask >=250 at255 and 3D metadata centre distance from agent <=1.5m",
+      "ordering": "for each actual v0: same-category pairs first, then different-category pairs; stable names within pairs",
+      "anchor": "one object of its category in full inventory; category differs from both candidates; unchanged nonrolling moved-object filter",
+      "instruction": "Select the marked object closest to the <anchor_type>.",
+      "marks": "only A/B receive marks; unchanged actual mask/mark rendering",
+      "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+      "closest_separation_ratio": 1.5,
+      "default_cloning": false,
+      "same_class_is_acceptance_filter": false,
+      "scope": "construction-stage qualification; T02 table/BFS/cache checks remain separate",
+      "nonrolling_anchor_exclusions": {
+        "excluded_moved_object_types": [
+          "Apple",
+          "Tomato",
+          "Potato",
+          "Egg",
+          "Lettuce",
+          "BasketBall",
+          "BaseballBat",
+          "Pen",
+          "Pencil"
+        ],
+        "excluded_native_variant_types": [
+          "AppleSliced",
+          "TomatoSliced",
+          "BreadSliced",
+          "PotatoSliced",
+          "LettuceSliced",
+          "EggCracked",
+          "EggShell"
+        ],
+        "excluded_type_suffixes": [
+          "Sliced",
+          "Cracked",
+          "Broken"
+        ],
+        "excluded_state_flags": [
+          "isBroken",
+          "isSliced"
+        ],
+        "category_matching": "exact case-sensitive metadata.objectType; suffixes apply to every category",
+        "native_category_source": "https://github.com/allenai/ai2thor/blob/f0825767cd50d69f666c7f282e54abfe58f1e917/unity/Assets/Scripts/SimObjType.cs",
+        "native_state_source": "https://github.com/allenai/ai2thor/blob/f0825767cd50d69f666c7f282e54abfe58f1e917/unity/Assets/Scripts/BaseFPSAgentController.cs#L1481"
+      }
+    },
+    "projection_pool_version": "native_projection_look_direct_pools_v1",
+    "projection_pool_policy": {
+      "version": "native_projection_look_direct_pools_v1",
+      "camera": "actual metadata cameraPosition, agent yaw and cameraHorizon, vertical fov, screenWidth/screenHeight",
+      "projection": "Unity +Z forward/+X right/+Y up; positive horizon looks down; image edge coordinates [0,width) x [0,height)",
+      "proposal_point": "native selected_position plus anchor AABB half-height in Y; placement input remains native point",
+      "direct": "projected point in the starting frame; original horizontal near-to-far order; at most 40 per side",
+      "look": "positive camera depth, >=10px beyond at least one starting-frame edge; in frame after an existing observation action; native point <=3m from agent; at most 12 per side",
+      "schedule": "Look/Direct alternate globally; each pool independently retains Flip/Stay and expanded Stay A/B alternation; truthful exhaustion fallback",
+      "orientation": "unchanged seed0 SHA256(scene, actual global attempt index); applied by caller after scheduling",
+      "retry": "selected unchanged native token first, then remaining same-side pool tokens in recorded order; at most 40 total",
+      "scope": "proposal prefilter only; does not establish visibility, action feasibility, physics, evidence or acceptance"
+    },
+    "attempt_setup_version": "common_baseline_before_each_attempt_v1",
+    "attempt_setup_policy": {
+      "version": "common_baseline_before_each_attempt_v1",
+      "timing": "restore common baseline before each frozen build_pair positions the agent at v0",
+      "baseline": "same validated settled or clone common baseline supplied to every attempt",
+      "verification": "unchanged restoration_state: all movable/pickupable positions <=1cm and encoded full agent pose exact",
+      "signed_zero": "unchanged encoded comparison; signed-zero differences remain mismatches",
+      "paired_prefix": "no additional restore/reset/agent action between w0 and w1",
+      "setup_failure": "record rejected attempt; no w0 physical measurement invented",
+      "terminal_failure": "black frame, deadline and process interrupt propagate through existing cleanup",
+      "retention": "existing accepted/first-three-reason/terminal evidence policy and byte caps unchanged"
+    },
+    "frozen_render_version": "w0_nonanchor_frozen_render_v1",
+    "frozen_render_policy": {
+      "version": "w0_nonanchor_frozen_render_v1",
+      "physics": "unchanged two native placements and settling checks; retain both original physical snapshots",
+      "requested_render_worlds": "complete physical w0 pose list for both worlds; replace only X position and rotation with physically settled w1 X",
+      "render_actions": "PausePhysicsAutoSim; SetObjectPoses(placeStationary=True), PhysicsSyncTransforms, Pass for w0 then w1; no agent action or physics advance between captures",
+      "readback": "all requested editable poses checked against actual metadata; exact equality and maximum position/rotation differences recorded",
+      "acceptance": "unchanged restoration position<=1cm/exact agent and physical/image/witness criteria; no new exact-pose acceptance threshold",
+      "actual_cross_world": "all nonanchor native position/rotation differences recorded without replacing measurements by zero"
+    },
+    "enable_candidate_clone": false,
+    "fov_contrast_version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+    "fov_contrast_policy": {
+      "version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+      "approved_task_commit": "47ea528",
+      "search_approval": "5a50999",
+      "field_of_view": 60,
+      "camera_selection": "completed same-scene supplement12 comparison; selected60; do not repeat the contrast",
+      "unit_gpu_count": 1,
+      "unit_timeout_seconds": 1200,
+      "parent_timeout_seconds": 1350,
+      "gate_timeout_seconds": 120,
+      "allocation_walltime_seconds": 1380,
+      "timing_scope": "one full1200-second scene grant; native deadline1190s; gate and finalization separate",
+      "partial_grant_policy": "fail before launch if full1200-second child grant is unavailable",
+      "scene_scope": "one explicit scene from the fixed40 training scenes",
+      "minimum_eligible_attempts": null,
+      "search": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "fixed_labels": "pair_stable_object_labels_v1",
+      "discovery_schedule": "one_discovery_then_full_active_round_v1",
+      "discovery_scope": "discover one additional domain per complete round of previously active domains; preserve all domains and acceptance thresholds",
+      "scope": "existing pending Stay domain order only; full original ranked geometry/physics/render/witness checks unchanged",
+      "previous_source_version": "look_flip_rounds_shared_native_complete_geometry_selected60_v2",
+      "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+      "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "approval": "human-authorized independent Stay-order trial after the recorded supplement15 diagnosis",
+      "proposal_domain": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "search_policy_override": "flip_search_policy retains scheduling/quota/seed/view ordering only; its native-surface role and point projection domain are superseded by flip_geometry_policy for Flip; Stay unchanged",
+      "rank_deadline": "check the original config.deadline before every ranked point; timeout propagates without a partial pool",
+      "stay_priority": "stay_pending_domain_min_world_one_step_area_v1"
+    },
+    "fov_contrast_group": "selected60_flip_unit",
+    "flip_unit_version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+    "flip_unit_policy": {
+      "version": "look_stay_min_world_predicted_area_priority_selected60_v1",
+      "approved_task_commit": "47ea528",
+      "search_approval": "5a50999",
+      "field_of_view": 60,
+      "camera_selection": "completed same-scene supplement12 comparison; selected60; do not repeat the contrast",
+      "unit_gpu_count": 1,
+      "unit_timeout_seconds": 1200,
+      "parent_timeout_seconds": 1350,
+      "gate_timeout_seconds": 120,
+      "allocation_walltime_seconds": 1380,
+      "timing_scope": "one full1200-second scene grant; native deadline1190s; gate and finalization separate",
+      "partial_grant_policy": "fail before launch if full1200-second child grant is unavailable",
+      "scene_scope": "one explicit scene from the fixed40 training scenes",
+      "minimum_eligible_attempts": null,
+      "search": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "fixed_labels": "pair_stable_object_labels_v1",
+      "discovery_schedule": "one_discovery_then_full_active_round_v1",
+      "discovery_scope": "discover one additional domain per complete round of previously active domains; preserve all domains and acceptance thresholds",
+      "scope": "existing pending Stay domain order only; full original ranked geometry/physics/render/witness checks unchanged",
+      "previous_source_version": "look_flip_rounds_shared_native_complete_geometry_selected60_v2",
+      "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+      "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "approval": "human-authorized independent Stay-order trial after the recorded supplement15 diagnosis",
+      "proposal_domain": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "search_policy_override": "flip_search_policy retains scheduling/quota/seed/view ordering only; its native-surface role and point projection domain are superseded by flip_geometry_policy for Flip; Stay unchanged",
+      "rank_deadline": "check the original config.deadline before every ranked point; timeout propagates without a partial pool",
+      "stay_priority": "stay_pending_domain_min_world_one_step_area_v1"
+    },
+    "flip_unit_scene": "FloorPlan203",
+    "flip_unit_plan": [
+      {
+        "scene": "FloorPlan203",
+        "field_of_view": 60,
+        "gpu_count": 1,
+        "timeout_seconds": 1200
+      }
+    ],
+    "flip_search_version": "look_flip_full_pool_edge_views_measured_quota_v1",
+    "flip_search_policy": {
+      "version": "look_flip_full_pool_edge_views_measured_quota_v1",
+      "approved_task_commit": "5a50999",
+      "domain": "all queried native points separated by3D distance ratio1.5,10px-outside,one-step-projection and3m filters; no old horizontal-side, proximity, overlap-proposal or12-point cap for Flip",
+      "receptacles": "all original eligible scene receptacles in deterministic original order",
+      "flip_order": "native3D near/far ratio, then stable native key; actual settled3D acceptance remains mandatory",
+      "prediction": "native selected coordinate is only proposal geometry; PlaceObjectAtPoint resolves its own surface and pivot, so actual settled metadata is authoritative",
+      "views": "existing allowed views reordered toward actual-geometric candidate centres at opposite left/right image edges; actual native visibility still required",
+      "identities": "opposite-edge candidate pairs first, then original same-category/name order",
+      "stay": "original first12 near points per side and supplement11 far-first retries",
+      "quota": "across the entire scene, including Controller restarts: counted Flip attempts >= counted Stay attempts; failed native placement does not earn quota",
+      "no_flip_domain": "continue other combinations/views; never fill a required Flip turn with Stay",
+      "unchanged": "seed0 world-side assignment, StayA/B alternation, physical10-rejection skip, all acceptance thresholds"
+    },
+    "flip_selected_field_of_view": 60,
+    "fixed_label_version": "pair_stable_object_labels_v1",
+    "fixed_label_policy": {
+      "version": "pair_stable_object_labels_v1",
+      "approved_task_commit": "5a50999",
+      "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+      "scope": "one object keeps its number across both worlds and all views of one pair",
+      "visible_subset": "draw only currently visible declared candidates; never renumber a subset",
+      "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+      "legacy": "absent policy means the original spatial policy; no retrospective upgrades"
+    },
+    "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_policy": {
+      "version": "one_discovery_then_full_active_round_v1",
+      "round": "discover at most one new combination, then process each combination active at that round start once",
+      "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+      "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order",
+      "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+      "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+      "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+      "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim"
+    },
+    "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+    "spawn_token_storage_policy": {
+      "version": "native_token_shared_json_exact_sha256_v1",
+      "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+      "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+      "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+      "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+      "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+      "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes"
+    },
+    "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "bbox_proposal_rank_policy": {
+      "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+      "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+      "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+      "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+      "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+      "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+      "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+      "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+      "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+      "scope": "proposal prediction only; no acceptance result or measured visibility is produced"
+    },
+    "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "flip_geometry_policy": {
+      "version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+      "approval": "T01v2 supplement15;5a0a138",
+      "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+      "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+      "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+      "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+      "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+      "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+      "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+      "unknown": "unknown projection/geometry never counts as a passing prediction",
+      "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+      "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+      "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+      "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+      "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+      "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim"
+    },
+    "stay_priority_version": "stay_pending_domain_min_world_one_step_area_v1",
+    "stay_priority_policy": {
+      "version": "stay_pending_domain_min_world_one_step_area_v1",
+      "score": "minimum of the two planned worlds best known one-action projected AABB rectangle areas",
+      "scope": "predicted planned native proposals only; not actual fallback, rendered visibility, mask area or scientific acceptance",
+      "selection": "only when the existing scene-wide counted quota requests Stay; highest known score among this finite round pending Stay domains; stable original-domain ties; unknown retained last",
+      "peek": "read the original next Stay row without advancing any cursor, side alternation or quota",
+      "within_domain": "unchanged original Stay A/B alternation, fixed-w0 far-first combinations and actual native fallback order",
+      "round": "one visit per original round domain; original discovery order restored at each round boundary; Flip selection delegates to original pop",
+      "domain": "no added/deleted points, proposals, combinations or views; no score threshold",
+      "deadline": "original finite scene soft deadline checked before every pending domain and each world prediction"
+    },
+    "stay_w1_order_version": "stay_w1_far_first_without_repeat_v1",
+    "stay_w1_order_policy": {
+      "version": "stay_w1_far_first_without_repeat_v1",
+      "enumeration": "same unordered Stay combinations; for each fixed w0, order its remaining w1 suffix far-to-near",
+      "distance": "3D Euclidean native position; descending; deterministic ascending native-key ties",
+      "native_origin": "actual physically settled w0 anchor metadata.position, including successful native fallback",
+      "native_order": "scheduled w1 first when w0 did not fall back and that point is untried; remaining retries far-to-near from actual w0",
+      "fallback_order": "when w0 fell back or scheduled w1 was already tried, remaining eligible same-side points far-to-near",
+      "exploration": "per Controller/common baseline/view/identity/pool/side/successful w0 point, skip only ledger-recorded w1 attempts",
+      "unchanged": "native tokens, pool membership/caps, Flip sequence, Stay A/B alternation, Look/Direct alternation, seed0, all acceptance thresholds"
+    }
+  },
+  "sources": [
+    {
+      "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.json",
+      "sha256": "4372cd2b09f90a029150289f3fcec8b17ae933d6806a5b12be217d0ee1d43754",
+      "metrics_sha256": "104665488fb4678636fc158c097b29d13829a611b8164d5827c2550547fff08b",
+      "exit_code": 0,
+      "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+      "audit": {
+        "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.json",
+        "fail": [],
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_gate.diff"
+        ]
+      }
+    },
+    {
+      "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.json",
+      "sha256": "c7c9920ac5973058057bd90c2960481aacf835369ba5cc9d9fb3915eb45a5579",
+      "metrics_sha256": "7eec8373c1b28d516406b70debd2b1110ee40603fba79de08fa059e4b16e46dd",
+      "exit_code": 1,
+      "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+      "audit": {
+        "file": "results/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.json",
+        "fail": [],
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01_j707865_hopper_m_02_g0_floorplan203.diff",
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      }
+    }
+  ],
+  "_meta": {
+    "name": "pilot_pairs_v2_stay60_fp203_visible_r01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t01v2_stay_priority_parallel",
+      "--name",
+      "pilot_pairs_v2_stay60_fp203_visible_r01",
+      "--gpus",
+      "1",
+      "--scenes",
+      "FloorPlan203",
+      "--field-of-view",
+      "60",
+      "--timeout-seconds",
+      "1350",
+      "--scene-timeout-seconds",
+      "1200",
+      "--gate-timeout-seconds",
+      "120"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-15",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T15:10:18",
+    "log_path": "logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bb69fa15404a3f5ebaf238fa9dc651b9afa0380d",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/pilot_pairs_v2_stay60_fp203_visible_r01.diff",
+    "end": "2026-11-09T15:29:52",
+    "duration_sec": 1173.0,
+    "exit_code": 1,
+    "metrics_sha256": "15690960e9789831d3d61613c9449fc1a851eb6eff71af87e34cd9fea2df7de0"
+  }
+}

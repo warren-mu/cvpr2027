@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.8959707780159079
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.phase_watch import validate_e2e_black_retry\nr=pathlib.Path.cwd();p=json.loads((r/'logs/pbs/smoke_e2e_look_views_01_retry1-20261109T071528Z-3ce74250/payload.json').read_text())\na,ar=audited_result(r/'results/smoke_e2e_look_black_accounting_02.json')\no,oref=audited_result(r/'results/smoke_e2e_look_views_01_retry1.json');g,gref=audited_result(r/'results/smoke_e2e_look_views_01_retry1_gate.json')\nassert a['metrics']['complete_allocation_accounting'] is True\nfields=next(v['fields'] for v in a['config']['jobs'] if v['job_id']=='707887.hopper-m-02')\nreason=validate_e2e_black_retry(r,p,'707887.hopper-m-02',fields,o,g,'smoke_e2e_look_views_01_retry1_gate')\ne={'reason':reason,'job':'707887.hopper-m-02','node':g['config']['node'],'devices':g['config']['allocation']['devices'],'actual_accounting':a['metrics'],'references':[ar,oref,gref]}\nprint('VERIFIED_RETRY: '+json.dumps(e,sort_keys=True))\ns=r/'STATUS.md';s.write_text(s.read_text()+'\\n### Second Look E2E black gate\\n\\nThe next retry is again gated by the original strict black/UUID/PBS/cleanup verifier; no export has started. Verified observation: '+json.dumps(e,sort_keys=True)+'. The failed source remains retained; retry2 preserves the same unpinned oneGPU37-minute request and links retry_of=707887.hopper-m-02.\\n')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_e2e_look_retry_guard_02",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_e2e_look_retry_guard_02",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.phase_watch import validate_e2e_black_retry\nr=pathlib.Path.cwd();p=json.loads((r/'logs/pbs/smoke_e2e_look_views_01_retry1-20261109T071528Z-3ce74250/payload.json').read_text())\na,ar=audited_result(r/'results/smoke_e2e_look_black_accounting_02.json')\no,oref=audited_result(r/'results/smoke_e2e_look_views_01_retry1.json');g,gref=audited_result(r/'results/smoke_e2e_look_views_01_retry1_gate.json')\nassert a['metrics']['complete_allocation_accounting'] is True\nfields=next(v['fields'] for v in a['config']['jobs'] if v['job_id']=='707887.hopper-m-02')\nreason=validate_e2e_black_retry(r,p,'707887.hopper-m-02',fields,o,g,'smoke_e2e_look_views_01_retry1_gate')\ne={'reason':reason,'job':'707887.hopper-m-02','node':g['config']['node'],'devices':g['config']['allocation']['devices'],'actual_accounting':a['metrics'],'references':[ar,oref,gref]}\nprint('VERIFIED_RETRY: '+json.dumps(e,sort_keys=True))\ns=r/'STATUS.md';s.write_text(s.read_text()+'\\n### Second Look E2E black gate\\n\\nThe next retry is again gated by the original strict black/UUID/PBS/cleanup verifier; no export has started. Verified observation: '+json.dumps(e,sort_keys=True)+'. The failed source remains retained; retry2 preserves the same unpinned oneGPU37-minute request and links retry_of=707887.hopper-m-02.\\n')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T15:25:01",
+    "log_path": "logs/runs/diag_e2e_look_retry_guard_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "6062a682cf605e3146b4d3cf19c689109a088a2a",
+    "git_dirty": false,
+    "end": "2026-11-09T15:25:02",
+    "duration_sec": 1.0,
+    "exit_code": 0,
+    "metrics_sha256": "a165415b2b971843102db531e41bc4f53892a2bb78a9f10b3c963d36d2eacc05"
+  }
+}
