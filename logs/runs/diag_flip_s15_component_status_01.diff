@@ -1,0 +1,40 @@
+diff --git a/STATUS.md b/STATUS.md
+index db4aabd..815ab75 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -581,3 +581,35 @@ Commit137bc6a adds an opt-in producer with the existing discovery cadence, exact
+ ### Overnight live prefix 2026-11-09T05:10:32.638193+00:00
+ 
+ 707691 / FloorPlan203 cadence-only r02 continues. Complete observed journal rows: 56; producer-reported classes: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; rejection counts: {"anchor_visible_at_v0": 18, "one_action_evidence_unavailable": 5, "target_uniqueness_or_ratio": 7, "v0_candidates_visibility": 2, "w0_physical": 20, "w1_physical": 4}. This is an archived live prefix, not a final source or independent acceptance. Source: results/t01v2_flip_progress_05.json.
++
++
++### FP203 cadence Flip unit 707691: sealed failure funnel
++
++PBS 707691.hopper-m-02 的 FloorPlan203/60° 单元已结束，原运行状态为 `incomplete`、exit 1，失败原因 `TimeoutError: Error encountered when running action {'action': 'PlaceObjectAtPoint', 'objectId': 'Box\|-03.71\|+01.07\|-00.63', 'position': {'x': -6.2486042976379395, 'y': 0.3065462112426758, 'z': -0.0050275325775146484}, 'rotation': {'x': 359.0010070800781, 'y': 327.9556884765625, 'z': 359.19390869140625}, 'forceKinematic': True, 'sequenceId': 2423} in scene FloorPlan203_physics.`。这是已封存的终止记录，并非完成采集：原记录共 57 次计入尝试，Flip/Stay 为 29/28；原生放置失败而未计入的提议为 9。所有失败及终止尝试保留；独立验收另看 checkpoint，下面仅是生成器原记录漏斗，不能当作独立合格数。
++
++表中每个 gate 均为「通过/失败/未知」，分母是该行实际尝试；尚未执行的检查保持未知，没有补成零。各 gate 是独立测量列，并非假定依次全部执行；原执行顺序仍先物理检查。
++
++| Group | Mode | Actual attempts | Source-reported Look passes | X hidden | Prefix ≤3 | First evidence ≥250 | Solvable both | Physical both | Witness both |
++|---|---|---:|---:|---|---|---|---|---|---|
++| All anchors | flip | 29 | 0 | 2/13/14 | 2/13/14 | 0/2/27 | 0/2/27 | 15/13/1 | 0/0/29 |
++| All anchors | stay | 28 | 0 | 3/7/18 | 3/7/18 | 0/3/25 | 0/3/25 | 17/11/0 | 0/0/28 |
++| Boots | flip | 4 | 0 | 0/0/4 | 0/0/4 | 0/0/4 | 0/0/4 | 0/4/0 | 0/0/4 |
++| Boots | stay | 6 | 0 | 0/0/6 | 0/0/6 | 0/0/6 | 0/0/6 | 0/6/0 | 0/0/6 |
++| Box | flip | 3 | 0 | 0/2/1 | 0/2/1 | 0/0/3 | 0/0/3 | 2/0/1 | 0/0/3 |
++| Box | stay | 2 | 0 | 0/2/0 | 0/2/0 | 0/0/2 | 0/0/2 | 2/0/0 | 0/0/2 |
++| CellPhone | flip | 6 | 0 | 0/6/0 | 0/6/0 | 0/0/6 | 0/0/6 | 6/0/0 | 0/0/6 |
++| CellPhone | stay | 3 | 0 | 0/2/1 | 0/2/1 | 0/0/3 | 0/0/3 | 3/0/0 | 0/0/3 |
++| CreditCard | flip | 3 | 0 | 2/1/0 | 2/1/0 | 0/2/1 | 0/2/1 | 3/0/0 | 0/0/3 |
++| CreditCard | stay | 5 | 0 | 3/0/2 | 3/0/2 | 0/3/2 | 0/3/2 | 5/0/0 | 0/0/5 |
++| KeyChain | flip | 4 | 0 | 0/0/4 | 0/0/4 | 0/0/4 | 0/0/4 | 0/4/0 | 0/0/4 |
++| KeyChain | stay | 3 | 0 | 0/0/3 | 0/0/3 | 0/0/3 | 0/0/3 | 0/3/0 | 0/0/3 |
++| Laptop | flip | 2 | 0 | 0/0/2 | 0/0/2 | 0/0/2 | 0/0/2 | 0/2/0 | 0/0/2 |
++| Laptop | stay | 2 | 0 | 0/0/2 | 0/0/2 | 0/0/2 | 0/0/2 | 2/0/0 | 0/0/2 |
++| Newspaper | flip | 2 | 0 | 0/2/0 | 0/2/0 | 0/0/2 | 0/0/2 | 2/0/0 | 0/0/2 |
++| Newspaper | stay | 3 | 0 | 0/2/1 | 0/2/1 | 0/0/3 | 0/0/3 | 3/0/0 | 0/0/3 |
++| Pillow | flip | 3 | 0 | 0/0/3 | 0/0/3 | 0/0/3 | 0/0/3 | 0/3/0 | 0/0/3 |
++| Plate | stay | 3 | 0 | 0/0/3 | 0/0/3 | 0/0/3 | 0/0/3 | 1/2/0 | 0/0/3 |
++| RemoteControl | flip | 2 | 0 | 0/2/0 | 0/2/0 | 0/0/2 | 0/0/2 | 2/0/0 | 0/0/2 |
++| TissueBox | stay | 1 | 0 | 0/1/0 | 0/1/0 | 0/0/1 | 0/0/1 | 1/0/0 | 0/0/1 |
++
++拒绝原因原计数：anchor_visible_at_v0=18; one_action_evidence_unavailable=5; target_uniqueness_or_ratio=7; terminal_interruption=1; v0_candidates_visibility=2; w0_physical=20; w1_physical=4。来源：`results/diag_flip_sealed_fp203_r02.json` 及其原日志中的 `SEALED_FLIP_ANCHOR_FUNNEL_JSON`，绑定 `results/pilot_pairs_v2_flip60_fp203_r02_j707691_hopper_m_02_g0_floorplan203.json` 与完整 journal；阈值和原始记录均未改。

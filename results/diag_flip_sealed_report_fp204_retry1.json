@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.07249709201278165
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nroot=pathlib.Path.cwd()\nd,ref=audited_result(root/'results/diag_flip_sealed_fp204_retry1.json')\nassert d['_meta']['exit_code']==0\nprefix='SEALED_FLIP_ANCHOR_FUNNEL_JSON: '\nr=json.loads(next(x[len(prefix):] for x in (root/d['_meta']['log_path']).read_text().splitlines() if x.startswith(prefix)))\ndef short(e):\n v=e['values']; actions=v.get('first_actions') or []\n evidence=[a.get('evidence',{}).get('evidence_pixels') for a in actions if a.get('evidence',{}).get('evidence_pixels') is not None]\n pixels=v.get('prefix_anchor_pixels')\n sol=v.get('solvable_by_world')\n return e['pair_id']+': X='+json.dumps(pixels,sort_keys=True)+'; RGBmax='+str(v.get('prefix_max_abs_diff'))+'; observed evidence='+str(evidence)+'; solvable='+str(sol)\nlines=['# FP20460° /707668 sealed failure funnel','',\n'The source ended incomplete after10 counted attempts, with no independently accepted pairs (checkpoint: results/t01v2_checkpoint_flip60_fp204_retry1.json). Flip/Stay5/5. This table copies the authenticated original funnel; each gate column is measured separately, and cumulative pass follows the requested gate sequence. Unknown means unreached/unrecorded. Failed examples are the first up to3 actually observed failures; no examples are invented for unmeasured gates.','',\n'| Mode | Gate | Pass | Fail | Unknown | Cumulative pass | Recorded rejected examples |','|---|---|---:|---:|---:|---:|---|']\nfor group in r['groups']:\n for gate in ('hidden_both','prefix_le3','first_evidence_ge250','solvable_both','physical_both','witness_both'):\n  s=group['funnel']['stages'][gate]\n  examples='<br>'.join(short(e) for e in s['rejected_examples']) or 'No observed failing example'\n  row=[group['mode'],gate,s['gate_pass'],s['gate_fail'],s['gate_unknown'],s['cumulative_pass'],examples]\n  lines.append('| '+' | '.join(str(x).replace('|','\\\\|') for x in row)+' |')\nlines+=['','Source: '+ref['file']+'; unchanged original metrics and failed run retained.']\nout=root/'logs/review/diag_flip_sealed_fp204_retry1.md'\nassert not out.exists()\nout.write_text('\\n'.join(lines)+'\\n')\nprint(str(out.relative_to(root)))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_flip_sealed_report_fp204_retry1",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_flip_sealed_report_fp204_retry1",
+      "--",
+      "python3",
+      "-c",
+      "import json,pathlib\nfrom src.tools.t01_partition import audited_result\nroot=pathlib.Path.cwd()\nd,ref=audited_result(root/'results/diag_flip_sealed_fp204_retry1.json')\nassert d['_meta']['exit_code']==0\nprefix='SEALED_FLIP_ANCHOR_FUNNEL_JSON: '\nr=json.loads(next(x[len(prefix):] for x in (root/d['_meta']['log_path']).read_text().splitlines() if x.startswith(prefix)))\ndef short(e):\n v=e['values']; actions=v.get('first_actions') or []\n evidence=[a.get('evidence',{}).get('evidence_pixels') for a in actions if a.get('evidence',{}).get('evidence_pixels') is not None]\n pixels=v.get('prefix_anchor_pixels')\n sol=v.get('solvable_by_world')\n return e['pair_id']+': X='+json.dumps(pixels,sort_keys=True)+'; RGBmax='+str(v.get('prefix_max_abs_diff'))+'; observed evidence='+str(evidence)+'; solvable='+str(sol)\nlines=['# FP20460° /707668 sealed failure funnel','',\n'The source ended incomplete after10 counted attempts, with no independently accepted pairs (checkpoint: results/t01v2_checkpoint_flip60_fp204_retry1.json). Flip/Stay5/5. This table copies the authenticated original funnel; each gate column is measured separately, and cumulative pass follows the requested gate sequence. Unknown means unreached/unrecorded. Failed examples are the first up to3 actually observed failures; no examples are invented for unmeasured gates.','',\n'| Mode | Gate | Pass | Fail | Unknown | Cumulative pass | Recorded rejected examples |','|---|---|---:|---:|---:|---:|---|']\nfor group in r['groups']:\n for gate in ('hidden_both','prefix_le3','first_evidence_ge250','solvable_both','physical_both','witness_both'):\n  s=group['funnel']['stages'][gate]\n  examples='<br>'.join(short(e) for e in s['rejected_examples']) or 'No observed failing example'\n  row=[group['mode'],gate,s['gate_pass'],s['gate_fail'],s['gate_unknown'],s['cumulative_pass'],examples]\n  lines.append('| '+' | '.join(str(x).replace('|','\\\\|') for x in row)+' |')\nlines+=['','Source: '+ref['file']+'; unchanged original metrics and failed run retained.']\nout=root/'logs/review/diag_flip_sealed_fp204_retry1.md'\nassert not out.exists()\nout.write_text('\\n'.join(lines)+'\\n')\nprint(str(out.relative_to(root)))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T13:14:01",
+    "log_path": "logs/runs/diag_flip_sealed_report_fp204_retry1.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "e27902cb87100129e3a8441d948989d5e319e3ba",
+    "git_dirty": false,
+    "end": "2026-11-09T13:14:02",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "687ee2d36e19715d267ea35fd35c017fe1a03d83b469beb72e31c6c5045481c5"
+  }
+}

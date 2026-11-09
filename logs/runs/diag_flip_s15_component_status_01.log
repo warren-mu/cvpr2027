@@ -1,0 +1,23 @@
+# run_logged: python3 -m src.tools.record_command --name diag_flip_s15_component_status_01 -- python3 -c import json,pathlib
+from src.tools.t01_partition import audited_result
+root=pathlib.Path.cwd()
+entries=[('707668.hopper-m-02','t01v2_flip60_fp204_retry1_accounting_01','diag_flip_sealed_fp204_retry1'),('707691.hopper-m-02','t01v2_flip60_fp203_r02_accounting_01','diag_flip_sealed_fp203_r02')]
+table=['| Job | GPUs | Queue wait (minutes) | Measured allocation GPU-hours | Recorded charge rate |','|---|---:|---:|---:|---:|']
+for job,name,report in entries:
+ d,_=audited_result(root/'results'/f'{name}.json')
+ assert d['_meta']['exit_code']==0 and d['metrics']['complete_allocation_accounting']
+ h=d['metrics']['allocation_gpu_hours_by_job'][job];wait=d['metrics']['queue_wait_seconds_by_job'][job]
+ fields=next(x['fields'] for x in d['config']['jobs'] if x['job_id']==job)
+ line='| '+job+' | '+fields['Resource_List.ngpus']+' | '+str(wait/60)+' | '+str(h)+' | '+fields['Resource_List.queue_charge_rate']+' |'
+ table.append(line)
+ target=root/'logs/review'/f'{report}.md'
+ text=target.read_text(); assert 'Recorded PBS allocation' not in text
+ target.write_text(text+'\nRecorded PBS allocation from '+name+'.json (allocation duration and queue charge rate; no independent credit reconciliation):\n\n'+'\n'.join(table[:2]+[line])+'\n')
+s=root/'STATUS.md'
+s.write_text(s.read_text()+'\n### Supplement15 geometry prefilter: CPU component complete\n\nCommit772fa9e implements full native-point input, predicted centre3D role ratios, complete start box outside10px, independent one-step box visibility, lazy full tuples, and fallback point validation.10 focused tests passed in results/t01v2_flip_geometry_cpu_01.json, including same-screen-side candidates and surface/centre disagreement. The actual producer/independent checker wiring is still being integrated; no supplement15 GPU job has been submitted. All final rendered and physical thresholds remain unchanged.\n\n'+ '\n'.join(table)+'\n')
+print('Copied measured PBS entries into the existing two funnel reports and STATUS.')
+
+# start: 2026-11-09T13:25:13
+Copied measured PBS entries into the existing two funnel reports and STATUS.
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.09100542200030759}
+# exit_code: 0

@@ -1,0 +1,32 @@
+# run_logged: python3 -m src.tools.record_command --name diag_flip_sealed_report_fp204_retry1 -- python3 -c import json,pathlib
+from src.tools.t01_partition import audited_result
+root=pathlib.Path.cwd()
+d,ref=audited_result(root/'results/diag_flip_sealed_fp204_retry1.json')
+assert d['_meta']['exit_code']==0
+prefix='SEALED_FLIP_ANCHOR_FUNNEL_JSON: '
+r=json.loads(next(x[len(prefix):] for x in (root/d['_meta']['log_path']).read_text().splitlines() if x.startswith(prefix)))
+def short(e):
+ v=e['values']; actions=v.get('first_actions') or []
+ evidence=[a.get('evidence',{}).get('evidence_pixels') for a in actions if a.get('evidence',{}).get('evidence_pixels') is not None]
+ pixels=v.get('prefix_anchor_pixels')
+ sol=v.get('solvable_by_world')
+ return e['pair_id']+': X='+json.dumps(pixels,sort_keys=True)+'; RGBmax='+str(v.get('prefix_max_abs_diff'))+'; observed evidence='+str(evidence)+'; solvable='+str(sol)
+lines=['# FP20460° /707668 sealed failure funnel','',
+'The source ended incomplete after10 counted attempts, with no independently accepted pairs (checkpoint: results/t01v2_checkpoint_flip60_fp204_retry1.json). Flip/Stay5/5. This table copies the authenticated original funnel; each gate column is measured separately, and cumulative pass follows the requested gate sequence. Unknown means unreached/unrecorded. Failed examples are the first up to3 actually observed failures; no examples are invented for unmeasured gates.','',
+'| Mode | Gate | Pass | Fail | Unknown | Cumulative pass | Recorded rejected examples |','|---|---|---:|---:|---:|---:|---|']
+for group in r['groups']:
+ for gate in ('hidden_both','prefix_le3','first_evidence_ge250','solvable_both','physical_both','witness_both'):
+  s=group['funnel']['stages'][gate]
+  examples='<br>'.join(short(e) for e in s['rejected_examples']) or 'No observed failing example'
+  row=[group['mode'],gate,s['gate_pass'],s['gate_fail'],s['gate_unknown'],s['cumulative_pass'],examples]
+  lines.append('| '+' | '.join(str(x).replace('|','\\|') for x in row)+' |')
+lines+=['','Source: '+ref['file']+'; unchanged original metrics and failed run retained.']
+out=root/'logs/review/diag_flip_sealed_fp204_retry1.md'
+assert not out.exists()
+out.write_text('\n'.join(lines)+'\n')
+print(str(out.relative_to(root)))
+
+# start: 2026-11-09T13:14:01
+logs/review/diag_flip_sealed_fp204_retry1.md
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.07249709201278165}
+# exit_code: 0
