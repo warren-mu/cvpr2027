@@ -115,6 +115,18 @@ class UnitTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Runnable'):units.validate_unit(external,f.root)
             with self.assertRaisesRegex(ValueError,'External'):units.validate_unit(f.unit,f.root,external=True)
 
+    def test_explicit_nearby_physics_changes_unit_identity_but_not_fixed_capacity_keys(self):
+        from src.envs import pair_v2_nearby_physics as physics
+        with tempfile.TemporaryDirectory() as folder:
+            f=Fixture(Path(folder)); old, oldkeys=units.validate_unit(f.unit,f.root)
+            changed=copy.deepcopy(f.unit);changed['command'].append('--nearby-physics')
+            identity,keys=units.validate_unit(changed,f.root)
+            self.assertEqual(identity,{**old,**physics.fields()})
+            self.assertEqual(keys,oldkeys)
+            self.assertNotIn('nearby_physics_version',old)
+            changed['command'].append('--nearby-physics')
+            with self.assertRaises(ValueError):units.validate_unit(changed,f.root)
+
     def test_changed_command_resource_or_manifest_ref_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             f=Fixture(Path(folder))

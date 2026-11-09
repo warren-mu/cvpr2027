@@ -25,8 +25,8 @@ from src.tools.t01_partition import audited_result, canonical_hash, sha_file
 KINDS = ("direct_flip", "direct_stay", "look_flip", "look_stay")
 PER_CLASS = 20
 REVIEWS_PER_CLASS = 10
-CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611", "4e010a3", "6ca87ceb")
-CURRENT_SPEC_REFERENCE = "6ca87ceb"
+CONSTRUCTION_SPEC_REFERENCES = ("635afb6", "1f41a2d", "50108ac", "d869611", "4e010a3", "6ca87ceb", "38b15551")
+CURRENT_SPEC_REFERENCE = "38b15551"
 
 
 @lru_cache(maxsize=64)
@@ -790,12 +790,50 @@ def final_pair_eligible(kind, solvability_version):
     return kind in KINDS and (not kind.startswith("look") or solvability_version == SOLVABILITY_VERSION)
 
 
+def validate_nearby_physics_opt_in(row, version, declared_policy, *, marked, frozen,
+                                   clone_enabled, preflight_version):
+    """A row cannot enable new acceptance rules without its audited source."""
+    from src.envs import pair_v2_nearby_physics as nearby
+    claimed = any(row.get(key) is not None for key in nearby.FIELDS)
+    if version is None:
+        if declared_policy is not None or claimed or any(row.get(key) is not None for key in
+                ('nearby_physics_context', 'far_object_drift_max_m', 'far_drift_objects', 'passes_original_physics_rule')):
+            raise ValueError('Historical source cannot acquire nearby-physics claims')
+        return False
+    nearby.validate_fields({'nearby_physics_version': version, 'nearby_physics_policy': declared_policy})
+    nearby.validate_fields(row)
+    if (version != row['nearby_physics_version'] or declared_policy != row['nearby_physics_policy']
+            or not marked or not frozen or clone_enabled or preflight_version != 'settled_baseline_window_v1'):
+        raise ValueError('Nearby physics requires its exact explicit natural/frozen source policy')
+    return True
+
+
+def verify_nearby_physics_measurements(row, constructions, common_objects, common_reference):
+    """Recompute both worlds together from authenticated original inputs.
+
+    The caller still verifies the complete native placement/settling chains,
+    original common-baseline evidence, snapshots and all scientific gates.
+    """
+    from src.envs import pair_v2_nearby_physics as nearby
+    measured = nearby.measure_pair(constructions, common_objects, common_reference)
+    if len(measured['worlds']) != 2 or len(constructions) != 2:
+        raise ValueError('Nearby physics requires both physical worlds')
+    for construction, world in zip(constructions, measured['worlds']):
+        if construction.get('nearby_physics_measurement') != world:
+            raise ValueError('Nearby physical measurement differs from original native positions')
+    for key, value in measured['pair'].items():
+        if key not in row or row[key] != value:
+            raise ValueError('Nearby pair diagnostic differs from independently measured positions: ' + key)
+    return measured['worlds'], copy.deepcopy(measured['pair'])
+
+
 def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False, preflight_version=None,
                evidence_version=None, search_version=None, search_policy=None, search_clone_source=None,
                solvability_version=None, solvability_policy=None, generation_version=None, generation_policy=None,
                attempt_setup_version=None, attempt_setup_policy=None, candidate_policy=None, candidate_policy_spec=None,
                projection_pool_version=None, projection_pool_policy=None,
-               frozen_render_version=None, frozen_render_policy=None, field_of_view=None):
+               frozen_render_version=None, frozen_render_policy=None, field_of_view=None,
+               nearby_physics_version=None, nearby_physics_policy=None):
     """Recompute the policy from portable measured inputs, never just trust PASS."""
     import numpy as np
     from src.envs.pair_v2_policy import (classify_pair, closest_target, compare_view,
@@ -812,6 +850,8 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
     elif frozen_render_policy is not None or any(row.get(key) is not None for key in
             ('frozen_render_version', 'frozen_render_policy', 'frozen_render_reference', 'physical_world_references')):
         raise ValueError('Historical pairs cannot silently acquire frozen-render claims')
+    nearby = validate_nearby_physics_opt_in(row, nearby_physics_version, nearby_physics_policy,
+        marked=marked, frozen=frozen, clone_enabled=clone_enabled, preflight_version=preflight_version)
     if marked:
         from src.envs.pair_v2_marked_policy import CANDIDATE_POLICY, CANDIDATE_POLICY_SPEC, closest_target
         from src.envs.pair_v2_projection_pool import POOL_VERSION, POOL_POLICY
@@ -986,6 +1026,13 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
                     or read_reference(construction["common_baseline_check_reference"], root=root, within=raw_root) != checked):
                 raise ValueError("Stable-world common-baseline check differs from independently measured positions")
             physical[index] = augment_physical_result(physical[index], construction)
+    # Keep all original local/common-baseline native measurements above. The
+    # explicit supplement16 source may derive a different collateral verdict;
+    # the original construction/action bytes are neither edited nor replaced.
+    physics_rule_verification = None
+    if nearby:
+        physical, physics_rule_verification = verify_nearby_physics_measurements(
+            row, constructions, common_objects, common_reference)
     attempt_setup = None
     if attempt_setup_version is not None:
         if marked:
@@ -1140,6 +1187,9 @@ def check_pair(row, pair_path, *, root=ROOT, raw_root=None, clone_enabled=False,
             **({"attempt_setup_verification": attempt_setup} if attempt_setup is not None else {}),
             "verification_scope": "construction-stage and applicable supplement 4(a); P-table/BFS/no-leak/cache checks not run",
             "full_metrics_spec_compliance": None,
+            "passes_original_physics_rule": (physics_rule_verification['passes_original_physics_rule']
+                if nearby else True),
+            **({'nearby_physics_verification': physics_rule_verification} if nearby else {}),
             "witnesses": [{"passed": w["passed"], "target_name": w["target_name"]} for w in witnesses],
             "portable_file_count": len(portable), "review_image": review,
             "proposal_identity": identity}

@@ -33,6 +33,7 @@ def validate_unit(unit, root, *, external=False):
     parser.add_argument('--partition', required=True)
     parser.add_argument('--quota-plan', required=True)
     parser.add_argument('--quota-plan-sha256', required=True)
+    parser.add_argument('--nearby-physics', action='store_true')
     argv = arguments(unit.get('command'))
     try:
         args = parser.parse_args(argv)
@@ -42,6 +43,8 @@ def validate_unit(unit, root, *, external=False):
         '--benchmark-source', args.benchmark_source, '--timeout-seconds', str(args.timeout_seconds),
         '--partition', 'test', '--quota-plan', args.quota_plan,
         '--quota-plan-sha256', args.quota_plan_sha256]
+    if args.nearby_physics:
+        expected.append('--nearby-physics')
     if (argv != expected or args.name != unit.get('name') or args.partition != 'test'
             or args.concurrency != 6 or args.timeout_seconds != collect.required_timeout(args.scenes, 6, 'test')
             or unit.get('timeout_seconds') != args.timeout_seconds):
@@ -73,6 +76,9 @@ def validate_unit(unit, root, *, external=False):
     identity, keys = bank.scientific_identity(expected_member, root=root)
     identity.update(benchmark_source=benchmark, timeout_seconds=args.timeout_seconds,
                     producer_module=MODULE, cpu_cores=12, gpus=1)
+    if args.nearby_physics:
+        from src.envs import pair_v2_nearby_physics
+        identity.update(pair_v2_nearby_physics.fields())
     return identity, keys
 
 

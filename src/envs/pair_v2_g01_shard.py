@@ -1,6 +1,6 @@
 """Opt-in single-scene G01 mixed worker; no changes to active/old producers."""
 import copy
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 
 from . import pair_v2_marked_shard as marked
@@ -15,6 +15,7 @@ from . import pair_v2_spawn_sharing as sharing
 from . import pair_v2_bbox_rank as rank
 from . import pair_v2_flip_geometry as geometry
 from . import pair_v2_flip_ranked_shard as ranked
+from . import pair_v2_nearby_physics as nearby_physics
 
 _ORIGINAL_BUILD = look._ORIGINAL_BUILD
 _ORIGINAL_EXPORT = marked.export_pair
@@ -39,7 +40,9 @@ def tags(config=None):
     quota_assignment = None if config is None else config.get('g01_quota_assignment')
     extra = {} if quota_assignment is None else policy.quota_plan.declared_fields(quota_assignment)
     configuration = config is not None and config.get('g01_configuration_version') is not None
-    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None, configuration),
+    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None, configuration,
+                config is not None and config.get('nearby_physics_version') is not None,
+                config is not None and config.get('g01_engineering_smoke') is not None),
             **extra, **search.fields(quota_assignment is not None, configuration), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
@@ -57,7 +60,9 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
         record, pool = proposal['_private_pool_record'], proposal['projection_pool']['pool']
         proposal = {**proposal, '_private_pool_record': {**record,
             'points': {**record['points'], pool: record['stay_points_by_pool'][pool]}}}
-    with labels.pair_context(pair_id, identities['candidate_names'], declared={**config, **fields}):
+    physics = (nearby_physics.pair_context(sim, row, config)
+               if config.get('nearby_physics_version') is not None else nullcontext())
+    with physics, labels.pair_context(pair_id, identities['candidate_names'], declared={**config, **fields}):
         try:
             # The original mixed branch is retained, including Direct acceptance;
             # the supplement12 Look-only prefix rejection hook is not installed.
@@ -81,8 +86,25 @@ def compact_attempt(row):
                 *cadence.FIELDS, *sharing.FIELDS, *rank.FIELDS, *geometry.FIELDS,
                 'flip_geometry_initial_tuple', 'flip_geometry_final_tuple', 'flip_geometry_native_guards',
                 'collection_quota_skip', 'proposed_pool') + tuple(
+                    key for key in (*nearby_physics.FIELDS, 'far_object_drift_max_m', 'passes_original_physics_rule',
+                                    'g01_engineering_smoke') if key in row) + tuple(
                     key for key in (*policy.quota_plan.FIELDS, 'g01_configuration', 'collection_configuration_skip') if key in row):
         result[key] = copy.deepcopy(row.get(key))
+    if row.get('nearby_physics_version') is not None:
+        context = row.get('nearby_physics_context')
+        result['nearby_physics_context'] = (None if context is None else {key: copy.deepcopy(context.get(key))
+            for key in ('finalized', 'baseline_reference', 'anchor_name', 'requested_anchor_positions',
+                        'supporting_receptacle_names', 'reason')})
+        result['nearby_physics_compact_scope'] = 'rejected summary only; per-object far drift and distance maps omitted; accepted pairs retain full measurements'
+        for world in ('w0', 'w1'):
+            measured = row.get('physical_' + world)
+            result['physical_' + world] = (None if measured is None else {key: copy.deepcopy(measured.get(key))
+                for key in ('valid_physical', 'original_valid_physical', 'nonanchor_gate_pending', 'reasons')})
+    if row.get('g01_configuration') is not None:
+        # The immutable configuration validator still checks literal generator
+        # inputs on rejected attempts; compact storage must retain those inputs.
+        result['view'] = copy.deepcopy(row['view'])
+        result['identities'] = copy.deepcopy(row['identities'])
     if row.get('collection_quota_skip') is not None or row.get('collection_configuration_skip') is not None:
         result['validity'] = copy.deepcopy(row.get('validity'))
     return result
@@ -138,6 +160,9 @@ def configuration_skip(config, row):
 def installed(config=None):
     quota = make_quota(config)
     check = ranked.deadline_check(config) if config is not None else None
+    physics_counts = {'counted_attempts': 0, 'finalized_two_worlds': 0, 'pending_or_unmeasured': 0,
+        'both_worlds_pass_new_physics': 0, 'pass_new_but_fail_original_physics': 0,
+        'exported_original_rule_true': 0, 'exported_original_rule_false': 0}
     with stay.installed(), policy.camera_support(), labels.installed(), sharing.installed():
         original_write, original_summary = marked._BASE_WRITE, marked.summary
         original_observer = marked.construct_observer
@@ -156,8 +181,16 @@ def installed(config=None):
             reference = original_write(path, row)
             if Path(path).name == 'attempt.json':
                 quota.record(path, row)
+                if config is not None and config.get('nearby_physics_version') is not None:
+                    nearby_physics.update_counts(physics_counts, row)
             return reference
         def export(config, row, *args, **kwargs):
+            if config.get('nearby_physics_version') is not None:
+                nearby_physics.validate_fields(row)
+                if (row.get('nearby_physics_context', {}).get('finalized') is not True
+                        or any(row['physical_' + world].get('nonanchor_gate_pending') is not False
+                               for world in ('w0', 'w1'))):
+                    raise ValueError('Cannot export a pending supplement16 physical pair')
             quota.before_export(row)
             return _ORIGINAL_EXPORT(config, row, *args, **kwargs)
         def discover(*args, **kwargs):
@@ -173,6 +206,9 @@ def installed(config=None):
             result = original_summary(state, config)
             result.update(g01_collection=quota.summary(), minimum_eligible_attempts=None,
                 minimum_attempt_count_met=None, minimum_count_scope='no minimum-attempt claim; bounded collection')
+            if config.get('nearby_physics_version') is not None:
+                result['nearby_physics_counts'] = copy.deepcopy(physics_counts)
+                result['nearby_physics_counts_scope'] = 'actual written counted attempts; physics pass is not full pair acceptance; pending unknown kept separate'
             if quota.complete():
                 result['search_stop_reason'] = 'g01_all_scene_class_caps_reached'
             return result

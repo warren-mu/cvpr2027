@@ -91,6 +91,9 @@ def verify_collection(data):
         if raw.get('counts_as_pair_attempt') is not True or raw.get('proposed_pool') != row.get('proposed_pool'):
             raise ValueError('G01 journal contains an uncounted or different-pool raw attempt')
         search.validate_fields(raw)
+        if config.get('nearby_physics_version') is not None:
+            from src.envs import pair_v2_nearby_physics as nearby
+            nearby.validate_fields(raw)
         if quota.ticketed and any(raw.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
             raise ValueError('Raw journal attempt changed its immutable scene tickets')
         if (raw.get('g01_search_version') in (search.QUOTA_VERSION, search.CONFIG_VERSION)) != quota.ticketed:
@@ -131,6 +134,8 @@ def source_support():
             if not is_g01_source(config):
                 return previous_producer(command, config)
             policy.validate_source(config)
+            if config.get('g01_engineering_smoke') is not None:
+                raise ValueError('Engineering smoke is not an independent G01 collection source')
             common = copy.deepcopy(config)
             common['producer_module'] = 'src.envs.pair_v2_marked_shard'
             merge.marked_policy_configuration(common)
@@ -144,6 +149,8 @@ def source_support():
             data, reference = _BASE_LOAD(path)
             if is_g01_source(data['config']):
                 policy.validate_source(data['config'], data['metrics'])
+                if data['config'].get('g01_engineering_smoke') is not None:
+                    raise ValueError('Engineering smoke cannot enter an independent G01 checkpoint')
                 verify_collection(data)
                 verify_admission(data)
                 partition = data['config']['g01_partition']
@@ -173,7 +180,9 @@ def source_support():
             config = data['config']
             if (row.get('producer_module') != policy.PRODUCER
                     or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None,
-                    config.get('g01_configuration_version') is not None).items())
+                    config.get('g01_configuration_version') is not None,
+                    config.get('nearby_physics_version') is not None,
+                    config.get('g01_engineering_smoke') is not None).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')
@@ -202,9 +211,15 @@ def source_support():
                     return {**{key: value for key, value in result.items() if key != 'flip_search_version'},
                             'g01_search_version': row['g01_search_version']}
                 return active_role(actual, positions)
+            scientific_kwargs = dict(kwargs)
+            for key in ('nearby_physics_version', 'nearby_physics_policy'):
+                if key in scientific_kwargs and scientific_kwargs[key] != config.get(key):
+                    raise ValueError('Caller nearby-physics policy differs from authenticated G01 source')
+                if config.get(key) is not None:
+                    scientific_kwargs[key] = copy.deepcopy(config[key])
             try:
                 roles.verify_proposal_role = verified_role
-                checked = labels.checked_pair(previous_check, row, path, declared_source=config, **kwargs)
+                checked = labels.checked_pair(previous_check, row, path, declared_source=config, **scientific_kwargs)
             finally:
                 roles.verify_proposal_role = active_role
             return {**checked, 'g01_partition': config['g01_partition'], 'g01_proposal_verification': binding,

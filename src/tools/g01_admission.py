@@ -37,7 +37,10 @@ def digest(raw):
 
 
 def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignments,
-                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train', shared_queue_claim=None):
+                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train', shared_queue_claim=None,
+                nearby_physics=False, engineering_smoke=False):
+    if type(nearby_physics) is not bool or type(engineering_smoke) is not bool or (engineering_smoke and not nearby_physics):
+        raise ValueError('Require explicit nearby physics and engineering-smoke switches')
     directory = Path(directory).resolve()
     if len(cpu_affinity) != 12 or len(set(cpu_affinity)) != 12:
         raise ValueError('All scene lanes must share exactly the allocated twelve CPUs')
@@ -58,6 +61,12 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
                     collection_purpose='evaluation only; never training or tuning')
     elif partition != 'train':
         raise ValueError('Require the approved train/test partition')
+    if nearby_physics:
+        from src.envs import pair_v2_nearby_physics as nearby
+        plan.update(nearby_physics_enabled=True, **nearby.fields())
+    if engineering_smoke:
+        from src.envs import pair_v2_g01_policy as policy
+        plan['g01_engineering_smoke'] = copy.deepcopy(policy.SMOKE)
     if shared_queue_claim is not None:
         plan['shared_queue_claim'] = copy.deepcopy(shared_queue_claim)
         plan['scratch'] = os.environ.get('CVPR_SCRATCH')
@@ -83,6 +92,15 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
 def validate_partition_plan(plan):
     """Old immutable train plans remain valid; test requires its explicit namespace."""
     from src.envs import pair_v2_g01_policy as policy
+    from src.envs import pair_v2_nearby_physics as nearby
+    if any(key in plan for key in ('nearby_physics_enabled', *nearby.FIELDS)):
+        if plan.get('nearby_physics_enabled') is not True:
+            raise ValueError('New admission physics requires explicit opt-in')
+        nearby.validate_fields(plan)
+    if plan.get('g01_engineering_smoke') is not None:
+        if (plan.get('nearby_physics_enabled') is not True
+                or plan['g01_engineering_smoke'] != policy.SMOKE):
+            raise ValueError('Engineering admission smoke changed its explicit policy')
     partition = plan.get('g01_partition', 'train')
     allowed = policy.split_scenes(partition)
     scenes = plan.get('scenes', [])
@@ -140,6 +158,15 @@ def validate_source_admission(config, metrics=None):
     shard = config['shard']
     assignment = shard['g01_admission']
     plan = load_plan(assignment)
+    from src.envs import pair_v2_nearby_physics as nearby
+    new_physics = plan.get('nearby_physics_enabled') is True
+    for value in (config, shard):
+        if new_physics:
+            nearby.validate_fields(value)
+        elif any(value.get(key) is not None for key in nearby.FIELDS):
+            raise ValueError('Source physics differs from the immutable legacy admission plan')
+        if value.get('g01_engineering_smoke') != plan.get('g01_engineering_smoke'):
+            raise ValueError('Source engineering status differs from its immutable admission plan')
     partition = plan.get('g01_partition', 'train')
     claim = plan.get('shared_queue_claim')
     if claim is not None or shard.get('shared_queue_claim') is not None:

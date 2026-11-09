@@ -208,11 +208,11 @@ class MergePairV2Tests(unittest.TestCase):
     def test_approved_shadow_revision_keeps_exact_source_document_binding(self):
         commit = 'a' * 40
         documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
-        self.assertEqual(CURRENT_SPEC_REFERENCE, '6ca87ceb')
+        self.assertEqual(CURRENT_SPEC_REFERENCE, '38b15551')
         documents[commit] = documents['6ca87ceb']
         checked = specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit,
                                            documents.__getitem__)
-        self.assertFalse(checked['historical_spec'])
+        self.assertTrue(checked['historical_spec'])
         self.assertEqual(checked['compatible_references'], ['6ca87ceb'])
         documents[commit] += b' unapproved changes'
         with self.assertRaises(ValueError):
@@ -628,6 +628,18 @@ class MergePairV2Tests(unittest.TestCase):
             del portable[root / "masks.npz"]
             with self.assertRaises(ValueError):
                 load_observation(record, portable, root, root=root)
+
+
+    def test_approved_nearby_physics_spec_binds_exact_current_document(self):
+        commit = 'd' * 40
+        documents = {reference: reference.encode() for reference in CONSTRUCTION_SPEC_REFERENCES}
+        documents[commit] = documents['38b15551']
+        checked = specification_provenance(hashlib.sha256(documents[commit]).hexdigest(), commit,
+                                           documents.__getitem__)
+        self.assertFalse(checked['historical_spec'])
+        self.assertEqual(checked['compatible_references'], ['38b15551'])
+        with self.assertRaises(ValueError):
+            specification_provenance('0' * 64, commit, documents.__getitem__)
 
 
 if __name__ == "__main__":
