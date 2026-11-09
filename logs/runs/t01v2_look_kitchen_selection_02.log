@@ -1,0 +1,1442 @@
+# run_logged: python3 -m src.tools.record_command --name t01v2_look_kitchen_selection_02 -- python3 -c """One-off read-only historical kitchen selection; root runs under run_logged.
+
+Prints measured inputs and selection, never edits repository/source data. The
+script's complete text should be passed to record_command's python3 -c argument
+so the diagnostic command itself is recorded in the provenance metadata.
+"""
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import re
+
+ROOT = Path('/home/svu/e1583364/CVPR2027/cvpr2027')
+
+
+def raw_bytes(path):
+    return gzip.decompress(path.read_bytes()) if path.suffix == '.gz' else path.read_bytes()
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def metrics_hash(metrics):
+    return sha(json.dumps(metrics, sort_keys=True).encode())
+
+
+def storage_only(row):
+    reasons = row.get('discard_reasons', [])
+    return bool(reasons) and all(any(text in reason.lower() for text in (
+        'raw evidence path or per-worker byte limit', 'evidence_incomplete_storage_cap',
+        'raw_storage_limit', 'evidence materialization failed')) for reason in reasons)
+
+
+scenes = {f'FloorPlan{i}': {'scene': f'FloorPlan{i}', 'sources': [],
+    'recorded_journal_rows': 0, 'recorded_non_storage_rows': 0,
+    'actual_w0_measured_attempts': 0, 'actual_w0_passed': 0,
+    'measurement_unknown_non_storage_rows': 0} for i in range(1, 21)}
+seen, skipped, errors, duplicate_sources, discrepancies = set(), [], [], [], []
+for path in sorted((ROOT / 'results').rglob('*floorplan*.json*')):
+    if not re.search(r'_floorplan(?:[1-9]|1[0-9]|20)\.json(?:\.gz)?$', path.name):
+        continue
+    try:
+        content = raw_bytes(path)
+        data = json.loads(content)
+        meta, metrics, config = data['_meta'], data['metrics'], data['config']
+        scene = config.get('scene')
+        if scene not in scenes or metrics.get('kind') != 'pair_v2_shard':
+            continue
+        identity = (meta['name'], meta.get('start'), meta['metrics_sha256'])
+        if identity in seen:
+            duplicate_sources.append(str(path.relative_to(ROOT)))
+            continue
+        if (meta.get('producer') != 'scripts/run_logged.py' or type(meta.get('exit_code')) is not int
+                or metrics_hash(metrics) != meta['metrics_sha256']):
+            raise ValueError('Source lacks final logged metadata or metrics hash mismatch')
+        # A completed metadata file distinguishes ended attempts from live logs.
+        meta_path = ROOT / 'logs/runs' / (meta['name'] + '.meta.json')
+        disk_meta = json.loads(meta_path.read_text())
+        if any(disk_meta.get(key) != meta.get(key) for key in (
+                'name', 'command', 'start', 'git_commit', 'metrics_sha256', 'exit_code')):
+            raise ValueError('Source metadata does not match ended run metadata')
+        journal_path = ROOT / metrics['attempt_journal']
+        journal_raw = raw_bytes(journal_path)
+        if sha(journal_raw) != metrics.get('attempt_journal_sha256'):
+            raise ValueError('Attempt journal hash mismatch or missing recorded hash')
+        rows = [json.loads(line) for line in journal_raw.splitlines() if line.strip()]
+        if len(rows) != metrics.get('attempts'):
+            discrepancies.append({'file': str(path.relative_to(ROOT)),
+                'final_metrics_attempts': metrics.get('attempts'), 'authenticated_journal_rows': len(rows),
+                'policy': 'keep both original values; select using actual boolean physical measurements from authenticated journal rows'})
+        source = {'file': str(path.relative_to(ROOT)), 'file_sha256': sha(path.read_bytes()),
+            'decompressed_sha256': sha(content), 'metrics_sha256': meta['metrics_sha256'],
+            'producer_commit': meta['git_commit'], 'source_exit_code': meta['exit_code'],
+            'source_status': metrics.get('status'), 'journal': str(journal_path.relative_to(ROOT)),
+            'declared_final_metrics_attempts': metrics.get('attempts'),
+            'journal_sha256': sha(journal_raw), 'recorded_journal_rows': len(rows),
+            'recorded_non_storage_rows': 0, 'actual_w0_measured_attempts': 0,
+            'actual_w0_passed': 0, 'measurement_unknown_non_storage_rows': 0,
+            'raw_measurement_proofs': [], 'unknown_measurement_examples': []}
+        raw_seen = set()
+        for row in rows:
+            # Never infer physical success/failure from a rejection name alone.
+            measured = row.get('w0_valid_physical')
+            reference = row.get('raw_attempt') or {}
+            raw_identity = (reference.get('file'), reference.get('sha256'))
+            if raw_identity != (None, None) and raw_identity in raw_seen:
+                raise ValueError('A source repeats one raw attempt reference')
+            raw_seen.add(raw_identity)
+            if storage_only(row) and type(measured) is not bool:
+                continue
+            source['recorded_non_storage_rows'] += 1
+            if type(measured) is not bool:
+                try:
+                    attempt_path = Path(reference['file'])
+                    attempt_raw = raw_bytes(attempt_path)
+                    if sha(attempt_raw) != reference['sha256']:
+                        raise ValueError('Raw attempt hash mismatch')
+                    attempt = json.loads(attempt_raw)
+                    measured = (attempt.get('physical_w0') or {}).get('valid_physical')
+                    if type(measured) is not bool:
+                        measured = ((attempt.get('physical_key_numbers') or {}).get('physical_w0') or {}).get('valid_physical')
+                    if type(measured) is bool:
+                        source['raw_measurement_proofs'].append(reference)
+                except (OSError, KeyError, ValueError) as error:
+                    if len(source['unknown_measurement_examples']) < 3:
+                        source['unknown_measurement_examples'].append({'pair_id': row.get('pair_id'),
+                            'reference': reference, 'reason': str(error)})
+            if type(measured) is bool:
+                source['actual_w0_measured_attempts'] += 1
+                source['actual_w0_passed'] += int(measured)
+            else:
+                source['measurement_unknown_non_storage_rows'] += 1
+        # The marked collector's independently recorded eligibility counter must
+        # agree, if present. Older search collectors have no such field.
+        eligible = metrics.get('eligible_pair_attempts')
+        if type(eligible) is int and eligible != source['actual_w0_measured_attempts']:
+            raise ValueError('Recorded eligible_pair_attempts disagrees with actual journal measurements')
+        seen.add(identity)
+        target = scenes[scene]
+        target['sources'].append(source)
+        for key in ('recorded_journal_rows', 'recorded_non_storage_rows', 'actual_w0_measured_attempts',
+                    'actual_w0_passed', 'measurement_unknown_non_storage_rows'):
+            target[key] += source[key]
+    except (OSError, KeyError, ValueError) as error:
+        errors.append({'file': str(path.relative_to(ROOT)), 'error': str(error)})
+
+ranking = sorted(scenes.values(), key=lambda row: (-row['actual_w0_measured_attempts'],
+    -row['recorded_non_storage_rows'], int(row['scene'].replace('FloorPlan', ''))))
+best = ranking[0]
+result = {'scope': 'all ended scene-result manifests matching FloorPlan1..20, including archives and gzip duplicates',
+    'selection_definition': 'greatest cumulative count of actual recorded boolean w0 physical checks; includes measured rejection, excludes native/storage-only failures; never interpret absent measurements as false',
+    'recommendation': best['scene'] if best['actual_w0_measured_attempts'] else None,
+    'ranking': ranking, 'duplicate_sources_not_counted': duplicate_sources, 'errors': errors,
+    'source_summary_journal_discrepancies': discrepancies,
+    'unobserved_scenes': [row['scene'] for row in ranking if not row['sources']],
+    'unknown_count_note': 'non-storage rows without a measured w0 check remain explicitly unknown; not eligible attempts',
+    'paper_result': False}
+print(json.dumps(result, sort_keys=True, indent=2, allow_nan=False), flush=True)
+if errors:
+    raise SystemExit('Historical source scan had errors; inspect before declaring complete coverage')
+
+# start: 2026-11-09T10:12:01
+{
+  "duplicate_sources_not_counted": [
+    "results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json.gz"
+  ],
+  "errors": [],
+  "paper_result": false,
+  "ranking": [
+    {
+      "actual_w0_measured_attempts": 167,
+      "actual_w0_passed": 68,
+      "measurement_unknown_non_storage_rows": 67,
+      "recorded_journal_rows": 304,
+      "recorded_non_storage_rows": 234,
+      "scene": "FloorPlan10",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 90,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 160,
+          "decompressed_sha256": "6a9e52e9ebc3fd4a7a0bf67386c0a9da402530f634cbdd412bf2b88ec9f77f23",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan10.json",
+          "file_sha256": "6a9e52e9ebc3fd4a7a0bf67386c0a9da402530f634cbdd412bf2b88ec9f77f23",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan10_attempts.jsonl",
+          "journal_sha256": "96b37d184d873229ec3abd2f05be2ddee7c04395a9472bc0a391b957569dbfe8",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "e581669f5ed7d5ca43c7f8f89d2df7536217e5f60912ab5e947717731825b77d",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00000/attempt.json",
+              "sha256": "9929c898f57278b229e3fc10831fd53292505794189d1c349d3484e92f013290"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00001/attempt.json",
+              "sha256": "9aa56f0f8f8d08c0119cfb82fc34f03b7544484288055b2da8fee610f3618244"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00002/attempt.json",
+              "sha256": "3c2d5e561cf01f493636209f3c88d5883429b2f258753bce84ea3194ac7ad710"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00003/attempt.json",
+              "sha256": "27231bf392032b6eb1b6714d0d005895f05bdbdf92f0000e4f473259a8d655d2"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00004/attempt.json",
+              "sha256": "561530ac13069c21a9908e2277f92e5df8d90b19b8a0e697b5ad74ad39fb48df"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00005/attempt.json",
+              "sha256": "dcb5085d9dc566956b26a4cf4d93ceea3b19a7ac734d59a51b38a4a464626214"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00006/attempt.json",
+              "sha256": "eebd602054755c2e6e3633535a13daf76bf8a6f28081ccce8e17dffcb35ac8c8"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00007/attempt.json",
+              "sha256": "bc09ac2bdfb499ea8d15a3d2dff572892c559d28a1824f4f97098695f6a323f1"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00008/attempt.json",
+              "sha256": "b02a46784506f25ae2dd06d8cd76866d44f7979b499dd8dfa5b0ef29fd1a92e8"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00009/attempt.json",
+              "sha256": "52424fa6f1ee9717131781590323cac52420263b4e251d3be79401ea3adca4bb"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00010/attempt.json",
+              "sha256": "7dc6f93e24763dcec76c4aa31b7e14193d5f647a3989729821f2e9d684054d8a"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00011/attempt.json",
+              "sha256": "b3de58024d2bd38f245d1dff0319b7976e50885e7d2a1cb7f2ef159010c1cb13"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00012/attempt.json",
+              "sha256": "a23f96b5a4ac3ef69d1aa19194fef4e30d9068461a65572f0e5043e811e93ed0"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00013/attempt.json",
+              "sha256": "a0c96772b12389bffad14c472a39a7b34a6efa4c41f6bfb8d6b75be11a73fa34"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00014/attempt.json",
+              "sha256": "e3e8aaf672b13d991a1e4b36f2432be25a732c92b2edb8582b65d1b60cb765c9"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00015/attempt.json",
+              "sha256": "323c9fb7818b2d49e685ef6d5bfe105853e71b3694b4a8b7a1e50d6c0383c760"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00016/attempt.json",
+              "sha256": "59aebdcdf167fec21ad454e649ac8af7cf339c76f66e19b5b9bc93a7ff58396f"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00017/attempt.json",
+              "sha256": "f8094f803c035033a8d9cc6cccb573dd35b364db9d554208dd61a11ed7225ad7"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00018/attempt.json",
+              "sha256": "66017de2c98df689f1979447ec35154b2af6988bcd6071064164a0adc8ceef65"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00019/attempt.json",
+              "sha256": "ef1c922de5880c78965494fcd31bf255d74cd2799060cc258611d3ef6804c993"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00020/attempt.json",
+              "sha256": "447f781d509125b1cc73f866394153e73ae96f58ec03227f5709f5e46bc63c33"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00021/attempt.json",
+              "sha256": "e2ed8d8cbcc7a83136d4e58b98ffd2e1f3caedb3204901b99fba4c9b0159ee7c"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00022/attempt.json",
+              "sha256": "9259f0ae2ec68147aa858cb76becc1861aba03bc05aca1474433174268b47599"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00023/attempt.json",
+              "sha256": "533131a91fbdc5dc1ad2819040cc65f7cb313702051165d878599d074bd64fc8"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00024/attempt.json",
+              "sha256": "2ca49e5c599170d3cb646782dd5e417a4d3843c2a6ce709d10e1a9bff2771a02"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00025/attempt.json",
+              "sha256": "8b758b042bf66f696e29e950eaa63516bf04d850d83f79305f6937c46f78bf33"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00026/attempt.json",
+              "sha256": "51e5e401df086c8f95aec7a3a5402f704e5dc53d299286c14a1980f027537e5e"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00027/attempt.json",
+              "sha256": "6a710f91f0723706ac1e6a00ef667cd0604aad5eb13a8e3eb9f73c00682c1b05"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00028/attempt.json",
+              "sha256": "45a38dac9dc3a3caa87c8960385785712ccc6513356c3e242ba47375531b2adb"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00029/attempt.json",
+              "sha256": "a00d42fede105b209a0aa79df1d8bdf4c6d4307e26b50705695d4a6255a99775"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00030/attempt.json",
+              "sha256": "9fcfae7190a25f258eb767eec4931317457e98b82f15cb59977c982ab2ecafde"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00031/attempt.json",
+              "sha256": "fa7852862493db9d3a333ce59cdf36de653c83032feea9009585c5a6999b9850"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00032/attempt.json",
+              "sha256": "cf33dd02e1d5c8860124a8ef288bc95eb66370caa8cd8c96a20b719ba3f3678d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00033/attempt.json",
+              "sha256": "6265696f0af5407879beb858796d7567cc5f8520d6cf390106bdd2c6d84ff498"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00034/attempt.json",
+              "sha256": "02538eae029790935509b3e6ffd6bdc29c18f802fec05425927c319a3668d538"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00035/attempt.json",
+              "sha256": "c0a0e4c097206cdeaf668d5de0ce5e3a14cd77ee1f89d07dc3a506e1cb65825c"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00036/attempt.json",
+              "sha256": "69ebbd07c50d5f54a9fe09abaf4e813781749ffa0722151773b5d86981e2b728"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00037/attempt.json",
+              "sha256": "ac5495d80d6358420376e552ef9a19a2dfdffd834af255269274c42a5ffdf977"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00038/attempt.json",
+              "sha256": "2bd392955db18073ce07b692e9ec09f1fb1c8de449228b8e689a7356c7146464"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00039/attempt.json",
+              "sha256": "42cd1f2b41b370cf56b6ea15518fc2df9381672a2ae77cc5d0629971dd43a885"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00040/attempt.json",
+              "sha256": "35edd01513d43f9d374d5c6941d3d880db382f23034901af2b8b3b0887ae11e0"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00041/attempt.json",
+              "sha256": "04d20ff091710de8859d2acb88c0021bd3abbee914b6397eb6b4f08df392de0d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00042/attempt.json",
+              "sha256": "3b1259420d39dbec2fd3cecb8778a86ad66e4f10c6677bc5a53b0f33cd64083c"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00043/attempt.json",
+              "sha256": "4cd68fe1159b28e80386e8e36da5ba641b66824a87c44a4aba8af11fa7d7868f"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00044/attempt.json",
+              "sha256": "82c06acc3ddd11004223ab6e127e365544bea84afc3ceda3c780a1c76e13d6ad"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00045/attempt.json",
+              "sha256": "e0cd173692e93d3056b47f0ba3535d593331ffbed5c057aa9d4a4e9ab0ce2079"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00046/attempt.json",
+              "sha256": "4aa1f58c4e058ebd8f27f4e6676ac291ac08bf035fd2522a942a0cad411871e4"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00047/attempt.json",
+              "sha256": "4974a870c6ab141a792399e006525130963755c9cc73142dcd9d6ee9e4893710"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00048/attempt.json",
+              "sha256": "36c98895fd86482866aab62159e7ea38eb8b9fb17e2815aff53e7d7baf84f98b"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00049/attempt.json",
+              "sha256": "7731fb5b9bfa8e580183236f5fcc3513bb0fcd80199a4feb20da177a0b1dbbd1"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00050/attempt.json",
+              "sha256": "aedcaef69aea758290a65bcfdc411bfb2cbe548203f80557269688fa741cbe80"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00051/attempt.json",
+              "sha256": "d08a3e110239589d95d830f7ba57eabcc886348a821ac7e8ad74db182ae1dafc"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00052/attempt.json",
+              "sha256": "1dfec7bb4482f2990ec7b50f0c1fc02d7dec1f4d1a1cb73516c5d489b8922968"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00053/attempt.json",
+              "sha256": "2da56f022daa57cd7ae7fad5be00e1f831e82840a9be52ab41db9310ffffad0d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00054/attempt.json",
+              "sha256": "dfd5478a046f89394330ec7e5e0ff2d3f03172823f1d759056172c1768bdb971"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00055/attempt.json",
+              "sha256": "cede575dc98a9c51a52ec1ba4b4107a49d6151297aab5f6c475d296852b306cd"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00056/attempt.json",
+              "sha256": "69fab544a73768e51d57cb6dc3d79d5b885a98be2a9847751413cf5ef39e4f4d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00057/attempt.json",
+              "sha256": "dcdc8f44d258e94f22f5412aec085284b4f2db3325fe2b7c50a71ea7c3cddae2"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00058/attempt.json",
+              "sha256": "ce2c803b199a1990b1e41a9e5eae0c0f7f6336a55872ce90176ab4c173f5198c"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00059/attempt.json",
+              "sha256": "c675edcb45751d800230fe188c5b32d10dba1988e0a98fc9659ab6a1f1ca4fa5"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00060/attempt.json",
+              "sha256": "259853f6599cf5099ae1920b06e3e59f0b826e2eecf93bfba803bd47a4e844a0"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00061/attempt.json",
+              "sha256": "e10e8d0b6cd922c093d7a3e49c7bceff2146765d4ca9793297a6914d0d338e43"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00062/attempt.json",
+              "sha256": "f9877c6c2f124be53df006a9473318da21bb4e6713d7229b595e1cadd5f4f343"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00063/attempt.json",
+              "sha256": "6ac5cc99c82cdb01d43ecd4d3981802be9b8b6b1f0da265cd36504ffb68e6aa0"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00064/attempt.json",
+              "sha256": "e5701401aed9121c9854acf7d4664b614b0e9666e335016d1bd6b9b79d9d71cc"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00065/attempt.json",
+              "sha256": "b2b94f7b35495dbab5ee3bb0e30581df99e7e4c7d12dce503c41222fd763f559"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00066/attempt.json",
+              "sha256": "ff552f3b319d7b26f8816e14cb1792cefbc656adc543c53e21885e37883b8aa8"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00067/attempt.json",
+              "sha256": "cae364edc69ed15d7f47c139924781b16aff4d7f84e33a26b17f8ba0096b20ac"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00068/attempt.json",
+              "sha256": "289aa61906c537441f3883bdbb21aba419f6d5e471efe75d42af6b4ef0acf037"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00069/attempt.json",
+              "sha256": "df2c92a3b721529fd687a5dc1afeb0b6e3b1e8e16553b6491deccf0fa1234fab"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00070/attempt.json",
+              "sha256": "42f2f5730d89a87d47e7c83f7119b8fb1212d6490f75dc30c6ee3c8b6611955f"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00071/attempt.json",
+              "sha256": "e5c8f8c29da52de8f993d01003b797c12e823364cfb1fba2687aebe90c6fafe2"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00072/attempt.json",
+              "sha256": "3a24062f7b2278bf98f661a6d5c03457b8f2c7f0c1518a55433ea67cc3a9e58d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00073/attempt.json",
+              "sha256": "1480bd7ab68c17ca4a887cb69b83127dd71cf1561c66f1ddcabea41e437029b2"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00074/attempt.json",
+              "sha256": "ae286e0d89be96810f537108b3562aa62dfad94cf383466afe456c6c5c7244e5"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00075/attempt.json",
+              "sha256": "29003d0ec0186397a516111170bcd8c273930ffb472ddf910ac9f4a6fe17b894"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00076/attempt.json",
+              "sha256": "90d6a51a35aa20666b64e7854accd40e1d55075447d8215d724bc3f757a51d99"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00077/attempt.json",
+              "sha256": "96ac723e1c68284da710360d493e77e9cfc10c7182094217c424bce42b17fc23"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00078/attempt.json",
+              "sha256": "7da921ae047aa870b524ce7c622f6e2b7fc298d44aaebb719827c647997d4ed9"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00079/attempt.json",
+              "sha256": "5555c4abd090a224e54574f1adcf8f2c11fa04e415ad6062ace4340c30585b7e"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00080/attempt.json",
+              "sha256": "a96bee61d14bfe2de64a570d195cb0844b865bb02cc3cd8a7b32da3fd0fd8703"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00081/attempt.json",
+              "sha256": "679b567228a9d30f29fe6f5f0780fc302b5b4c7e07c608d00b4a349acb0bea20"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00082/attempt.json",
+              "sha256": "0877f644deaa3e8dcfb768887289f4b5730ebf2725bfe2fcbe6182a778ad079f"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00083/attempt.json",
+              "sha256": "486e49bf5acd79d18e4df09e57c77df4820c22a27cf44c1643bbe91a584f7922"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00084/attempt.json",
+              "sha256": "92486f029e60cdcb49d89cdc2da0cf79dae8f78ddcabe429eb32267f105b3541"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00085/attempt.json",
+              "sha256": "2e6f827a727c87e53b6c23276de2543f4d3d91b84a57fed6293618b1cfd11e61"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00086/attempt.json",
+              "sha256": "6d9bf0be06b2a484d4a1523d7a5fec3ac5d9cb255a56eb2a23ee82f933b43e14"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00087/attempt.json",
+              "sha256": "461ae10bc1e620672c22c975ef44975dae75f5bde2af17786786d59b9cf348e4"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00088/attempt.json",
+              "sha256": "785a8bb1d731f466268903e6fe51b7b2c20cef29c0646449f0ed8397650160e3"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan10/floorplan10_00089/attempt.json",
+              "sha256": "d1851d281b6bcd7bbaff57c8c0085d974476e528d2d8ab57617e2aed70ee74e3"
+            }
+          ],
+          "recorded_journal_rows": 160,
+          "recorded_non_storage_rows": 90,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 77,
+          "actual_w0_passed": 68,
+          "declared_final_metrics_attempts": 143,
+          "decompressed_sha256": "240664bbd30aad04bf63a1eac33c3772078c24df92748e2ed4eac2a03dfcdced",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan10.json",
+          "file_sha256": "240664bbd30aad04bf63a1eac33c3772078c24df92748e2ed4eac2a03dfcdced",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan10_attempts.jsonl",
+          "journal_sha256": "68b88e0b00f95958f7e278696c9f1a68f2be73532fede33efdd98a42702af378",
+          "measurement_unknown_non_storage_rows": 67,
+          "metrics_sha256": "0663b7d4a1d5bbc05e4d216b76c68f69564b75adb67cf5c8d2070214981f019f",
+          "producer_commit": "4f1af0ee797387dd43102a96f1f5acd29b7f7379",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 144,
+          "recorded_non_storage_rows": 144,
+          "source_exit_code": 1,
+          "source_status": "shard_failed",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 95,
+      "actual_w0_passed": 45,
+      "measurement_unknown_non_storage_rows": 75,
+      "recorded_journal_rows": 296,
+      "recorded_non_storage_rows": 170,
+      "scene": "FloorPlan7",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 34,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 160,
+          "decompressed_sha256": "edca27cb0f64d4553fe41ef0495fd6e15b23da26911599cd1dd74dd5b6fb8363",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan7.json",
+          "file_sha256": "edca27cb0f64d4553fe41ef0495fd6e15b23da26911599cd1dd74dd5b6fb8363",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan7_attempts.jsonl",
+          "journal_sha256": "29b8937945b85d4d92b1664d5710e28efad61d6aefddecd3db8463cf8a6b037d",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "76b66b0eaad1ca79760ece735676736285e1f25aaac2cfef66fc9df6dfa8ff50",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00000/attempt.json",
+              "sha256": "bbe4c939e99d28b7d27ff648390397c01bb51695e9a48e5a0683f32e78bf848b"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00001/attempt.json",
+              "sha256": "faffe199b37b4016355754ccda0e512fa358b8b47309c7ceea9921c9fe2267ab"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00002/attempt.json",
+              "sha256": "1a3dff410c70c87a0916b9d5aeeceab0afa47d692fed78e65c3d478a815d38c9"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00003/attempt.json",
+              "sha256": "67af195f6321184abb5deb635f62fc620d0dce1f42a23eebe908f2eba0a7db1a"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00004/attempt.json",
+              "sha256": "adc1dd2a46d0553b6cf0610eae485005d70bfbb6cd727502b74fc205a191edf8"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00005/attempt.json",
+              "sha256": "16c864cfcac460e1bedff795d43cb7776f4b78e95d2836e2913f00fe40328e06"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00006/attempt.json",
+              "sha256": "62979afaeedf666657af33d8925d3993ca43d58ef168598e8ea0c1842c7fc4d7"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00007/attempt.json",
+              "sha256": "a0aff676549e930f27436035e268539640317286d5fec17cba5658d808f056a1"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00008/attempt.json",
+              "sha256": "69ee39cf89feed103d99c28310f79c00bb86cbce4c39d5d72ec811f27ecb2126"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00009/attempt.json",
+              "sha256": "f8aa3217d291d19e367f0d3ea69fcb73693c73f1bbacaa634606ce08c2edfe03"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00010/attempt.json",
+              "sha256": "9db963f694cf5655477b421deea47c6efbf888c328468ba4141925d38b0fc876"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00011/attempt.json",
+              "sha256": "80262c5b4953c7deaac25513a189c73c4cc7f69b6b1d6779fe7df3b1bbb4779c"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00012/attempt.json",
+              "sha256": "a9f524f3a8f23448ab2e08b73246bead679ff0964afedbeb3082f234b28ca975"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00013/attempt.json",
+              "sha256": "8ac50a077ccc2792e09debca305d3d47814be4afcebddb38d6a12503fb129d2e"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00014/attempt.json",
+              "sha256": "64c2d5f132b46fd10b39f4056338b25ba2ac8ad89bb8c4dcfcb5a61a28927c76"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00015/attempt.json",
+              "sha256": "c11207531d8e5ec04840f97d824ac26ef94ada1b95d85643337b84aba92b2c54"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00016/attempt.json",
+              "sha256": "f7d6173af46cae915d7740bbbbb8c8437a9e259fb1aaa0d019a33956b9edd42a"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00017/attempt.json",
+              "sha256": "c9a156b43f66fe8b095785514839da0398f08f9295155fb55937d2ac42fa00e5"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00018/attempt.json",
+              "sha256": "175acd3b1fc76cdb8d37be28b6a251571df3f5046708a19bf80a585eb6d4d519"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00019/attempt.json",
+              "sha256": "9947a2f9edcf11073478e7017f5c8cb552bfe5fe57ac6c2952d7ce346f708f40"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00020/attempt.json",
+              "sha256": "6eee1f40c1561e9186ac30bc43ea689206eda83a629c6bc6c27ff1de15bfa0a3"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00021/attempt.json",
+              "sha256": "be4d4e8b7ccc34fc84d41d1125906bfb3afd36c35eacf3ddaed0128418027898"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00022/attempt.json",
+              "sha256": "673fb2383ea247693ab3a42852cebc0e839beb23ab5026f7de861f97d1898834"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00023/attempt.json",
+              "sha256": "d781b4e2b766a3ba2756dd1210672153ac2e1211d7593c5651f450dd55a33613"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00024/attempt.json",
+              "sha256": "29b031a1b8b693ed8f3353bab4f06ad046f1d1d585d9b56b4e0bd5c2a664b206"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00025/attempt.json",
+              "sha256": "de137397f9c153dae688cc695e1f83ae8659f43525e491baeccbfecbb9f044e3"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00026/attempt.json",
+              "sha256": "d20a0b13fdc0783cebfd5036aa16ab2cf0785feae3c785c62b39f8e5a8d8dabc"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00027/attempt.json",
+              "sha256": "ec4bcf6a87040a429d65a4e95e4b746fdd9bffb90a591919b98bdd89d8a5be2b"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00028/attempt.json",
+              "sha256": "85713c8518645cde6ae775a8bb97901e2e231b1f1e0373e2300af466f7e19dec"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00029/attempt.json",
+              "sha256": "27a0881971ad516a1d71c26ecb5565520a752db7b5bb06c83ff8e8fcf572b86d"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00030/attempt.json",
+              "sha256": "e6b910b63894523a9d05db29c0ac781a938f78b87a5e0debba290ad7d44c5a5a"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00031/attempt.json",
+              "sha256": "e99eae7e914111a492bc3b8b568f21cc3b5fda6d46cfd2b3e106fec91711dac0"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00032/attempt.json",
+              "sha256": "3ffc76438f775ead5e3155156791a8c12e29ce4fe463692a6031980629744dc2"
+            },
+            {
+              "file": "/scratch/e1583364/cvpr2027/t01v2_parallel/pilot_pairs_v2_kitchen_r1/707189_hopper_m_02/FloorPlan7/floorplan7_00033/attempt.json",
+              "sha256": "e4b60254b355b5a707b7832e174d055940f11df5dac280e6e8af9004f29667c2"
+            }
+          ],
+          "recorded_journal_rows": 160,
+          "recorded_non_storage_rows": 34,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 61,
+          "actual_w0_passed": 45,
+          "declared_final_metrics_attempts": 135,
+          "decompressed_sha256": "a70cd372f0889f55a2df35dce4968bbf6b4b56cb3d5319aa1e9880911507a007",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan7.json",
+          "file_sha256": "a70cd372f0889f55a2df35dce4968bbf6b4b56cb3d5319aa1e9880911507a007",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan7_attempts.jsonl",
+          "journal_sha256": "f0311034b5f223e4913989c9da7a532895adc48629fe63c21db9b59da78bacaf",
+          "measurement_unknown_non_storage_rows": 75,
+          "metrics_sha256": "e18c96df308a8ff99a54db48d601db9584f15ff70ea0cad1a097770069d3e7b0",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 136,
+          "recorded_non_storage_rows": 136,
+          "source_exit_code": 1,
+          "source_status": "shard_failed",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 54,
+      "actual_w0_passed": 54,
+      "measurement_unknown_non_storage_rows": 1,
+      "recorded_journal_rows": 55,
+      "recorded_non_storage_rows": 55,
+      "scene": "FloorPlan1",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 23,
+          "actual_w0_passed": 23,
+          "declared_final_metrics_attempts": 23,
+          "decompressed_sha256": "faebb9c3c066c081e2b4d60541832137820712bf20f8f2f2f69b710a5b367e89",
+          "file": "results/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan1.json",
+          "file_sha256": "faebb9c3c066c081e2b4d60541832137820712bf20f8f2f2f69b710a5b367e89",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan1_attempts.jsonl",
+          "journal_sha256": "fb9546228b6de687e8aeffa7d6d31012fb7f87f5e40a062468aacd21fee2f54a",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "bfbd03aca721f7f95d1627640c28c18d6d8fe2d2077f1a2c7ee53c9c891a7dad",
+          "producer_commit": "4fdb8b11c1f538f9fd8ae188776294d403c0bf62",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 23,
+          "recorded_non_storage_rows": 23,
+          "source_exit_code": 1,
+          "source_status": "shard_failed",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "23f2157020b356af43111cad66fc4dee45117fe23969681867a9ded2a6f93a95",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan1.json",
+          "file_sha256": "23f2157020b356af43111cad66fc4dee45117fe23969681867a9ded2a6f93a95",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan1_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "b4765ea56b14efae691a50c28eda00a1f7ca8698f8ab9551f3a80fa90b8d081b",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 8,
+          "actual_w0_passed": 8,
+          "declared_final_metrics_attempts": 8,
+          "decompressed_sha256": "22f62e43e1a92ba36dfbbf2764d44e9787253194e8f17a85bfd100845b4794b3",
+          "file": "results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json",
+          "file_sha256": "22f62e43e1a92ba36dfbbf2764d44e9787253194e8f17a85bfd100845b4794b3",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1_attempts.jsonl",
+          "journal_sha256": "557a8b98a6e9d694ca08a9cc0923541bd6891e63ebf3605969b92456d6b4fd57",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "7e2dc67558a951766a54a55bd12def89de82e0164a81ad9ced1e52f679a74742",
+          "producer_commit": "6fa8b8274141b064d5e43a31b9fa87ce1a8bfcd6",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 8,
+          "recorded_non_storage_rows": 8,
+          "source_exit_code": 1,
+          "source_status": "incomplete",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 23,
+          "actual_w0_passed": 23,
+          "declared_final_metrics_attempts": 24,
+          "decompressed_sha256": "a34aa82f98adcc081b53bbc96e95c4e10eeb571319648b317dd38abc2090be19",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan1.json",
+          "file_sha256": "a34aa82f98adcc081b53bbc96e95c4e10eeb571319648b317dd38abc2090be19",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan1_attempts.jsonl",
+          "journal_sha256": "407c737ea035ae779802621110502dbdc206c04bfa001287fe9d2f9021ce3a36",
+          "measurement_unknown_non_storage_rows": 1,
+          "metrics_sha256": "61b023836c83e2cf340b24fe64727cb82258f131bd5682e128eb12f57d5d03bb",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 24,
+          "recorded_non_storage_rows": 24,
+          "source_exit_code": 1,
+          "source_status": "shard_failed",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 10,
+      "actual_w0_passed": 3,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 10,
+      "recorded_non_storage_rows": 10,
+      "scene": "FloorPlan2",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "adb341f1a2e5de8d1dc9eb628777ee1e1e9a7c4d1d6cce7422928c42a5634297",
+          "file": "results/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan2.json",
+          "file_sha256": "adb341f1a2e5de8d1dc9eb628777ee1e1e9a7c4d1d6cce7422928c42a5634297",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan2_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "501fb99ed3566b0c2a698fd76e95419ea77cf51b5fbfb33304c85688d846878a",
+          "producer_commit": "4fdb8b11c1f538f9fd8ae188776294d403c0bf62",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "298c9b347344ad77cafa78c923c12a4907813d0dc0678219cd150e099a8cca56",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan2.json",
+          "file_sha256": "298c9b347344ad77cafa78c923c12a4907813d0dc0678219cd150e099a8cca56",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan2_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "1dcc64f3e7696486b183fd2dc31c7b454175998484c01c464a11c5e363161de4",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 10,
+          "actual_w0_passed": 3,
+          "declared_final_metrics_attempts": 10,
+          "decompressed_sha256": "6bbee6a72faacb88a3ae3e51ca50b2bc15a93a03c34ac32cd05ed43572f8f1c0",
+          "file": "results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2.json",
+          "file_sha256": "6bbee6a72faacb88a3ae3e51ca50b2bc15a93a03c34ac32cd05ed43572f8f1c0",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2_attempts.jsonl",
+          "journal_sha256": "ae7a85c5af57fccb4a851a66b6e50ea67e685184e9faf322fae71d0fe1ffbd5b",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "62863691f2890e7458a836bc25f26cb1970bfbadd4eae5b4af7866eb8e644bed",
+          "producer_commit": "1412d7fc279727674c897239e4647650eaa92ec6",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 10,
+          "recorded_non_storage_rows": 10,
+          "source_exit_code": 1,
+          "source_status": "incomplete",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "ce492c40ecf37c54f8ff2d16ed620f0c0ee9fbb1cb0daaeb89dcc25286916992",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan2.json",
+          "file_sha256": "ce492c40ecf37c54f8ff2d16ed620f0c0ee9fbb1cb0daaeb89dcc25286916992",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan2_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "07f2769408f568d1c7eddcb24cfb7d0b15d47f277107e3a506ff747a7898501d",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan3",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "6a9639c2ba83e764c91396517269723e2414208aa5d30046958572bec2cbb723",
+          "file": "results/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan3.json",
+          "file_sha256": "6a9639c2ba83e764c91396517269723e2414208aa5d30046958572bec2cbb723",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan3_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "dc91e862bcb9878f22de4437d3788c73873fb1eef229bf56ec27ac6cf24830a1",
+          "producer_commit": "b44ab09a1788b0d8f7512166613bbf6f681fc674",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "d66d787ea87e74e92f70b2aefc90ef34bf8f3e1a91fc0daf8a2ea88374ead42b",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan3.json",
+          "file_sha256": "d66d787ea87e74e92f70b2aefc90ef34bf8f3e1a91fc0daf8a2ea88374ead42b",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan3_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "ab83d014058ff6c0b57f654b0b00137a57c7be061293cccf5a62698b81001ee3",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "ab319676a38a63299e1adf9d4406f2022b6755d7f50211d82631bfd0de1c6945",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan3.json",
+          "file_sha256": "ab319676a38a63299e1adf9d4406f2022b6755d7f50211d82631bfd0de1c6945",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan3_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "6f8907bd5458d77e04c45bf1f87c4cb57c53cc836f353aedeb357b149d06c069",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan4",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "fd54667bfc9bd35907055a496e2be5a0fb5ac9a4bc6e75a8bc1afaa53badc343",
+          "file": "results/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan4.json",
+          "file_sha256": "fd54667bfc9bd35907055a496e2be5a0fb5ac9a4bc6e75a8bc1afaa53badc343",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_isolated_kitchen_001_004_a00_j707366_hopper_m_02_g0_floorplan4_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "5a256d0305c179bbd669a3fbfc4c355b441e49613bcdafaf4d38499830d1f8fc",
+          "producer_commit": "6ebdfff60ff7e1605f7002b210bf53188f8b8d59",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "8b4e2c67c1344b52ad5fd6af6099d0f57259a7b9176f53a3afcf4bd27254bd8e",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan4.json",
+          "file_sha256": "8b4e2c67c1344b52ad5fd6af6099d0f57259a7b9176f53a3afcf4bd27254bd8e",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan4_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "f22f802101454319ecd5a54b9a52607612f4f59a998afc1c750d1201884c1e3f",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "edf9c9ee3d5801cde5fdd01614ad93954783f12a22757a9efdaef6692d741e6c",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan4.json",
+          "file_sha256": "edf9c9ee3d5801cde5fdd01614ad93954783f12a22757a9efdaef6692d741e6c",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan4_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "f3682f5430c94159e1f3922b7b81ce838ddecc16314ac5ce2d0b607ea763bc48",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 1,
+          "source_status": "worker_failed",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan5",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "59b1291998f9ba8f36799d5e6b46d2858d4714fbdff52e6a971dbe74c0da3165",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan5.json",
+          "file_sha256": "59b1291998f9ba8f36799d5e6b46d2858d4714fbdff52e6a971dbe74c0da3165",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan5_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "078d646dc9aa0b1574bed96cab065e6cc92e96eeef5f684d621087a5bfcba14c",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "cb36fc857c1508b564bb3333b4efcc50f378e9c4e5df5a2a75167eb9b1d491cb",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan5.json",
+          "file_sha256": "cb36fc857c1508b564bb3333b4efcc50f378e9c4e5df5a2a75167eb9b1d491cb",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan5_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "a8ed614e669afbe2d2633c7c7451ca3de97fdce6a566506b39b8f0a3aa74bc22",
+          "producer_commit": "51232b593cfe70c8302cd9e4c5b6d4c4af9b5287",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan6",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "f6dd3af74f94312b0610ca0b2c0e6e4d205c3a278c5f5119ee17628b6fd9d67e",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan6.json",
+          "file_sha256": "f6dd3af74f94312b0610ca0b2c0e6e4d205c3a278c5f5119ee17628b6fd9d67e",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g1_floorplan6_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "d11faaf5175e4a972313edc71cf7ccd5b89ba0353113bcfca64c4b19ffbbb4d5",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "ce1fe39b58d8cbc65dfba1f0e4e41c8c42b5af82875586ec453550a6f61e1042",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan6.json",
+          "file_sha256": "ce1fe39b58d8cbc65dfba1f0e4e41c8c42b5af82875586ec453550a6f61e1042",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan6_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "201d581e5b7f1d5210828299a9adc56abde0c929543076c12a891ef854d6af10",
+          "producer_commit": "4f1af0ee797387dd43102a96f1f5acd29b7f7379",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan8",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "b3022b56e66759cf2130f48bdad390b5d97e0a2eb913e7d02f434dfce869e13d",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan8.json",
+          "file_sha256": "b3022b56e66759cf2130f48bdad390b5d97e0a2eb913e7d02f434dfce869e13d",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan8_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "a4732af47cc320433c78344832570fa08e8f1007218f6d376c9c105453cefdc9",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "53d49126e9ab45fd7f8c67d2a502528d2cbe0fc80a08d62323d17f0d0633eafd",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan8.json",
+          "file_sha256": "53d49126e9ab45fd7f8c67d2a502528d2cbe0fc80a08d62323d17f0d0633eafd",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan8_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "5fde774ece3db67878b5854f31181555c7a3bf1d0920771bc83cf9140c80c9c6",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan9",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "f7602dde56beb00ff104e71ca94f81cd0ac4a7b23de41aec7db5244e1a50b47f",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan9.json",
+          "file_sha256": "f7602dde56beb00ff104e71ca94f81cd0ac4a7b23de41aec7db5244e1a50b47f",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g0_floorplan9_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "ddf34fa91c7beb7a92fe67609a439fee99a633640f080624dcc5381036173cad",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "d516a315d5288c31d9b7971c0d4e24a48ad93cfb51ff392de4bbe97c4a83fda8",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan9.json",
+          "file_sha256": "d516a315d5288c31d9b7971c0d4e24a48ad93cfb51ff392de4bbe97c4a83fda8",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g0_floorplan9_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "82df82201c63bc2c37e86998ca092d086353c7a71182360ab84edff352b4b78e",
+          "producer_commit": "51232b593cfe70c8302cd9e4c5b6d4c4af9b5287",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan11",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "7e317f69d13d5cbffab28f56030bb9b336a1a4904bc40ee2c257ffcf98a689ce",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan11.json",
+          "file_sha256": "7e317f69d13d5cbffab28f56030bb9b336a1a4904bc40ee2c257ffcf98a689ce",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g2_floorplan11_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "4f8a9488623dad3d59c027dd75977785d0d87886f7d6684ebd814788fc2b48d2",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "6d3035338b3f870326aec9551119b34833358fc4a2c6bf6767137bea55ebf353",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan11.json",
+          "file_sha256": "6d3035338b3f870326aec9551119b34833358fc4a2c6bf6767137bea55ebf353",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan11_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "7b0dc015837d89e08210cb61f31d1ead3551759a6e4bd8e33096207092d9a078",
+          "producer_commit": "51232b593cfe70c8302cd9e4c5b6d4c4af9b5287",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan12",
+      "sources": [
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "20a3728f536563c96065e988b366d6fbbac8a09ccefc14162d28a7d1b9bcbd48",
+          "file": "results/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan12.json",
+          "file_sha256": "20a3728f536563c96065e988b366d6fbbac8a09ccefc14162d28a7d1b9bcbd48",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_kitchen_r1_j707189_hopper_m_02_g3_floorplan12_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "eb029e47290d5f00a4afae76b83462c3d25de085ae5ccfc6e00cdfe978432bd9",
+          "producer_commit": "25f34b3c2067c9687cffdb83361d6f75da83dae4",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        },
+        {
+          "actual_w0_measured_attempts": 0,
+          "actual_w0_passed": 0,
+          "declared_final_metrics_attempts": 0,
+          "decompressed_sha256": "7b2d2c503e9be8e966e22efc7285eae7af91125458393d821c1788b51658b146",
+          "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan12.json",
+          "file_sha256": "7b2d2c503e9be8e966e22efc7285eae7af91125458393d821c1788b51658b146",
+          "journal": "data/world_pairs/v2/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g3_floorplan12_attempts.jsonl",
+          "journal_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "measurement_unknown_non_storage_rows": 0,
+          "metrics_sha256": "73bec94b39c68c302b4a35fec1ccbc4fb9e0f4eb3382ab818ad9a77c76f9c7b1",
+          "producer_commit": "025b7a7559b0e342611b55bbd7ffe51d8bdcd5d0",
+          "raw_measurement_proofs": [],
+          "recorded_journal_rows": 0,
+          "recorded_non_storage_rows": 0,
+          "source_exit_code": 0,
+          "source_status": "completed_search",
+          "unknown_measurement_examples": []
+        }
+      ]
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan13",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan14",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan15",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan16",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan17",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan18",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan19",
+      "sources": []
+    },
+    {
+      "actual_w0_measured_attempts": 0,
+      "actual_w0_passed": 0,
+      "measurement_unknown_non_storage_rows": 0,
+      "recorded_journal_rows": 0,
+      "recorded_non_storage_rows": 0,
+      "scene": "FloorPlan20",
+      "sources": []
+    }
+  ],
+  "recommendation": "FloorPlan10",
+  "scope": "all ended scene-result manifests matching FloorPlan1..20, including archives and gzip duplicates",
+  "selection_definition": "greatest cumulative count of actual recorded boolean w0 physical checks; includes measured rejection, excludes native/storage-only failures; never interpret absent measurements as false",
+  "source_summary_journal_discrepancies": [
+    {
+      "authenticated_journal_rows": 144,
+      "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g1_floorplan10.json",
+      "final_metrics_attempts": 143,
+      "policy": "keep both original values; select using actual boolean physical measurements from authenticated journal rows"
+    },
+    {
+      "authenticated_journal_rows": 136,
+      "file": "results/pilot_pairs_v2_search_kitchen_r4_j707255_hopper_m_02_g2_floorplan7.json",
+      "final_metrics_attempts": 135,
+      "policy": "keep both original values; select using actual boolean physical measurements from authenticated journal rows"
+    }
+  ],
+  "unknown_count_note": "non-storage rows without a measured w0 check remain explicitly unknown; not eligible attempts",
+  "unobserved_scenes": [
+    "FloorPlan13",
+    "FloorPlan14",
+    "FloorPlan15",
+    "FloorPlan16",
+    "FloorPlan17",
+    "FloorPlan18",
+    "FloorPlan19",
+    "FloorPlan20"
+  ]
+}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 4.1095541280228645}
+# exit_code: 0

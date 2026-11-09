@@ -1,0 +1,30 @@
+# run_logged: python3 -m src.tools.record_command --name smoke_e2e_eval_black_proof_01 -- python3 -c import json,copy
+from pathlib import Path
+from src.tools import phase_watch as w
+root=Path.cwd().resolve()
+aud=w.load_module('black_auditor',root/'scripts/audit_provenance.py')
+paths=list(root.glob('logs/pbs/smoke_e2e_eval_01-*/payload.json'))
+assert len(paths)==1
+payload=json.load(paths[0].open())
+outer,oe=w.load_logged(root,root/'results/smoke_e2e_eval_01.json',aud)
+gate,ge=w.load_logged(root,root/'results/smoke_e2e_eval_01_gate.json',aud)
+account=json.load(open('results/smoke_e2e_eval_black_accounting_01.json'))
+assert account['metrics']['complete_allocation_accounting'] is True
+assert len(account['config']['jobs'])==1
+fields=account['config']['jobs'][0]['fields']; job='707539.hopper-m-02'
+cfg,metrics=outer['config'],outer['metrics']
+assert payload['task_id']=='T01' and payload['budget_group']=='E2E' and payload['requested_gpu_count']==1 and payload['requested_host'] is None
+assert payload['command']==['python3','-u','-m','src.tools.smoke_e2e_eval','--name','smoke_e2e_eval_01','--replay','results/smoke_e2e_replay_01.json','--timeout-seconds','1140']
+assert cfg['identity']['pbs_jobid']==job and cfg['gpus']==1 and cfg['version']=='smoke_e2e_original_model_eval_v1'
+assert metrics['kind']=='smoke_e2e_eval' and metrics['producer_exit_code']==86 and metrics['step3_passed'] is False
+assert metrics['errors']==[] and metrics['cleanup_errors']==[] and metrics['black_frame_detected'] is True
+assert gate['config']['resolution']==255 and gate['config']['segmentation'] is True
+normalized=copy.deepcopy(outer)
+normalized['config']['pbs_jobid']=cfg['identity']['pbs_jobid']
+reason=w.validate_black_retry(payload,job,fields,normalized,gate,'smoke_e2e_eval_01_gate','e2e_eval')
+print(json.dumps({'reason':reason,'job_id':job,'node':cfg['node'],'gpu_uuid':gate['config']['allocation']['devices'][0]['gpu_uuid'],'outer':oe,'gate':ge,'schema_normalization':'Read-only copy exposes the verified identity.pbs_jobid to the existing gate validator; original source bytes and metadata remain unchanged.'},sort_keys=True))
+
+# start: 2026-11-09T10:19:28
+{"gate": {"log_path": "logs/runs/smoke_e2e_eval_01_gate.log", "log_sha256": "8079b36a5e6f941258ca67d95ef761d80782d59ee1bbab08d3807c629f8c5090", "path": "results/smoke_e2e_eval_01_gate.json", "sha256": "17605e8e14f4f76b2b60c26b8a5292b6512448682ce216161b0099c53b45d3d3"}, "gpu_uuid": "GPU-6e4785f0-652c-3903-a3d9-b1f131c1266a", "job_id": "707539.hopper-m-02", "node": "hopper-27", "outer": {"log_path": "logs/runs/smoke_e2e_eval_01.log", "log_sha256": "1b84f04e41b80d2620531deb8664c477048ed9aee4efa7a44f216d3f1f5c7d24", "path": "results/smoke_e2e_eval_01.json", "sha256": "1d65ef7bdb7c9b3a9f7d4df13b94d7899a970bd42d8636791896a5da9451d20b"}, "reason": "render_gate_black_capture", "schema_normalization": "Read-only copy exposes the verified identity.pbs_jobid to the existing gate validator; original source bytes and metadata remain unchanged."}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.09503868100000545}
+# exit_code: 0

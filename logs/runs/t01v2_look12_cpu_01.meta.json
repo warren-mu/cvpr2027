@@ -1,0 +1,28 @@
+{
+  "name": "t01v2_look12_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_look12_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest,sys\nloader=unittest.TestLoader()\npatterns=['test_pair_v2*.py','test_merge_pair_v2*.py','test_t01v2*.py','test_pair_table*.py','test_t02*.py','test_smoke_e2e*.py']\nsuite=unittest.TestSuite(loader.discover('tests',pattern=p) for p in patterns)\nresult=unittest.TextTestRunner(verbosity=1).run(suite)\nsys.exit(not result.wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T10:18:48",
+  "log_path": "logs/runs/t01v2_look12_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "9e2474a7d10a6cfab0b6f199b613f8af98367920",
+  "git_dirty": false,
+  "end": "2026-11-09T10:19:12",
+  "duration_sec": 24.4,
+  "exit_code": 0,
+  "metrics_sha256": "e6ab6e2ac7ad2ac5a540f17cc4141bf4513ca3c45f92575be00030498f58a447"
+}
