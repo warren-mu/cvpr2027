@@ -58,6 +58,13 @@ def read_json_ref(reference, root, *, expected=None):
 
 
 def load_exports(paths, scratch):
+    """Recheck all original science, with one bounded evidence-byte snapshot."""
+    from src.tools.t02_evidence_read_session import authenticated_read_reuse
+    with authenticated_read_reuse(sys.modules[__name__]):
+        return _load_exports(paths, scratch)
+
+
+def _load_exports(paths, scratch):
     """Audit every declared export and recheck the complete usable inventory."""
     from src.envs.pair_table_source import load_reviewed_pair
     tables, packages, pair_checks, sources, ledger = {}, {}, {}, [], []
