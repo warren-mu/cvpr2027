@@ -1,0 +1,1 @@
+First Look review image: FloorPlan203,100degrees,Look→Stay, floorplan203_00035. This is an unchanged image from a generator-passed pair while its source unit still runs. Final source audit and independent checkpoint are pending. No completed-cohort/FOV-winner or expansion claim.

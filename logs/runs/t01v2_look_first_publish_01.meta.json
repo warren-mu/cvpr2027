@@ -1,0 +1,28 @@
+{
+  "name": "t01v2_look_first_publish_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t01v2_look_first_publish_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,hashlib,shutil\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nroot=Path.cwd().resolve()\nsource='pilot_pairs_v2_look100_seq_01_j707546_hopper_m_02_g0_floorplan203'\nraw,extent=read_prefix(root/'data/world_pairs/v2'/(source+'_attempts.jsonl'))\nrows=[json.loads(line) for line in raw.splitlines() if line.strip()]\nrow=next(r for r in rows if r['pair_id']=='floorplan203_00035')\nassert row['status']=='passed' and row['kind']=='look_stay'\npair=(root/row['pair_file']).resolve();pair.relative_to(root/'data/world_pairs/v2')\nblob=pair.read_bytes();assert hashlib.sha256(blob).hexdigest()==row['pair_sha256']\nd=json.loads(blob);ref=d['review_image']\npicture=(root/ref['file']).resolve();picture.relative_to(root)\nimage=picture.read_bytes();assert hashlib.sha256(image).hexdigest()==ref['sha256']\nout=root/'logs/review/t01v2_look_first_01';out.mkdir(exist_ok=False)\n(out/'floorplan203_00035.png').write_bytes(image)\nproof={'scope':'provisional producer-passed Look pair; source unit still running, ended-source independent checkpoint pending','source_run':source,'pair_id':row['pair_id'],'kind':row['kind'],'scene':row['scene'],'field_of_view':100,'pair_file':row['pair_file'],'pair_sha256':row['pair_sha256'],'original_review_image':ref,'published_image':{'file':str((out/'floorplan203_00035.png').relative_to(root)),'sha256':ref['sha256']},'journal_prefix':archive(raw,out,'source_journal.prefix'),'journal_extent':extent,'journal_row':row}\n(out/'provisional.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\\n')\n(out/'README.md').write_text('First Look review image: FloorPlan203,100degrees,Look→Stay, floorplan203_00035. This is an unchanged image from a generator-passed pair while its source unit still runs. Final source audit and independent checkpoint are pending. No completed-cohort/FOV-winner or expansion claim.\\n')\nprint(json.dumps(proof,sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T10:47:14",
+  "log_path": "logs/runs/t01v2_look_first_publish_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "340f031bc48e729909ac56676e82d522bf9cd44a",
+  "git_dirty": false,
+  "end": "2026-11-09T10:47:15",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "2d493ecc129fe0f53c18223ca15f8e6360a0f90315107eb09bb4d0e86128669f"
+}
