@@ -1060,3 +1060,36 @@ gen_test_fixed40_60_b01_c6_floorplan225: {"direct_flip": 0, "direct_stay": 2, "l
 708893(A)和708896(C)分别在30秒、23秒后以86退出；严格原生双黑PNG、GPU UUID、节点、PBS最终状态及清理证据均通过复核。二者同为 hopper-16 / GPU-80df2717-b2e5-ed5b-9586-275e993cc7aa。最终账见diag_pbs_usage_708893_final与diag_pbs_usage_708896_final；黑帧proof见diag_black_guard_708893_01/708896_01。保持原参数重提：708893 → 708912（gen_test_fixed40_60_a01_retry1），708896 → 708918（gen_test_fixed40_60_c01_retry1）；均无host限制。固定尾批D已提交708909，4场景、单卡、00:27:10。B的708894在hopper-30通过出图门槛并开始6路采集；运行中计数见diag_g01_test_live_01，不把生成端passed当独立验收。
 
 后续T02完整训练来源输入快照 configs/t02_export_current_train.json 由diag_t02_current_train_manifest_01生成：161个唯一proposal（DF33/DS58/LF41/LS29），全部原source/shard/metrics为60°，包含11个旧controller LookStay；4组plain pair_id冲突全部按不同原来源保留。这里是待导出输入，不是合格训练池。旧24触发/28完整/7未知保持原分类，首批6项全部保留。总清单须切成受限并发批次，不能直接作为一个>64项parent。
+
+
+## 2026-11-09 17:16 UTC — 测试生成运行中计数
+
+gen_test_fixed40_60_b01_c6_floorplan24: {"direct_flip": 0, "direct_stay": 0, "look_flip": 4, "look_stay": 0}; observed attempts=145; ended
+gen_test_fixed40_60_b01_c6_floorplan224: {"direct_flip": 0, "direct_stay": 2, "look_flip": 0, "look_stay": 0}; observed attempts=59; ended
+gen_test_fixed40_60_b01_c6_floorplan324: {"direct_flip": 0, "direct_stay": 0, "look_flip": 2, "look_stay": 0}; observed attempts=54; ended
+gen_test_fixed40_60_b01_c6_floorplan424: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=107; ended
+gen_test_fixed40_60_b01_c6_floorplan25: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=46; ended
+gen_test_fixed40_60_b01_c6_floorplan225: {"direct_flip": 0, "direct_stay": 3, "look_flip": 6, "look_stay": 0}; observed attempts=97; ended
+gen_test_fixed40_60_b01_c6_floorplan325: {"direct_flip": 1, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=4; ended
+gen_test_fixed40_60_b01_c6_floorplan425: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=38; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan26: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=0; ended
+gen_test_fixed40_60_b01_c6_floorplan226: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=29; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan326: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=25; running snapshot
+gen_test_fixed40_60_b01_c6_floorplan426: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=100; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan21: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=4; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan221: {"direct_flip": 0, "direct_stay": 1, "look_flip": 0, "look_stay": 0}; observed attempts=93; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan321: {"direct_flip": 0, "direct_stay": 0, "look_flip": 1, "look_stay": 0}; observed attempts=142; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan421: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=106; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan22: {"direct_flip": 0, "direct_stay": 6, "look_flip": 0, "look_stay": 0}; observed attempts=74; running snapshot
+gen_test_fixed40_60_a01_retry1_c6_floorplan222: {"direct_flip": 0, "direct_stay": 6, "look_flip": 3, "look_stay": 2}; observed attempts=73; running snapshot
+
+以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 diag_g01_test_live_02。
+
+
+## 2026-11-09 17:18 UTC — 执行 cef90e80 的减量与配额决定
+
+已合并人类决定：训练取消400总量目标；只补未达标的Look类，在T02、Stay位移筛选和Look比例0.8–1.25处理后LF/LS各40即可冻结；Direct仅用现有来源。最迟周二美东20:00冻结关口如任一Look<30，先停下报告由人类决定。测试生成按独立构造合格的筛选前每类60停止该类后续提议。现有161构造输入不等于T02后已确认训练数量。
+
+708894(B)、708912(A_retry1)已通过gate在运行，保留原作业；它们是旧版本全类别计划，不能追溯宣称有新全局配额能力，剩余最大可能产出先保守预留。708909(D)与708918(C_retry1)再次black/F86，实际账已记录，暂不按旧全类别计划重提；后续按新scene×kind不可转移配额补采。新配额实现隔离准备，不热改运行中共享生成器。无可安全新增的测试配额时，空名额先用于T02首6单卡并行实测。后续成本预测按新训练规模与测试目标，不再按训练400。
+
+测试Look原始预览8张已由diag_g01_test_live_preview_01从封存前缀逐SHA复制至logs/review/g01_test_live_preview_01；显式provisional，原source仍可能在跑，尚非独立验收。

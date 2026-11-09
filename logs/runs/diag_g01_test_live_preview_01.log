@@ -1,0 +1,78 @@
+# run_logged: python3 -m src.tools.record_command --name diag_g01_test_live_preview_01 -- python3 -c import hashlib,json,sys
+from datetime import datetime, timezone
+from pathlib import Path
+from PIL import Image
+import io
+from src.tools.t01_partition import audited_result
+root=Path.cwd().resolve()
+name="g01_test_live_preview_01"
+out=root/"logs/review"/name
+if out.exists(): raise FileExistsError(str(out))
+source,source_ref=audited_result("results/diag_g01_test_live_01.json")
+if source["_meta"]["exit_code"] != 0: raise ValueError("Snapshot run did not succeed")
+scope="PROVISIONAL GENERATOR PREVIEW ONLY: copied from the frozen live journal prefix; generating sources may still be running. Not independent acceptance, not a final source result, and not authorization to use test outcomes for tuning."
+def digest(raw):return hashlib.sha256(raw).hexdigest()
+def confined(value):
+ p=(root/value).resolve()
+ p.relative_to(root)
+ return p
+records=[];errors=[];images=[];seen=set()
+for scene in source["metrics"]["scene_runs"]:
+ journal=scene.get("journal_prefix")
+ if not isinstance(journal,dict) or not isinstance(journal.get("snapshot"),dict):continue
+ ref=journal["snapshot"]
+ snap=confined(ref["file"])
+ if snap.parent != root/"logs/runs/diag_g01_test_live_01/evidence":raise ValueError("Unexpected snapshot directory")
+ raw=snap.read_bytes()
+ if digest(raw)!=ref["sha256"] or len(raw)!=journal["snapshot_bytes"]:raise ValueError("Snapshot bytes/hash mismatch")
+ if journal.get("trailing_incomplete_bytes_not_counted") != 0:raise ValueError("Snapshot has incomplete final row; no row inference allowed")
+ if raw and not raw.endswith(b"\n"):raise ValueError("Archived prefix does not end at a complete row")
+ for line_index,line in enumerate(raw.splitlines(),1):
+  row=json.loads(line)
+  if row.get("status")!="passed" or row.get("kind") not in ("look_flip","look_stay"):continue
+  base={"source_run":scene["run_name"],"scene":scene["scene"],"pair_id":row.get("pair_id"),"generator_kind":row.get("kind"),"generator_status":"passed","snapshot_source_ended":scene.get("ended"),"independent_acceptance":None,"snapshot_reference":ref,"snapshot_line":line_index,"snapshot_line_sha256":digest(line),"live_journal_source_file":journal["source_file"]}
+  try:
+   pair_id=row["pair_id"]
+   if not isinstance(pair_id,str) or Path(pair_id).name!=pair_id:raise ValueError("Unsafe pair identifier")
+   key=(scene["run_name"],pair_id)
+   if key in seen:raise ValueError("Duplicate frozen pair entry")
+   seen.add(key)
+   pair_path=confined(row["pair_file"])
+   expected=root/"data/world_pairs/v2"/scene["run_name"]/pair_id/"pair.json"
+   if pair_path!=expected:raise ValueError("Pair path not bound to snapshot source/identifier")
+   pair_raw=pair_path.read_bytes()
+   if digest(pair_raw)!=row["pair_sha256"]:raise ValueError("Pair hash differs from frozen journal")
+   pair=json.loads(pair_raw)
+   for k,v in (("pair_id",pair_id),("scene",scene["scene"]),("kind",row["kind"]),("status","passed"),("g01_partition","test"),("producer_module","src.envs.pair_v2_g01_shard")):
+    if pair.get(k)!=v:raise ValueError("Pair declaration mismatch: "+k)
+   image_ref=pair["review_image"]
+   image_path=confined(image_ref["file"])
+   if image_path!=pair_path.parent/"review.png":raise ValueError("Review image is not the pair's original review.png")
+   image_raw=image_path.read_bytes()
+   if digest(image_raw)!=image_ref["sha256"]:raise ValueError("Review PNG hash differs from authenticated pair")
+   with Image.open(io.BytesIO(image_raw)) as image:
+    if image.format!="PNG":raise ValueError("Review image is not PNG")
+    image.verify()
+   filename=scene["run_name"]+"__"+pair_id+".png"
+   base.update({"pair_reference":{"file":row["pair_file"],"sha256":row["pair_sha256"]},"original_review_image_reference":image_ref,"copied_review_image_reference":{"file":(out/filename).relative_to(root).as_posix(),"sha256":digest(image_raw)},"image_processing":"byte-for-byte copy; no rendering, relabeling, or editing"})
+   records.append(base);images.append((filename,image_raw))
+  except Exception as exc:
+   errors.append(dict(base,error=repr(exc)))
+out.mkdir(parents=True,exist_ok=False)
+for filename,raw in images:
+ with (out/filename).open("xb") as stream:stream.write(raw)
+manifest={"scope":scope,"created_utc":datetime.now(timezone.utc).isoformat(),"source_snapshot_result":source_ref,"source_snapshot_utc":source["metrics"]["snapshot_utc"],"records":records,"errors":errors,"independent_acceptance":None,"source_results_modified":False}
+with (out/"manifest.json").open("x") as stream:json.dump(manifest,stream,indent=2);stream.write("\n")
+lines=["# Provisional G01 test Look previews","",scope,"","Only entries contained in the already archived `diag_g01_test_live_01` journal prefixes are shown. Pair JSON and original review PNG SHA-256 values were checked before byte-for-byte copying; the manifest retains these references and each archived journal line. No generating source was declared complete or independently accepted.","","| Source | Pair | Generator-reported class | Preview |","|---|---|---|---|"]
+for record in records:
+ filename=Path(record["copied_review_image_reference"]["file"]).name
+ lines.append("| "+record["source_run"]+" | "+record["pair_id"]+" | "+record["generator_kind"]+" | [original generated image]("+filename+") |")
+if errors:lines += ["","Some entries could not be bound or verified; they were not copied. See manifest errors."]
+with (out/"README.md").open("x") as stream:stream.write("\n".join(lines)+"\n")
+print("PROVISIONAL_PREVIEW_JSON: "+json.dumps({"directory":out.relative_to(root).as_posix(),"copied":len(records),"errors":errors,"pair_ids":[row["pair_id"] for row in records],"scope":scope},sort_keys=True),flush=True)
+sys.exit(1 if errors else 0)
+
+# start: 2026-11-10T01:10:56
+PROVISIONAL_PREVIEW_JSON: {"copied": 8, "directory": "logs/review/g01_test_live_preview_01", "errors": [], "pair_ids": ["floorplan24_00013", "floorplan24_00030", "floorplan24_00037", "floorplan24_00054", "floorplan324_00009", "floorplan225_00031", "floorplan225_00039", "floorplan225_00047"], "scope": "PROVISIONAL GENERATOR PREVIEW ONLY: copied from the frozen live journal prefix; generating sources may still be running. Not independent acceptance, not a final source result, and not authorization to use test outcomes for tuning."}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.8404699200182222}
+# exit_code: 0
