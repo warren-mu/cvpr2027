@@ -179,7 +179,8 @@ class VllmPolicy:
             observations = context['observations']
             messages = prompt_messages(observations, context['responses'], select_only=context['select_only'])
             prompt = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            choices = [a for a in public_actions(observations[-1]) if a.startswith('select ')]
+            choices = ([a for a in public_actions(observations[-1]) if a.startswith('select ')]
+                       if context['select_only'] else [])
             if context['select_only'] and not choices:
                 raise ValueError('Forced-selection episode has no public selectable mark')
             images = [Image.frombytes('RGB', (obs.image.width, obs.image.height), obs.image.data) for obs in observations]

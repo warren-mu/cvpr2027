@@ -2,6 +2,7 @@
 import copy
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from src.envs.paired_env import PublicObservation, RGBFrame, PublicMark
 from src.tools import smoke_e2e_eval as evaluation
@@ -50,6 +51,29 @@ class Policy:
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_unconstrained_diag_accepts_empty_final_turn_action_domain(self):
+        empty = PublicObservation(RGBFrame(b'\x01\x02\x03' * 16, 4, 4),
+                                  'Instruction\nAvailable actions: []', ())
+        policy = object.__new__(evaluation.VllmPolicy)
+        policy.processor = SimpleNamespace(
+            apply_chat_template=lambda *args, **kwargs: 'actual public prompt',
+            chat_template='fixture', tokenizer=SimpleNamespace(encode=lambda *args, **kwargs: [7, 8]))
+        policy.sample_type = lambda **kwargs: kwargs
+        policy.guide_type = lambda **kwargs: self.fail('diag_base must remain unconstrained')
+        policy.serial = 0
+        generated = []
+        def generate(requests, parameters, **kwargs):
+            generated.append((requests, parameters))
+            return [SimpleNamespace(outputs=[SimpleNamespace(text='invalid', token_ids=[9],
+                finish_reason='stop', stop_reason=None)])]
+        policy.model = SimpleNamespace(generate=generate)
+        rows = policy([{'observations': [empty], 'responses': [], 'select_only': False}])
+        self.assertEqual(rows[0]['action'], 'invalid')
+        self.assertIsNone(generated[0][1][0]['guided_decoding'])
+        self.assertIsNone(rows[0]['input']['guided_select_choices'])
+        with self.assertRaises(ValueError):
+            policy([{'observations': [empty], 'responses': [], 'select_only': True}])
+
     def test_import_does_not_load_gpu_dependencies(self):
         import sys
         # This module's own import remains safe in CPU unittest discovery.
