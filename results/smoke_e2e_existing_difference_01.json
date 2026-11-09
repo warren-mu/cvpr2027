@@ -1,0 +1,43 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.4007748500443995
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json,hashlib,io,numpy as np\nfrom PIL import Image\nroot=pathlib.Path('/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/raw')\nindex=json.loads((root/'evidence_index.json').read_text())\nrefs={pathlib.Path(x['file']).name:x for x in index['files']}\ndef read(name):\n p=root/name\n b=p.read_bytes()\n assert hashlib.sha256(b).hexdigest()==refs[name]['sha256']\n return b\ndef load(n):\n action=json.loads(read(f'action_{n-1:06d}.json'))\n files=action['capture']['files']\n for ref in files.values():\n  assert refs[pathlib.Path(ref['file']).name]['sha256']==ref['sha256']\n rgb=np.asarray(Image.open(io.BytesIO(read(f'frame_{n:06d}_rgb.png'))))\n meta=json.loads(read(f'frame_{n:06d}_metadata.json'))\n with np.load(io.BytesIO(read(f'frame_{n:06d}_masks.npz')),allow_pickle=False) as z:\n  masks={str(k):v.copy() for k,v in zip(z['names'],z['masks'])}\n  structural={str(k):v.copy() for k,v in zip(z['structural_ids'],z['structural_masks'])}\n return rgb,meta,masks,structural\na,b=load(409),load(412)\ndiff=np.abs(a[0].astype(np.int16)-b[0].astype(np.int16)); pix=diff.max(axis=2)\ndef bbox(mask):\n y,x=np.where(mask)\n return [int(x.min()),int(y.min()),int(x.max()),int(y.max())] if len(y) else None\nout={'scope':'existing saved frames only; no re-render; not a causal intervention','frame_w0':'frame_000409','frame_w1':'frame_000412','max_channel_difference':int(diff.max()),'different_pixel_count':int((pix>0).sum()),'difference_gt3_pixels':int((pix>3).sum()),'difference_gt10_pixels':int((pix>10).sum()),'bbox_gt3_xyxy':bbox(pix>3),'camera_exact':a[1]['agent']==b[1]['agent'] and a[1]['cameraPosition']==b[1]['cameraPosition'],'by_visible_object':[],'by_structural_id':[]}\nzero=np.zeros((255,255),bool)\nfor group,key in ((2,'by_visible_object'),(3,'by_structural_id')):\n for name in sorted(set(a[group])|set(b[group])):\n  mask=a[group].get(name,zero)|b[group].get(name,zero)\n  if (mask&(pix>0)).any():\n   out[key].append({'name':name,'difference_gt0_pixels':int((mask&(pix>0)).sum()),'difference_gt3_pixels':int((mask&(pix>3)).sum()),'difference_gt10_pixels':int((mask&(pix>10)).sum()),'maximum':int(pix[mask].max()),'bbox_gt3_xyxy':bbox(mask&(pix>3)),'mask_boundary_change_pixels':int((a[group].get(name,zero)^b[group].get(name,zero)).sum())})\nout['anchor_and_candidates']=[]\nobjects=[{o['name']:o for o in row[1]['objects']} for row in (a,b)]\nfor name in ('TissueBox_88aca81e','Book_e173324d','Book_e173324d(Clone)_copy_32','Chair_d2634fc6','Chair_dd569128','DiningTable_806ce8fd'):\n oa,ob=(x[name] for x in objects)\n delta=np.asarray([oa['position'][k]-ob['position'][k] for k in 'xyz'])\n out['anchor_and_candidates'].append({'name':name,'mask_pixels_w0_w1':[int(row[2].get(name,zero).sum()) for row in (a,b)],'position_delta_m':float(np.linalg.norm(delta)),'positions':[oa['position'],ob['position']],'rotations':[oa['rotation'],ob['rotation']]})\nprint('EXISTING_FRAME_DIAGNOSTIC: '+json.dumps(out,sort_keys=True,allow_nan=False))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "smoke_e2e_existing_difference_01",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "smoke_e2e_existing_difference_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json,hashlib,io,numpy as np\nfrom PIL import Image\nroot=pathlib.Path('/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_views_01/707395.hopper-m-02/export_0000/raw')\nindex=json.loads((root/'evidence_index.json').read_text())\nrefs={pathlib.Path(x['file']).name:x for x in index['files']}\ndef read(name):\n p=root/name\n b=p.read_bytes()\n assert hashlib.sha256(b).hexdigest()==refs[name]['sha256']\n return b\ndef load(n):\n action=json.loads(read(f'action_{n-1:06d}.json'))\n files=action['capture']['files']\n for ref in files.values():\n  assert refs[pathlib.Path(ref['file']).name]['sha256']==ref['sha256']\n rgb=np.asarray(Image.open(io.BytesIO(read(f'frame_{n:06d}_rgb.png'))))\n meta=json.loads(read(f'frame_{n:06d}_metadata.json'))\n with np.load(io.BytesIO(read(f'frame_{n:06d}_masks.npz')),allow_pickle=False) as z:\n  masks={str(k):v.copy() for k,v in zip(z['names'],z['masks'])}\n  structural={str(k):v.copy() for k,v in zip(z['structural_ids'],z['structural_masks'])}\n return rgb,meta,masks,structural\na,b=load(409),load(412)\ndiff=np.abs(a[0].astype(np.int16)-b[0].astype(np.int16)); pix=diff.max(axis=2)\ndef bbox(mask):\n y,x=np.where(mask)\n return [int(x.min()),int(y.min()),int(x.max()),int(y.max())] if len(y) else None\nout={'scope':'existing saved frames only; no re-render; not a causal intervention','frame_w0':'frame_000409','frame_w1':'frame_000412','max_channel_difference':int(diff.max()),'different_pixel_count':int((pix>0).sum()),'difference_gt3_pixels':int((pix>3).sum()),'difference_gt10_pixels':int((pix>10).sum()),'bbox_gt3_xyxy':bbox(pix>3),'camera_exact':a[1]['agent']==b[1]['agent'] and a[1]['cameraPosition']==b[1]['cameraPosition'],'by_visible_object':[],'by_structural_id':[]}\nzero=np.zeros((255,255),bool)\nfor group,key in ((2,'by_visible_object'),(3,'by_structural_id')):\n for name in sorted(set(a[group])|set(b[group])):\n  mask=a[group].get(name,zero)|b[group].get(name,zero)\n  if (mask&(pix>0)).any():\n   out[key].append({'name':name,'difference_gt0_pixels':int((mask&(pix>0)).sum()),'difference_gt3_pixels':int((mask&(pix>3)).sum()),'difference_gt10_pixels':int((mask&(pix>10)).sum()),'maximum':int(pix[mask].max()),'bbox_gt3_xyxy':bbox(mask&(pix>3)),'mask_boundary_change_pixels':int((a[group].get(name,zero)^b[group].get(name,zero)).sum())})\nout['anchor_and_candidates']=[]\nobjects=[{o['name']:o for o in row[1]['objects']} for row in (a,b)]\nfor name in ('TissueBox_88aca81e','Book_e173324d','Book_e173324d(Clone)_copy_32','Chair_d2634fc6','Chair_dd569128','DiningTable_806ce8fd'):\n oa,ob=(x[name] for x in objects)\n delta=np.asarray([oa['position'][k]-ob['position'][k] for k in 'xyz'])\n out['anchor_and_candidates'].append({'name':name,'mask_pixels_w0_w1':[int(row[2].get(name,zero).sum()) for row in (a,b)],'position_delta_m':float(np.linalg.norm(delta)),'positions':[oa['position'],ob['position']],'rotations':[oa['rotation'],ob['rotation']]})\nprint('EXISTING_FRAME_DIAGNOSTIC: '+json.dumps(out,sort_keys=True,allow_nan=False))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T08:24:53",
+    "log_path": "logs/runs/smoke_e2e_existing_difference_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "4e010a3541ca2664e35ecf33fe26b4370ecff6d7",
+    "git_dirty": false,
+    "end": "2026-11-09T08:24:54",
+    "duration_sec": 0.5,
+    "exit_code": 0,
+    "metrics_sha256": "13844bed9d8587e6a677b1aa48680225d7640659f1617f98ace5c6ae89129f01"
+  }
+}

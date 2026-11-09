@@ -1,0 +1,21 @@
+# run_logged: python3 src/tools/record_command.py --name t01v2_marked_live_01 -- python3 -c import pathlib,json
+from src.tools.t01v2_live_progress import read_prefix,observed_counts,archive
+root=pathlib.Path('logs/runs/t01v2_marked_live_01/snapshots');root.mkdir(parents=True,exist_ok=False)
+for name in ["pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1","pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2","pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201","pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan202"]:
+ p=pathlib.Path('data/world_pairs/v2')/(name+'_attempts.jsonl')
+ if not p.exists():
+  print(json.dumps({'name':name,'status':'not_yet_observed'}));continue
+ raw,info=read_prefix(p)
+ ref=archive(raw,root,name+'.jsonl')
+ print(json.dumps({'name':name,'scope':'producer_reported_live_not_independent_acceptance','source':ref,**observed_counts(raw,'FloorPlan'+name.split('floorplan')[-1])},sort_keys=True))
+
+# start: 2026-11-09T08:24:53
+Traceback (most recent call last):
+  File "<string>", line 9, in <module>
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01v2_live_progress.py", line 67, in archive
+    return {'file': str(path.relative_to(ROOT)), 'sha256': hashlib.sha256(data).hexdigest()}
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 818, in relative_to
+    raise ValueError("{!r} is not in the subpath of {!r}"
+ValueError: 'logs/runs/t01v2_marked_live_01/snapshots/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.jsonl' is not in the subpath of '/nfs/home/svu/e1583364/CVPR2027/cvpr2027' OR one path is relative and the other is absolute.
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.22092206496745348}
+# exit_code: 1

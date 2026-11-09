@@ -1,0 +1,97 @@
+# run_logged: python3 src/tools/record_command.py --name smoke_e2e_supp8_export_cpu_01 -- python3 -m unittest discover -s tests -p test_t02*.py
+# start: 2026-11-09T08:28:23
+...Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 249, in fresh_worker
+    comparison = check_cached_state(make_sample(table, state_id, fresh))
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 175, in make_sample
+    tuple(labels(view, table) for view in fresh), kind=table.kind)
+AttributeError: 'types.SimpleNamespace' object has no attribute 'kind'
+.Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 249, in fresh_worker
+    comparison = check_cached_state(make_sample(table, state_id, fresh))
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 175, in make_sample
+    tuple(labels(view, table) for view in fresh), kind=table.kind)
+AttributeError: 'types.SimpleNamespace' object has no attribute 'kind'
+F.ETraceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 249, in fresh_worker
+    comparison = check_cached_state(make_sample(table, state_id, fresh))
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 175, in make_sample
+    tuple(labels(view, table) for view in fresh), kind=table.kind)
+AttributeError: 'types.SimpleNamespace' object has no attribute 'kind'
+F....Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 157, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: non_anchor_divergent
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 153, in pair_worker
+    with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_export.py", line 170, in session
+    raise RuntimeError("stop failed")
+RuntimeError: stop failed
+....Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 157, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 157, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: missing source metadata
+.......
+======================================================================
+ERROR: test_json_roundtrip_preserves_comparison_tuples_and_exact_state_prefix (test_t02_cache_check.CacheProducerTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_cache_check.py", line 243, in test_json_roundtrip_preserves_comparison_tuples_and_exact_state_prefix
+    comparison = check_cached_state(cache.make_sample(value, "s0", fresh))
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_cache_check.py", line 175, in make_sample
+    tuple(labels(view, table) for view in fresh), kind=table.kind)
+AttributeError: 'types.SimpleNamespace' object has no attribute 'kind'
+
+======================================================================
+FAIL: test_first_state_mismatch_stops_remaining_plan_without_replacement (test_t02_cache_check.CacheProducerTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_cache_check.py", line 191, in test_first_state_mismatch_stops_remaining_plan_without_replacement
+    self.assertEqual(report["status"], "cache_mismatch")
+AssertionError: 'error' != 'cache_mismatch'
+- error
++ cache_mismatch
+
+
+======================================================================
+FAIL: test_new_controller_reconstructs_both_clone_worlds_before_capturing (test_t02_cache_check.CacheProducerTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_cache_check.py", line 186, in test_new_controller_reconstructs_both_clone_worlds_before_capturing
+    self.assertEqual(report["status"], "captured")
+AssertionError: 'error' != 'captured'
+- error
++ captured
+
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.587s
+
+FAILED (failures=2, errors=1)
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.8059025370166637}
+# exit_code: 1

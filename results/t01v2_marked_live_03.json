@@ -1,0 +1,43 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.215263950987719
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.tools.t01v2_live_progress import ROOT,read_prefix,observed_counts,archive\nroot=ROOT/'logs/runs/t01v2_marked_live_03/snapshots';root.mkdir(parents=True,exist_ok=False)\nfor name in [\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1\",\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan202\"]:\n p=ROOT/'data/world_pairs/v2'/(name+'_attempts.jsonl')\n if not p.exists():\n  print(json.dumps({'name':name,'status':'not_yet_observed'}));continue\n raw,info=read_prefix(p);ref=archive(raw,root,name+'.jsonl')\n print(json.dumps({'name':name,'scope':'producer_reported_live_not_independent_acceptance','source':ref,**observed_counts(raw,'FloorPlan'+name.split('floorplan')[-1])},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t01v2_marked_live_03",
+    "command": [
+      "python3",
+      "src/tools/record_command.py",
+      "--name",
+      "t01v2_marked_live_03",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,json\nfrom src.tools.t01v2_live_progress import ROOT,read_prefix,observed_counts,archive\nroot=ROOT/'logs/runs/t01v2_marked_live_03/snapshots';root.mkdir(parents=True,exist_ok=False)\nfor name in [\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1\",\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan202\"]:\n p=ROOT/'data/world_pairs/v2'/(name+'_attempts.jsonl')\n if not p.exists():\n  print(json.dumps({'name':name,'status':'not_yet_observed'}));continue\n raw,info=read_prefix(p);ref=archive(raw,root,name+'.jsonl')\n print(json.dumps({'name':name,'scope':'producer_reported_live_not_independent_acceptance','source':ref,**observed_counts(raw,'FloorPlan'+name.split('floorplan')[-1])},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-09T08:36:41",
+    "log_path": "logs/runs/t01v2_marked_live_03.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "716c454bf4d3c476bf5ae80039317fb0b174f682",
+    "git_dirty": false,
+    "end": "2026-11-09T08:36:42",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "3e8be1f8e1425c929254b579514e30d5695acc7b0c799ba9289fe15ea0fbe0b5"
+  }
+}

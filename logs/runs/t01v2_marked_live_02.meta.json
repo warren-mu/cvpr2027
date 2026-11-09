@@ -1,0 +1,27 @@
+{
+  "name": "t01v2_marked_live_02",
+  "command": [
+    "python3",
+    "src/tools/record_command.py",
+    "--name",
+    "t01v2_marked_live_02",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,json\nfrom src.tools.t01v2_live_progress import ROOT,read_prefix,observed_counts,archive\nroot=ROOT/'logs/runs/t01v2_marked_live_02/snapshots';root.mkdir(parents=True,exist_ok=False)\nfor name in [\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1\",\"pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan2\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201\",\"pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan202\"]:\n p=ROOT/'data/world_pairs/v2'/(name+'_attempts.jsonl')\n if not p.exists():\n  print(json.dumps({'name':name,'status':'not_yet_observed'}));continue\n raw,info=read_prefix(p)\n ref=archive(raw,root,name+'.jsonl')\n print(json.dumps({'name':name,'scope':'producer_reported_live_not_independent_acceptance','source':ref,**observed_counts(raw,'FloorPlan'+name.split('floorplan')[-1])},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T08:26:26",
+  "log_path": "logs/runs/t01v2_marked_live_02.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "4e010a3541ca2664e35ecf33fe26b4370ecff6d7",
+  "git_dirty": false,
+  "end": "2026-11-09T08:26:26",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "f4a2285eae634b8ea976338e822d9d0b021d1909c9f2b278b2f99ee9400c027e"
+}
