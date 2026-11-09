@@ -1,0 +1,28 @@
+{
+  "name": "diag_g01_next12_02_plan_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_next12_02_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,pathlib,importlib.util,datetime\nfrom src.tools.t01_partition import audited_result,sha_file\nroot=pathlib.Path.cwd()\nspec=importlib.util.spec_from_file_location(\"existing_budget\",root/\"scripts/pbs/submit_phase.py\")\nb=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)\ncheckpoint,ref=audited_result(root/\"results/t01v2_checkpoint_g01_next12_01.json\")\nassert checkpoint[\"_meta\"][\"exit_code\"]==0 and checkpoint[\"metrics\"][\"errors\"]==[]\nassert checkpoint[\"metrics\"][\"published_pair_count\"]==23\nrecommendation,rref=audited_result(root/\"results/diag_g01_next_scene_plan_01.json\")\nassert recommendation[\"_meta\"][\"exit_code\"]==0\nlines=(root/recommendation[\"_meta\"][\"log_path\"]).read_text().splitlines()\nplan=json.loads(next(x.split(\": \",1)[1] for x in lines if x.startswith(\"G01_NEXT_SCENE_RECOMMENDATION_JSON: \")))\nstate=b.budget_state(root)\nname=\"gen_train_next12_60_02\"\nb.validate_request(\"T01\",1,2890,name,state,\"G01\")\nout={\"at_utc\":datetime.datetime.now(datetime.timezone.utc).isoformat(),\"name\":name,\"checkpoint\":ref,\"recommendation\":rref,\"scenes\":plan[\"proposed_scenes\"],\"launch_settings\":plan[\"launch_settings\"],\"budget\":state,\"budget_guard_passed\":True,\"additional_requested_charged_GPUh\":2890/3600*state[\"charge_policy\"][\"rates\"][\"smallx\"],\"full1700_goal_authorized_or_promised\":False,\"rules_changed\":False,\"GPU_submitted\":False}\nprint(\"G01_NEXT12_02_PLAN_JSON: \"+json.dumps(out,sort_keys=True))\nstatus=root/\"STATUS.md\"\nwith status.open(\"a\") as f:\n f.write(\"\\n\\n### Next bounded G01 batch and physical diagnosis\\n\\n\")\n f.write(\"Independent checkpoint t01v2_checkpoint_g01_next12_01 retains all12 sources and publishes23 unique pairs: DF7/DS11/LF1/LS4; original duplicate and failed/partial sources retained. Review images are in logs/review/t01v2_checkpoint_g01_next12_01/. Job708238 used0.6516666667 chargedGPUh and queued129s (canonical g01_next12_final_accounting_01). Construction acceptance does not establish complete T02/cache acceptance.\\n\\n\")\n f.write(\"diag_g01_zero_physical_01 locates ordinary failures in FP304/403/404 at w0 physical checks: Bed or ToiletPaper moves beyond the unchanged1cm threshold after full-list SetObjectPoses and physics advances. This is not unique causal proof; no object freezing, baseline change, or threshold relaxation is made. Next bounded batch follows diag_g01_next_scene_plan_01: \"+\", \".join(plan[\"proposed_scenes\"])+\". Existing concurrency6 plus at most2 shared witness Controllers,1GPU/12CPU,60degree,1200s per scene,2860s parent,2890s PBS,autox,no host. Original preflight applies in every new scene.\\n\\n\")\n f.write(\"Pre-submission live measured-plus-reserved chargedGPUh: \"+json.dumps(state[\"accounted_or_reserved_by_subbudget\"],sort_keys=True)+\"; shared \"+str(state[\"accounted_or_reserved_total\"])+\"/60. Proposed additional ceiling \"+str(out[\"additional_requested_charged_GPUh\"])+\" GPUh. Existing guard passes; queued/running jobs retain requested ceilings. This is a bounded night batch, not approval/promise of the full1700 target.\\n\")\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T19:38:47",
+  "log_path": "logs/runs/diag_g01_next12_02_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "735455c4901d340bbe00ea4130eced57ac6ea10e",
+  "git_dirty": false,
+  "end": "2026-11-09T19:39:45",
+  "duration_sec": 55.9,
+  "exit_code": 0,
+  "metrics_sha256": "d085658f44cf2d6826a4e99a0d5b8cc73c4586bebfa3930e15ffbe02d685d214"
+}

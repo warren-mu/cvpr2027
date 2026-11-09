@@ -1,0 +1,28 @@
+{
+  "name": "diag_g01_zero_physical_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_g01_zero_physical_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\ndef read(reference):\n    path=Path(reference['file']); body=path.read_bytes()\n    if hashlib.sha256(body).hexdigest()!=reference['sha256']:\n        raise ValueError('Evidence SHA mismatch: '+str(path))\n    if reference.get('bytes') is not None and len(body)!=reference['bytes']:\n        raise ValueError('Evidence size mismatch: '+str(path))\n    return json.loads(body)\nnames={'304':['Bed_420caaec','Pillow_fc6f2755'],'403':['ToiletPaper_4a3f20c6','HandTowel_120bce5b','Towel_3a060e0d'],'404':['ToiletPaper_2d91ad71','HandTowel_99f5e9a6','Towel_830a0e9d']}\nsummary=[]\nfor scene,wanted in names.items():\n    source=Path('results/gen_train_next12_60_01_retry1_c6_floorplan'+scene+'.json')\n    data,source_ref=audited_result(source);m=data['metrics']\n    if m.get('final_metrics_verified') is not True or m.get('terminal_verified_after_cleanup') is not True:\n        raise ValueError('Source not sealed after cleanup')\n    journal=Path(m['attempt_journal']);body=journal.read_bytes()\n    if hashlib.sha256(body).hexdigest()!=m['attempt_journal_sha256']:\n        raise ValueError('Journal SHA mismatch')\n    first=json.loads(body.splitlines()[0]);attempt=read(first['raw_attempt'])\n    visit=next(v for v in m['controller_visits'] if v['controller_id']==attempt['search_controller_id'])\n    index=read(visit['raw_index']);refs={str(Path(r['file']).resolve()):r for r in index['files']}\n    physical=attempt['physical_w0'];common=physical['common_baseline_check']\n    read(common['baseline_reference']);setup=read(attempt['attempt_setup_reference'])\n    actions=[]\n    for record in attempt['native_retry_records']['w0'].values():\n        read(record['ledger_reference'])\n        native=read(record['action_reference']);path=Path(record['action_reference']['file'])\n        for action_index in (native['index'],native['index']+1,native['index']+2):\n            p=path.with_name('action_'+str(action_index).zfill(6)+'.json')\n            ref=refs[str(p.resolve())];action=read(ref);args=action.get('arguments',{})\n            entry={'reference':ref,'action':action['action'],'arguments_except_pose_list':{k:v for k,v in args.items() if k!='objectPoses'},\n                   'success':action['after_metadata']['lastActionSuccess'],'exception':action.get('exception')}\n            if 'objectPoses' in args:\n                entry['implicated_object_poses']=[v for v in args['objectPoses'] if v['objectName'] in wanted]\n            entry['implicated_objects_before']={o['name']:{k:o.get(k) for k in ('position','rotation','moveable','pickupable','isMoving','parentReceptacles')} for o in action['before_metadata']['objects'] if o['name'] in wanted}\n            entry['implicated_objects_after']={o['name']:{k:o.get(k) for k in ('position','rotation','moveable','pickupable','isMoving','parentReceptacles')} for o in action['after_metadata']['objects'] if o['name'] in wanted}\n            actions.append(entry)\n    summary.append({'scene':'FloorPlan'+scene,'source':source_ref,\n        'journal':{'file':str(journal),'sha256':m['attempt_journal_sha256']},\n        'recorded_counts':{k:m[k] for k in ('attempts','discard_reason_counts','passed_by_class','w0_by_anchor','proposed_pool_attempts','placement_exhausted_proposals','failed_native_point_count')},\n        'recorded_physical_rejection_distribution':m['evidence_retention']['physical_rejection_distribution'],\n        'recorded_reason_counts':m['evidence_retention']['complete_rejection_reason_counts'],\n        'recorded_terminal_error':m.get('error'),'cleanup_errors':m['cleanup_errors'],'black_frame_detected':m['black_frame_detected'],\n        'sample':{'journal_row':first,'raw_reference':first['raw_attempt'],'controller_id':visit['controller_id'],'raw_index':visit['raw_index'],\n          'setup':{k:setup.get(k) for k in ('setup_passed','status','error','restored_snapshot_reference')},\n          'edited_names':physical['edited_names'],'edits':physical['edits'],'native_is_scene_at_rest':physical['native_is_scene_at_rest'],\n          'reasons':physical['reasons'],'common_baseline_reference':common['baseline_reference'],\n          'recorded_object_changes':{k:physical['all_object_changes'][k] for k in wanted},\n          'recorded_common_measurements':{k:common['measurements']['objects'][k] for k in wanted},\n          'native_action_sequence':actions}})\nprint('G01_ZERO_PHYSICAL_DIAGNOSTIC_JSON: '+json.dumps({'scope':'Read-only extraction of existing sealed counts and first retained rejection per scene; reason counts overlap, no new acceptance test, no causal intervention, no GPU','scenes':summary},sort_keys=True,allow_nan=False))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-09T19:26:51",
+  "log_path": "logs/runs/diag_g01_zero_physical_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "735455c4901d340bbe00ea4130eced57ac6ea10e",
+  "git_dirty": false,
+  "end": "2026-11-09T19:27:20",
+  "duration_sec": 25.0,
+  "exit_code": 0,
+  "metrics_sha256": "a21c7e43839476f0da49fba9e6f5887b7b0d06c157ac4c47da12fbe9314c5d0d"
+}
