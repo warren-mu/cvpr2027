@@ -1,0 +1,323 @@
+{
+  "metrics": {
+    "kind": "g01_parallel_collection",
+    "status": "blocked_by_render_gate",
+    "acceptance_passed": false,
+    "gate": {
+      "run_name": "gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate",
+      "exit_code": 86,
+      "wall_seconds_observed": 17.922216875012964,
+      "result_path": "results/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.json",
+      "launcher_log": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_metadata_revalidate_01/708092_hopper_m_02/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.launcher.log",
+      "launcher_log_sha256": "8243fd53d1dcd2a3d0763d9d6d42c36ec626bca4a6aedbd591a5b7090b9fe999",
+      "source": {
+        "file": "results/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.json",
+        "sha256": "f1c5ff8599c3ecd1131786aa4bccd0bd2c9f116ea9ad77448c2ba993dea8607e",
+        "metrics_sha256": "f0db39cd2af9f380ac59aeb8978fdf410725dee0b1af2c1eb5313ffef2a6656a",
+        "exit_code": 86,
+        "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+        "audit": {
+          "file": "results/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 86); keep it, do not cite it"
+          ]
+        }
+      },
+      "source_status": null
+    },
+    "stages": [],
+    "scene_runs": [],
+    "started_shards": [],
+    "cleanup_errors": [],
+    "black_frame_detected": true,
+    "admission_final": [],
+    "unstarted_assignments": [
+      {
+        "scene": "FloorPlan1",
+        "lane_index": 0,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan1"
+      },
+      {
+        "scene": "FloorPlan7",
+        "lane_index": 1,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan7"
+      },
+      {
+        "scene": "FloorPlan203",
+        "lane_index": 2,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan203"
+      },
+      {
+        "scene": "FloorPlan204",
+        "lane_index": 3,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan204"
+      },
+      {
+        "scene": "FloorPlan301",
+        "lane_index": 4,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan301"
+      },
+      {
+        "scene": "FloorPlan401",
+        "lane_index": 5,
+        "child_run_name": "gen_train_metadata_revalidate_01_c6_floorplan401"
+      }
+    ],
+    "unfinished_run_names": [],
+    "stop_reasons": [],
+    "all_planned_assignments_finished": false,
+    "exit_code": 86
+  },
+  "config": {
+    "name": "gen_train_metadata_revalidate_01",
+    "pbs_jobid": "708092.hopper-m-02",
+    "node": "hopper-19",
+    "budget_group": "G01",
+    "gpus": 1,
+    "seed": 0,
+    "resolution": 255,
+    "field_of_view": 60,
+    "scenes": [
+      "FloorPlan1",
+      "FloorPlan7",
+      "FloorPlan203",
+      "FloorPlan204",
+      "FloorPlan301",
+      "FloorPlan401"
+    ],
+    "concurrencies": [
+      6
+    ],
+    "cpu_cores_per_gpu": 12,
+    "scene_timeout_seconds": 1200,
+    "child_finalization_seconds": 60,
+    "gate_timeout_seconds": 120,
+    "gate_wrapper_seconds": 10,
+    "stage_finalization_seconds": 30,
+    "parent_cleanup_seconds": 60,
+    "timeout_seconds": 1600,
+    "required_timeout_seconds": 1600,
+    "deadline_scope": "fixed full scene grants plus bounded startup/finalization/cleanup allowances; not measured speed",
+    "pool_scope": "one collection stage; explicit training scenes once each; aggregate actual proposal deduplication and total8 per scene/class remain required before training-pool freeze",
+    "producer_module": "src.envs.pair_v2_g01_shard",
+    "stage_plans": [],
+    "submission": {
+      "file": "logs/pbs/gen_train_metadata_revalidate_01-20261109T085201Z-cbca629d/payload.json",
+      "sha256": "9f89d7ca7baf1c59c97371c590c3d0921380ec97638b02cf6d381a622e711bf0",
+      "requested_wall_seconds": 1630,
+      "budget_group": "G01"
+    },
+    "parent_cuda_visible_devices": "GPU-41b4dc5b-ab2e-9066-f4b6-13baa1b17eac",
+    "cpu_affinity": [
+      24,
+      26,
+      28,
+      30,
+      32,
+      34,
+      36,
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "collection_version": "g01_single_stage_collection_v1",
+    "benchmark_source": "results/gen_train_concurrency_s15_02.json",
+    "benchmark_selection": {
+      "source": {
+        "file": "results/gen_train_concurrency_s15_02.json",
+        "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729",
+        "metrics_sha256": "7ce21b8032bdcf7f5bfaec2918bd13e09cae8576b29dd853461b4c06e2b05f8c",
+        "exit_code": 1,
+        "git_commit": "47b8afb99847bf08977197a65cdd9b7af315bcfe",
+        "audit": {
+          "file": "results/gen_train_concurrency_s15_02.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "concurrency": 6,
+      "stage_index": 2,
+      "stage_wall_seconds_observed": 1168.1187027089763,
+      "plan": {
+        "plan_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c6/admission_plan.json",
+        "plan_sha256": "d1560ea29e5961d7e1172c7b7c7aad073c5ffa061fb1f42667eb127d78bc16c7",
+        "state_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_concurrency_s15_02/707841_hopper_m_02/c6/admission_state.json"
+      },
+      "fixed_scenes": [
+        "FloorPlan1",
+        "FloorPlan7",
+        "FloorPlan203",
+        "FloorPlan204",
+        "FloorPlan301",
+        "FloorPlan401"
+      ],
+      "children": [
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan1.json",
+          "sha256": "072946c75d1bce30990e5b44e6efd6ef0e20d06b50d6fb6cfc8d4ccc5b00c02a",
+          "metrics_sha256": "45f9bada19fee7544d09ae478176adb473d294ab5ed13d6c7dea3a0121366dc4",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan1.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan7.json",
+          "sha256": "800af9ecac44f2347f603b0aea13f096f3983f2dfbb6936a3046f03477ee821f",
+          "metrics_sha256": "a322a7fd342991ecd3444abd22026fc9ed5fa938054cd4a3ee3133a3e555ce93",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan7.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan203.json",
+          "sha256": "54e7ded8cd5792395b42d5aa6494f07a7d4cd87bd102e6819f182827b918d853",
+          "metrics_sha256": "d3eb9c92912d1272a1f14182c2f23254abced7a06d6b168b26a6bbb3329e5ea3",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan203.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan204.json",
+          "sha256": "3fc6bb2b36d963205f99bcdd18d08990aeaafc58c97bf5416d1ac4420840bafe",
+          "metrics_sha256": "45f06e04a4fc492df357a751f2068c40bda29967cdb222869bfc19044b737e7e",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan204.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan301.json",
+          "sha256": "5e43d0198662a80bdead3fec85270accb8364ec8c2edee63320902341fa2a87c",
+          "metrics_sha256": "3eb2c0b3b277670ce788270989490eb81d1707cccb91857a7fbe0108beb2e7f9",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan301.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        },
+        {
+          "file": "results/gen_train_concurrency_s15_02_c6_floorplan401.json",
+          "sha256": "94f08b84cd92dd4f0e07e3e68d0454c8685053ccfd397a9551740736aa15ec98",
+          "metrics_sha256": "88ef15819d2c3c519eaa01ba45733fcb23ef113f7a2e11b557d0e4fb9e2373cc",
+          "exit_code": 1,
+          "git_commit": "02196e0b0ae73243e215243848edd380604499c4",
+          "audit": {
+            "file": "results/gen_train_concurrency_s15_02_c6_floorplan401.json",
+            "fail": [],
+            "warn": [
+              "P7 run failed (exit_code 1); keep it, do not cite it"
+            ]
+          }
+        }
+      ],
+      "parent_exit_code": 1,
+      "parent_status": "completed",
+      "selection": "explicit operator choice; no automatic fastest-setting inference",
+      "scope": "completed workload and known resource cleanup only; no scientific pair acceptance"
+    },
+    "runner_timeout_seconds": 1480,
+    "benchmark_validation_timeout_seconds": 120
+  },
+  "sources": [
+    {
+      "file": "results/gen_train_concurrency_s15_02.json",
+      "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729",
+      "metrics_sha256": "7ce21b8032bdcf7f5bfaec2918bd13e09cae8576b29dd853461b4c06e2b05f8c",
+      "exit_code": 1,
+      "git_commit": "47b8afb99847bf08977197a65cdd9b7af315bcfe",
+      "audit": {
+        "file": "results/gen_train_concurrency_s15_02.json",
+        "fail": [],
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      }
+    },
+    {
+      "file": "results/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.json",
+      "sha256": "f1c5ff8599c3ecd1131786aa4bccd0bd2c9f116ea9ad77448c2ba993dea8607e",
+      "metrics_sha256": "f0db39cd2af9f380ac59aeb8978fdf410725dee0b1af2c1eb5313ffef2a6656a",
+      "exit_code": 86,
+      "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+      "audit": {
+        "file": "results/gen_train_metadata_revalidate_01_j708092_hopper_m_02_gate.json",
+        "fail": [],
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      }
+    }
+  ],
+  "_meta": {
+    "name": "gen_train_metadata_revalidate_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_train_metadata_revalidate_01",
+      "--scenes",
+      "FloorPlan1",
+      "FloorPlan7",
+      "FloorPlan203",
+      "FloorPlan204",
+      "FloorPlan301",
+      "FloorPlan401",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-19",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-09T17:04:40",
+    "log_path": "logs/runs/gen_train_metadata_revalidate_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "4766ae54514946e258f85e34edc4a81d0e7361ef",
+    "git_dirty": false,
+    "end": "2026-11-09T17:05:02",
+    "duration_sec": 22.0,
+    "exit_code": 86,
+    "metrics_sha256": "21df7cf5c1c51502768402899458b5193724305ba06eb490ace9d908a8811582"
+  }
+}
