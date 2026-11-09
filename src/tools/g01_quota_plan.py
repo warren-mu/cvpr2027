@@ -104,7 +104,8 @@ def validate_structure(plan):
             raise ValueError('Duplicate or missing outstanding reservation identity')
         ids.add(identity)
         reference(item.get('source'))
-        if item.get('scope') not in ('unverified_inventory_upper_bound', 'submitted_job_upper_bound'):
+        if item.get('scope') not in ('unverified_inventory_upper_bound', 'submitted_job_upper_bound',
+                                    'preallocated_disjoint_ticket_upper_bound'):
             raise ValueError('Reservation is an upper bound, never a confirmed scientific pass')
         per_scene = by_scene(item.get('by_scene'), partition)
         declared = counts(item.get('by_kind'))
@@ -244,6 +245,10 @@ def authenticate_count_basis(plan):
     """
     if plan['partition'] != 'test':
         raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
+    if 'shared_ticket_bank' in plan:
+        from src.tools.g01_ticket_bank import verify_member
+        verified = verify_member(plan, root=ROOT, authenticate=True)
+        return {**verified['count_basis_proof'], 'shared_ticket_bank': verified}
     if plan['outstanding_reservations']:
         raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
     proof = reconstruct_test_inventory(plan['count_basis_sources'], configuration=plan['version'] == CONFIG_VERSION,
@@ -267,6 +272,9 @@ def load_plan(ref, *, authenticate=True):
         raise ValueError('Immutable quota plan bytes changed')
     plan = json.loads(raw)
     arithmetic = validate_structure(plan)
+    if 'shared_ticket_bank' in plan:
+        from src.tools.g01_ticket_bank import verify_member
+        verify_member(plan, root=ROOT, authenticate=False)
     proof = None
     if authenticate:
         key = (str(path), ref['sha256'])

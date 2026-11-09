@@ -287,6 +287,10 @@ def main(argv=None):
     try:
         identity = {**export.execution_environment(os.environ, os.sched_getaffinity(0)), 'node': config['node']}
         config.update(identity)
+        from src.tools.gpu_shared_claim import validate_runtime_claim
+        shared = validate_runtime_claim(os.environ, identity, 'src.tools.t02_export_parallel', args.name)
+        if shared is not None:
+            config['shared_queue_claim'] = shared
         deadline = deadline_after(args.timeout_seconds)
         config['absolute_deadline_epoch'] = deadline
         directory = Path(identity['scratch']) / 't02_export_parallel' / args.name / identity['pbs_jobid']

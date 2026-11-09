@@ -29,6 +29,34 @@ UUID = re.compile(r"GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\Z")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
 
 
+def create_shared_queue(directory, plan, plan_reference, *, root=ROOT):
+    """Opt-in shared scientific claims; legacy allocation queues stay unchanged."""
+    from src.tools.gpu_shared_claim import SharedQueue
+    return SharedQueue(directory, plan, plan_reference, root=root)
+
+
+def launch_shared_logged(name, command, environment, directory, cpu_affinity):
+    """One original logged command, one UUID, and a real twelve-CPU mask."""
+    if not NAME.fullmatch(name) or len(set(cpu_affinity)) != 12:
+        raise ValueError('Shared unit requires a safe name and twelve distinct CPUs')
+    if not set(cpu_affinity).issubset(os.sched_getaffinity(0)):
+        raise ValueError('Shared child CPU mask expands the original allocation')
+    if any(path.exists() or path.is_symlink() for path in artifact_paths(name)):
+        raise FileExistsError('Preserved shared unit output already exists: ' + name)
+    log = Path(directory) / (name + '.launcher.log')
+    stream = log.open('x')
+    env = dict(environment, CVPR_RUN_NAME=name, CVPR_RESULTS_PATH=str(ROOT / 'results' / (name + '.json')))
+    argv = [sys.executable, '-u', str(ROOT / 'scripts/run_logged.py'), '--name', name, '--seed', '0', '--', *command]
+    try:
+        process = subprocess.Popen(argv, cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT,
+            start_new_session=True, preexec_fn=lambda: os.sched_setaffinity(0, set(cpu_affinity)))
+    except BaseException:
+        stream.close()
+        raise
+    return {'process': process, 'stream': stream, 'launcher_log': log, 'name': name,
+            'command': argv, 'start_monotonic': time.monotonic()}
+
+
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 

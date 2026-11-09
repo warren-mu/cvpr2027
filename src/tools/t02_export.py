@@ -324,6 +324,10 @@ def main():
     try:
         identity = execution_environment(os.environ, os.sched_getaffinity(0))
         config.update(identity)
+        from src.tools.gpu_shared_claim import validate_t02_child_claim
+        shared = validate_t02_child_claim(os.environ, {**identity, 'node': config['node']}, args)
+        if shared is not None:
+            config['shared_queue_claim'] = shared
         deadline = deadline_after(args.timeout_seconds)
         signal.setitimer(signal.ITIMER_REAL, max(.1, deadline - time.time()))
         config["absolute_deadline_epoch"] = deadline

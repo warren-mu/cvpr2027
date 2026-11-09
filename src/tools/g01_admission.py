@@ -37,7 +37,7 @@ def digest(raw):
 
 
 def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignments,
-                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train'):
+                pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train', shared_queue_claim=None):
     directory = Path(directory).resolve()
     if len(cpu_affinity) != 12 or len(set(cpu_affinity)) != 12:
         raise ValueError('All scene lanes must share exactly the allocated twelve CPUs')
@@ -58,6 +58,12 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
                     collection_purpose='evaluation only; never training or tuning')
     elif partition != 'train':
         raise ValueError('Require the approved train/test partition')
+    if shared_queue_claim is not None:
+        plan['shared_queue_claim'] = copy.deepcopy(shared_queue_claim)
+        plan['scratch'] = os.environ.get('CVPR_SCRATCH')
+        from src.tools.g01_shared_unit import validate_admission
+        from src.envs.thor_common import ROOT
+        validate_admission(plan, root=ROOT)
     validate_partition_plan(plan)
     path = directory / 'admission_plan.json'
     with path.open('x') as stream:
@@ -135,6 +141,21 @@ def validate_source_admission(config, metrics=None):
     assignment = shard['g01_admission']
     plan = load_plan(assignment)
     partition = plan.get('g01_partition', 'train')
+    claim = plan.get('shared_queue_claim')
+    if claim is not None or shard.get('shared_queue_claim') is not None:
+        if claim is None or shard.get('shared_queue_claim') != claim:
+            raise ValueError('G01 shard changed or dropped its shared claim binding')
+        from src.tools.g01_shared_unit import validate_admission
+        from src.envs.thor_common import ROOT
+        validate_admission(plan, root=ROOT)
+        if plan.get('scratch') != shard.get('allocation', {}).get('scratch'):
+            raise ValueError('Shared G01 scratch differs from the original audited render allocation')
+    quota_assignment = config.get('g01_quota_assignment')
+    if quota_assignment is not None:
+        from src.tools import g01_quota_plan as quotas
+        quota_value, _, _ = quotas.load_plan(quota_assignment['plan_reference'], authenticate=False)
+        if 'shared_ticket_bank' in quota_value and claim is None:
+            raise ValueError('A bank-backed G01 source cannot omit its shared claim')
     if (shard.get('g01_partition', 'train') != partition
             or config.get('g01_partition', 'train') != partition):
         raise ValueError('Source partition differs from its immutable admission plan')

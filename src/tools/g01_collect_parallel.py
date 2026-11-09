@@ -200,6 +200,10 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
     if quota_reference is not None:
         quota_plan.reference(quota_reference)
         expected += ['--quota-plan', quota_reference['file'], '--quota-plan-sha256', quota_reference['sha256']]
+    from src.tools.g01_shared_unit import runtime_claim
+    claim = runtime_claim(root=repo, name=name, job=job, command=expected, quota_reference=quota_reference)
+    if claim is not None:
+        return {'shared_queue_claim': claim, 'budget_group': 'G01'}
     matches = []
     for path in (repo / 'logs/pbs').glob('*/payload.json'):
         data = json.loads(path.read_text())
@@ -228,7 +232,8 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
     """Reuse the original scheduler; every binding is process-local and restored."""
     scenes = validate_selection(scenes, concurrency, partition)
     previous = {key: getattr(parent, key) for key in
-                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged', 'make_shard')}
+                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged', 'make_shard', 'create_plan')}
+    shared_claim = None
     quota_reference = None if quota is None else quota['reference']
     if quota is not None:
         quota_plan.validate_structure(quota['plan'])
@@ -236,13 +241,22 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
                 or [row['scene'] for row in quota['plan']['assignments']] != list(scenes)):
             raise ValueError('Collection scene order or partition differs from immutable quota plan')
     def reservation(repo, name, job, timeout):
+        nonlocal shared_claim
         if timeout != runner_timeout(scenes, concurrency, partition):
             raise ValueError('Scheduler must retain its complete full-grant deadline')
-        return submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
+        result = submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
                                    concurrency=concurrency, benchmark=benchmark, partition=partition,
                                    explicit_partition=explicit_partition, quota_reference=quota_reference)
+        shared_claim = result.get('shared_queue_claim')
+        return result
+    def create_plan(*args, **kwargs):
+        if shared_claim is not None:
+            kwargs['shared_queue_claim'] = copy.deepcopy(shared_claim)
+        return previous['create_plan'](*args, **kwargs)
     def make_shard(name, scene, *args, **kwargs):
         shard = previous['make_shard'](name, scene, *args, **kwargs)
+        if shared_claim is not None:
+            shard['shared_queue_claim'] = copy.deepcopy(shared_claim)
         if quota is not None:
             assignment = quota_plan.assignment(quota['plan'], quota_reference, scene, name)
             shard.update(parent.policy.declared(scene, partition, assignment))
@@ -252,6 +266,8 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
             sources.append(copy.deepcopy(proof['source']))
         return previous['finish_logged'](running, sources)
     def write(name, metrics, config):
+        if shared_claim is not None:
+            config['shared_queue_claim'] = copy.deepcopy(shared_claim)
         metrics['kind'] = 'g01_parallel_collection'
         config.update(collection_version=VERSION,
                       g01_partition=partition, per_scene_class_cap=parent.policy.class_cap(partition),
@@ -269,7 +285,7 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
         return previous['write_result'](name, metrics, config)
     parent.SCENES, parent.CONCURRENCIES, parent.PARTITION = scenes, (concurrency,), partition
     parent.submission_identity, parent.write_result, parent.finish_logged = reservation, write, finish
-    parent.make_shard = make_shard
+    parent.make_shard, parent.create_plan = make_shard, create_plan
     try:
         yield
     finally:

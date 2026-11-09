@@ -23,8 +23,9 @@ import uuid
 BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 120.0}
 TOTAL_LIMIT = 120.0
-BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40"
+BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40_shared_gpu_units_v1"
 SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 6.0, "G01": 40.0, "T02": 40.0}
+PACK_GROUP = "PACK"  # A reservation route, never an additional budget.
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 EXTERNAL_FINAL_CONFIG = "configs/phase_external_final_jobs.json"
 EXTERNAL_FINAL_VERSION = "g01_direct_qsub_final_cost_v1"
@@ -32,6 +33,12 @@ EXTERNAL_FINAL_VERSION = "g01_direct_qsub_final_cost_v1"
 
 def budget_group(task, name, command, declared=None):
     """Subbudgets share the approved120 total; historical diagnostic routes are retained."""
+    pack = isinstance(name, str) and name.startswith("gpu_pack_")
+    pack_launch = "src.tools.gpu_pack" in (command or [])
+    if pack or pack_launch or declared == PACK_GROUP:
+        if task != "T01" or not pack or declared != PACK_GROUP or (command and not pack_launch):
+            raise ValueError("Shared GPU queue requires explicit PACK, task T01 and its gpu_pack_ producer/name")
+        return PACK_GROUP
     named = isinstance(name, str) and (name == "pilot_pairs_v2" or name.startswith("pilot_pairs_v2_"))
     launched = any(isinstance(arg, str) and
                    (arg.endswith(("/t01v2_pairs.sh", "/t01v2_clone_pairs.sh", "/t01v2_stable_pairs.sh", "/t01v2_search_pairs.sh", "/t01v2_solvable_pairs.sh", "/t01v2_isolated_pairs.sh", "/t01v2_marked_pairs.sh"))
@@ -385,10 +392,15 @@ def budget_state(repo, policy=None, live_rates=None):
             raise RuntimeError(f"Unknown task in this budget batch: {task}")
         requested = payload["requested_gpu_count"] * payload["requested_wall_seconds"] / 3600
         group = budget_group(task, payload["name"], payload.get("command"), payload.get("budget_group"))
+        mixed = None
+        if group == PACK_GROUP:
+            from src.tools.pbs_mixed_accounting import validate_payload
+            mixed = validate_payload(repo, payload)
         submissions.append({"task": task, "budget_group": group, "name": payload["name"], "job_id": job_id, "payload": str(path.relative_to(repo)),
                             "requested_gpu_hours": requested, "gpus": payload["requested_gpu_count"],
                             "recorded_reservation_rate": payload.get("requested_queue_charge_rate"),
-                            "submission_returncode": receipt.get("returncode")})
+                            "submission_returncode": receipt.get("returncode"),
+                            **({"mixed_budget_authorization": mixed} if mixed is not None else {})})
     external, external_final = _external_final_jobs(repo, seen)
     final = _final_accounting(repo, seen)
     submissions.extend(external)
@@ -417,7 +429,29 @@ def budget_state(repo, policy=None, live_rates=None):
         if observed:
             row["accounting_result"] = observed["accounting_result"]
         used[row["task"]] += cost
-        if row["budget_group"]:
+        if row["budget_group"] == PACK_GROUP:
+            from src.tools.pbs_mixed_accounting import finalized_split
+            split = finalized_split(repo, row, observed) if observed else None
+            groups = row["mixed_budget_authorization"]["possible_groups"]
+            if observed and observed["gpu_hours"] == 0:
+                group_costs = {group: 0.0 for group in groups}
+                row["mixed_subbudget_basis"] = "canonical_zero_allocation"
+            elif split is not None:
+                group_costs = split["charged_gpu_hours_by_group"]
+                row["mixed_subbudget_basis"] = "verified_final_unit_intervals_and_priority_remainder"
+                row["mixed_final_accounting"] = split
+            else:
+                # Shared/T01 still counts this physical allocation exactly once.
+                # Until an authenticated unit split exists, every possible group
+                # conservatively retains the entire original requested bound.
+                reserve_rate = max(rate, positive_rate(row["recorded_reservation_rate"]))
+                reserve = row["requested_gpu_hours"] * reserve_rate
+                group_costs = {group: max(reserve, cost) for group in groups}
+                row["mixed_subbudget_basis"] = "full_allocation_reservation_per_possible_group"
+            row["accounted_or_reserved_by_subbudget"] = group_costs
+            for group, value in group_costs.items():
+                subgroup_costs[group].append(value)
+        elif row["budget_group"]:
             subgroup_costs[row["budget_group"]].append(cost)
     return {"batch": BATCH, "charge_policy": policy, "units": "scheduler_charged_gpu_hours", "limits_gpu_hours": LIMITS, "total_limit_gpu_hours": TOTAL_LIMIT,
             "accounted_or_reserved_by_task": used, "accounted_or_reserved_total": math.fsum(used.values()),
@@ -426,11 +460,11 @@ def budget_state(repo, policy=None, live_rates=None):
             "submissions": submissions}
 
 
-def validate_request(task, gpus, seconds, name, state, group=None):
+def validate_request(task, gpus, seconds, name, state, group=None, mixed_authorization=None):
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
-    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+)"
+    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+|gpu_pack_[A-Za-z0-9_]+)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
     if any(row["name"] == name for row in state["submissions"]):
@@ -447,6 +481,22 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 120 GPU-hour budget")
     group = budget_group(task, name, [], group)
+    if group == PACK_GROUP:
+        from src.tools.pbs_mixed_accounting import VERSION, PRIORITY
+        groups = (mixed_authorization or {}).get("possible_groups")
+        if (gpus not in (1, 4) or (mixed_authorization or {}).get("version") != VERSION
+                or not isinstance(groups, list) or not groups or groups != [g for g in PRIORITY if g in groups]
+                or mixed_authorization.get("residual_priority") != groups):
+            raise ValueError("PACK needs its authenticated immutable plan and one/four GPUs")
+        for possible in groups:
+            recorded = state.get("accounted_or_reserved_by_subbudget", {}).get(possible)
+            if (isinstance(recorded, bool) or not isinstance(recorded, (int, float))
+                    or not math.isfinite(recorded) or recorded < 0
+                    or recorded + proposed > SUBBUDGET_LIMITS[possible] + 1e-12):
+                raise ValueError(f"Mixed pack full allocation reservation would exceed or lacks the {possible} subbudget")
+        return
+    if mixed_authorization is not None:
+        raise ValueError("Ordinary single-group jobs cannot claim a mixed reservation")
     if group in ("E2E", "E2Epilot", "T02") and gpus != 1:
         raise ValueError("E2E/E2Epilot/T02 use exactly one GPU per job")
     if group == "G01" and name.startswith("gen_test_") and gpus != 1:
@@ -471,7 +521,7 @@ def main():
     parser.add_argument("--black-retry-evidence", help="Original logged strict black-gate guard result")
     parser.add_argument("--black-retry-evidence-sha256", help="Exact guard result SHA256")
     parser.add_argument("--retry-of", help="Original explicit PBS job ID; provenance metadata only")
-    parser.add_argument("--budget-group", choices=sorted(SUBBUDGET_LIMITS), help="Additional limit within the existing phase budget")
+    parser.add_argument("--budget-group", choices=sorted([*SUBBUDGET_LIMITS, PACK_GROUP]), help="Additional limit within the existing phase budget; PACK reserves each plan group")
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--scratch", default=os.environ.get("CVPR_SCRATCH", f"/scratch/{os.environ.get('USER', '')}/cvpr2027"))
     parser.add_argument("--dry-run", action="store_true")
@@ -497,12 +547,16 @@ def main():
         seconds = wall_seconds(args.walltime)
         group = budget_group(args.task, args.name, command, args.budget_group)
         sys.path.insert(0, str(repo))
+        mixed_authorization = None
+        if group == PACK_GROUP:
+            from src.tools.pbs_mixed_accounting import validate_submission
+            mixed_authorization = validate_submission(repo, command, args.name, args.gpus)
         from src.tools.pbs_black_retry import validate_request_host
         host_authorization = validate_request_host(repo, host=args.host, retry_of=args.retry_of,
             evidence_path=args.black_retry_evidence, evidence_sha256=args.black_retry_evidence_sha256,
             name=args.name, command=command, task=args.task, group=group, gpus=args.gpus, wall_seconds=seconds)
         state = budget_state(repo)
-        validate_request(args.task, args.gpus, seconds, args.name, state, group)
+        validate_request(args.task, args.gpus, seconds, args.name, state, group, mixed_authorization)
     except (ValueError, RuntimeError) as error:
         parser.error(str(error))
     for suffix in (repo / "results" / f"{args.name}.json", repo / "logs/runs" / f"{args.name}.log",
@@ -524,6 +578,8 @@ def main():
                "requested_queue_charge_rate": state["charge_policy"]["rates"][queue_for_gpus(args.gpus)]}
     if host_authorization is not None:
         payload["black_retry_host_authorization"] = host_authorization
+    if mixed_authorization is not None:
+        payload["mixed_budget_authorization"] = mixed_authorization
     payload_path = directory / "payload.json"
     payload_path.write_text(json.dumps(payload, indent=2) + "\n")
     payload_path.chmod(0o444)
