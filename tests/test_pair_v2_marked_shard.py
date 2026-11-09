@@ -191,11 +191,15 @@ class MarkedShardTests(unittest.TestCase):
                 self.done = True; return copy.deepcopy(proposal), view, {}
         sim = SimpleNamespace(check_deadline=lambda: None, reachable_positions=lambda: {'positions': []})
         current = state(); channel = SimpleNamespace(send=lambda value: None)
+        def domains(*args):
+            yield identity, rec
+            self.assertEqual(current['proposal_trials'], 1,
+                             'Construct before discovering the rest of a crowded view')
         with tempfile.TemporaryDirectory() as folder:
             config = {'scene': 'FloorPlan1', 'raw_evidence_dir': folder, 'max_attempts': 160,
                       'scene_pairs_per_class': 5, 'attempt_journal': 'synthetic'}
             with patch.object(shard, 'existing_views', return_value=[view]), \
-                 patch.object(shard, 'discover_view', return_value=iter([(identity, rec)])), \
+                 patch.object(shard, 'discover_view', side_effect=domains), \
                  patch.object(shard.pools, 'PoolProposalIterator', Single), \
                  patch.object(shard.base, 'build_pair', side_effect=NativePlacementExhausted({'failed_point_count': 40})), \
                  patch.object(shard.base, 'write_json', return_value={'file': 'raw', 'sha256': 'e' * 64}), \

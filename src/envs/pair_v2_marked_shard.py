@@ -340,7 +340,10 @@ def discover_view(sim, baseline, reachable, view, config, state):
 def run_search(sim, config, baseline, state, journal, connection, seen):
     from .pair_v2_native_retry import NativePlacementExhausted, FreshControllerRequired
     reachable = sim.reachable_positions()['positions']
-    discovery = iter(existing_views(baseline, reachable, config))
+    def discovered_domains():
+        for view in existing_views(baseline, reachable, config):
+            yield from discover_view(sim, baseline, reachable, view, config, state)
+    discovery = iter(discovered_domains())
     active, discovering, next_pool = [], True, 'look'
     while discovering or active:
         sim.check_deadline()
@@ -351,10 +354,12 @@ def run_search(sim, config, baseline, state, journal, connection, seen):
             state['status'] = 'completed_quota'; return
         if discovering:
             try:
-                view = next(discovery)
-                for identity, record in discover_view(sim, baseline, reachable, view, config, state):
-                    active.append({'identity': identity, 'record': record, 'stream': pools.PoolProposalIterator([record]),
-                                   'consecutive_physical_rejections': 0})
+                # Discover one actual candidate/anchor domain, then attempt a
+                # proposal. Do not query every identity in a crowded view
+                # before the first constructive attempt can run.
+                identity, record = next(discovery)
+                active.append({'identity': identity, 'record': record, 'stream': pools.PoolProposalIterator([record]),
+                               'consecutive_physical_rejections': 0})
             except StopIteration:
                 discovering = False
         # Select one source stream that actually contains the wanted pool.
