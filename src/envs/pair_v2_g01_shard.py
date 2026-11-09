@@ -36,7 +36,10 @@ def enable_config(config):
 
 def tags(config=None):
     partition = 'train' if config is None else config['g01_partition']
-    return {**stay.tags(), **policy.fields(partition), **search.fields(), **labels.fields(),
+    quota_assignment = None if config is None else config.get('g01_quota_assignment')
+    extra = {} if quota_assignment is None else policy.quota_plan.declared_fields(quota_assignment)
+    return {**stay.tags(), **policy.fields(partition, quota_assignment is not None),
+            **extra, **search.fields(quota_assignment is not None), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
 
@@ -60,9 +63,7 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
         except search.CollectionQuotaFull as error:
             if row.get('validity', {}).get('acceptance_passed') is not True or row.get('kind') != str(error):
                 raise ValueError('Quota skip lacks an unchanged positive scientific verdict') from error
-            row['collection_quota_skip'] = {'kind': row['kind'], 'per_scene_class_cap': policy.class_cap(config['g01_partition']),
-                'acceptance_passed_before_collection': True,
-                'scope': 'collection capacity only; original scientific validity remains unchanged'}
+            row['collection_quota_skip'] = quota_skip(config, row['kind'])
             row.update(status='rejected', discard_reasons=['collection_quota_full'])
             return row
 
@@ -72,7 +73,8 @@ def compact_attempt(row):
     for key in (*policy.FIELDS, *search.FIELDS, *labels.PAIR_FIELDS,
                 *cadence.FIELDS, *sharing.FIELDS, *rank.FIELDS, *geometry.FIELDS,
                 'flip_geometry_initial_tuple', 'flip_geometry_final_tuple', 'flip_geometry_native_guards',
-                'collection_quota_skip', 'proposed_pool'):
+                'collection_quota_skip', 'proposed_pool') + tuple(
+                    key for key in policy.quota_plan.FIELDS if key in row):
         result[key] = copy.deepcopy(row.get(key))
     if row.get('collection_quota_skip') is not None:
         result['validity'] = copy.deepcopy(row.get('validity'))
@@ -97,9 +99,28 @@ def replay_worker(config, connection):
     return result
 
 
+def make_quota(config):
+    partition = 'train' if config is None else config['g01_partition']
+    options = {}
+    if config is not None and config.get('g01_quota_version') is not None:
+        options = {key: config[key] for key in ('actual_output_caps', 'allowed_kinds')}
+    return search.SceneQuota(policy.class_cap(partition), **options)
+
+
+def quota_skip(config, kind):
+    value = {'kind': kind, 'per_scene_class_cap': policy.class_cap(config['g01_partition']),
+        'acceptance_passed_before_collection': True,
+        'scope': 'collection capacity only; original scientific validity remains unchanged'}
+    if config.get('g01_quota_version') is not None:
+        value.update(quota_version=policy.quota_plan.VERSION,
+                     actual_output_cap=config['actual_output_caps'][kind],
+                     plan_reference=copy.deepcopy(config['g01_quota_assignment']['plan_reference']))
+    return value
+
+
 @contextmanager
 def installed(config=None):
-    quota = search.SceneQuota(policy.class_cap(config['g01_partition']) if config is not None else 8)
+    quota = make_quota(config)
     check = ranked.deadline_check(config) if config is not None else None
     with stay.installed(), policy.camera_support(), labels.installed(), sharing.installed():
         original_write, original_summary = marked._BASE_WRITE, marked.summary
@@ -107,7 +128,10 @@ def installed(config=None):
         def full_pool(*args, **kwargs):
             if check is None:
                 raise RuntimeError('G01 geometry is only bound inside the spawned generator')
-            return search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
+            record = search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
+            if quota.ticketed:
+                record.update(search.fields(True))
+            return record
         def observer(sim, proposal, role, record, row, **kwargs):
             if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':
                 return ranked.guarded_observer(original_observer, sim, proposal, role, record, row, **kwargs)

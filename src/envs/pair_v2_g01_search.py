@@ -13,6 +13,7 @@ from . import pair_v2_spawn_sharing as sharing
 VERSION = 'g01_mixed_complete_look_geometry_four_class_quota_v2'
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 PER_CLASS = 8
+QUOTA_VERSION = 'g01_static_ticket_proposal_selection_v1'
 POLICY = {
     'version': VERSION, 'task': 'G01; approved supplements13/14/15',
     'look_flip': 'supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged',
@@ -28,12 +29,19 @@ POLICY = {
 FIELDS = ('g01_search_version', 'g01_search_policy')
 
 
-def fields():
-    return {FIELDS[0]: VERSION, FIELDS[1]: copy.deepcopy(POLICY)}
+def fields(quota=False):
+    spec = copy.deepcopy(POLICY)
+    if quota:
+        spec.update(version=QUOTA_VERSION,
+            pool_order='only explicit allowed proposal kinds with remaining scene tickets; preserve available pool order',
+            look_attempt_mix='retain Flip/Stay preference while both are open; never propose a disabled or full class',
+            collection='actual output counts bounded by immutable scene/class tickets; scientific acceptance remains separate',
+            balance_after_cap='no forced Flip after its tickets are full; Stay-only is allowed by the new task')
+    return {FIELDS[0]: spec['version'], FIELDS[1]: spec}
 
 
 def validate_fields(value):
-    if any(value.get(key) != item for key, item in fields().items()):
+    if any(value.get(key) != item for key, item in fields(value.get(FIELDS[0]) == QUOTA_VERSION).items()):
         raise ValueError('Missing or altered G01 mixed-search policy')
 
 
@@ -42,18 +50,35 @@ class CollectionQuotaFull(RuntimeError):
 
 
 class SceneQuota:
-    def __init__(self, per_class=PER_CLASS):
+    def __init__(self, per_class=PER_CLASS, *, actual_output_caps=None, allowed_kinds=None):
         if type(per_class) is not int or per_class not in (6, 8):
             raise ValueError('Require the approved train8/test6 scene-class cap')
         self.per_class = per_class
+        self.ticketed = actual_output_caps is not None or allowed_kinds is not None
+        self.limits = {kind: per_class for kind in KINDS}
+        self.allowed = list(KINDS)
+        if self.ticketed:
+            from src.tools.g01_quota_plan import counts
+            self.limits = counts(actual_output_caps)
+            self.allowed = [kind for kind in KINDS if self.limits[kind] > 0]
+            if (allowed_kinds != self.allowed or not self.allowed
+                    or any(value > per_class for value in self.limits.values())):
+                raise ValueError('Invalid bounded scene tickets or allowed proposal classes')
         self.passed = {kind: 0 for kind in KINDS}
         self.attempts = {kind: 0 for kind in KINDS}
         self.saved = set()
 
     def complete(self):
-        return all(value == self.per_class for value in self.passed.values())
+        return all(self.passed[kind] == self.limits[kind] for kind in KINDS)
 
     def desired_modes(self, pool, preferred):
+        if self.ticketed:
+            choices = [mode for mode in ('flip', 'stay')
+                       if f'{pool}_{mode}' in self.allowed
+                       and self.passed[f'{pool}_{mode}'] < self.limits[f'{pool}_{mode}']]
+            if pool == 'look' and len(choices) == 2:
+                preferred = 'flip' if self.attempts['look_flip'] <= self.attempts['look_stay'] else 'stay'
+            return sorted(choices, key=lambda mode: mode != preferred)
         if pool == 'look':
             if self.passed['look_flip'] == self.passed['look_stay'] == self.per_class:
                 return []
@@ -68,7 +93,7 @@ class SceneQuota:
         kind = row.get('kind')
         if kind not in self.passed:
             raise ValueError('Unknown actual output class')
-        if self.passed[kind] >= self.per_class:
+        if self.passed[kind] >= self.limits[kind]:
             raise CollectionQuotaFull(kind)
 
     def record(self, path, row):
@@ -77,7 +102,10 @@ class SceneQuota:
         key = f"{row.get('proposed_pool')}_{row.get('mode')}"
         if key not in self.attempts:
             raise ValueError('Counted G01 attempt lacks its actual proposed pool/mode')
-        if key == 'look_stay' and self.attempts['look_flip'] <= self.attempts['look_stay']:
+        if self.ticketed and (key not in self.allowed or self.passed[key] >= self.limits[key]):
+            raise ValueError('Counted proposal used a disabled or already-full class')
+        if (not self.ticketed and key == 'look_stay'
+                and self.attempts['look_flip'] <= self.attempts['look_stay']):
             raise ValueError('LookStay consumed unearned actual LookFlip attempt balance')
         if row.get('status') == 'passed':
             self.before_export(row)
@@ -86,6 +114,12 @@ class SceneQuota:
         self.saved.add(str(path))
 
     def summary(self):
+        if self.ticketed:
+            return {'version': QUOTA_VERSION, 'accepted_by_actual_class': dict(self.passed),
+                    'counted_by_proposed_pool_mode': dict(self.attempts),
+                    'per_scene_class_cap': self.per_class, 'actual_output_caps': dict(self.limits),
+                    'allowed_kinds': list(self.allowed), 'all_class_caps_reached': self.complete(),
+                    'acceptance_scope': 'producer output counts against reserved tickets; not independent acceptance'}
         return {'version': VERSION, 'accepted_by_actual_class': dict(self.passed),
                 'counted_by_proposed_pool_mode': dict(self.attempts),
                 'per_scene_class_cap': self.per_class, 'all_class_caps_reached': self.complete(),
@@ -186,6 +220,8 @@ class MixedIterator(pools.PoolProposalIterator):
         if len(self.records) != 1:
             raise ValueError('One authenticated view/identity catalog required')
         validate_fields(self.records[0])
+        if (self.records[0].get(FIELDS[0]) == QUOTA_VERSION) != quota.ticketed:
+            raise ValueError('Proposal pool and scene quota versions differ')
         record = self.records[0]
         self.streams = {pool: flip.FlipRoles({**record,
             'points': {'look': record['points'][pool]}, 'stay_points': record['stay_points_by_pool'][pool]})
@@ -257,4 +293,4 @@ def verify_flip_role(row, candidate_positions):
     return {'passed': True, 'intended_candidate_roles': sides, 'actual_candidate_roles': actual,
         'actual_targets_match_intended': actual == sides, 'assignment_digest': declared['assignment_digest'],
         'scope': 'proposal geometry only; unchanged actual settled target checks remain mandatory',
-        'g01_search_version': VERSION}
+        'g01_search_version': row['g01_search_version']}

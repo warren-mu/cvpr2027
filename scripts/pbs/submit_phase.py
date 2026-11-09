@@ -23,8 +23,8 @@ import uuid
 BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 120.0}
 TOTAL_LIMIT = 120.0
-BUDGET_REVISION = "20261109_premium_charged_120_t01v2_16_e2e_4_g01_40_t02_40"
-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "G01": 40.0, "T02": 40.0}
+BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40"
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 6.0, "G01": 40.0, "T02": 40.0}
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 
 
@@ -36,11 +36,19 @@ def budget_group(task, name, command, declared=None):
                     or arg in ("src.tools.t01v2_parallel", "src.tools.t01v2_clone_parallel", "src.tools.t01v2_stable_parallel", "src.tools.t01v2_search_parallel", "src.tools.t01v2_solvable_parallel", "src.tools.t01v2_isolated_parallel", "src.tools.t01v2_marked_parallel"))
                    for arg in (command or []))
     e2e = isinstance(name, str) and name.startswith("smoke_e2e_")
+    e2e_pilot = isinstance(name, str) and name.startswith("smoke_e2e_pilot_")
     e2e_launch = any(isinstance(arg, str) and (arg.endswith("/e2e_export.sh")
         or arg in ("src.tools.e2e_export", "src.tools.smoke_e2e_views")) for arg in (command or []))
     g01 = isinstance(name, str) and name.startswith(("gen_train_", "gen_test_"))
     t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel", "src.tools.t02_cache_check") for arg in (command or []))
     t02 = isinstance(name, str) and name.startswith("t02_export_")
+    # Step 6 is a new explicitly declared ledger. Never infer it from a generic
+    # smoke command or move historical steps 1--5 out of their original E2E cap.
+    if e2e_pilot or declared == "E2Epilot":
+        if (task != "T01" or not e2e_pilot or declared != "E2Epilot"
+                or named or launched or e2e_launch or g01 or t02_launch):
+            raise ValueError("E2E pilot requires task T01, explicit E2Epilot budget and its own smoke_e2e_pilot_ name")
+        return "E2Epilot"
     if t02 or declared == "T02":
         if task != "T01" or not t02 or declared != "T02" or named or launched or e2e or e2e_launch or g01:
             raise ValueError("T02 export requires task T01, explicit T02 budget and its own t02_export_ name")
@@ -319,8 +327,8 @@ def validate_request(task, gpus, seconds, name, state, group=None):
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 120 GPU-hour budget")
     group = budget_group(task, name, [], group)
-    if group in ("E2E", "T02") and gpus != 1:
-        raise ValueError("E2E/T02 use exactly one GPU per job")
+    if group in ("E2E", "E2Epilot", "T02") and gpus != 1:
+        raise ValueError("E2E/E2Epilot/T02 use exactly one GPU per job")
     if group == "G01" and name.startswith("gen_test_") and gpus != 1:
         raise ValueError("Evaluation generation retains the frozen single-GPU collection plan")
     if group == "G01" and gpus == 2:

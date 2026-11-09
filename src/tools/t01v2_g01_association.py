@@ -27,6 +27,97 @@ def same(first, second):
     return encode(first) == encode(second)
 
 
+def verify_final_preflight_binding(config, metrics, visits, *, root, raw_root):
+    """Distinguish a final failed attempt from the last selected success.
+
+    Inputs are from the caller's audited source/log. The original equal-reference
+    path is unchanged. The additional path authenticates every visit's indexed
+    preflight and the exact final exclusion; it never substitutes source fields.
+    """
+    names = [visit['controller_id'] for visit in visits]
+    selected = metrics.get('selected_controller_id')
+    if selected not in names:
+        raise ValueError('Source final selected Controller is absent from its visit ledger')
+    selected_visit = visits[names.index(selected)]
+    passed_names = [visit['controller_id'] for visit in visits if visit.get('preflight_passed') is True]
+    if not passed_names or selected != passed_names[-1]:
+        raise ValueError('Source selected Controller is not the last preflight-passed visit')
+    final_ref = metrics['scene_preflight_reference']
+    final_path = merge.reference_path(final_ref, root=root, within=raw_root)
+    selected_path = merge.reference_path(selected_visit['preflight_reference'], root=root, within=raw_root)
+    if (final_path == selected_path and final_ref['sha256'] == selected_visit['preflight_reference']['sha256']
+            and visits[-1].get('preflight_passed') is not False):
+        return None
+
+    message = 'Original final source preflight does not bind the selected final visit'
+    if (len(visits) < 2 or names != [f'marked_controller_{index:03d}' for index in range(len(visits))]
+            or selected != names[-2] or metrics.get('status') != 'completed_search'
+            or metrics.get('cleanup_errors') != []):
+        raise ValueError(message + '; no authenticated final-failed-visit case')
+    exclusion = metrics.get('scene_excluded')
+    if (not isinstance(exclusion, dict) or exclusion.get('scene') != config['scene']
+            or exclusion.get('reason') != 'settled_baseline_window_preflight_failed'
+            or not same(exclusion.get('evidence'), final_ref)):
+        raise ValueError(message + '; missing exact final preflight exclusion')
+
+    verified = []
+    for index, visit in enumerate(visits):
+        directory = raw_root / visit['controller_id'] / 'construction'
+        expected_passed = index < len(visits) - 1
+        worker, unity = visit.get('worker_pid'), (visit.get('unity_identity') or {}).get('pid')
+        if (visit.get('role') != 'natural_marked' or visit.get('cleanup_errors') != []
+                or visit.get('preflight_passed') is not expected_passed
+                or any(type(pid) is not int or pid <= 0 for pid in (worker, unity))):
+            raise ValueError(message + '; visit order/verdict/ownership/cleanup is not proven')
+        index_ref = visit['raw_index']
+        index_path = merge.reference_path(index_ref, root=root, within=directory)
+        if index_path != directory / 'evidence_index.json':
+            raise ValueError('Final preflight visit index is outside its exact Controller path')
+        files = merge.read_reference(index_ref, root=root, within=directory).get('files')
+        if not isinstance(files, list) or not files:
+            raise ValueError('Final preflight visit lacks its original index entries')
+        indexed = {}
+        for ref in files:
+            if (not isinstance(ref, dict) or not isinstance(ref.get('file'), str)
+                    or re.fullmatch(r'[0-9a-f]{64}', str(ref.get('sha256', ''))) is None):
+                raise ValueError('Malformed final preflight Controller index entry')
+            path = (root / ref['file']).resolve()
+            if not path.is_relative_to(directory) or path in indexed:
+                raise ValueError('Duplicate or foreign final preflight Controller index entry')
+            indexed[path] = ref
+
+        def read_indexed(ref):
+            path = merge.reference_path(ref, root=root, within=directory)
+            member = indexed.get(path)
+            if member is None or member['sha256'] != ref['sha256']:
+                raise ValueError('Final preflight reference lacks original index membership')
+            if 'bytes' in member and (type(member['bytes']) is not int or member['bytes'] != path.stat().st_size):
+                raise ValueError('Final preflight indexed size differs from actual bytes')
+            return json.loads(path.read_text()), path
+
+        ref = visit['preflight_reference']
+        preflight, path = read_indexed(ref)
+        if path != directory / 'scene_preflight.json' or preflight.get('passed') is not expected_passed:
+            raise ValueError('Final preflight native verdict differs from visit declaration')
+        setup = visit['initial_agent_setup_reference']
+        if not same(preflight.get('initial_agent_setup_reference'), setup):
+            raise ValueError('Final preflight canonical setup differs from its original visit')
+        read_indexed(setup)
+        if not expected_passed:
+            if (path != final_path or ref['sha256'] != final_ref['sha256']
+                    or not isinstance(preflight.get('reasons'), list) or not preflight['reasons']
+                    or not same(preflight['reasons'], exclusion.get('reasons'))):
+                raise ValueError('Final failed preflight does not bind the exact original exclusion')
+        verified.append({'controller_id': visit['controller_id'], 'preflight_passed': expected_passed,
+            'preflight_reference': copy.deepcopy(ref), 'controller_index_reference': copy.deepcopy(index_ref)})
+    return {'version': 'g01_final_attempt_vs_selected_preflight_binding_v1',
+        'selected_controller_id': selected, 'last_attempted_controller_id': names[-1],
+        'original_final_preflight_reference': copy.deepcopy(final_ref),
+        'scene_excluded': copy.deepcopy(exclusion), 'authenticated_visit_preflights': verified,
+        'source_record_mutated': False,
+        'scope': 'source final failed preflight provenance only; pair Controller and all scientific checks remain required'}
+
+
 def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=None):
     root = Path(merge.ROOT if root is None else root).resolve()
     config, metrics = data['config'], data['metrics']
@@ -39,8 +130,11 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
     raw = merge.read_reference(raw_ref, root=root, within=raw_root)
     for value in (pair, raw):
         if (value.get('producer_module') != policy.PRODUCER
-                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition']).items())):
+                or any(value.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())):
             raise ValueError('Pair/raw differs from its authenticated G01 source policy')
+        if config.get('g01_quota_version') is not None and any(
+                value.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
+            raise ValueError('Pair/raw differs from its authenticated static quota assignment')
         search.validate_fields(value)
     pool = pair.get('proposed_pool')
     if (pool not in ('look', 'direct') or raw.get('proposed_pool') != pool
@@ -71,14 +165,8 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
         raise ValueError('Missing, duplicate or invalid audited Controller identity')
     visit = visits[names.index(controller)]
     selected = metrics.get('selected_controller_id')
-    if selected not in names:
-        raise ValueError('Source final selected Controller is absent from its visit ledger')
-    final_visit = visits[names.index(selected)]
     final_ref = metrics['scene_preflight_reference']
-    final_path = merge.reference_path(final_ref, root=root, within=raw_root)
-    selected_path = merge.reference_path(final_visit['preflight_reference'], root=root, within=raw_root)
-    if final_path != selected_path or final_ref['sha256'] != final_visit['preflight_reference']['sha256']:
-        raise ValueError('Original final source preflight does not bind the selected final visit')
+    final_binding = verify_final_preflight_binding(config, metrics, visits, root=root, raw_root=raw_root)
     if visit.get('role') != 'natural_marked' or visit.get('cleanup_errors') != [] or visit.get('preflight_passed') is not True:
         raise ValueError('Selected pair Controller has unknown role, preflight or cleanup')
     controller_dir = raw_root / controller / 'construction'
@@ -191,7 +279,7 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
             'unity_identity': copy.deepcopy(lease['unity_identity'])})
     if admission_links[0]['lease_token'] == admission_links[1]['lease_token']:
         raise ValueError('Independent world witnesses cannot reuse one resource lease')
-    return {'version': VERSION, 'policy': copy.deepcopy(POLICY),
+    proof = {'version': VERSION, 'policy': copy.deepcopy(POLICY),
         'source_reference': copy.deepcopy(source_ref), 'controller_id': controller,
         'source_final_controller_id': selected, 'original_source_final_preflight_reference': copy.deepcopy(final_ref),
         'pair_preflight_reference': copy.deepcopy(portable_ref), 'controller_preflight_reference': copy.deepcopy(preflight_ref),
@@ -204,3 +292,9 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
             'scope': 'proposal domain versus actual rendered class; no new acceptance threshold'},
         'preflight_validation': verified_preflight, 'source_record_mutated': False,
         'scope': 'Controller provenance only; unchanged full check_pair is still required'}
+    if final_binding is not None:
+        proof['source_final_preflight_binding'] = final_binding
+        proof['source_last_attempted_controller_id'] = final_binding['last_attempted_controller_id']
+        proof['policy']['source_final_preflight'] = (
+            'preserved as the authenticated last attempted failed visit; selected Controller remains the last success')
+    return proof

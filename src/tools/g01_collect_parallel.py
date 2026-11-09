@@ -16,6 +16,7 @@ import sys
 import traceback
 
 from src.tools import g01_parallel as parent
+from src.tools import g01_quota_plan as quota_plan
 from src.tools.g01_admission import child_assignment, load_plan, validate_source_admission
 from src.tools.t01_partition import audited_result, sha_file
 from src.envs.thor_common import ROOT, write_result
@@ -186,7 +187,7 @@ def benchmark_stage(path, concurrency):
         'scope': 'completed workload and known resource cleanup only; no scientific pair acceptance'}
 
 
-def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False):
+def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False, quota_reference=None):
     expected = ['--name', name, '--scenes', *scenes, '--concurrency', str(concurrency),
                 '--benchmark-source', str(benchmark), '--timeout-seconds', str(timeout)]
     validate_selection(scenes, concurrency, partition)
@@ -196,6 +197,9 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
         expected += ['--partition', partition]
     elif partition != 'train':
         raise ValueError('Evaluation collection requires explicit --partition test')
+    if quota_reference is not None:
+        quota_plan.reference(quota_reference)
+        expected += ['--quota-plan', quota_reference['file'], '--quota-plan-sha256', quota_reference['sha256']]
     matches = []
     for path in (repo / 'logs/pbs').glob('*/payload.json'):
         data = json.loads(path.read_text())
@@ -218,16 +222,29 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
 
 
 @contextmanager
-def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False):
+def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False, quota=None):
     """Reuse the original scheduler; every binding is process-local and restored."""
     scenes = validate_selection(scenes, concurrency, partition)
     previous = {key: getattr(parent, key) for key in
-                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged')}
+                ('SCENES', 'CONCURRENCIES', 'PARTITION', 'submission_identity', 'write_result', 'finish_logged', 'make_shard')}
+    quota_reference = None if quota is None else quota['reference']
+    if quota is not None:
+        quota_plan.validate_structure(quota['plan'])
+        if (quota['plan']['partition'] != partition
+                or [row['scene'] for row in quota['plan']['assignments']] != list(scenes)):
+            raise ValueError('Collection scene order or partition differs from immutable quota plan')
     def reservation(repo, name, job, timeout):
         if timeout != runner_timeout(scenes, concurrency, partition):
             raise ValueError('Scheduler must retain its complete full-grant deadline')
         return submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
-                                   concurrency=concurrency, benchmark=benchmark, partition=partition, explicit_partition=explicit_partition)
+                                   concurrency=concurrency, benchmark=benchmark, partition=partition,
+                                   explicit_partition=explicit_partition, quota_reference=quota_reference)
+    def make_shard(name, scene, *args, **kwargs):
+        shard = previous['make_shard'](name, scene, *args, **kwargs)
+        if quota is not None:
+            assignment = quota_plan.assignment(quota['plan'], quota_reference, scene, name)
+            shard.update(parent.policy.declared(scene, partition, assignment))
+        return shard
     def finish(running, sources):
         if proof['source'] not in sources:
             sources.append(copy.deepcopy(proof['source']))
@@ -242,9 +259,15 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
                       timeout_seconds=required_timeout(scenes, concurrency, partition),
                       required_timeout_seconds=required_timeout(scenes, concurrency, partition),
                       benchmark_validation_timeout_seconds=BENCHMARK_VALIDATION_SECONDS)
+        if quota is not None:
+            config.update(collection_quota_version=quota_plan.VERSION, quota_plan_reference=quota_reference,
+                          quota_arithmetic=copy.deepcopy(quota['arithmetic']),
+                          quota_count_basis_proof=copy.deepcopy(quota['count_basis_proof']))
+            config['pool_scope'] += '; actual output bounded by explicitly assigned static class tickets'
         return previous['write_result'](name, metrics, config)
     parent.SCENES, parent.CONCURRENCIES, parent.PARTITION = scenes, (concurrency,), partition
     parent.submission_identity, parent.write_result, parent.finish_logged = reservation, write, finish
+    parent.make_shard = make_shard
     try:
         yield
     finally:
@@ -260,41 +283,54 @@ def main(argv=None):
     parser.add_argument('--concurrency', type=int, choices=BENCHMARK_CONCURRENCIES, required=True)
     parser.add_argument('--benchmark-source', type=Path, required=True)
     parser.add_argument('--timeout-seconds', type=int, required=True)
+    parser.add_argument('--quota-plan', type=Path)
+    parser.add_argument('--quota-plan-sha256')
     args = parser.parse_args(argv)
     partition = args.partition or 'train'
     scenes = validate_selection(args.scenes, args.concurrency, partition)
     if (not re.fullmatch(r'gen_' + partition + r'_[A-Za-z0-9_]+', args.name)
-            or args.timeout_seconds != required_timeout(scenes, args.concurrency, partition)):
+            or args.timeout_seconds != required_timeout(scenes, args.concurrency, partition)
+            or (args.quota_plan is None) != (args.quota_plan_sha256 is None)):
         parser.error('Require the matching train/test name and exact full-scene-grant deadline')
     output = ROOT / 'results' / f'{args.name}.json'
     if output.exists() or output.is_symlink():
         raise FileExistsError('Existing results are preserved; choose a new collection name')
+    quota = None
     try:
         if signal.getitimer(signal.ITIMER_REAL) != (0.0, 0.0):
             raise RuntimeError('Refuse to replace another active process deadline')
         original_alarm = signal.getsignal(signal.SIGALRM)
         def expired(*_):
-            raise TimeoutError('Benchmark source authentication exceeded its declared execution cap')
+            raise TimeoutError('Quota/benchmark source authentication exceeded its declared execution cap')
         signal.signal(signal.SIGALRM, expired)
         signal.setitimer(signal.ITIMER_REAL, BENCHMARK_VALIDATION_SECONDS)
         try:
+            if args.quota_plan is not None:
+                ref = {'file': str(args.quota_plan), 'sha256': args.quota_plan_sha256}
+                plan, arithmetic, count_proof = quota_plan.load_plan(ref)
+                if (plan['parent_run_name'] != args.name or plan['partition'] != partition
+                        or [row['scene'] for row in plan['assignments']] != list(scenes)):
+                    raise ValueError('Submission differs from its immutable quota parent/scenes/partition')
+                quota = {'plan': plan, 'reference': ref, 'arithmetic': arithmetic, 'count_basis_proof': count_proof}
             proof = benchmark_stage(args.benchmark_source, args.concurrency)
         finally:
             signal.setitimer(signal.ITIMER_REAL, 0)
             signal.signal(signal.SIGALRM, original_alarm)
     except Exception as error:
         traceback.print_exc()
-        metrics = {'kind': 'g01_parallel_collection', 'status': 'benchmark_validation_failed',
+        metrics = {'kind': 'g01_parallel_collection',
+                   'status': 'quota_or_benchmark_validation_failed' if args.quota_plan is not None else 'benchmark_validation_failed',
                    'acceptance_passed': False, 'exit_code': 1, 'cleanup_errors': [],
                    'error': f'{type(error).__name__}: {error}', 'scene_runs': [], 'started_shards': []}
         write_result(args.name, metrics, {**vars(args), 'benchmark_source': str(args.benchmark_source),
+                                         **({'quota_plan': str(args.quota_plan)} if args.quota_plan is not None else {}),
                                          'collection_version': VERSION, 'pool_scope': SCOPE})
         return 1
     original_argv = sys.argv
     handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
     try:
         with installed(scenes=scenes, concurrency=args.concurrency, benchmark=args.benchmark_source, proof=proof,
-                       partition=partition, explicit_partition=args.partition is not None):
+                       partition=partition, explicit_partition=args.partition is not None, quota=quota):
             sys.argv = [MODULE, '--name', args.name, '--timeout-seconds', str(runner_timeout(scenes, args.concurrency, partition))]
             code = parent.main()
     finally:

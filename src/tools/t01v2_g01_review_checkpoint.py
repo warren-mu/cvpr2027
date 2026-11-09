@@ -78,7 +78,10 @@ def verify_collection(data):
             raise ValueError('G01 collection claim lacks an authenticated attempt journal')
         return None
     journal = merge.reference_path(journal_ref, within=merge.ROOT / 'data/world_pairs/v2')
-    quota = search.SceneQuota(policy.class_cap(config['g01_partition']))
+    from src.envs.pair_v2_g01_shard import make_quota, quota_skip
+    quota = make_quota(config)
+    if quota.ticketed:
+        policy.quota_plan.validate_assignment(config, authenticate=True)
     for line in journal.read_text().splitlines():
         if not line.strip():
             continue
@@ -88,12 +91,14 @@ def verify_collection(data):
         if raw.get('counts_as_pair_attempt') is not True or raw.get('proposed_pool') != row.get('proposed_pool'):
             raise ValueError('G01 journal contains an uncounted or different-pool raw attempt')
         search.validate_fields(raw)
+        if quota.ticketed and any(raw.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
+            raise ValueError('Raw journal attempt changed its immutable scene tickets')
+        if (raw.get('g01_search_version') == search.QUOTA_VERSION) != quota.ticketed:
+            raise ValueError('Raw journal proposal policy differs from source quota version')
         if raw.get('collection_quota_skip') is not None:
             kind = raw.get('kind')
-            expected = {'kind': kind, 'per_scene_class_cap': quota.per_class,
-                'acceptance_passed_before_collection': True,
-                'scope': 'collection capacity only; original scientific validity remains unchanged'}
-            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != quota.per_class
+            expected = quota_skip(config, kind)
+            if (raw['collection_quota_skip'] != expected or quota.passed.get(kind) != quota.limits.get(kind)
                     or raw.get('status') != 'rejected' or raw.get('discard_reasons') != ['collection_quota_full']
                     or raw.get('validity', {}).get('acceptance_passed') is not True
                     or raw.get('pair_file') is not None or raw.get('pair_sha256') is not None):
@@ -156,10 +161,13 @@ def source_support():
             data, reference = source
             config = data['config']
             if (row.get('producer_module') != policy.PRODUCER
-                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition']).items())
+                    or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')
+            if config.get('g01_quota_version') is not None and any(
+                    row.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
+                raise ValueError('Pair differs from its authenticated static quota assignment')
             search.validate_fields(row)
             for module in (geometry, sharing, rank, cadence):
                 module.validate_fields(row)
@@ -180,7 +188,7 @@ def source_support():
                 if actual is row and proof is not None:
                     result = geometry_proof.verify_role(actual, positions, proof)
                     return {**{key: value for key, value in result.items() if key != 'flip_search_version'},
-                            'g01_search_version': search.VERSION}
+                            'g01_search_version': row['g01_search_version']}
                 return active_role(actual, positions)
             try:
                 roles.verify_proposal_role = verified_role
