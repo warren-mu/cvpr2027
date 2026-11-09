@@ -1127,3 +1127,12 @@ gen_test_fixed40_60_a01_retry1_c6_floorplan323: {"direct_flip": 6, "direct_stay"
 gen_test_fixed40_60_a01_retry1_c6_floorplan423: {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}; observed attempts=164; running snapshot
 
 以上为归档日志完整前缀中的生成端计数，尚未独立验收；见 diag_g01_test_live_03。
+
+
+## 2026-11-09 17:52 UTC — First6 retry and formal CPU validation
+
+T02 first6 708944 exited86 on hopper-17 / GPU-2a86a7f5-c15a-8370-668f-62ac65860780 before launching any export. PBS actual23seconds =0.006388888888888889GPUh, queue1195seconds, charge rate1. Original PNG/fresh wire/ownership/cleanup/PBS evidence passed diag_t02_black_guard_708944_03. Diagnostic01/02 schema lookup failures and the first03 source-reference-schema mistake remain preserved; the original03 result/log/meta copies are in logs/runs/diag_t02_black_guard_708944_03/pre_source_schema_fix, and original run_logged archived the previous result before correcting the producer command. Current result passes unchanged auditor.
+
+Same six-pair manifest resubmitted as708980 (t02_export_first6_01_retry1), oneGPU/six processes, walltime00:20:30, budgetT02. No measured per-pair export cost yet. All nine formal CPU groups diag_day_quota_binding_cpu_01..09 passed for final-failed-preflight association, class tickets, historical compatibility and independent E2Epilot6GPUh budget. Full B/A independent checkpoints retain all source scenes.
+
+Merged Claude83828652; human confirmation requested because scene-level holdout replaces the latest human20% pair-level instruction. No split or new configuration-deduplicated dispatch is frozen pending confirmation. T4 consistency reduction and unavailable-candidate policy remain null in the draft; requested explicit definitions before T4 GPU execution.
