@@ -15,7 +15,7 @@ from src.tools.smoke_e2e_views import file_ref
 from src.tools.smoke_e2e_training_contract import FROZEN_PIPELINE, digest
 from src.tools.smoke_e2e_train import build_config, upstream_roots
 from src.tools.ray_scratch import reserve_directory
-from src.tools.smoke_e2e_pilot_contract import ARM_UPDATES
+from src.tools.smoke_e2e_pilot_contract import execution_schedule
 
 
 def pilot_train_worker(config, connection):
@@ -24,8 +24,9 @@ def pilot_train_worker(config, connection):
     os.sched_setaffinity(0, config['identity']['cpu_affinity'])
     os.environ['VLLM_ATTENTION_BACKEND'] = 'XFORMERS'
     spec, spec_ref = load_spec(config['pilot_spec_reference']['file'])
-    if (spec_ref != config['pilot_spec_reference'] or config['arm'] not in ARM_UPDATES
-            or config['updates'] != ARM_UPDATES[config['arm']]
+    expected_updates, _ = execution_schedule(config['arm'], config.get('engineering_smoke'))
+    if (spec_ref != config['pilot_spec_reference']
+            or config['updates'] != expected_updates
             or config['credit_pipeline'] != FROZEN_PIPELINE or config['format_policy'] != 'explicit_task_zero'):
         raise ValueError('Pilot worker differs from its approved immutable driver specification')
     common_path = ROOT / 'configs/rl_common.yaml'
@@ -91,7 +92,7 @@ def pilot_train_worker(config, connection):
         initialization_seconds = time.monotonic() - initialized
         result = trainer.pilot_fit(tables=tables, dataset_proof=proof, arm=config['arm'],
             directory=config['training_directory'], checkpoint_directory=config['checkpoint_directory'],
-            common_hash=common_hash)
+            common_hash=common_hash, engineering_smoke=config.get('engineering_smoke'))
         result.update(cache_authorized=True, dataset_proof=proof, common_pool_hash=proof['common_pool_hash'],
             common_config_sha256=common_hash, resolved_config=file_ref(config_file, ROOT / 'logs'),
             upstream=roots, source_authentication_seconds=source_seconds,

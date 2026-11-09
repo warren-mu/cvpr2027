@@ -25,8 +25,10 @@ from src.tools.t02_export import save_json, execution_environment, logged_gate, 
 from src.tools.smoke_e2e_views import file_ref
 from src.tools.smoke_e2e_pilot_dataset import (VERSION as DATASET_VERSION, SCENE_SPLIT,
     KINDS, require, ref_identity, read_repo_ref, argv_values)
+from src.tools.smoke_e2e_pilot_contract import ENGINEERING_SMOKE, execution_schedule
 
 VERSION = 'smoke_e2e_pilot_driver_v1'
+ENGINEERING_VERSION = 'smoke_e2e_pilot_engineering_driver_v1'
 SPEC_VERSION = 'smoke_e2e_pilot_spec_v1'
 MODEL = 'Qwen/Qwen2.5-VL-3B-Instruct'
 ARM_UPDATES = {'T0': 50, 'T4': 50, 'T2': 5}
@@ -96,6 +98,13 @@ def pilot_train_worker(config, connection):
 
 
 def completed_worker(result, config):
+    mode = config.get('engineering_smoke')
+    updates, holdout_updates = execution_schedule(config['arm'], mode)
+    require(config['updates'] == updates, 'Run length differs from the explicit pilot execution mode')
+    require(result.get('engineering_smoke_version') == mode,
+        'Worker engineering mode differs from its original driver')
+    require(mode is None or result.get('checkpoint_saved') is True,
+        'The engineering run did not save its own completed checkpoint')
     require(result.get('actual_completed_updates') == config['updates'], 'Pilot stopped before all actual updates completed')
     rows = result.get('updates')
     require(isinstance(rows, list) and len(rows) == config['updates']
@@ -108,7 +117,7 @@ def completed_worker(result, config):
             'Every actual update must account for its complete 64-episode four-class budget')
     evaluations = result.get('holdout_evaluations')
     require(isinstance(evaluations, list)
-        and [row.get('update') for row in evaluations] == EVAL_UPDATES[config['arm']]
+        and [row.get('update') for row in evaluations] == list(holdout_updates)
         and all(row.get('greedy') is True and row.get('complete') is True for row in evaluations),
         'Pilot holdout evaluation is incomplete')
     require(result.get('cache_authorized') is True and result.get('dataset_proof', {}).get('cache_authorized') is True
@@ -119,6 +128,12 @@ def completed_worker(result, config):
 
 
 def run(args):
+    mode = getattr(args, 'engineering_smoke', None)
+    updates, holdout_updates = execution_schedule(args.arm, mode)
+    require(mode is None or re.fullmatch(r'smoke_e2e_pilot_engineering_T4_[A-Za-z0-9_]+', args.name),
+        'The engineering prefix needs its separate T4 run namespace')
+    require(mode is not None or not args.name.startswith('smoke_e2e_pilot_engineering_'),
+        'The engineering namespace requires its explicit versioned mode')
     require(re.fullmatch(r'smoke_e2e_pilot_[A-Za-z0-9_]+', args.name)
         and math.isfinite(args.timeout_seconds) and 300 <= args.timeout_seconds <= 21600
         and math.isfinite(args.gate_timeout_seconds) and 15 <= args.gate_timeout_seconds <= args.timeout_seconds - 60,
@@ -128,14 +143,19 @@ def run(args):
     spec, spec_ref = load_spec(args.pilot_spec)
     manifest_ref = ref_identity(json.loads(args.manifest))
     common_path = ROOT / 'configs/rl_common.yaml'
-    config = {**vars(args), 'version': VERSION, 'gpus': 1, 'budget_group': 'E2Epilot',
-        'model': MODEL, 'updates': ARM_UPDATES[args.arm], 'episodes_per_update': 64, 'seed': 0,
+    config = {**vars(args), 'version': ENGINEERING_VERSION if mode else VERSION, 'gpus': 1, 'budget_group': 'E2Epilot',
+        'model': MODEL, 'updates': updates, 'episodes_per_update': 64, 'seed': 0,
         'format_policy': spec['format_policy'], 'credit_pipeline': spec['credit_pipeline'],
         'node': socket.gethostname(), 'manifest_reference': manifest_ref,
         'pilot_spec_reference': spec_ref, 'common_config_reference': file_ref(common_path, ROOT / 'configs')}
     metrics = {'kind': 'smoke_e2e_pilot_training', 'pilot_completed': False,
         'errors': [], 'cleanup_errors': [], 'black_frame_detected': False,
         'paper_result': False, 'formal_T04_T05_acceptance': None, 'common_config_frozen': False}
+    if mode:
+        metrics.update(kind='smoke_e2e_pilot_engineering_training', engineering_smoke_version=mode,
+            engineering_smoke_completed=False, learning_comparison_eligible=False,
+            scheduled_holdout_updates=list(holdout_updates), unrun_formal_holdout_updates=[20, 40, 50],
+            scope='T4 first5 updates only; same qualified pool and frozen method; no50-step learning comparison or resume authorization')
     worker, sources, code = None, [], 1
     install_signals()
     try:
@@ -171,7 +191,10 @@ def run(args):
             sources.extend(ref for ref in result.pop('sources', []) if ref not in sources)
             metrics.update(result)
             completed_worker(result, config)
-            metrics['pilot_completed'] = True; code = 0
+            metrics['pilot_completed'] = mode is None
+            if mode:
+                metrics['engineering_smoke_completed'] = True
+            code = 0
     except BaseException as error:
         traceback.print_exc(); metrics['errors'].append(f'{type(error).__name__}: {error}')
     finally:
@@ -180,6 +203,10 @@ def run(args):
             metrics['cleanup_errors'].extend(stop_workers([worker]))
         if metrics['errors'] or metrics['cleanup_errors']:
             code = 1; metrics['pilot_completed'] = False
+            if mode:
+                metrics['engineering_smoke_completed'] = False
+        if mode:
+            metrics['pilot_completed'] = False
         metrics['training_logs'] = [file_ref(path, ROOT / 'logs') for path in
             sorted((ROOT / 'logs/runs' / args.name).rglob('*.json*'))]
         metrics['producer_exit_code'] = code
@@ -221,6 +248,11 @@ def learning_comparison(results):
     arm_values = {}
     for arm, data in results.items():
         config, metrics = data['config'], data['metrics']
+        require(config.get('engineering_smoke') is None
+            and metrics.get('engineering_smoke_version') is None
+            and metrics.get('engineering_smoke_completed') is not True
+            and metrics.get('kind') != 'smoke_e2e_pilot_engineering_training',
+            'Engineering smoke cannot enter the formal50-update learning comparison')
         require(config['arm'] == arm and metrics.get('pilot_completed') is True, 'Only completed matching arms enter comparison')
         completed_worker(metrics, config)
         early, late = learning_window(metrics['updates'], 1, 10), learning_window(metrics['updates'], 41, 50)
@@ -257,6 +289,7 @@ def summarize(args):
                 and result.get('producer_exit_code') == 0 and result.get('errors') == []
                 and result.get('cleanup_errors') == [] and result.get('kind') == 'smoke_e2e_pilot_training'
                 and argv[:1] == ['run'] and argv_values(argv, '--arm') == [arm]
+                and argv_values(argv, '--engineering-smoke') == []
                 and argv_values(argv, '--name') == [meta['name']] and config.get('version') == VERSION,
                 'Require successful audited original pilot T0 and T4 runs')
             values[arm] = data; sources.append(ref)
@@ -280,6 +313,8 @@ def main():
     execute.add_argument('--model-source', required=True, help='JSON {file,sha256} original model step3 result')
     execute.add_argument('--pilot-spec', default='configs/smoke_e2e_pilot.json')
     execute.add_argument('--critic-offload', action='store_true')
+    execute.add_argument('--engineering-smoke', choices=[ENGINEERING_SMOKE], default=None,
+        help='Explicit T4 first5-update engineering check; never formal pilot completion')
     execute.add_argument('--timeout-seconds', required=True, type=float)
     execute.add_argument('--gate-timeout-seconds', type=float, default=180.)
     report = commands.add_parser('summarize')

@@ -17,7 +17,7 @@ from src.envs.thor_common import ROOT
 from src.tools.smoke_e2e_views import file_ref
 from src.rl import t4_consistency as consistency
 from src.tools.smoke_e2e_pilot_actor import update_support, require_completed_optimizer_steps
-from src.tools.smoke_e2e_pilot_contract import (ARM_UPDATES, HOLDOUT_UPDATES, training_plan,
+from src.tools.smoke_e2e_pilot_contract import (execution_schedule, training_plan,
     holdout_plan, episode_observation, classified_observations)
 from src.tools.smoke_e2e_training_contract import FROZEN_PIPELINE, decision_token_spans, pre_evidence
 from src.tools.smoke_e2e_training_runtime import (ObservedWorkerHooks, TableEpisode,
@@ -161,7 +161,9 @@ class PilotTrainer(SmokeTrainer):
         self.config.actor_rollout_ref.actor.optim.total_training_steps = 50
         self.config.critic.optim.total_training_steps = 50
 
-    def pilot_fit(self, *, tables, dataset_proof, arm, directory, checkpoint_directory, common_hash):
+    def pilot_fit(self, *, tables, dataset_proof, arm, directory, checkpoint_directory, common_hash,
+                  engineering_smoke=None):
+        update_count, holdout_updates = execution_schedule(arm, engineering_smoke)
         directory = Path(directory); directory.mkdir(parents=True, exist_ok=False)
         train_keys, eval_keys = dataset_proof['train_keys'], dataset_proof['eval_keys']
         if (set(train_keys) & set(eval_keys) or set(train_keys) | set(eval_keys) != set(tables)
@@ -196,8 +198,8 @@ class PilotTrainer(SmokeTrainer):
                 finally:
                     for env in manager.envs.values(): env.close()
             result['episode_log'] = file_ref(path, ROOT / 'logs'); evaluations.append(result)
-        if 0 in HOLDOUT_UPDATES[arm]: evaluate(0)
-        for update in range(1, ARM_UPDATES[arm] + 1):
+        if 0 in holdout_updates: evaluate(0)
+        for update in range(1, update_count + 1):
             path = directory / f'update_{update:03d}.jsonl'
             with path.open('x') as stream:
                 def journal(row):
@@ -276,13 +278,16 @@ class PilotTrainer(SmokeTrainer):
                 finally:
                     for env in manager.envs.values(): env.close()
             row['episode_log'] = file_ref(path, ROOT / 'logs')
-            if update in HOLDOUT_UPDATES[arm]: evaluate(update)
+            if update in holdout_updates: evaluate(update)
         checkpoint = Path(checkpoint_directory)
-        self.actor_rollout_wg.save_checkpoint(str(checkpoint / 'actor'), None, ARM_UPDATES[arm], remove_previous_ckpt=False)
-        self.critic_wg.save_checkpoint(str(checkpoint / 'critic'), None, ARM_UPDATES[arm], remove_previous_ckpt=False)
-        return {'actual_completed_updates': len(updates), 'updates': updates, 'holdout_evaluations': evaluations,
+        self.actor_rollout_wg.save_checkpoint(str(checkpoint / 'actor'), None, update_count, remove_previous_ckpt=False)
+        self.critic_wg.save_checkpoint(str(checkpoint / 'critic'), None, update_count, remove_previous_ckpt=False)
+        result = {'actual_completed_updates': len(updates), 'updates': updates, 'holdout_evaluations': evaluations,
             'checkpoint_saved': True, 'final_checkpoint_directory': str(checkpoint),
             'pre_evidence_logic_covered': any(row['pre_evidence_decision_count'] > 0 for row in updates),
             's1_variance': None, 's1_scope': 'actual token vectors and independent units retained for analyst',
             's2_due_updates': [row['update'] for row in evaluations if row['update'] in (20, 40)],
             'formal_T04_T05_acceptance': None, 'paper_result': False, 'common_config_frozen': False}
+        if engineering_smoke:
+            result['engineering_smoke_version'] = engineering_smoke
+        return result

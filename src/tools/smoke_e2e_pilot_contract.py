@@ -12,9 +12,23 @@ VERSION = 'smoke_e2e_pilot_training_v1'
 ARM_UPDATES = {'T0': 50, 'T4': 50, 'T2': 5}
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 HOLDOUT_UPDATES = {'T0': (0, 20, 40, 50), 'T4': (0, 20, 40, 50), 'T2': ()}
+ENGINEERING_SMOKE = 't4_five_update_engineering_v1'
 PAIRED_ARMS = ('T4',)
 T4_PENDING_FIELDS = ('symmetric_kl_sum_or_half_sum',
     'flip_per_world_to_training_loss_reduction', 'missing_or_invisible_auxiliary_candidate_policy')
+
+
+def execution_schedule(arm, engineering_smoke=None):
+    """A short prefix of the frozen T4 run, never a replacement pilot arm."""
+    if arm not in ARM_UPDATES:
+        raise ValueError('Unknown frozen pilot arm')
+    if engineering_smoke is None:
+        return ARM_UPDATES[arm], HOLDOUT_UPDATES[arm]
+    if engineering_smoke != ENGINEERING_SMOKE or arm != 'T4':
+        raise ValueError('Engineering smoke must explicitly select the versioned T4 prefix')
+    # Keep the original greedy holdout schedule: only update0 is reached.
+    # The optimizer still uses the identical50-update horizon in the worker.
+    return 5, tuple(update for update in HOLDOUT_UPDATES[arm] if update <= 5)
 
 
 def training_plan(train_keys, *, arm, update, seed=0):

@@ -34,6 +34,16 @@ def compared(arm, **kwargs):
 
 
 class PilotDecisionTests(unittest.TestCase):
+    def test_engineering_cannot_enter_comparison_even_with_fabricated_full_length(self):
+        for location, key, value in [('config', 'engineering_smoke', pilot.ENGINEERING_SMOKE),
+            ('metrics', 'engineering_smoke_version', pilot.ENGINEERING_SMOKE),
+            ('metrics', 'engineering_smoke_completed', True),
+            ('metrics', 'kind', 'smoke_e2e_pilot_engineering_training')]:
+            values = {arm: compared(arm) for arm in ('T0', 'T4')}
+            values['T4'][location][key] = value
+            with self.subTest(location=location, key=key), self.assertRaisesRegex(ValueError, 'Engineering smoke'):
+                pilot.learning_comparison(values)
+
     def test_both_arms_both_small_changes_stop_without_mutating_configuration(self):
         inputs = {arm: compared(arm) for arm in ('T0', 'T4')}; before = copy.deepcopy(inputs)
         result = pilot.learning_comparison(inputs)
@@ -101,13 +111,14 @@ class PilotDecisionTests(unittest.TestCase):
 
 
 class PilotLifecycleTests(unittest.TestCase):
-    def run_fixture(self, root, *, gate_code=0, worker_result=None, cleanup=None):
+    def run_fixture(self, root, *, gate_code=0, worker_result=None, cleanup=None,
+                    arm='T0', engineering_smoke=None, name='smoke_e2e_pilot_fixture'):
         (root / 'configs').mkdir()
         (root / 'configs/rl_common.yaml').write_text('fixture: true\n')
         identity = {'pbs_jobid': '123.hopper-m-02', 'scratch': str(root / 'scratch'),
                     'cpu_affinity': list(range(12)), 'cuda_visible_devices': 'GPU-fixture'}
         spec = {'format_policy': 'explicit_task_zero', 'credit_pipeline': 't05_section1b', 'split_policy': pilot.SCENE_SPLIT}
-        args = argparse.Namespace(operation='run', name='smoke_e2e_pilot_fixture', arm='T0',
+        args = argparse.Namespace(operation='run', name=name, arm=arm, engineering_smoke=engineering_smoke,
             manifest=json.dumps({'file': 'data/pool.json', 'sha256': 'a' * 64}),
             model_source=json.dumps({'file': 'results/base.json', 'sha256': 'b' * 64}),
             pilot_spec='configs/spec.json', critic_offload=True, timeout_seconds=600., gate_timeout_seconds=30.)
@@ -132,9 +143,88 @@ class PilotLifecycleTests(unittest.TestCase):
             stack.enter_context(patch.object(pilot, 'Worker', Worker))
             stack.enter_context(patch.object(pilot, 'stop_workers', return_value=cleanup or []))
             code = pilot.run(args)
-        saved = json.loads((root / 'results/smoke_e2e_pilot_fixture.json').read_text())
+        saved = json.loads((root / 'results' / (name + '.json')).read_text())
         self.assertEqual(saved['metrics'], json.loads(output.getvalue().split('FINAL_METRICS_JSON: ')[-1]))
         return code, saved, observed, model.call_count, manifest.call_count
+
+    def engineering_result(self):
+        result = complete_result('T4')
+        result.update(actual_completed_updates=5, updates=result['updates'][:5],
+            holdout_evaluations=result['holdout_evaluations'][:1], checkpoint_saved=True,
+            engineering_smoke_version=pilot.ENGINEERING_SMOKE)
+        return result
+
+    def test_engineering_success_is_five_updates_without_formal_pilot_permission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, saved, workers, model, manifest = self.run_fixture(Path(directory),
+                worker_result=self.engineering_result(), arm='T4',
+                engineering_smoke=pilot.ENGINEERING_SMOKE, name='smoke_e2e_pilot_engineering_T4_fixture')
+        self.assertEqual((code, model, manifest), (0, 1, 1))
+        self.assertEqual(workers[0]['updates'], 5)
+        self.assertEqual(workers[0]['version'], pilot.ENGINEERING_VERSION)
+        self.assertEqual(workers[0]['budget_group'], 'E2Epilot')
+        self.assertEqual(workers[0]['format_policy'], 'explicit_task_zero')
+        self.assertEqual(workers[0]['credit_pipeline'], 't05_section1b')
+        metrics = saved['metrics']
+        self.assertTrue(metrics['engineering_smoke_completed'])
+        self.assertFalse(metrics['pilot_completed'])
+        self.assertFalse(metrics['learning_comparison_eligible'])
+        self.assertEqual(metrics['scheduled_holdout_updates'], [0])
+        self.assertEqual(metrics['unrun_formal_holdout_updates'], [20, 40, 50])
+        self.assertEqual(metrics['kind'], 'smoke_e2e_pilot_engineering_training')
+
+    def test_engineering_failure_and_uncertain_cleanup_preserve_incomplete_status(self):
+        for mutation in ('updates', 'cache', 'mode', 'checkpoint', 'holdout', 'cleanup'):
+            result = self.engineering_result(); cleanup = []
+            if mutation == 'updates': result['actual_completed_updates'] = 4
+            elif mutation == 'cache': result['dataset_proof']['cache_authorized'] = False
+            elif mutation == 'mode': result.pop('engineering_smoke_version')
+            elif mutation == 'checkpoint': result['checkpoint_saved'] = False
+            elif mutation == 'holdout': result['holdout_evaluations'] = []
+            else: cleanup = ['owned process survived']
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                code, saved, *_ = self.run_fixture(Path(directory), worker_result=result,
+                    cleanup=cleanup, arm='T4', engineering_smoke=pilot.ENGINEERING_SMOKE,
+                    name='smoke_e2e_pilot_engineering_T4_fixture')
+            self.assertEqual(code, 1)
+            self.assertFalse(saved['metrics']['pilot_completed'])
+            self.assertFalse(saved['metrics']['engineering_smoke_completed'])
+
+    def test_engineering_namespace_and_black_gate_cannot_bypass_authorization(self):
+        for arm, mode, name in [('T0', pilot.ENGINEERING_SMOKE, 'smoke_e2e_pilot_engineering_T4_fixture'),
+            ('T4', pilot.ENGINEERING_SMOKE, 'smoke_e2e_pilot_fixture'),
+            ('T4', None, 'smoke_e2e_pilot_engineering_T4_fixture')]:
+            with tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError):
+                self.run_fixture(Path(directory), arm=arm, engineering_smoke=mode, name=name)
+        with tempfile.TemporaryDirectory() as directory:
+            code, saved, workers, model, manifest = self.run_fixture(Path(directory), gate_code=86,
+                arm='T4', engineering_smoke=pilot.ENGINEERING_SMOKE, name='smoke_e2e_pilot_engineering_T4_fixture')
+        self.assertEqual((code, model, manifest), (86, 0, 0))
+        self.assertEqual(workers, [])
+        self.assertFalse(saved['metrics']['engineering_smoke_completed'])
+
+    def test_engineering_worker_reauthenticates_original_qualified_pool_before_ray(self):
+        from src.tools import smoke_e2e_pilot_training as training
+        from src.tools import smoke_e2e_pilot_dataset as dataset
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / 'configs').mkdir()
+            (root / 'configs/smoke_e2e_pilot.json').write_bytes(
+                (pilot.ROOT / 'configs/smoke_e2e_pilot.json').read_bytes())
+            common = root / 'configs/rl_common.yaml'; common.write_text('original common fixture\n')
+            with patch.object(pilot, 'ROOT', root), patch.object(training, 'ROOT', root), \
+                    patch.object(training.os, 'sched_setaffinity', create=True), \
+                    patch.object(dataset, 'load_pilot_pool', side_effect=ValueError('original formal cache qualification rejected')) as loader:
+                spec, spec_ref = pilot.load_spec('configs/smoke_e2e_pilot.json')
+                config = {'arm': 'T4', 'engineering_smoke': pilot.ENGINEERING_SMOKE, 'updates': 5,
+                    'identity': {'cpu_affinity': list(range(12))}, 'pilot_spec_reference': spec_ref,
+                    'format_policy': spec['format_policy'], 'credit_pipeline': spec['credit_pipeline'],
+                    'manifest_reference': {'file': 'data/frozen.json', 'sha256': 'a' * 64},
+                    'common_config_reference': training.file_ref(common, root / 'configs')}
+                with self.assertRaisesRegex(ValueError, 'original formal cache qualification rejected'):
+                    training.pilot_train_worker(config, None)
+                loader.assert_called_once_with(config['manifest_reference'])
+                self.assertEqual(spec['minimum_balanced_pairs'], 80)
+                self.assertEqual(spec['required_classes'], list(pilot.KINDS))
 
     def test_black_gate_precedes_model_manifest_and_worker(self):
         with tempfile.TemporaryDirectory() as directory:

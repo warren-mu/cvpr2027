@@ -6,6 +6,18 @@ from src.tools import smoke_e2e_pilot_contract as pilot
 
 
 class PilotContractTests(unittest.TestCase):
+    def test_engineering_mode_is_only_an_explicit_t4_prefix_of_original_schedule(self):
+        for arm in pilot.ARM_UPDATES:
+            self.assertEqual(pilot.execution_schedule(arm),
+                (pilot.ARM_UPDATES[arm], pilot.HOLDOUT_UPDATES[arm]))
+        self.assertEqual(pilot.execution_schedule('T4', pilot.ENGINEERING_SMOKE), (5, (0,)))
+        self.assertEqual(pilot.ARM_UPDATES, {'T0': 50, 'T4': 50, 'T2': 5})
+        self.assertEqual(pilot.HOLDOUT_UPDATES['T4'], (0, 20, 40, 50))
+        for arm, mode in [('T0', pilot.ENGINEERING_SMOKE), ('T2', pilot.ENGINEERING_SMOKE),
+                          ('T4', True), ('T4', 'five_updates'), ('unknown', None)]:
+            with self.subTest(arm=arm, mode=mode), self.assertRaises(ValueError):
+                pilot.execution_schedule(arm, mode)
+
     def test_training_uses_only_explicit_train_keys_and_exact_frozen_arm_budget(self):
         train = ['dataset:one', 'dataset:two']
         for arm, end in pilot.ARM_UPDATES.items():
