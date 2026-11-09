@@ -47,6 +47,10 @@ def file_ref(path, root, limit=48 * 1024 * 1024):
 def review_packages(path):
     reference = file_ref(path, ROOT / "configs", 1024 * 1024)
     plan = json.loads(Path(reference["file"]).read_text())
+    from src.tools import smoke_e2e_look_plan as look
+    if plan.get("version") == look.VERSION:
+        return look.review_packages(plan, reference, root=ROOT, file_ref=file_ref,
+                                    load_pair=load_reviewed_pair)
     if (plan.get("version") != "smoke_e2e_reviewed_five_v1"
             or plan.get("checkpoint") != APPROVED_CHECKPOINT or plan.get("scene_source") != APPROVED_SCENE
             or plan.get("approval", {}).get("status") != "human_explicitly_approved"
@@ -212,7 +216,9 @@ def load_success(path):
             or not re.fullmatch(r"\d+\.hopper-m-\d+", config["pbs_jobid"])):
         raise ValueError("Step 1 scratch/PBS identity mismatch")
     plan, reference, images, packages, sources = review_packages(ROOT / config["review_plan"])
-    if reference != config.get("review_plan_reference") or images != config.get("review_images"):
+    pair_ids = [package["pair_id"] for package in packages]
+    if (reference != config.get("review_plan_reference") or images != config.get("review_images")
+            or config.get("approved_pair_ids") != pair_ids):
         raise ValueError("Reviewed plan/image bytes changed after export")
     gate, gate_ref = audited_result(metrics["gate"]["file"])
     if gate_ref != metrics["gate"]:
@@ -223,7 +229,7 @@ def load_success(path):
     gate_runtime(gate, {key: config[key] for key in ("pbs_jobid", "cuda_visible_devices", "scratch", "cpu_affinity")},
                  config["node"], directory / "unity_logs")
     rows = metrics.get("exports", [])
-    if [row.get("pair_id") for row in rows] != list(APPROVED_PAIRS):
+    if [row.get("pair_id") for row in rows] != pair_ids:
         raise ValueError("Step 1 filtered the reviewed pair population")
     tables, checked_packages, pair_checks = {}, {}, {}
     for index, package in enumerate(packages):
@@ -288,7 +294,8 @@ def main():
         directory.mkdir(parents=True, exist_ok=False)
         config["scratch_directory"] = str(directory)
         plan, reference, images, packages, sources = review_packages(ROOT / args.review_plan)
-        config.update(review_plan_reference=reference, review_images=images, approved_pair_ids=list(APPROVED_PAIRS))
+        config.update(review_plan_reference=reference, review_images=images,
+                      approved_pair_ids=[package["pair_id"] for package in packages])
         gate, gate_ref, cleanup = logged_gate(args.name + "_gate", args.gate_timeout_seconds, directory, deadline, sources)
         metrics["gate"], metrics["cleanup_errors"] = gate_ref, cleanup
         if gate["_meta"]["exit_code"] != 0:

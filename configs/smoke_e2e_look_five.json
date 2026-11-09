@@ -1,0 +1,35 @@
+{
+  "version": "smoke_e2e_look_five_v1",
+  "checkpoint": "results/t01v2_checkpoint_flip_geometry_01.json",
+  "checkpoint_metrics_sha256": "ebc796436ade0fba6f783be468463b0a10ab41f3e0eb9c226bff28099b1fe001",
+  "scene_source": "results/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203.json",
+  "selection": "first_five_unique_Look_in_checkpoint_canonical_order",
+  "authorization": {
+    "status": "prior_human_authorized_Look_followup",
+    "basis": "User instruction: Look pairs available -> rerun the E2E Look follow-up",
+    "Claude_review_of_these_images": "not_confirmed",
+    "GPU_submission": "root_controlled_after_budget_check",
+    "scope": "steps_1_to_3_only; no training-method choices or training authorization"
+  },
+  "coverage": {"included": ["look_flip"], "not_included": ["look_stay", "direct_flip", "direct_stay"]},
+  "pairs": [
+    {"pair_id": "floorplan203_00002", "kind": "look_flip", "review_image": "logs/review/t01v2_checkpoint_flip_geometry_01/00000_look_flip.png", "review_image_sha256": "125090db6f2340a56e11e342c1aa3d0518f49acbe8c384b1856e2a3570ccd48f"},
+    {"pair_id": "floorplan203_00004", "kind": "look_flip", "review_image": "logs/review/t01v2_checkpoint_flip_geometry_01/00001_look_flip.png", "review_image_sha256": "4755f1ecac1f3cc342d556e24d45e3abee1648eb2f9c6af873036e5df703887e"},
+    {"pair_id": "floorplan203_00010", "kind": "look_flip", "review_image": "logs/review/t01v2_checkpoint_flip_geometry_01/00002_look_flip.png", "review_image_sha256": "5fe0aff8eb55a1e4a0b77287badea7e67daf2c211ad868d562c41327c5d0e723"},
+    {"pair_id": "floorplan203_00020", "kind": "look_flip", "review_image": "logs/review/t01v2_checkpoint_flip_geometry_01/00003_look_flip.png", "review_image_sha256": "4beaeaaf6a8d81d72227f8cf511a47f16074531c05b6761d941231a7e0eb1fae"},
+    {"pair_id": "floorplan203_00024", "kind": "look_flip", "review_image": "logs/review/t01v2_checkpoint_flip_geometry_01/00004_look_flip.png", "review_image_sha256": "98805597025c9365e09d472a4d6f3e92ab2382999446194671816a353eead4c9"}
+  ],
+  "planning": {
+    "gpus_per_PBS_job": 1,
+    "total_E2E_charged_GPU_hours_limit": 4,
+    "depth": 4,
+    "max_steps": 5,
+    "max_model_calls": 5,
+    "cache_distinct_pair_states": 20,
+    "formal_T02_cache_minimum": 200,
+    "PBS_submission_and_cumulative_budget_guard": "root_owned_required_before_submission",
+    "step_3": "blocked_until_actual_steps_1_and_2_pass",
+    "steps_4_and_5": "not_authorized_by_this_plan; unresolved_Look_training_contract",
+    "old_Direct_T0_is_same_pool_baseline": false
+  }
+}
