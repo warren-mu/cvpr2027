@@ -326,14 +326,6 @@ def main():
         directory = Path(identity["scratch"]) / "t02_export" / args.name / identity["pbs_jobid"]
         directory.mkdir(parents=True, exist_ok=False)
         config["scratch_directory"] = str(directory)
-        from src.envs.pair_table_source import load_reviewed_pair
-        packages = []
-        for pair_id in args.pair_id:
-            package = load_reviewed_pair(args.source, pair_id, pair_file=args.pair_file)
-            for reference in package["sources"]:
-                if reference not in sources:
-                    sources.append(reference)
-            packages.append(package)
         gate, gate_ref, cleanup = logged_gate(args.name + "_gate", args.gate_timeout_seconds, directory, deadline, sources)
         metrics["gate"], metrics["cleanup_errors"] = gate_ref, cleanup
         if gate["_meta"]["exit_code"] != 0:
@@ -344,6 +336,16 @@ def main():
             config["runtime"] = runtime
             if cleanup:
                 raise RuntimeError("Gate cleanup is uncertain")
+            # Stop unusable allocations before the CPU source checks, while
+            # still authenticating every requested pair before any export.
+            from src.envs.pair_table_source import load_reviewed_pair
+            packages = []
+            for pair_id in args.pair_id:
+                package = load_reviewed_pair(args.source, pair_id, pair_file=args.pair_file)
+                for reference in package["sources"]:
+                    if reference not in sources:
+                        sources.append(reference)
+                packages.append(package)
             for index, package in enumerate(packages):
                 if time.time() >= deadline - 30:
                     metrics["errors"].append("export_deadline_before_next_pair")

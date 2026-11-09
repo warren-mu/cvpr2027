@@ -95,6 +95,113 @@ class ExportTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 export.gate_runtime(changed, identity, "hopper-1", Path("/scratch/logs"))
 
+    def main_order_fixture(self, *, gate_exit=0, gate_cleanup=(), fail_pair=None):
+        # Exercise the real main sequence/result writer. GPU/PBS execution and
+        # byte/science authentication are boundaries mocked by this fixture.
+        from src.envs import pair_table_source, thor_common
+
+        calls, children = [], []
+        gate_ref = {"file": "/fixture/gate.json", "sha256": "a" * 64}
+        common_ref = {"file": "/fixture/checkpoint.json", "sha256": "b" * 64}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gate, identity = self.gate()
+            identity["scratch"] = str(root / "scratch")
+            gate["config"]["allocation"].update(identity)
+            gate["_meta"]["exit_code"] = gate_exit
+            gate["metrics"]["passed"] = gate_exit == 0
+            argv = ["t02_export", "--name", "t02_order", "--source", "source.json",
+                    "--pair-id", "p0", "--pair-id", "p1", "--timeout-seconds", "600",
+                    "--pair-timeout-seconds", "200", "--gate-timeout-seconds", "180"]
+
+            def run_gate(name, seconds, output, deadline, sources):
+                calls.append("gate")
+                self.assertEqual((name, seconds, deadline), ("t02_order_gate", 180, 1000))
+                self.assertEqual(sources, [])
+                self.assertTrue(output.is_dir())
+                sources.append(gate_ref)
+                return gate, gate_ref, list(gate_cleanup)
+
+            def authenticate(source, pair_id, *, pair_file):
+                calls.append("source:" + pair_id)
+                self.assertEqual(source, Path("source.json"))
+                self.assertIsNone(pair_file)
+                if pair_id == fail_pair:
+                    raise ValueError("source evidence SHA mismatch")
+                value = package()
+                value.update(pair_id=pair_id, sources=[common_ref], source_config={
+                    "grid_size": .1, "visibility_distance": 10, "field_of_view": 60})
+                return value
+
+            def start_worker(target, config):
+                self.assertIs(target, export.pair_worker)
+                calls.append("worker:" + config["package"]["pair_id"])
+                children.append(config)
+                return SimpleNamespace(result={"pair_id": config["package"]["pair_id"],
+                    "status": "exported", "cleanup_errors": []}, error=None,
+                    identity={"pid": 10}, unity_identity={"pid": 11}, receive=lambda: None)
+
+            with patch.object(export, "ROOT", root), patch.object(export.sys, "argv", argv), \
+                 patch.object(export, "execution_environment", return_value=identity), \
+                 patch.object(export.os, "sched_getaffinity", return_value=set(range(12)), create=True), \
+                 patch.object(export.socket, "gethostname", return_value="hopper-1"), \
+                 patch.object(thor_common, "install_signals"), \
+                 patch.object(export.signal, "setitimer"), \
+                 patch.object(export, "deadline_after", return_value=1000), \
+                 patch.object(export.time, "time", return_value=400), \
+                 patch.object(export, "logged_gate", side_effect=run_gate), \
+                 patch.object(pair_table_source, "load_reviewed_pair", side_effect=authenticate), \
+                 patch.object(export, "Worker", side_effect=start_worker), \
+                 patch.object(export, "stop_workers", return_value=[]), \
+                 patch.object(export.sys, "stdout", io.StringIO()), \
+                 patch.object(export.sys, "stderr", io.StringIO()):
+                code = export.main()
+            saved = json.loads((root / "results/t02_order.json").read_text())
+        return code, saved, calls, children, gate_ref, common_ref
+
+    def test_gate_failure_skips_all_source_checks_and_exports(self):
+        for gate_exit, cleanup, expected in ((86, (), 86), (1, (), 1), (86, ("unknown",), 1)):
+            with self.subTest(gate_exit=gate_exit, cleanup=cleanup):
+                code, saved, calls, children, gate_ref, _ = self.main_order_fixture(
+                    gate_exit=gate_exit, gate_cleanup=cleanup)
+                self.assertEqual(code, expected)
+                self.assertEqual(calls, ["gate"])
+                self.assertEqual(children, [])
+                self.assertEqual(saved["sources"], [gate_ref])
+                self.assertEqual(saved["metrics"]["pairs"], [])
+                self.assertEqual(saved["metrics"]["unstarted_pair_ids"], ["p0", "p1"])
+                self.assertEqual(saved["metrics"]["status"], "blocked_by_render_gate")
+
+    def test_successful_gate_still_authenticates_all_pairs_before_first_export(self):
+        code, saved, calls, children, gate_ref, common_ref = self.main_order_fixture()
+        self.assertEqual(code, 0)
+        self.assertEqual(calls, ["gate", "source:p0", "source:p1", "worker:p0", "worker:p1"])
+        self.assertEqual(saved["sources"], [gate_ref, common_ref])
+        self.assertEqual(saved["metrics"]["unstarted_pair_ids"], [])
+        self.assertTrue(saved["metrics"]["export_checks_complete"])
+        self.assertTrue(all(child["deadline"] == 600 for child in children))
+        self.assertTrue(all(child["runtime"]["cuda_visible_devices"] == UUID for child in children))
+        self.assertTrue(all(child["field_of_view"] == 60 for child in children))
+
+    def test_later_source_failure_prevents_even_the_first_export(self):
+        code, saved, calls, children, gate_ref, common_ref = self.main_order_fixture(fail_pair="p1")
+        self.assertEqual(code, 1)
+        self.assertEqual(calls, ["gate", "source:p0", "source:p1"])
+        self.assertEqual(children, [])
+        self.assertEqual(saved["sources"], [gate_ref, common_ref])
+        self.assertEqual(saved["metrics"]["pairs"], [])
+        self.assertEqual(saved["metrics"]["unstarted_pair_ids"], ["p0", "p1"])
+        self.assertEqual(saved["metrics"]["errors"], ["ValueError: source evidence SHA mismatch"])
+
+    def test_uncertain_successful_gate_cleanup_stops_before_source_checks(self):
+        code, saved, calls, children, gate_ref, _ = self.main_order_fixture(gate_cleanup=("unknown",))
+        self.assertEqual(code, 1)
+        self.assertEqual(calls, ["gate"])
+        self.assertEqual(children, [])
+        self.assertEqual(saved["sources"], [gate_ref])
+        self.assertEqual(saved["metrics"]["unstarted_pair_ids"], ["p0", "p1"])
+        self.assertEqual(saved["metrics"]["cleanup_errors"], ["unknown"])
+
     def export_mocks(self, package_value, *, native_pass=True):
         sim, order = FakeSim(), []
         original = SimpleNamespace(export_measurements={"fixture": True})
