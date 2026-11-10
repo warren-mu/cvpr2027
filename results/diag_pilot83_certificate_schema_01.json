@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 1,
+    "elapsed_seconds": 0.053732811007648706
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_pilot83_certificate_schema_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_): raise TimeoutError('12-second metadata-only schema check')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef load(path,reference=None):\n    p=Path(path);assert p.stat().st_size<=8*1024*1024,'Not a small metadata file: '+str(p)\n    raw=p.read_bytes();digest=hashlib.sha256(raw).hexdigest()\n    if reference is not None: assert digest==reference['sha256']\n    return json.loads(raw),{'file':str(p),'sha256':digest,'bytes':len(raw)}\nnames=['t02_export_cache_first5_01_retry2','t02_export_cache_remaining24_01','t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01_retry4']\nobservations=[]\nfor name in names:\n    data,source=load('results/'+name+'.json');metrics=data['metrics']\n    cert,cref=load(metrics['authorization_manifest']['file'],metrics['authorization_manifest'])\n    report,rref=load(metrics['validation_report']['file'],metrics['validation_report'])\n    plan,pref=load(metrics['sampling_plan']['file'],metrics['sampling_plan'])\n    entry=next(row for row in metrics['population_ledger'] if row['population_membership']=='complete_independently_verified_table')\n    export,eref=load(entry['source']['file'],entry['source'])\n    row=next(r for r in export['metrics']['pairs'] if r['pair_id']==entry['pair_id'])\n    package,kref=load(row['source_package']['file'],row['source_package'])\n    checks,dref=load(row['detail']['file'],row['detail'])\n    assert row['table_complete'] is row['native_evidence_verified'] is row['pair_checks_passed'] is True\n    assert row['status']=='exported' and row['cleanup_errors']==[] and row.get('error') is None\n    assert checks['table_manifest']==row['table_manifest']==entry['table_manifest']\n    assert checks['native_checks']['passed'] is checks['pair_checks']['passed'] is True\n    assert checks['pair_checks']['synthetic_only'] is False\n    assert package['independent_verification']['validity']['acceptance_passed'] is True\n    assert isinstance(package['candidate_names'],list) and isinstance(package['target_names'],list)\n    assert cert['tables'][entry['dataset_key']]=={k:entry['table_manifest'][k] for k in ('file','sha256','bytes')}\n    assert report['sampling_plan']==plan and cert['cache_validation']==metrics['validation_report']\n    actual={(r['dataset_key'],r['state_id'],world,r['worlds'][world]['fresh_source']['render_id']) for r in report['states'] for world in ('w0','w1')}\n    assert actual=={tuple(r) for r in report['native_authenticated_render_ids']}\n    observations.append({'cache_result':source,'certificate':cref,'validation_report':rref,'sampling_plan':pref,\n      'example_export':eref,'example_source_package':kref,'example_checks':dref,\n      'example_pair_id':row['pair_id'],'example_kind':package['kind'],'actual_package_keys':sorted(package),\n      'actual_checks_keys':sorted(checks),'required_keys_and_flags_match':True,\n      'certificate_table_reference_keys':sorted(cert['tables'][entry['dataset_key']]),\n      'ledger_table_reference_keys':sorted(entry['table_manifest']),\n      'first_fresh_worker_keys':sorted(metrics['worker_runs'][0]),\n      'native_report_identity_shape_matches':True})\noutput=Path('logs/review')/NAME;output.mkdir(parents=True,exist_ok=False)\npath=output/'report.json'\nwith path.open('x') as stream:json.dump({'scope':'Original small metadata only; no native tree, RGB/mask table payload or new scientific reauthentication', 'observations':observations},stream,indent=2,sort_keys=True)\nprint('PILOT_CERTIFICATE_SCHEMA_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'all_sampled_metadata_matches':True},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot83_certificate_schema_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot83_certificate_schema_01",
+      "--",
+      "python3",
+      "-c",
+      "import hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_pilot83_certificate_schema_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_): raise TimeoutError('12-second metadata-only schema check')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef load(path,reference=None):\n    p=Path(path);assert p.stat().st_size<=8*1024*1024,'Not a small metadata file: '+str(p)\n    raw=p.read_bytes();digest=hashlib.sha256(raw).hexdigest()\n    if reference is not None: assert digest==reference['sha256']\n    return json.loads(raw),{'file':str(p),'sha256':digest,'bytes':len(raw)}\nnames=['t02_export_cache_first5_01_retry2','t02_export_cache_remaining24_01','t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01_retry4']\nobservations=[]\nfor name in names:\n    data,source=load('results/'+name+'.json');metrics=data['metrics']\n    cert,cref=load(metrics['authorization_manifest']['file'],metrics['authorization_manifest'])\n    report,rref=load(metrics['validation_report']['file'],metrics['validation_report'])\n    plan,pref=load(metrics['sampling_plan']['file'],metrics['sampling_plan'])\n    entry=next(row for row in metrics['population_ledger'] if row['population_membership']=='complete_independently_verified_table')\n    export,eref=load(entry['source']['file'],entry['source'])\n    row=next(r for r in export['metrics']['pairs'] if r['pair_id']==entry['pair_id'])\n    package,kref=load(row['source_package']['file'],row['source_package'])\n    checks,dref=load(row['detail']['file'],row['detail'])\n    assert row['table_complete'] is row['native_evidence_verified'] is row['pair_checks_passed'] is True\n    assert row['status']=='exported' and row['cleanup_errors']==[] and row.get('error') is None\n    assert checks['table_manifest']==row['table_manifest']==entry['table_manifest']\n    assert checks['native_checks']['passed'] is checks['pair_checks']['passed'] is True\n    assert checks['pair_checks']['synthetic_only'] is False\n    assert package['independent_verification']['validity']['acceptance_passed'] is True\n    assert isinstance(package['candidate_names'],list) and isinstance(package['target_names'],list)\n    assert cert['tables'][entry['dataset_key']]=={k:entry['table_manifest'][k] for k in ('file','sha256','bytes')}\n    assert report['sampling_plan']==plan and cert['cache_validation']==metrics['validation_report']\n    actual={(r['dataset_key'],r['state_id'],world,r['worlds'][world]['fresh_source']['render_id']) for r in report['states'] for world in ('w0','w1')}\n    assert actual=={tuple(r) for r in report['native_authenticated_render_ids']}\n    observations.append({'cache_result':source,'certificate':cref,'validation_report':rref,'sampling_plan':pref,\n      'example_export':eref,'example_source_package':kref,'example_checks':dref,\n      'example_pair_id':row['pair_id'],'example_kind':package['kind'],'actual_package_keys':sorted(package),\n      'actual_checks_keys':sorted(checks),'required_keys_and_flags_match':True,\n      'certificate_table_reference_keys':sorted(cert['tables'][entry['dataset_key']]),\n      'ledger_table_reference_keys':sorted(entry['table_manifest']),\n      'first_fresh_worker_keys':sorted(metrics['worker_runs'][0]),\n      'native_report_identity_shape_matches':True})\noutput=Path('logs/review')/NAME;output.mkdir(parents=True,exist_ok=False)\npath=output/'report.json'\nwith path.open('x') as stream:json.dump({'scope':'Original small metadata only; no native tree, RGB/mask table payload or new scientific reauthentication', 'observations':observations},stream,indent=2,sort_keys=True)\nprint('PILOT_CERTIFICATE_SCHEMA_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'all_sampled_metadata_matches':True},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T13:14:13",
+    "log_path": "logs/runs/diag_pilot83_certificate_schema_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "3333cdf2f5ff8e0bae137d2f6df7db0caef9b516",
+    "git_dirty": false,
+    "end": "2026-11-10T13:14:16",
+    "duration_sec": 0.2,
+    "exit_code": 1,
+    "metrics_sha256": "546568e8da6da1b3237c6bca7374b5e8e932455e4e41681c1e1505bfa0d880b5"
+  }
+}

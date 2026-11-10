@@ -1,0 +1,94 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "gpu_pack_test_priority_full_single_01_retry3",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.gpu_pack",
+    "--name",
+    "gpu_pack_test_priority_full_single_01_retry3",
+    "--queue-plan",
+    "configs/shared_test_priority_active_01.json",
+    "--queue-plan-sha256",
+    "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+    "--queue-root",
+    "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01",
+    "--gpus",
+    "1",
+    "--timeout-seconds",
+    "1825",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1855,
+  "requested_host": "hopper-30",
+  "dry_run": false,
+  "budget_revision": "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40_shared_gpu_units_v1",
+  "queue": "autox",
+  "retry_of": "709674.hopper-m-02",
+  "budget_group": "PACK",
+  "requested_queue_charge_rate": 1.0,
+  "black_retry_host_authorization": {
+    "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293",
+    "evidence": {
+      "file": "results/diag_gpu_pack_full_single01_retry2_black_guard_01.json",
+      "sha256": "4fc450e49ffd5e82da06652edf38b0e803ab5fd4abe37b12058f31ce3608edfb"
+    },
+    "retry_of": "709674.hopper-m-02",
+    "requested_host": "hopper-30",
+    "previous_requested_host": null,
+    "rotation_index": 8,
+    "rotation_previous": {
+      "payload": {
+        "file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/payload.json",
+        "sha256": "e8d9778cf915524bfa285d76ec63e4bbf8bfdf8de9975543cedcd3c2895620a8"
+      },
+      "receipt": {
+        "file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/submission.json",
+        "sha256": "2052e8ecdb8c8ab9a317a2652982a9d48e46a97eadf01ea9c276991e7a7d1c9f"
+      }
+    },
+    "original_node": "hopper-15",
+    "original_gpu_uuid": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680",
+    "queue_fallback_after_seconds": 1200,
+    "scope": "opening black gate retry only; no scientific acceptance",
+    "available_hosts": [
+      "hopper-28",
+      "hopper-30"
+    ],
+    "disabled_hosts": {
+      "hopper-22": {
+        "reason": "New pinned submissions excluded after authenticated opening black gate",
+        "job_id": "709293.hopper-m-02",
+        "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+        "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+      }
+    }
+  },
+  "mixed_budget_authorization": {
+    "version": "shared_gpu_units_budget_v1",
+    "plan_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_active_01.json",
+      "sha256": "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+      "bytes": 84011
+    },
+    "possible_groups": [
+      "G01",
+      "T02"
+    ],
+    "residual_priority": [
+      "G01",
+      "T02"
+    ],
+    "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget",
+    "total_rule": "one_allocation_once_in_T01_and_shared",
+    "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business"
+  }
+}

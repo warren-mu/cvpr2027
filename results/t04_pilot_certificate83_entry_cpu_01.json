@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 58.04165286698844
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_smoke_e2e_pilot*.py','test_train_holdout_freeze.py','test_t02_cache_check.py','test_pair_table_cache.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nraise SystemExit(0 if result.wasSuccessful() and not result.skipped else 1)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t04_pilot_certificate83_entry_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t04_pilot_certificate83_entry_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_smoke_e2e_pilot*.py','test_train_holdout_freeze.py','test_t02_cache_check.py','test_pair_table_cache.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nraise SystemExit(0 if result.wasSuccessful() and not result.skipped else 1)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T13:17:44",
+    "log_path": "logs/runs/t04_pilot_certificate83_entry_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "0e98ed2edf3ad2420dbc007570c0c45b09f4d2f1",
+    "git_dirty": false,
+    "end": "2026-11-10T13:18:43",
+    "duration_sec": 58.2,
+    "exit_code": 0,
+    "metrics_sha256": "15db479fe6ca9072a37ac941fa28dc408140b4e8a77cb424878886373e812560"
+  }
+}

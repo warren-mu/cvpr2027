@@ -1,0 +1,55 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot83_certificate_schema_01 -- python3 -c import hashlib,json,os,signal
+from pathlib import Path
+NAME='diag_pilot83_certificate_schema_01'
+assert os.environ.get('CVPR_RUN_NAME')==NAME
+def expired(*_): raise TimeoutError('12-second metadata-only schema check')
+signal.signal(signal.SIGALRM,expired);signal.alarm(12)
+def load(path,reference=None):
+    p=Path(path);assert p.stat().st_size<=8*1024*1024,'Not a small metadata file: '+str(p)
+    raw=p.read_bytes();digest=hashlib.sha256(raw).hexdigest()
+    if reference is not None: assert digest==reference['sha256']
+    return json.loads(raw),{'file':str(p),'sha256':digest,'bytes':len(raw)}
+names=['t02_export_cache_first5_01_retry2','t02_export_cache_remaining24_01','t02_export_cache_six05_08_01_retry2','t02_export_cache_six09_14_01_retry4']
+observations=[]
+for name in names:
+    data,source=load('results/'+name+'.json');metrics=data['metrics']
+    cert,cref=load(metrics['authorization_manifest']['file'],metrics['authorization_manifest'])
+    report,rref=load(metrics['validation_report']['file'],metrics['validation_report'])
+    plan,pref=load(metrics['sampling_plan']['file'],metrics['sampling_plan'])
+    entry=next(row for row in metrics['population_ledger'] if row['population_membership']=='complete_independently_verified_table')
+    export,eref=load(entry['source']['file'],entry['source'])
+    row=next(r for r in export['metrics']['pairs'] if r['pair_id']==entry['pair_id'])
+    package,kref=load(row['source_package']['file'],row['source_package'])
+    checks,dref=load(row['detail']['file'],row['detail'])
+    assert row['table_complete'] is row['native_evidence_verified'] is row['pair_checks_passed'] is True
+    assert row['status']=='exported' and row['cleanup_errors']==[] and row.get('error') is None
+    assert checks['table_manifest']==row['table_manifest']==entry['table_manifest']
+    assert checks['native_checks']['passed'] is checks['pair_checks']['passed'] is True
+    assert checks['pair_checks']['synthetic_only'] is False
+    assert package['independent_verification']['validity']['acceptance_passed'] is True
+    assert isinstance(package['candidate_names'],list) and isinstance(package['target_names'],list)
+    assert cert['tables'][entry['dataset_key']]=={k:entry['table_manifest'][k] for k in ('file','sha256','bytes')}
+    assert report['sampling_plan']==plan and cert['cache_validation']==metrics['validation_report']
+    actual={(r['dataset_key'],r['state_id'],world,r['worlds'][world]['fresh_source']['render_id']) for r in report['states'] for world in ('w0','w1')}
+    assert actual=={tuple(r) for r in report['native_authenticated_render_ids']}
+    observations.append({'cache_result':source,'certificate':cref,'validation_report':rref,'sampling_plan':pref,
+      'example_export':eref,'example_source_package':kref,'example_checks':dref,
+      'example_pair_id':row['pair_id'],'example_kind':package['kind'],'actual_package_keys':sorted(package),
+      'actual_checks_keys':sorted(checks),'required_keys_and_flags_match':True,
+      'certificate_table_reference_keys':sorted(cert['tables'][entry['dataset_key']]),
+      'ledger_table_reference_keys':sorted(entry['table_manifest']),
+      'first_fresh_worker_keys':sorted(metrics['worker_runs'][0]),
+      'native_report_identity_shape_matches':True})
+output=Path('logs/review')/NAME;output.mkdir(parents=True,exist_ok=False)
+path=output/'report.json'
+with path.open('x') as stream:json.dump({'scope':'Original small metadata only; no native tree, RGB/mask table payload or new scientific reauthentication', 'observations':observations},stream,indent=2,sort_keys=True)
+print('PILOT_CERTIFICATE_SCHEMA_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'all_sampled_metadata_matches':True},sort_keys=True),flush=True)
+signal.alarm(0)
+
+# start: 2026-11-10T13:14:13
+Traceback (most recent call last):
+  File "<string>", line 17, in <module>
+  File "<string>", line 8, in load
+AssertionError: Not a small metadata file: /scratch/e1583364/cvpr2027/t02_cache/t02_export_cache_first5_01_retry2/709054.hopper-m-02/cache_validation.json
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.053732811007648706}
+# exit_code: 1
