@@ -4,67 +4,93 @@
 % from aggregated multi-seed results (agg_*). Never type a number by hand, and never fill a cell
 % before the corresponding result exists. "We observe" rather than "we prove"; no causal
 % explanation without an ablation that supports it. Negative results are reported as they are.
+% Blue \hyp{...} text was written ASSUMING the experiments succeed (human request 2026-11-10).
+% At G2 each \hyp sentence is checked against agg_* results: kept (wrapper removed, claim registered
+% in CLAIMS.md), rewritten to what the results show, or deleted. \finalsubmissiontrue enforces this.
 
-\subsection{Does the task require selective looking?}
-\label{sec:res-trainfree}
-\todo{Text written from the training-free results: does never-look lose accuracy as the change rate grows, and does always-look pay a clear observation cost? How often does the base model commit prematurely?}
-
-\begin{table}[t]
-  \centering
-  \small
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}lccccccc@{}}
-    \toprule
-    & \multicolumn{3}{c}{SR $\uparrow$} & Obs. & \multicolumn{3}{c}{Premature $\downarrow$} \\
-    \cmidrule(lr){2-4}\cmidrule(lr){6-8}
-    Policy & $r{=}0$ & $0.25$ & $0.5$ & cost & $r{=}0$ & $0.25$ & $0.5$ \\
-    \midrule
-    Never look       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
-    Look twice       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
-    Always look      & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
-    Look until seen$^\dagger$ & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
-    Base model       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
-    \bottomrule
-  \end{tabular}
-  \caption{Training-free references on the frozen test set at test change rates $r$. $^\dagger$Uses ground-truth instance masks. \todo{Confidence intervals.}}
-  \label{tab:trainfree}
-\end{table}
-
-\subsection{Main comparison}
-\label{sec:res-main}
-\todo{Text written only from aggregated results, following the pre-registered reading of the $2{\times}2$ design: paired sampling (IS-credit vs.\ Single-$\Qc$), commit-now baseline (Single-$\Qc$ vs.\ PPO; IS-credit vs.\ Paired-GAE if run), and consistency (Ours vs.\ IS-credit). State non-significant differences as such.}
+We organise the results around five questions; unless stated otherwise, numbers are on the frozen test set (unseen rooms) at a test change rate of $r = 0.5$, averaged over three seeds with $95\%$ confidence intervals.
 
 \begin{table*}[t]
   \centering
   \small
-  \begin{tabular}{@{}lcccccc@{}}
+  \begin{tabular}{@{}lcccccccc@{}}
     \toprule
-    & Sampling & Baseline & SR@0.5 $\uparrow$ & SR@0.25 $\uparrow$ & Prem.@0.5 $\downarrow$ & SR@0 \\
+    & Sampling & Baseline & Prem.@0.5 $\downarrow$ & \Look\ SR@0.5 $\uparrow$ & SR@0.5 $\uparrow$ & SR@0.25 $\uparrow$ & SR@0 & Obs. cost \\ % claim-ok: test change rates in column headers, not results
     \midrule
-    PPO           & single & critic & \tbd & \tbd & \tbd & \tbd \\
-    Paired-GAE    & paired & critic & \tbd & \tbd & \tbd & \tbd \\
-    Single-$\Qc$  & single & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
-    IS-credit     & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
-    Ours          & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd \\
+    PPO           & single & critic & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Paired-GAE    & paired & critic & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Single-$\Qc$  & single & $\Qc$  & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    IS-credit     & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Ours          & paired & $\Qc$  & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
     \bottomrule
   \end{tabular}
-  \caption{Main results (mean $\pm$ s.d.\ over three seeds) at a matched observation budget. Ours = IS-credit + post-evidence consistency. \todo{Observation cost column and significance markers.}}
+  \caption{Main results on the frozen test set (unseen rooms): mean over three seeds with $95\%$ confidence intervals, at a matched observation budget. Ours = IS-credit + post-evidence consistency. A difference is marked significant only if the $95\%$ interval of the Welch difference excludes zero. \todo{Drop the Paired-GAE row if it was not run, and say so.}}
   \label{tab:main}
 \end{table*}
 
-\begin{figure}[t]
+\subsection{Does the task require selective looking?}
+\label{sec:res-trainfree}
+\hyp{Never looking leaves \Look\ episodes near chance (\tbd), since the two worlds are indistinguishable at the start.
+Always looking pays \tbd\ observations per episode and still commits after the evidence only if the sweep happens to reveal the anchor.
+Committing as soon as the anchor is visible (privileged) reaches \tbd\ on \Look\ episodes at \tbd\ observations, which bounds what a selective policy can gain with the base model's perception.
+The base model, left to decide, commits before seeing the anchor in \tbd\ of \Look\ episodes (\cref{tab:trainfree}).}
+
+\begin{table}[!t]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    & \multicolumn{2}{c}{SR $\uparrow$} & Obs. & Prem. $\downarrow$ & Direct \\
+    \cmidrule(lr){2-3}
+    Policy & all & \Look & cost & \Look & acc. \\
+    \midrule
+    Never look       & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Look twice       & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Always look      & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Look until seen$^\dagger$ & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    Base model       & \tbd & \tbd & \tbd & \tbd & \tbd \\
+    \bottomrule
+  \end{tabular}
+  \caption{Training-free references on the frozen test set ($r = 0.5$; $r \in \{0, 0.25\}$ in the supplement). All use the base model to choose the target and differ only in when it may commit. $^\dagger$Uses ground-truth instance masks.}
+  \label{tab:trainfree}
+\end{table}
+
+\subsection{Outcome-only RL rewards lucky guesses}
+\label{sec:res-lucky}
+\hyp{PPO's training reward rises steadily, but the rise comes almost entirely from \Look$\to$\Stay\ pairs, whose answer is the same in both worlds and can be given without looking, while \Look$\to$\Flip\ pairs stay near chance (\cref{fig:curves}).
+Its rate of committing before seeing the anchor barely moves, and its success in held-out rooms does not improve over training.
+In other words, the reward it collects is consistent with recognising training scenes and committing to their answers, which is exactly the lucky-guess pattern that outcome-only credit cannot tell apart from informed decisions.}
+
+\begin{figure}[!t]
   \centering
   % Data figures must be produced by analysis/ scripts via savefig_with_provenance; no hand-made plots.
-  \fbox{\parbox{0.95\linewidth}{\centering\vspace{1.8cm}\todo{Figure: SR versus observation cost for all methods and training-free references, at $r = 0.5$.}\vspace{1.8cm}}}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{0.9cm}\todo{Figure (analysis script): training reward per class and held-out premature commitment / \Look\ SR every 20 steps, PPO vs.\ Ours, mean and range over three seeds.}\vspace{0.9cm}}}
+  \caption{\todo{Caption.}}
+  \label{fig:curves}
+\end{figure}
+
+\subsection{Main comparison}
+\label{sec:res-main}
+\hyp{At a matched observation budget, our method commits prematurely in \tbd\ of \Look\ episodes, compared with \tbd\ for PPO and \tbd\ for Single-$\Qc$, and raises \Look\ success from \tbd\ (PPO) to \tbd\ (\cref{tab:main}).
+It spends its extra observations on \Look\ episodes, while direct episodes are committed without looking and their accuracy is unchanged; SR on the unchanged task ($r = 0$) is not lower than PPO's.
+Reading the $2{\times}2$ design, the commit-now baseline alone (Single-$\Qc$ vs.\ PPO) reduces premature commitment by \tbd, paired sampling on top of it (IS-credit vs.\ Single-$\Qc$) by a further \tbd, and the consistency term mainly changes what happens after the evidence (\cref{sec:res-post}).
+On the SR--observation-cost plane, our method lies above the line traced by the training-free references and close to the privileged ``look until seen'' policy (\cref{fig:sr-cost}).}
+
+
+\begin{figure}[!t]
+  \centering
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{0.9cm}\todo{Figure (analysis script): SR versus observation cost at $r = 0.5$ for all trained methods (mean and $95\%$ CI) and the training-free references.}\vspace{0.9cm}}}
   \caption{\todo{Caption.}}
   \label{fig:sr-cost}
 \end{figure}
 
 \subsection{What happens after the evidence arrives?}
 \label{sec:res-post}
-\todo{Post-evidence update accuracy for \Look$\to$\Flip\ and \Look$\to$\Stay\ separately, with the number of episodes entering each statistic; accuracy on direct pairs.}
+\hyp{Among \Look\ episodes that commit after $\tauseen$, PPO switches correctly in \Look$\to$\Flip\ pairs \tbd\ of the time but keeps its answer in \Look$\to$\Stay\ pairs \tbd\ of the time, an asymmetry we read as a learned habit rather than a use of the evidence.
+With the consistency term, both rates are \tbd\ and \tbd, closer to each other than for IS-credit alone (\cref{tab:post}).}
 
-\begin{table}[t]
+\begin{table}[!t]
   \centering
   \small
   \resizebox{\columnwidth}{!}{%
@@ -82,6 +108,27 @@
   \label{tab:post}
 \end{table}
 
-\subsection{Robustness and training signal}
+\subsection{Do the gains transfer, and are they robust?}
 \label{sec:res-robust}
-\todo{Pre-registered robustness checks: (i) \Look\ pairs without shadow/reflection-only divergent states; (ii) pairs that also pass the stricter physics rule. Secondary measures: variance of the pre-evidence credit during training and validation learning curves.}
+\hyp{\Cref{tab:transfer} compares \Look\ success in training rooms, in held-out training rooms, and in test rooms.
+PPO is \tbd\ points better in the rooms it was trained in than in unseen rooms, consistent with memorising scene answers; for our method the gap is \tbd\ points, and held-out and test rooms agree within their confidence intervals.
+The ranking of methods is unchanged on the subset of pairs that also pass the stricter physics rule and on \Look\ pairs without shadow-only divergent states.
+As intended by its construction, paired sampling lowers the variance of the pre-evidence credit (IS-credit vs.\ Single-$\Qc$: \tbd\ vs.\ \tbd); we treat this as a check of the mechanism, not as evidence of better performance.}
+
+\begin{table}[!t]
+  \centering
+  \small
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    \Look\ SR & train rooms & held-out rooms & test rooms \\
+    \midrule
+    PPO   & \tbd & \tbd & \tbd \\
+    Ours  & \tbd & \tbd & \tbd \\
+    \bottomrule
+  \end{tabular}
+  \caption{Does the behaviour transfer to rooms not seen in training? Training-room numbers use the last ten training updates; held-out rooms are training-split rooms excluded from training.}
+  \label{tab:transfer}
+\end{table}
+
+\paragraph{Qualitative example.}
+\todo{Figure from real frames of the first \Look$\to$\Flip\ test pair by ID (selection rule fixed before evaluation): PPO commits at $s_0$ with the same answer in both worlds; Ours turns, sees the anchor, and answers each world correctly.}

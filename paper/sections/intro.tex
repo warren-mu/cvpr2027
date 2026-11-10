@@ -5,7 +5,7 @@
   \centering
   % Placeholder for the teaser. Hand-drawn method diagrams need the comment below on the \includegraphics line.
   % \includegraphics[width=\linewidth]{figures/teaser.pdf} % fig-ok: diagram
-  \fbox{\parbox{0.95\linewidth}{\centering\vspace{2.2cm}\todo{Teaser: one \Look$\to$\Flip\ pair. Left: the shared start view (both candidates marked, anchor out of view). Middle: after one turn, world $w_0$ shows the anchor next to candidate~1, world $w_1$ does not. Right: an agent that guesses at the start is right in one world and wrong in the other; paired credit sees both outcomes at once.}\vspace{2.2cm}}}
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{2.2cm}\todo{Teaser from real rendered frames of one training-scene \Look$\to$\Flip\ pair (FIG01): one row per world, \texttt{turn\_left} $\mid$ $s_0$ $\mid$ \texttt{turn\_right}, with the shared $s_0$ spanning both rows. An agent that commits at $s_0$ gives the same answer in both worlds and is wrong in one; an agent that turns first sees the kettle and answers each world correctly.}\vspace{2.2cm}}}
   \caption{\todo{Caption.} Two worlds that are indistinguishable at the start should receive the same credit for the same decision; they are allowed, and required, to diverge only after the agent has looked.}
   \label{fig:teaser}
 \end{figure}
@@ -20,6 +20,7 @@ The learning signal in these systems is computed in the one world that the episo
 If the agent commits without looking and the kettle happens to be near its first guess, the episode succeeds and the guess is reinforced; if the kettle was elsewhere, the same decision, taken on exactly the same input, is punished.
 Because the input was identical in both cases, the difference in credit carries no information the agent could have used.
 In expectation the signal is still correct, but it is noisy exactly at the decision we care about, and it rewards lucky guesses along the way.
+\hyp{With a finite set of training scenes the problem is sharper than noise: in our experiments, outcome-only PPO raises its training reward mainly on pairs whose answer does not depend on the hidden world, rarely looks before committing, and gains nothing in rooms it has not seen (\cref{sec:res-lucky}).}
 
 We remove this noise at its source.
 Instead of sampling one world per episode, we construct \emph{pairs} of simulated worlds that differ only in the position of one object, the anchor of the instruction.
@@ -46,5 +47,5 @@ An agent that has only seen ``no kettle next to candidate 1'' has reached $\tau$
 \item A formulation of when to look and when to change one's mind as credit assignment over information sets, with \Look/direct and \Flip/\Stay\ cases defined relative to what the agent has observed and two explicit moments, $\tau$ and $\tauseen$ (\cref{sec:method}).
 \item Counterfactual world pairs in AI2-THOR~\cite{ai2thor2017} with pre-rendered view tables, verified identical inputs before the evidence step, and validity checks for physics, target uniqueness, evidence visibility, and solvability (\cref{sec:data}).
 \item An analysis showing that paired credit decomposes into stratified sampling and a commit-now baseline, a controlled $2{\times}2$ design that tests each ingredient at an equal rollout budget, and a post-evidence consistency term that is applied only after the agent has seen the evidence (\cref{sec:method,sec:setup}).
-\item \todo{Experimental finding(s), one clause per claim, written only from aggregated results and registered in CLAIMS.md.}
+\item \hyp{Experiments in unseen rooms showing that, at a matched observation budget, paired credit with post-evidence consistency reduces premature commitment and improves success on \Look\ episodes relative to outcome-only PPO and a same-world commit-now baseline, without hurting direct episodes or the unchanged task (\cref{sec:results}).} % register in CLAIMS.md before removing \hyp
 \end{itemize}
