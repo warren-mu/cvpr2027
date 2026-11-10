@@ -1557,3 +1557,12 @@ Video-MME: /scratch/e1583364/Video-MME；t00b: /scratch/e1583364/cvpr2027/t00b_s
 
 
 709510 指定hopper-28超过20分钟且仍为从未启动Q，已通过原logged Q→qdel→F链确认取消，原canonical实际GPU用量0。原31对/seed0/200状态去掉host后重提709534，已在hopper-16通过出图检查并开始完整认证；没有宣称缓存通过。22:30备用52对路径仍照常。
+
+
+## 2026-11-09 21:45 ET — 扩展清理已完成
+
+删前清单已推送 `53f021b5` 后才删除。原 `diag_authorized_expanded_cleanup_02` 实际删除 1,093 个清单文件：Video-MME 905 个 / 101.401 十进制 GB；t00b actor/critic/model/optimizer 16 个 / 91.360 GB；7个未引用 hf_ckpts 模型 172 个 / 199.760 GB；合计 unlink allocated 392,520,630,272 bytes（392.521 GB）。世界对、视角表、结果、日志、Qwen2.5-VL-3B 基座与环境均未删除。目录空壳、t00b data.pt/extra_state 及非模型测试目录保留。
+
+Video-MME 的公开 metadata 字节、标注、全部视频ID及MP4头已和[公开数据集](https://huggingface.co/datasets/lmms-eval/Video-MME)核对；原始视频没有重新下载。第一次清理因授权标签 `human a0076849` 与 `a0076849` 的字面断言差异在任何unlink前退出，失败日志保留；第二次仅修正该比对，固定清单SHA未变，全部删除成功无错误。首次Video-MME清单记录器缺少运行名环境变量的失败也原样保留，第二次使用显式名字完成记录。
+
+10:43 SGT 的 hpc quota 报告仍为879.8 GiB/1TiB，2,908,614 chunk files；它读取管理员缓存文件，未反映此次删除，不能把这条旧值称作清理后的容量。等待其更新后再报告。清理本身GPU用量0；固定31缓存709534仍在运行，原31/seed0/200不变。

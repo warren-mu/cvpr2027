@@ -1,0 +1,55 @@
+{
+  "metrics": {
+    "groups": {
+      "human_authorized_public_Video_MME": {
+        "files": 905,
+        "allocated_bytes_unlinked": 101400662016,
+        "logical_bytes_unlinked": 101398831059
+      },
+      "human_authorized_t00b_actor_critic_optimizer": {
+        "files": 16,
+        "allocated_bytes_unlinked": 91359780864,
+        "logical_bytes_unlinked": 91359740608
+      },
+      "human_authorized_unreferenced_hf_model": {
+        "files": 172,
+        "allocated_bytes_unlinked": 199760187392,
+        "logical_bytes_unlinked": 199759726425
+      }
+    },
+    "deleted_file_count": 1093,
+    "allocated_bytes_unlinked": 392520630272,
+    "logical_bytes_unlinked": 392518298092,
+    "elapsed_seconds": 3.3750386238098145,
+    "errors": [],
+    "all_listed_files_removed": true,
+    "quota_requery_required": true
+  },
+  "config": {
+    "report": "logs/review/diag_authorized_expanded_cleanup_02/report.json",
+    "authorization": "a0076849",
+    "note": "Freed quota measured separately; unlinked allocated bytes are not concurrent account quota delta"
+  },
+  "_meta": {
+    "name": "diag_authorized_expanded_cleanup_02",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,json,os,stat,time\nfrom pathlib import Path\nfrom src.tools.phase_watch import load_module\nname='diag_authorized_expanded_cleanup_02';root=Path.cwd()\nauditor=load_module('cleanup_original_auditor',root/'scripts/audit_provenance.py')\nspecs=[('diag_authorized_storage_cleanup_plan_02','da8172fbeed772ccb4f7d4ec55146468ab1e7bfcd9aaa1c52d345af543d6e0ab'),('diag_authorized_hf_cleanup_plan_01','55357dc4c14aa3412992ce5b7265d74e09f95c8ecd9e1e0864f4531b882446e6')]\nallrows=[];refs=[];status=Path('STATUS.md').read_text()\nfor n,sha in specs:\n p=Path('results',n+'.json');assert not auditor.audit_file(str(p))['fail']\n r=json.loads(p.read_text());assert r['_meta']['exit_code']==0 and r['metrics']['deletion_performed'] is False\n mp=Path(r['metrics']['manifest']['file']);assert r['metrics']['manifest']['sha256']==sha and hashlib.sha256(mp.read_bytes()).hexdigest()==sha and sha in status\n d=json.loads(mp.read_bytes());assert d['authorization']==('human a0076849' if n=='diag_authorized_storage_cleanup_plan_02' else 'a0076849');allrows.extend(d['files']);refs.append({'file':str(mp),'sha256':sha})\nassert len({r['path'] for r in allrows})==len(allrows)\ndef verify(r):\n p=Path(r['path']);s=p.lstat()\n assert p.resolve()==p and s.st_uid==os.getuid()==r['uid'] and stat.S_ISREG(s.st_mode) and s.st_nlink==1\n assert (s.st_ino,s.st_mtime_ns,s.st_size,s.st_dev,s.st_blocks*512)==(r['inode'],r['mtime_ns'],r['bytes'],r['device'],r['allocated_bytes'])\n if r['category']=='human_authorized_public_Video_MME':p.relative_to('/scratch/e1583364/Video-MME')\n elif r['category']=='human_authorized_t00b_actor_critic_optimizer':\n  p.relative_to('/scratch/e1583364/cvpr2027/t00b_scale')\n  assert p.name.startswith(('model_world_size_4_rank_','optim_world_size_4_rank_')) and p.suffix=='.pt'\n elif r['category']=='human_authorized_unreferenced_hf_model':\n  p.relative_to('/scratch/e1583364/hf_ckpts')\n  assert 'qwen2.5-vl-3b-instruct' not in str(p).lower()\n else:raise ValueError('Unknown authorized class')\n return p\nfor r in allrows:verify(r)\ndeleted=[];errors=[];started=time.time()\nfor r in allrows:\n try:\n  p=verify(r);p.unlink();deleted.append(r)\n except Exception as e:\n  errors.append({'path':r['path'],'error':repr(e)});break\ngroups={}\nfor r in deleted:\n g=groups.setdefault(r['category'],{'files':0,'allocated_bytes_unlinked':0,'logical_bytes_unlinked':0})\n g['files']+=1;g['allocated_bytes_unlinked']+=r['allocated_bytes'];g['logical_bytes_unlinked']+=r['bytes']\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)\nreport={'authorization':'a0076849','manifest_references':refs,'deleted':deleted,'errors':errors,'groups':groups,'scope':'Only exact listed regular owned files; no directories, original evidence, results/logs, environments or Qwen3B base touched'}\n(out/'report.json').write_text(json.dumps(report,indent=2))\nmetrics={'groups':groups,'deleted_file_count':len(deleted),'allocated_bytes_unlinked':sum(r['allocated_bytes'] for r in deleted),'logical_bytes_unlinked':sum(r['bytes'] for r in deleted),'elapsed_seconds':time.time()-started,'errors':errors,'all_listed_files_removed':len(deleted)==len(allrows),'quota_requery_required':True}\nPath('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'report':str(out/'report.json'),'authorization':'a0076849','note':'Freed quota measured separately; unlinked allocated bytes are not concurrent account quota delta'}},indent=2));print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\nraise SystemExit(bool(errors))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:42:51",
+    "log_path": "logs/runs/diag_authorized_expanded_cleanup_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "53f021b5ca0ff91af632fe7180f84765c36022f4",
+    "git_dirty": false,
+    "end": "2026-11-10T10:42:59",
+    "duration_sec": 3.9,
+    "exit_code": 0,
+    "metrics_sha256": "532a13dbbc444a801dae3504668c14c2091ab01ebba438e02e3fbf222ccd596c"
+  }
+}

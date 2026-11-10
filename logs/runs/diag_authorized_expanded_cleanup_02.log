@@ -1,0 +1,47 @@
+# run_logged: python3 -c import hashlib,json,os,stat,time
+from pathlib import Path
+from src.tools.phase_watch import load_module
+name='diag_authorized_expanded_cleanup_02';root=Path.cwd()
+auditor=load_module('cleanup_original_auditor',root/'scripts/audit_provenance.py')
+specs=[('diag_authorized_storage_cleanup_plan_02','da8172fbeed772ccb4f7d4ec55146468ab1e7bfcd9aaa1c52d345af543d6e0ab'),('diag_authorized_hf_cleanup_plan_01','55357dc4c14aa3412992ce5b7265d74e09f95c8ecd9e1e0864f4531b882446e6')]
+allrows=[];refs=[];status=Path('STATUS.md').read_text()
+for n,sha in specs:
+ p=Path('results',n+'.json');assert not auditor.audit_file(str(p))['fail']
+ r=json.loads(p.read_text());assert r['_meta']['exit_code']==0 and r['metrics']['deletion_performed'] is False
+ mp=Path(r['metrics']['manifest']['file']);assert r['metrics']['manifest']['sha256']==sha and hashlib.sha256(mp.read_bytes()).hexdigest()==sha and sha in status
+ d=json.loads(mp.read_bytes());assert d['authorization']==('human a0076849' if n=='diag_authorized_storage_cleanup_plan_02' else 'a0076849');allrows.extend(d['files']);refs.append({'file':str(mp),'sha256':sha})
+assert len({r['path'] for r in allrows})==len(allrows)
+def verify(r):
+ p=Path(r['path']);s=p.lstat()
+ assert p.resolve()==p and s.st_uid==os.getuid()==r['uid'] and stat.S_ISREG(s.st_mode) and s.st_nlink==1
+ assert (s.st_ino,s.st_mtime_ns,s.st_size,s.st_dev,s.st_blocks*512)==(r['inode'],r['mtime_ns'],r['bytes'],r['device'],r['allocated_bytes'])
+ if r['category']=='human_authorized_public_Video_MME':p.relative_to('/scratch/e1583364/Video-MME')
+ elif r['category']=='human_authorized_t00b_actor_critic_optimizer':
+  p.relative_to('/scratch/e1583364/cvpr2027/t00b_scale')
+  assert p.name.startswith(('model_world_size_4_rank_','optim_world_size_4_rank_')) and p.suffix=='.pt'
+ elif r['category']=='human_authorized_unreferenced_hf_model':
+  p.relative_to('/scratch/e1583364/hf_ckpts')
+  assert 'qwen2.5-vl-3b-instruct' not in str(p).lower()
+ else:raise ValueError('Unknown authorized class')
+ return p
+for r in allrows:verify(r)
+deleted=[];errors=[];started=time.time()
+for r in allrows:
+ try:
+  p=verify(r);p.unlink();deleted.append(r)
+ except Exception as e:
+  errors.append({'path':r['path'],'error':repr(e)});break
+groups={}
+for r in deleted:
+ g=groups.setdefault(r['category'],{'files':0,'allocated_bytes_unlinked':0,'logical_bytes_unlinked':0})
+ g['files']+=1;g['allocated_bytes_unlinked']+=r['allocated_bytes'];g['logical_bytes_unlinked']+=r['bytes']
+out=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)
+report={'authorization':'a0076849','manifest_references':refs,'deleted':deleted,'errors':errors,'groups':groups,'scope':'Only exact listed regular owned files; no directories, original evidence, results/logs, environments or Qwen3B base touched'}
+(out/'report.json').write_text(json.dumps(report,indent=2))
+metrics={'groups':groups,'deleted_file_count':len(deleted),'allocated_bytes_unlinked':sum(r['allocated_bytes'] for r in deleted),'logical_bytes_unlinked':sum(r['bytes'] for r in deleted),'elapsed_seconds':time.time()-started,'errors':errors,'all_listed_files_removed':len(deleted)==len(allrows),'quota_requery_required':True}
+Path('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'report':str(out/'report.json'),'authorization':'a0076849','note':'Freed quota measured separately; unlinked allocated bytes are not concurrent account quota delta'}},indent=2));print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)
+raise SystemExit(bool(errors))
+
+# start: 2026-11-10T10:42:51
+FINAL_METRICS_JSON: {"groups": {"human_authorized_public_Video_MME": {"files": 905, "allocated_bytes_unlinked": 101400662016, "logical_bytes_unlinked": 101398831059}, "human_authorized_t00b_actor_critic_optimizer": {"files": 16, "allocated_bytes_unlinked": 91359780864, "logical_bytes_unlinked": 91359740608}, "human_authorized_unreferenced_hf_model": {"files": 172, "allocated_bytes_unlinked": 199760187392, "logical_bytes_unlinked": 199759726425}}, "deleted_file_count": 1093, "allocated_bytes_unlinked": 392520630272, "logical_bytes_unlinked": 392518298092, "elapsed_seconds": 3.3750386238098145, "errors": [], "all_listed_files_removed": true, "quota_requery_required": true}
+# exit_code: 0

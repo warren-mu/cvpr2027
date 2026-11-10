@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 12.890104416001122
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_expanded_cleanup_results_audit_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_expanded_cleanup_results_audit_01",
+      "--",
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:46:09",
+    "log_path": "logs/runs/diag_expanded_cleanup_results_audit_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "53f021b5ca0ff91af632fe7180f84765c36022f4",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_expanded_cleanup_results_audit_01.diff",
+    "end": "2026-11-10T10:46:26",
+    "duration_sec": 13.1,
+    "exit_code": 0,
+    "metrics_sha256": "d74bc4da50678c73ef538e9b07ed07871b2add8842c8c727b0c853fcef13c160"
+  }
+}
