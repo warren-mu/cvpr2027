@@ -1,0 +1,28 @@
+{
+  "name": "diag_submit_gen_test_s16_round2_s04",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_submit_gen_test_s16_round2_s04",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json,subprocess\nfrom pathlib import Path\nname='gen_test_s16_round2_s04'\np=Path('configs/'+name+'_quota.json')\nquota=json.loads(p.read_text())\nassert quota['parent_run_name']==name\nassert not Path('results/'+name+'.json').exists()\nassert not list(Path('logs/pbs').glob(name+'-*'))\nscenes=[x['scene'] for x in quota['assignments']]\nassert scenes==['FloorPlan325','FloorPlan425','FloorPlan26','FloorPlan226','FloorPlan326','FloorPlan426']\ncommand=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','G01','--name',name,'--gpus','1','--walltime','00:27:10','--','python3','-u','-m','src.tools.g01_collect_parallel','--name',name,'--scenes',*scenes,'--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json','--timeout-seconds','1600','--partition','test','--quota-plan',str(p),'--quota-plan-sha256',hashlib.sha256(p.read_bytes()).hexdigest(),'--nearby-physics']\nprint('EXACT_SUBMISSION_COMMAND: '+json.dumps(command),flush=True)\nraise SystemExit(subprocess.call(command))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T09:13:11",
+  "log_path": "logs/runs/diag_submit_gen_test_s16_round2_s04.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+  "git_dirty": false,
+  "end": "2026-11-10T09:14:55",
+  "duration_sec": 103.3,
+  "exit_code": 0,
+  "metrics_sha256": "3b7ec1b1034022d6842db466246534fc0c99db079b1a368ab819319c7eb81c11"
+}

@@ -1,0 +1,828 @@
+{
+  "action_successes": [
+    true
+  ],
+  "actions": [
+    {
+      "distance_m": 1.3951041173328378,
+      "distance_method": "3D Euclidean agent metadata.position to object metadata.position",
+      "kind": "select",
+      "label": 1,
+      "mark_labels_by_name": {
+        "Plunger_52057ba8": 1,
+        "ToiletPaper_3560522c": 2
+      },
+      "measurement_action_sent": false,
+      "metadata_distance": 1.395104169845581,
+      "realized_relation": {
+        "anchor_name": "HandTowel_21c7e229",
+        "candidate_names": [
+          "Plunger_52057ba8",
+          "ToiletPaper_3560522c"
+        ],
+        "candidate_policy": "two_marked_pickupables_v1",
+        "candidate_types": [
+          "Plunger",
+          "ToiletPaper"
+        ],
+        "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+        "distances_m": {
+          "Plunger_52057ba8": 0.4164797809523104,
+          "ToiletPaper_3560522c": 0.6343887882232306
+        },
+        "passed": true,
+        "reasons": [],
+        "same_class": false,
+        "target_name": "Plunger_52057ba8"
+      },
+      "selected_object_id": "Plunger|-02.53|+00.00|+03.03",
+      "selected_object_name": "Plunger_52057ba8",
+      "success": true,
+      "target_name": "Plunger_52057ba8",
+      "visible_mask_pixels": 420
+    }
+  ],
+  "actual_output_caps": {
+    "direct_flip": 1,
+    "direct_stay": 1,
+    "look_flip": 1,
+    "look_stay": 2
+  },
+  "allowed_kinds": [
+    "direct_flip",
+    "direct_stay",
+    "look_flip",
+    "look_stay"
+  ],
+  "bbox_proposal_rank_policy": {
+    "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+    "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+    "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+    "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+    "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+    "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+    "scope": "proposal prediction only; no acceptance result or measured visibility is produced",
+    "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+    "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+    "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1"
+  },
+  "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+  "buffered_raw_complete": true,
+  "candidate_label_assignment": {
+    "Plunger_52057ba8": 1,
+    "ToiletPaper_3560522c": 2
+  },
+  "captures": [
+    {
+      "action_index": 2,
+      "black": false,
+      "files": {
+        "masks": {
+          "bytes": 4849,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/frame_000003_masks.npz",
+          "sha256": "b015bee7291987e9212b2a57bff3058467a0a853deb1c7f3aa5ec1b9befe0fd5"
+        },
+        "metadata": {
+          "bytes": 102091,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/frame_000003_metadata.json",
+          "sha256": "2c15928f0cb09cd269184a513d4a35bca5830300289d014084008b82b2c49811"
+        },
+        "rgb": {
+          "bytes": 58408,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/frame_000003_rgb.png",
+          "sha256": "ab558b989ec6041524fd9f440778fa58415b4000ca3974b3513a11f2816b60fb"
+        }
+      },
+      "mask_pixels_by_name": {
+        "Bathtub_e94c4d91": 1424,
+        "Floor_a17732a4": 1917,
+        "HandTowel_21c7e229": 264,
+        "Plunger_52057ba8": 420,
+        "ScrubBrush_36650621": 297,
+        "ShowerCurtain_5d2fd8c3": 2487,
+        "ShowerHead_6182e32c": 95,
+        "SoapBar_6f9efa9f": 40,
+        "ToiletPaperHanger_60e99a0a": 8,
+        "ToiletPaper_3560522c": 467,
+        "ToiletPaper_a5de7568": 27,
+        "Toilet_6d7373ef": 11819
+      },
+      "rgb_sha256": "89abb5d3c7e8a8c64bc96b9a40bd43c59c4c047e8fbfa8a9beba20bee6059f0e",
+      "rgb_shape": [
+        255,
+        255,
+        3
+      ],
+      "sequence_id": null,
+      "source_action": "TeleportFull",
+      "stem": "action_2_TeleportFull",
+      "valid": true
+    }
+  ],
+  "cleanup_errors": [],
+  "construction_process_id": 810220,
+  "discovery_schedule_policy": {
+    "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+    "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+    "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+    "round": "discover at most one new combination, then process each combination active at that round start once",
+    "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim",
+    "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+    "version": "one_discovery_then_full_active_round_v1",
+    "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order"
+  },
+  "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+  "done": true,
+  "error": null,
+  "executed_actions": [
+    "select 1"
+  ],
+  "field_of_view": 60,
+  "fixed_label_pair_id": "floorplan423_00019",
+  "fixed_label_policy": {
+    "approved_task_commit": "5a50999",
+    "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+    "legacy": "absent policy means the original spatial policy; no retrospective upgrades",
+    "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+    "scope": "one object keeps its number across both worlds and all views of one pair",
+    "version": "pair_stable_object_labels_v1",
+    "visible_subset": "draw only currently visible declared candidates; never renumber a subset"
+  },
+  "fixed_label_version": "pair_stable_object_labels_v1",
+  "flip_geometry_policy": {
+    "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+    "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+    "approval": "T01v2 supplement15;5a0a138",
+    "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+    "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+    "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+    "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+    "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+    "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+    "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+    "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim",
+    "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+    "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+    "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+    "unknown": "unknown projection/geometry never counts as a passing prediction",
+    "version": "look_flip_complete_tuple_predicted_center_geometry_v1"
+  },
+  "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+  "fov_contrast_group": "g01_selected60",
+  "fov_contrast_policy": {
+    "actual_class": "unchanged scientific classification; only actual classes with reserved tickets are exported",
+    "approval": "83828652 and 002d747c human approved",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": "explicit allowed_kinds in the immutable scene assignment",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_scope": "base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "evaluation only:21\u201330/221\u2013230/321\u2013330/421\u2013430",
+    "per_scene_class_cap": 6,
+    "physics": {
+      "anchor_position_error_limit_m": 0.02,
+      "approval": "38b15551 supplement16",
+      "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+      "distance_origin": "same settled common baseline object position in both worlds",
+      "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+      "nearby_radius_m": 0.5,
+      "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+      "nonanchor_position_limit_m": 0.01,
+      "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+      "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+      "version": "nearby_nonanchor_0_5m_v1"
+    },
+    "physics_approval": "38b15551 supplement16; explicit new production version",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "purpose": "frozen evaluation collection only; never training, tuning or generator pilots",
+    "quota": "g01_static_configuration_tickets_v2",
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_test_configuration_ticket_proposals_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_test_configuration_tickets_selected60_v2_nearby_v1"
+  },
+  "fov_contrast_version": "g01_test_configuration_tickets_selected60_v2_nearby_v1",
+  "g01_configuration_version": "test_configuration_canonical_start_seed0_v1",
+  "g01_partition": "test",
+  "g01_policy": {
+    "actual_class": "unchanged scientific classification; only actual classes with reserved tickets are exported",
+    "approval": "83828652 and 002d747c human approved",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": "explicit allowed_kinds in the immutable scene assignment",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_scope": "base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "evaluation only:21\u201330/221\u2013230/321\u2013330/421\u2013430",
+    "per_scene_class_cap": 6,
+    "physics": {
+      "anchor_position_error_limit_m": 0.02,
+      "approval": "38b15551 supplement16",
+      "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+      "distance_origin": "same settled common baseline object position in both worlds",
+      "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+      "nearby_radius_m": 0.5,
+      "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+      "nonanchor_position_limit_m": 0.01,
+      "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+      "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+      "version": "nearby_nonanchor_0_5m_v1"
+    },
+    "physics_approval": "38b15551 supplement16; explicit new production version",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "purpose": "frozen evaluation collection only; never training, tuning or generator pilots",
+    "quota": "g01_static_configuration_tickets_v2",
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_test_configuration_ticket_proposals_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_test_configuration_tickets_selected60_v2_nearby_v1"
+  },
+  "g01_quota_assignment": {
+    "actual_output_caps": {
+      "direct_flip": 1,
+      "direct_stay": 1,
+      "look_flip": 1,
+      "look_stay": 2
+    },
+    "allowed_kinds": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "child_run_name": "gen_test_s16_round2_s02_c6_floorplan423",
+    "parent_run_name": "gen_test_s16_round2_s02",
+    "partition": "test",
+    "plan_reference": {
+      "file": "configs/gen_test_s16_round2_s02_bank_quota.json",
+      "sha256": "e49b59edb2d5420383247965e866957945630e6986d0cfcdbae437432b29ac8d"
+    },
+    "scene": "FloorPlan423",
+    "seen_configurations": [],
+    "version": "g01_static_configuration_tickets_v2"
+  },
+  "g01_quota_version": "g01_static_configuration_tickets_v2",
+  "g01_search_policy": {
+    "approval": "83828652 configuration dispersion; 002d747c human-approved test round2",
+    "balance_after_cap": "no forced Flip after its tickets are full; Stay-only is allowed by the new task",
+    "collection": "one exported actual class per canonical configuration across Controller restarts and authenticated historical inventory; static tickets unchanged",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "direct_flip": "unchanged G01 native-surface3D ratio roles and in-frame centre projection; no proximity or per-side cap",
+    "discovery_schedule_override": "preserve one new domain per finite round and at most one visit per active domain; replace only within-round domain preference with available class priority, stable ties",
+    "look_attempt_mix": "no Flip/Stay balance constraint in this explicit test configuration version; LookStay has first priority",
+    "look_flip": "supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged",
+    "pool_order": "stable class priority within each finite active-domain round and within each domain; only available unoccupied ticketed classes; no Look/Direct alternation",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "quota_skip": "retain original validity verdict and record collection_quota_full; never recast this as physical failure",
+    "stay": "original horizontal native domain; original Look12/Direct40 cap and far-first actual-w0 retries",
+    "task": "G01; approved supplements13/14/15",
+    "unchanged": "seed0 role orientation, native token proof, all physical/target/prefix/evidence/solvability/witness thresholds",
+    "version": "g01_test_configuration_ticket_proposals_v2"
+  },
+  "g01_search_version": "g01_test_configuration_ticket_proposals_v2",
+  "g01_seen_configurations": [],
+  "g01_version": "g01_test_configuration_tickets_selected60_v2_nearby_v1",
+  "nearby_physics_policy": {
+    "anchor_position_error_limit_m": 0.02,
+    "approval": "38b15551 supplement16",
+    "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+    "distance_origin": "same settled common baseline object position in both worlds",
+    "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+    "nearby_radius_m": 0.5,
+    "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+    "nonanchor_position_limit_m": 0.01,
+    "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+    "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+    "version": "nearby_nonanchor_0_5m_v1"
+  },
+  "nearby_physics_version": "nearby_nonanchor_0_5m_v1",
+  "passed": true,
+  "planned_actions": [
+    "select 1"
+  ],
+  "process_id": 2526118,
+  "producer_module": "src.envs.pair_v2_g01_shard",
+  "raw_evidence": {
+    "bytes": 5119,
+    "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/evidence_index.json",
+    "sha256": "431487a613c3e02538a1f6bf7589f8cde2c33719d4587ffa4becfa26ea583998"
+  },
+  "restoration": {
+    "agent_pose_exact": true,
+    "agent_realized": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -2.25,
+        "y": 0.9019852876663208,
+        "z": 2.0
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 315.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "agent_requested": {
+      "horizon": 30.000003814697266,
+      "position": {
+        "x": -2.25,
+        "y": 0.9019852876663208,
+        "z": 2.0
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 315.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "executed_agent_setup_arguments": {
+      "forceAction": false,
+      "horizon": 30,
+      "position": {
+        "x": -2.25,
+        "y": 0.9019852876663208,
+        "z": 2.0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 315,
+        "z": 0
+      },
+      "standing": true
+    },
+    "frozen_pose_readback": {
+      "all_pose_components_exact": false,
+      "max_position_delta_m": 5.960464477539063e-08,
+      "max_rotation_component_abs_diff_degrees": 7.62939453125e-06,
+      "max_rotation_shortest_component_diff_degrees": 7.62939453125e-06,
+      "objects": {
+        "Candle_6e43819d": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Cloth_daaa91fd": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.4901161193847656e-08,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.4901161193847656e-08,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "GarbageCan_ec40b3ef": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 4.656612873077393e-10,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 4.656612873077393e-10,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "HandTowel_21c7e229": {
+          "position_delta_m": 5.960464477539063e-08,
+          "position_exact": false,
+          "rotation_component_abs_diff_degrees": {
+            "x": 5.960464477539063e-08,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 5.960464477539063e-08,
+            "y": 7.62939453125e-06,
+            "z": 0.0
+          }
+        },
+        "Plunger_52057ba8": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "ScrubBrush_36650621": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SoapBar_6f9efa9f": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SoapBottle_2cc1a870": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SprayBottle_e84b64d3": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.862645149230957e-09
+          }
+        },
+        "ToiletPaper_3560522c": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          }
+        },
+        "ToiletPaper_a5de7568": {
+          "position_delta_m": 2.0489096641540527e-08,
+          "position_exact": false,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Towel_aa646def": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "scope": "actual metadata versus requested pose values; diagnostic, not a new acceptance threshold"
+    },
+    "frozen_pose_readback_reference": {
+      "bytes": 4156,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/frozen_restore_readback_000003.json",
+      "sha256": "f115426023a816718a442372bcc6545c0ac866e62b4925e8b3b96c2a5725c8e6"
+    },
+    "pose_measurements": {
+      "added": [],
+      "editable_inventory_exact": true,
+      "inventory_exact": true,
+      "missing": [],
+      "objects": {
+        "Candle_6e43819d": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -7.273897062987089e-05,
+            "y": -0.0013446402736008167,
+            "z": -7.854308933019638e-06
+          },
+          "rotation_before": {
+            "x": -7.273897062987089e-05,
+            "y": -0.0013446402736008167,
+            "z": -7.854308933019638e-06
+          },
+          "rotation_exact": true
+        },
+        "Cloth_daaa91fd": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.04815468192100525,
+            "y": 130.6342010498047,
+            "z": 359.6654052734375
+          },
+          "rotation_before": {
+            "x": 0.048154667019844055,
+            "y": 130.6342010498047,
+            "z": 359.6654052734375
+          },
+          "rotation_exact": false
+        },
+        "GarbageCan_ec40b3ef": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.006920800544321537,
+            "y": 0.4784158170223236,
+            "z": -0.0009501593885943294
+          },
+          "rotation_before": {
+            "x": 0.00692080007866025,
+            "y": 0.4784158170223236,
+            "z": -0.0009501593885943294
+          },
+          "rotation_exact": false
+        },
+        "HandTowel_21c7e229": {
+          "isMoving": false,
+          "position_delta_m": 5.960464477539063e-08,
+          "rotation_after": {
+            "x": 0.29273512959480286,
+            "y": 90.00691986083984,
+            "z": 359.9374084472656
+          },
+          "rotation_before": {
+            "x": 0.2927350699901581,
+            "y": 90.00692749023438,
+            "z": 359.9374084472656
+          },
+          "rotation_exact": false
+        },
+        "Plunger_52057ba8": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0011762030189856887,
+            "y": 0.0016644898569211364,
+            "z": 0.0007917644106782973
+          },
+          "rotation_before": {
+            "x": -0.0011762030189856887,
+            "y": 0.0016644898569211364,
+            "z": 0.0007917644106782973
+          },
+          "rotation_exact": true
+        },
+        "ScrubBrush_36650621": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 8.263353811344132e-05,
+            "y": 3.6473462387220934e-05,
+            "z": 0.00016989455616567284
+          },
+          "rotation_before": {
+            "x": 8.263353811344132e-05,
+            "y": 3.6473462387220934e-05,
+            "z": 0.00016989455616567284
+          },
+          "rotation_exact": true
+        },
+        "SoapBar_6f9efa9f": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -3.468892828095704e-05,
+            "y": -0.0008065099827945232,
+            "z": 0.0014532302739098668
+          },
+          "rotation_before": {
+            "x": -3.468892828095704e-05,
+            "y": -0.0008065099827945232,
+            "z": 0.0014532302739098668
+          },
+          "rotation_exact": true
+        },
+        "SoapBottle_2cc1a870": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -4.616997830453329e-05,
+            "y": 216.53321838378906,
+            "z": -5.398588109528646e-05
+          },
+          "rotation_before": {
+            "x": -4.616997830453329e-05,
+            "y": 216.53321838378906,
+            "z": -5.398588109528646e-05
+          },
+          "rotation_exact": true
+        },
+        "SprayBottle_e84b64d3": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.99407958984375,
+            "y": 50.856529235839844,
+            "z": 0.01825418509542942
+          },
+          "rotation_before": {
+            "x": 359.99407958984375,
+            "y": 50.856529235839844,
+            "z": 0.01825418323278427
+          },
+          "rotation_exact": false
+        },
+        "ToiletPaper_3560522c": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9462890625,
+            "y": -0.002787001896649599,
+            "z": 0.19823454320430756
+          },
+          "rotation_before": {
+            "x": 359.9462890625,
+            "y": -0.002787001896649599,
+            "z": 0.19823452830314636
+          },
+          "rotation_exact": false
+        },
+        "ToiletPaper_a5de7568": {
+          "isMoving": true,
+          "position_delta_m": 2.0489096641540527e-08,
+          "rotation_after": {
+            "x": 32.276824951171875,
+            "y": 176.58169555664062,
+            "z": 89.96980285644531
+          },
+          "rotation_before": {
+            "x": 32.276824951171875,
+            "y": 176.58169555664062,
+            "z": 89.96980285644531
+          },
+          "rotation_exact": true
+        },
+        "Towel_aa646def": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 347.7796630859375,
+            "y": 351.1134033203125,
+            "z": 325.4964294433594
+          },
+          "rotation_before": {
+            "x": 347.7796630859375,
+            "y": 351.1134033203125,
+            "z": 325.4964294433594
+          },
+          "rotation_exact": true
+        }
+      }
+    },
+    "restore_deterministic": true,
+    "restore_max_abs_diff": 1,
+    "restore_rgb_exact": false,
+    "restored_positions_within_1cm": true,
+    "restored_snapshot_reference": {
+      "bytes": 96497,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan423/floorplan423_00019_trial000230/replay_w0/snapshot_000000.json",
+      "sha256": "f46026ed8497ea6ad2a9230088b8c0e92cb2b3b2b01aacccb252ce4b668720f9"
+    },
+    "scope": "state restore: all movable/pickupable positions <=1cm and exact full agent pose; RGB separate"
+  },
+  "restore_deterministic": true,
+  "restore_max_abs_diff": 1,
+  "selected_distance_m": 1.3951041173328378,
+  "selected_mask_pixels": 420,
+  "selected_name": "Plunger_52057ba8",
+  "snapshot_restored": true,
+  "spawn_token_storage_policy": {
+    "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+    "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+    "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+    "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+    "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes",
+    "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+    "version": "native_token_shared_json_exact_sha256_v1"
+  },
+  "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+  "status": "completed",
+  "success": true,
+  "unity_pid": 2580192,
+  "worker_pid": 2526118
+}

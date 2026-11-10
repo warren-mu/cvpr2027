@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.2545246939989738
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json\nfrom src.tools.t01_partition import audited_result\nroot=Path.cwd().resolve()\nnames=['gpu_pack_test_priority_first_01','gpu_pack_training_single_04','gpu_pack_training_single_05','gpu_pack_training_single_06','gpu_pack_training_single_07']\nrows=[]\nfor name in names:\n d,ref=audited_result(root/'results'/(name+'.json'))\n assert d['_meta']['end'] and d['metrics']['all_owned_units_ended'] is True and d['metrics']['cleanup_errors']==[]\n for unit in d['metrics']['unit_runs']:\n  assert unit['cleanup_errors']==[] and unit['finished_monotonic']-unit['started_monotonic']==unit['duration_seconds_monotonic']\n  rows.append({'pack':ref,**{k:unit[k] for k in ['name','unit_id','gpu_uuid','started_monotonic','finished_monotonic','duration_seconds_monotonic','claim_reference','release_reference']}})\nt02=[row for row in rows if row['name'].startswith('t02_export_')]\nassert [row['name'] for row in t02]==['t02_export_train_six_'+str(i) for i in range(16,20)]\nprint('ORIGINAL_UNIT_DURATIONS_JSON: '+json.dumps({'scope':'Observed ended unit occupied-card durations; not a guarantee of future throughput and not scientific acceptance.','rows':rows,'t02_16_19_max_duration_seconds_monotonic':max(row['duration_seconds_monotonic'] for row in t02)},ensure_ascii=False),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_shared_unit_observed_durations_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_shared_unit_observed_durations_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json\nfrom src.tools.t01_partition import audited_result\nroot=Path.cwd().resolve()\nnames=['gpu_pack_test_priority_first_01','gpu_pack_training_single_04','gpu_pack_training_single_05','gpu_pack_training_single_06','gpu_pack_training_single_07']\nrows=[]\nfor name in names:\n d,ref=audited_result(root/'results'/(name+'.json'))\n assert d['_meta']['end'] and d['metrics']['all_owned_units_ended'] is True and d['metrics']['cleanup_errors']==[]\n for unit in d['metrics']['unit_runs']:\n  assert unit['cleanup_errors']==[] and unit['finished_monotonic']-unit['started_monotonic']==unit['duration_seconds_monotonic']\n  rows.append({'pack':ref,**{k:unit[k] for k in ['name','unit_id','gpu_uuid','started_monotonic','finished_monotonic','duration_seconds_monotonic','claim_reference','release_reference']}})\nt02=[row for row in rows if row['name'].startswith('t02_export_')]\nassert [row['name'] for row in t02]==['t02_export_train_six_'+str(i) for i in range(16,20)]\nprint('ORIGINAL_UNIT_DURATIONS_JSON: '+json.dumps({'scope':'Observed ended unit occupied-card durations; not a guarantee of future throughput and not scientific acceptance.','rows':rows,'t02_16_19_max_duration_seconds_monotonic':max(row['duration_seconds_monotonic'] for row in t02)},ensure_ascii=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T09:20:51",
+    "log_path": "logs/runs/diag_shared_unit_observed_durations_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_shared_unit_observed_durations_01.diff",
+    "end": "2026-11-10T09:20:55",
+    "duration_sec": 0.4,
+    "exit_code": 0,
+    "metrics_sha256": "b9e9dd38242976f55b003f0524a077ae12c80f98777baa89a1e81dcd2c9de661"
+  }
+}

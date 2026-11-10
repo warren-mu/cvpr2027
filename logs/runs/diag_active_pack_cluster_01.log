@@ -1,0 +1,42 @@
+# run_logged: python3 -m src.tools.record_command --name diag_active_pack_cluster_01 -- python3 -c import json,subprocess,time
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from src.tools.cluster_capacity import queue_blocks,summarize_nodes
+queries={'queues':['qstat','-Qf','mediumx','smallx'],'own_jobs':['qstat','-u','e1583364'],'nodes':['pbsnodes','-a','-F','json']}
+def run(item):
+ label,argv=item; attempts=[]
+ for attempt in range(2):
+  start=time.monotonic()
+  try:
+   p=subprocess.run(argv,text=True,capture_output=True,timeout=30)
+   attempts.append({'attempt':attempt+1,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'seconds':time.monotonic()-start})
+   break
+  except subprocess.TimeoutExpired:
+   attempts.append({'attempt':attempt+1,'timeout_seconds':30,'seconds':time.monotonic()-start})
+ return label,{'argv':argv,'attempts':attempts}
+rows=dict(ThreadPoolExecutor(max_workers=3).map(run,queries.items()))
+out=Path('logs/review/diag_active_pack_cluster_01');out.mkdir(parents=True,exist_ok=False)
+(out/'queries.json').write_text(json.dumps(rows,indent=2)+'\n')
+for name,row in rows.items():
+ last=row['attempts'][-1]
+ if last.get('exit_code')!=0: print(name, 'QUERY_INCOMPLETE',json.dumps({k:v for k,v in last.items() if k!='stdout'}));continue
+ if name=='queues': print(name,json.dumps(queue_blocks(last['stdout'])))
+ elif name=='nodes':
+  capacity=summarize_nodes(json.loads(last['stdout']))
+  print(name,json.dumps([{'node':r['node'],'free_gpus':r['unassigned_on_non_offline_node'],'state':r['state']} for r in capacity['nodes'] if (r['unassigned_on_non_offline_node'] or 0)>=4]))
+ else: print(name,last['stdout'])
+
+# start: 2026-11-10T09:11:19
+queues QUERY_INCOMPLETE {"attempt": 2, "timeout_seconds": 30, "seconds": 30.030951376014855}
+own_jobs 
+hopper-m-02: 
+                                                            Req'd  Req'd   Elap
+Job ID          Username Queue    Jobname    SessID NDS TSK Memory Time  S Time
+--------------- -------- -------- ---------- ------ --- --- ------ ----- - -----
+706017.hopper-* e1583364 small    gpu_hold      --    1  24  450gb 12:00 Q   -- 
+709435.hopper-* e1583364 smallx   cvpr27_af* 18325*   1  12  225gb 01:59 R 00:22
+709440.hopper-* e1583364 smallx   cvpr27_e0* 20848*   1  12  225gb 00:30 R 00:14
+
+nodes QUERY_INCOMPLETE {"attempt": 2, "timeout_seconds": 30, "seconds": 30.030853662989102}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 60.36591345700435}
+# exit_code: 0

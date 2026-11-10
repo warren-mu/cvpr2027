@@ -1,0 +1,28 @@
+{
+  "name": "diag_test_s16_s02_shared_engineering_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_s16_s02_shared_engineering_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport hashlib,importlib.util,json\nfrom src.tools import pbs_mixed_accounting as mixed,g01_admission\nfrom src.tools.t01_partition import audited_result\nroot=Path.cwd().resolve()\npack='gpu_pack_test_priority_first_01'\naccount=root/'results'/(pack+'_accounting.json')\nspec=importlib.util.spec_from_file_location('original_submitter_s02',root/'scripts/pbs/submit_phase.py')\nsubmit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)\ncanonical=submit._final_accounting(root,{'709440.hopper-m-02'},paths=[account])['709440.hopper-m-02']\nmixed_report=json.loads((root/'results'/(pack+'_mixed_accounting.json')).read_text())\nrow={'name':pack,'payload':mixed_report['config']['payload_reference']['file'],'job_id':'709440.hopper-m-02'}\nsplit=mixed.finalized_split(root,row,canonical);assert split is not None\nd,ref=audited_result(root/'results'/(pack+'.json'))\nm=d['metrics'];assert m['all_owned_units_ended'] is True and m['cleanup_errors']==[] and m['errors']==[]\nassert len(m['unit_runs'])==1 and m['unit_runs'][0]['name']=='gen_test_s16_round2_s02'\nunit=m['unit_runs'][0];assert unit['cleanup_errors']==[] and unit.get('release_reference')\nproofs=[]\nfor scene in (322,422,23,223,323,423):\n source=root/'results'/f'gen_test_s16_round2_s02_c6_floorplan{scene}.json'\n s,sref=audited_result(source)\n plan=g01_admission.validate_source_admission(s['config'],s['metrics'])\n assert plan['nearby_physics_enabled'] is True\n assert plan['shared_queue_claim']['unit']['name']==unit['name']\n assert plan['shared_queue_claim']['unit_id']==unit['unit_id']\n proofs.append({'source':sref,'scene':s['config']['scene'],'nearby_physics_enabled':plan['nearby_physics_enabled'],'nearby_physics_version':plan['nearby_physics_version'],'claim_reference':plan['shared_queue_claim']['claim_reference'],'source_status':s['metrics']['status'],'original_error':s['metrics'].get('error')})\nprint('SHARED_FIRST_UNIT_ENGINEERING_JSON: '+json.dumps({'scope':'Original shared-admission and ended allocation verification only; independent construction checkpoint remains separate.','pack':ref,'unit':unit,'original_finalized_split':split,'source_bindings':proofs},ensure_ascii=False),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T09:18:22",
+  "log_path": "logs/runs/diag_test_s16_s02_shared_engineering_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+  "git_dirty": false,
+  "end": "2026-11-10T09:18:26",
+  "duration_sec": 4.1,
+  "exit_code": 0,
+  "metrics_sha256": "237c02cf891a815324ae336ca710e563245f5310950f97f220e359b834885e37"
+}

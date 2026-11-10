@@ -1374,3 +1374,15 @@ S01（709432）原独立checkpoint t01v2_checkpoint_test_s16_s01_01已完成，e
 两张LookStay独立审查图在logs/review/t01v2_checkpoint_test_s16_s01_01/00000_look_stay.png与00002_look_stay.png。按原原生记录重算的分列与拒因见diag_test_s16_s01_independent_summary_01及其report：已分类LookStay拒因包含one_action_evidence_unavailable85、evidence_incomplete_storage_cap4、terminal_interruption1；另638条只知Look放置池、尚未分类的提议单列，不冒称LookStay。此批额外放行0只描述本批，不外推规则效果。
 
 S03原独立分片709438已通过出图检查，继续生成；它与S01一样只占自己的固定票。S02-only共享首单元709440已提交（00:30:55含原完整1600秒unit和gate/清理），只有一个业务单元，不能误领第二个。待其原共享验收/字段完整通过，主新队列将排除S02已领取项，将S01/S03作为原单卡外部占位，4卡和后续single共用其余S04–S07＋未领训练20–26，测试优先。已取消的旧4卡709345确认零GPU用量；新4卡仍保留22:00未启动取消保护。
+
+### 2026-11-09 20:18 ET：S03独立通过、新物理规则分列与缓存进度
+
+S03=709438原六源独立checkpoint通过，errors/duplicates为空：direct_stay旧规则true 2、false 1；look_stay true 2、false 0；另外两类为0。原PBS实扣0.33416666666666667GPU·小时、排队30秒。两张LookStay审查图在logs/review/t01v2_checkpoint_test_s16_s03_01/00001_look_stay.png和00002_look_stay.png。原拒因摘要diag_test_s16_s03_independent_summary_01保留已分类LookStay evidence71、terminal1及449个尚未分类Look-pool提议，后者不冒算为LookStay。此批新规则额外放行的是1对DirectStay。
+
+S03结束后的单卡槽已补S04=709455（原固定六场景、同版本/配额/1600秒完整单元，PBS27:10），已通过门检；其他运行中作业不取消。S02唯一共享首单元已实际结束，正在原canonical/mixed和六源独立验收。主active plan会排除S02已领取项及已独立提交S03/S04，余S05–S07和未领训练20–26共用锁、测试优先，不提交旧prepared全plan。
+
+4卡前查询diag_active_pack_cluster_01：mediumx/smallx配置与节点容量分别30秒限时重试一次，均两次超时；own_jobs成功，当时709435和709440在smallx运行，无本账号mediumx运行作业。随后S04预算入口自带qstat-Qf于01:13:42UTC成功：全队列mediumx Queued17/Running8，smallx Queued59/Running25，倍率均1；节点空闲卡数仍未知。依人类要求不阻塞4卡提交，保留22:00美东从未启动则取消、空队列立即退出。S04提交前共享已用/预留40.53527777777777/120GPU·小时（含排队fullwall，不冒称全为实扣）；G01 7.176666666666667/40、T02 7.258055555555556/40、E2Epilot 0/6。
+
+709435原31对重跑已于01:14:33UTC写出sampling_plan并开始fresh采样，未见Initialize错误；原门检08:49:33SGT对应00:49:33UTC，源认证约25分钟，最终精确phase计时待父结果。训练已检查数仍52。资格构建和训练worker的完整源认证也必须计入后续作业时限；不跳过认证、不把认证耗时当训练更新速度、不因600秒总时限人为制造未进入训练的失败。
+
+14f9e512保留的两份超50MB原diff已用gzip无损归档，raw仍在Hopper，恢复指令及解压SHA校验在logs/review/diag_diff_lossless_archive_01/manifest.json；没有修改原diff/meta或删除失败证据。

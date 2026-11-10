@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 60.36591345700435
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,subprocess,time\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nfrom src.tools.cluster_capacity import queue_blocks,summarize_nodes\nqueries={'queues':['qstat','-Qf','mediumx','smallx'],'own_jobs':['qstat','-u','e1583364'],'nodes':['pbsnodes','-a','-F','json']}\ndef run(item):\n label,argv=item; attempts=[]\n for attempt in range(2):\n  start=time.monotonic()\n  try:\n   p=subprocess.run(argv,text=True,capture_output=True,timeout=30)\n   attempts.append({'attempt':attempt+1,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'seconds':time.monotonic()-start})\n   break\n  except subprocess.TimeoutExpired:\n   attempts.append({'attempt':attempt+1,'timeout_seconds':30,'seconds':time.monotonic()-start})\n return label,{'argv':argv,'attempts':attempts}\nrows=dict(ThreadPoolExecutor(max_workers=3).map(run,queries.items()))\nout=Path('logs/review/diag_active_pack_cluster_01');out.mkdir(parents=True,exist_ok=False)\n(out/'queries.json').write_text(json.dumps(rows,indent=2)+'\\n')\nfor name,row in rows.items():\n last=row['attempts'][-1]\n if last.get('exit_code')!=0: print(name, 'QUERY_INCOMPLETE',json.dumps({k:v for k,v in last.items() if k!='stdout'}));continue\n if name=='queues': print(name,json.dumps(queue_blocks(last['stdout'])))\n elif name=='nodes':\n  capacity=summarize_nodes(json.loads(last['stdout']))\n  print(name,json.dumps([{'node':r['node'],'free_gpus':r['unassigned_on_non_offline_node'],'state':r['state']} for r in capacity['nodes'] if (r['unassigned_on_non_offline_node'] or 0)>=4]))\n else: print(name,last['stdout'])\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_active_pack_cluster_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_active_pack_cluster_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,subprocess,time\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nfrom src.tools.cluster_capacity import queue_blocks,summarize_nodes\nqueries={'queues':['qstat','-Qf','mediumx','smallx'],'own_jobs':['qstat','-u','e1583364'],'nodes':['pbsnodes','-a','-F','json']}\ndef run(item):\n label,argv=item; attempts=[]\n for attempt in range(2):\n  start=time.monotonic()\n  try:\n   p=subprocess.run(argv,text=True,capture_output=True,timeout=30)\n   attempts.append({'attempt':attempt+1,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'seconds':time.monotonic()-start})\n   break\n  except subprocess.TimeoutExpired:\n   attempts.append({'attempt':attempt+1,'timeout_seconds':30,'seconds':time.monotonic()-start})\n return label,{'argv':argv,'attempts':attempts}\nrows=dict(ThreadPoolExecutor(max_workers=3).map(run,queries.items()))\nout=Path('logs/review/diag_active_pack_cluster_01');out.mkdir(parents=True,exist_ok=False)\n(out/'queries.json').write_text(json.dumps(rows,indent=2)+'\\n')\nfor name,row in rows.items():\n last=row['attempts'][-1]\n if last.get('exit_code')!=0: print(name, 'QUERY_INCOMPLETE',json.dumps({k:v for k,v in last.items() if k!='stdout'}));continue\n if name=='queues': print(name,json.dumps(queue_blocks(last['stdout'])))\n elif name=='nodes':\n  capacity=summarize_nodes(json.loads(last['stdout']))\n  print(name,json.dumps([{'node':r['node'],'free_gpus':r['unassigned_on_non_offline_node'],'state':r['state']} for r in capacity['nodes'] if (r['unassigned_on_non_offline_node'] or 0)>=4]))\n else: print(name,last['stdout'])\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:11:19",
+    "log_path": "logs/runs/diag_active_pack_cluster_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+    "git_dirty": false,
+    "end": "2026-11-10T09:12:22",
+    "duration_sec": 60.5,
+    "exit_code": 0,
+    "metrics_sha256": "6eb11b8eafc74f8f8d45b519af3d164fffb6dcf709d33eb957a2b7f27ef2f68d"
+  }
+}

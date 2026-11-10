@@ -1,0 +1,66 @@
+# run_logged: python3 -m src.tools.record_command --name diag_s03_shared_first_publish_audit_01 -- python3 -c import pathlib,subprocess
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=raw[3:].decode()
+ if not p.startswith('results/_archive/') and p.endswith('.json') and pathlib.Path('logs/runs',pathlib.Path(p).stem+'.meta.json').is_file(): names.append(p)
+assert names
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T09:21:19
+PASS  results/diag_active_pack_cluster_01.json
+PASS  results/diag_gen_test_s16_s03_accounting_01.json
+WARN  results/diag_shared_unit_observed_durations_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_shared_unit_observed_durations_01.diff
+PASS  results/diag_submit_gen_test_s16_round2_s04.json
+PASS  results/diag_test_s16_s02_shared_engineering_01.json
+PASS  results/diag_test_s16_s03_independent_summary_01.json
+WARN  results/gen_test_s16_round2_s02.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan223.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan23.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan322.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan323.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan422.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s02_c6_floorplan423.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan224.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan225.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan24.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan25.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan324.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s03_c6_floorplan424.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s04.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s04_c6_floorplan26.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gen_test_s16_round2_s04_c6_floorplan325.json
+PASS  results/gen_test_s16_round2_s04_j709455_hopper_m_02_gate.json
+WARN  results/gpu_pack_test_priority_first_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gpu_pack_test_priority_first_01_accounting.json
+PASS  results/gpu_pack_test_priority_first_01_mixed_accounting.json
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/t01v2_checkpoint_test_s16_s03_01.json
+WARN  results/t02_export_cache_six09_14_01_retry1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+
+31 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 17.63979390799068}
+# exit_code: 0
