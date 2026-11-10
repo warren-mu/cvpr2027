@@ -1357,3 +1357,20 @@ Git切换曾将已提交PBS payload的文件模式从0444改成0644，字节未�
 原训练-only 4卡709345经原Q→qdel→F证据确认从未启动，canonical确认用量0，现已取消以更换测试优先队列；旧所有single均自然结束，已领取13–19批（含失败项）不会重领。新队列准备严格核对全部原PBS终态、claim/release并冻结剩余20–26批；先放测试S02–S07，再放这些未领训练批次。原S01独立占位，40场景固定票额和seen configurations不变。因新增共享声明校验，先用只含原S02的单卡首单元plan验证；它保持完整1200秒场景窗口/1600秒unit，不截短科学参数。此后主4卡和single使用同一active plan并明确排除已领取S02，避免靠时限猜测是否只运行一单元；旧准备全plan不会被直接提交。
 
 测试S01=709432（hopper-26）已运行完六场景。原生成报告出现FP22、FP222各1对LookStay，尚在独立验收，不先计入配额或两列产量。已有工程冒烟的FloorPlan21新增放行0不代表总体效果；正式批次按独立通过对的passes_original_physics_rule true/false两列报告。新4卡替换提交后仍保留美东22:00从未启动则取消、空队列立即退出的保护。
+
+### 2026-11-09 20:00 ET：首批测试独立验收与同人口缓存重跑
+
+初始化保护已在20分钟时限内完成并通过Hopper正式63项CPU回归。709362→709435整批重跑已入队，仍为相同31个源、seed0及200状态、原deadline，未剔除任何出错世界对；709435已通过原出图检查，尚未得到最终cache证书。当前训练已检查数仍52，不预称83。失败709362本质为Initialize基础设施超时，不是已经证实的掩码/IoU/共享分叉不一致。
+
+S01（709432）原独立checkpoint t01v2_checkpoint_test_s16_s01_01已完成，errors/duplicates均空；原PBS用量0.33361111111111114GPU·小时，排队27秒。
+
+|S01独立通过类别|passes_original_physics_rule=true|false|
+|---|---:|---:|
+|direct_flip|0|0|
+|direct_stay|2|0|
+|look_flip|0|0|
+|look_stay|2|0|
+
+两张LookStay独立审查图在logs/review/t01v2_checkpoint_test_s16_s01_01/00000_look_stay.png与00002_look_stay.png。按原原生记录重算的分列与拒因见diag_test_s16_s01_independent_summary_01及其report：已分类LookStay拒因包含one_action_evidence_unavailable85、evidence_incomplete_storage_cap4、terminal_interruption1；另638条只知Look放置池、尚未分类的提议单列，不冒称LookStay。此批额外放行0只描述本批，不外推规则效果。
+
+S03原独立分片709438已通过出图检查，继续生成；它与S01一样只占自己的固定票。S02-only共享首单元709440已提交（00:30:55含原完整1600秒unit和gate/清理），只有一个业务单元，不能误领第二个。待其原共享验收/字段完整通过，主新队列将排除S02已领取项，将S01/S03作为原单卡外部占位，4卡和后续single共用其余S04–S07＋未领训练20–26，测试优先。已取消的旧4卡709345确认零GPU用量；新4卡仍保留22:00未启动取消保护。

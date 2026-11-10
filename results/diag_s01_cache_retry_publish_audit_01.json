@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 10.768742364016362
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import pathlib,subprocess\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=raw[3:].decode()\n if not p.startswith('results/_archive/') and p.endswith('.json') and pathlib.Path('logs/runs',pathlib.Path(p).stem+'.meta.json').is_file(): names.append(p)\nassert names\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_s01_cache_retry_publish_audit_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_s01_cache_retry_publish_audit_01",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,subprocess\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=raw[3:].decode()\n if not p.startswith('results/_archive/') and p.endswith('.json') and pathlib.Path('logs/runs',pathlib.Path(p).stem+'.meta.json').is_file(): names.append(p)\nassert names\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:07:40",
+    "log_path": "logs/runs/diag_s01_cache_retry_publish_audit_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_s01_cache_retry_publish_audit_01.diff",
+    "end": "2026-11-10T09:07:54",
+    "duration_sec": 10.9,
+    "exit_code": 0,
+    "metrics_sha256": "cfb8d6f34e47eef4c760f3fe828e76ea71f84803813d84bee0ae7a698c2c37ff"
+  }
+}

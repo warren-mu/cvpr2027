@@ -1,0 +1,29 @@
+{
+  "name": "diag_diff_lossless_archive_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_diff_lossless_archive_01",
+    "--",
+    "python3",
+    "-c",
+    "import gzip,hashlib,json,shutil\nfrom pathlib import Path\nfiles=[]\nfor p in sorted(Path('logs/runs').glob('*.diff')):\n if p.stat().st_size<=50*1024*1024: continue\n target=Path(str(p)+'.gz')\n before=hashlib.sha256(p.read_bytes()).hexdigest()\n if not target.exists():\n  with p.open('rb') as r,target.open('xb') as w:\n   with gzip.GzipFile(filename='',mode='wb',fileobj=w,mtime=0,compresslevel=1) as z: shutil.copyfileobj(r,z,1024*1024)\n h=hashlib.sha256()\n with gzip.open(target,'rb') as r:\n  for chunk in iter(lambda:r.read(1024*1024),b''): h.update(chunk)\n assert before==h.hexdigest()\n assert target.stat().st_size<=50*1024*1024\n files.append(dict(source=str(p),source_bytes=p.stat().st_size,source_sha256=before,archive=str(target),archive_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),archive_bytes=target.stat().st_size,roundtrip_verified=True))\nout=Path('logs/review/diag_diff_lossless_archive_01');out.mkdir(parents=True,exist_ok=False)\n(out/'manifest.json').write_text(json.dumps({'format':'gzip-whole-file-v1','files':files,'restoration':'gzip -dc <archive> > <source>; verify source_sha256 before audit; original source remains unchanged on Hopper'},indent=2)+'\\n')\nprint(json.dumps(files))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T09:06:33",
+  "log_path": "logs/runs/diag_diff_lossless_archive_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_diff_lossless_archive_01.diff",
+  "end": "2026-11-10T09:06:42",
+  "duration_sec": 3.5,
+  "exit_code": 0,
+  "metrics_sha256": "c0452a51df37c881a64c30547fda58d851895931c1ebf2587e6d59f52cd37a88"
+}

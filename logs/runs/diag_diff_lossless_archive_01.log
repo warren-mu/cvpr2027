@@ -1,0 +1,24 @@
+# run_logged: python3 -m src.tools.record_command --name diag_diff_lossless_archive_01 -- python3 -c import gzip,hashlib,json,shutil
+from pathlib import Path
+files=[]
+for p in sorted(Path('logs/runs').glob('*.diff')):
+ if p.stat().st_size<=50*1024*1024: continue
+ target=Path(str(p)+'.gz')
+ before=hashlib.sha256(p.read_bytes()).hexdigest()
+ if not target.exists():
+  with p.open('rb') as r,target.open('xb') as w:
+   with gzip.GzipFile(filename='',mode='wb',fileobj=w,mtime=0,compresslevel=1) as z: shutil.copyfileobj(r,z,1024*1024)
+ h=hashlib.sha256()
+ with gzip.open(target,'rb') as r:
+  for chunk in iter(lambda:r.read(1024*1024),b''): h.update(chunk)
+ assert before==h.hexdigest()
+ assert target.stat().st_size<=50*1024*1024
+ files.append(dict(source=str(p),source_bytes=p.stat().st_size,source_sha256=before,archive=str(target),archive_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),archive_bytes=target.stat().st_size,roundtrip_verified=True))
+out=Path('logs/review/diag_diff_lossless_archive_01');out.mkdir(parents=True,exist_ok=False)
+(out/'manifest.json').write_text(json.dumps({'format':'gzip-whole-file-v1','files':files,'restoration':'gzip -dc <archive> > <source>; verify source_sha256 before audit; original source remains unchanged on Hopper'},indent=2)+'\n')
+print(json.dumps(files))
+
+# start: 2026-11-10T09:06:33
+[{"source": "logs/runs/diag_submit_gen_test_s16_round2_s03.diff", "source_bytes": 96027713, "source_sha256": "3f8efea780ba09e7728fea61d76b5a9b881d9b8b493f3fe72f22322538aeaa7a", "archive": "logs/runs/diag_submit_gen_test_s16_round2_s03.diff.gz", "archive_sha256": "69fc3c68944c4fbb25b8f58c08969a26595494f2288b96c59a722157206de866", "archive_bytes": 14069361, "roundtrip_verified": true}, {"source": "logs/runs/diag_test_priority_retry_transition_audit_01.diff", "source_bytes": 96027713, "source_sha256": "3f8efea780ba09e7728fea61d76b5a9b881d9b8b493f3fe72f22322538aeaa7a", "archive": "logs/runs/diag_test_priority_retry_transition_audit_01.diff.gz", "archive_sha256": "69fc3c68944c4fbb25b8f58c08969a26595494f2288b96c59a722157206de866", "archive_bytes": 14069361, "roundtrip_verified": true}]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.360870351025369}
+# exit_code: 0
