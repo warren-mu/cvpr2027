@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.3786010070471093
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nname=os.environ['CVPR_RUN_NAME']\nassert name.startswith('diag_test_s16_s06s07_terminal_')\ndef expired(*_):raise TimeoutError('12s small original terminal metadata')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef read_result(stem):\n p=Path('results')/(stem+'.json');row={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  raw=p.read_bytes();assert len(raw)<16*1024*1024;d=json.loads(raw);m=d.get('metrics',{})\n  row.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},meta={k:d.get('_meta',{}).get(k) for k in ('name','start','end','exit_code')},original_metrics={k:m[k] for k in ('kind','status','error','errors','cleanup_errors','black_frame_detected','all_owned_units_ended','unit_claims','unit_runs','stages','scene_runs','stop_reasons','attempts','passed_by_class','scene_excluded') if k in m})\n return row\njobs=[('709763.hopper-m-02','gpu_pack_test_priority_full_single_04','gen_test_s16_round2_s06',(328,428,29,229,329,429)),('709766.hopper-m-02','gpu_pack_test_priority_full_single_01_retry4','gen_test_s16_round2_s07',(30,230,330,430))]\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original small source/parent lifecycle only; no PBS terminal inference, source reported passes are not independent acceptance','jobs':[]}\nfor job,pack,parent,scenes in jobs:\n record['jobs'].append({'job_id':job,'pack':read_result(pack),'source_parent':read_result(parent),'scene_sources':[read_result(parent+'_c6_floorplan'+str(scene)) for scene in scenes]})\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'jobs':[]}\nfor job in record['jobs']:\n c={'job_id':job['job_id']}\n for key in ('pack','source_parent'):\n  r=job[key];c[key]={k:r[k] for k in ('file','exists','reference','meta') if k in r};c[key]['metrics']={k:v for k,v in r.get('original_metrics',{}).items() if k not in ('stages','scene_runs','unit_runs','unit_claims')}\n c['scene_sources']=[{**{k:r[k] for k in ('file','exists','reference','meta') if k in r},'metrics':r.get('original_metrics')} for r in job['scene_sources']];brief['jobs'].append(c)\nprint('ORIGINAL_TERMINAL_SNAPSHOT_JSON: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_s16_s06s07_terminal_0615_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_s16_s06s07_terminal_0615_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nname=os.environ['CVPR_RUN_NAME']\nassert name.startswith('diag_test_s16_s06s07_terminal_')\ndef expired(*_):raise TimeoutError('12s small original terminal metadata')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef read_result(stem):\n p=Path('results')/(stem+'.json');row={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  raw=p.read_bytes();assert len(raw)<16*1024*1024;d=json.loads(raw);m=d.get('metrics',{})\n  row.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},meta={k:d.get('_meta',{}).get(k) for k in ('name','start','end','exit_code')},original_metrics={k:m[k] for k in ('kind','status','error','errors','cleanup_errors','black_frame_detected','all_owned_units_ended','unit_claims','unit_runs','stages','scene_runs','stop_reasons','attempts','passed_by_class','scene_excluded') if k in m})\n return row\njobs=[('709763.hopper-m-02','gpu_pack_test_priority_full_single_04','gen_test_s16_round2_s06',(328,428,29,229,329,429)),('709766.hopper-m-02','gpu_pack_test_priority_full_single_01_retry4','gen_test_s16_round2_s07',(30,230,330,430))]\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original small source/parent lifecycle only; no PBS terminal inference, source reported passes are not independent acceptance','jobs':[]}\nfor job,pack,parent,scenes in jobs:\n record['jobs'].append({'job_id':job,'pack':read_result(pack),'source_parent':read_result(parent),'scene_sources':[read_result(parent+'_c6_floorplan'+str(scene)) for scene in scenes]})\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'jobs':[]}\nfor job in record['jobs']:\n c={'job_id':job['job_id']}\n for key in ('pack','source_parent'):\n  r=job[key];c[key]={k:r[k] for k in ('file','exists','reference','meta') if k in r};c[key]['metrics']={k:v for k,v in r.get('original_metrics',{}).items() if k not in ('stages','scene_runs','unit_runs','unit_claims')}\n c['scene_sources']=[{**{k:r[k] for k in ('file','exists','reference','meta') if k in r},'metrics':r.get('original_metrics')} for r in job['scene_sources']];brief['jobs'].append(c)\nprint('ORIGINAL_TERMINAL_SNAPSHOT_JSON: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:15:33",
+    "log_path": "logs/runs/diag_test_s16_s06s07_terminal_0615_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "f43b671b1f2e9826e710513522764d772d3377fa",
+    "git_dirty": false,
+    "end": "2026-11-10T14:15:37",
+    "duration_sec": 0.5,
+    "exit_code": 0,
+    "metrics_sha256": "d0fd80b623023965a8054ccd6136043c7a01c5b91d604289d05326ed34a7ca97"
+  }
+}

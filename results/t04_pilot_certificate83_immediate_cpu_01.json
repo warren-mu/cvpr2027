@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 3.552844545978587
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_smoke_e2e_pilot_certificates.py','test_e2e_certificates_entry.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nif not result.wasSuccessful() or result.skipped:raise SystemExit(1)\nfrom src.tools import smoke_e2e_pilot_certificates as cert\np=cert.policy();activation=cert.activate(p['cache_sources'])\nassert activation['authorization_revision']=='96fbdd1f'\nassert activation['extra_qualification_snapshot']['observed_passed'] is False\nprint('Actual immediate activation metadata binding passed; no population, renderer or model was started.',flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t04_pilot_certificate83_immediate_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t04_pilot_certificate83_immediate_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest\nsuite=unittest.TestSuite()\nfor pattern in ('test_smoke_e2e_pilot_certificates.py','test_e2e_certificates_entry.py'):\n suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nif not result.wasSuccessful() or result.skipped:raise SystemExit(1)\nfrom src.tools import smoke_e2e_pilot_certificates as cert\np=cert.policy();activation=cert.activate(p['cache_sources'])\nassert activation['authorization_revision']=='96fbdd1f'\nassert activation['extra_qualification_snapshot']['observed_passed'] is False\nprint('Actual immediate activation metadata binding passed; no population, renderer or model was started.',flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:10:25",
+    "log_path": "logs/runs/t04_pilot_certificate83_immediate_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "f43b671b1f2e9826e710513522764d772d3377fa",
+    "git_dirty": false,
+    "end": "2026-11-10T14:10:29",
+    "duration_sec": 3.7,
+    "exit_code": 0,
+    "metrics_sha256": "a2c91c630af47466c89c92fcec5cda7c931ca53b4eda7dfe83a7735543ed8795"
+  }
+}

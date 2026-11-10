@@ -1,0 +1,36 @@
+# run_logged: python3 -m src.tools.record_command --name t04_pilot_certificate83_immediate_cpu_01 -- python3 -c import unittest
+suite=unittest.TestSuite()
+for pattern in ('test_smoke_e2e_pilot_certificates.py','test_e2e_certificates_entry.py'):
+ suite.addTests(unittest.defaultTestLoader.discover('tests',pattern=pattern))
+result=unittest.TextTestRunner(verbosity=2).run(suite)
+if not result.wasSuccessful() or result.skipped:raise SystemExit(1)
+from src.tools import smoke_e2e_pilot_certificates as cert
+p=cert.policy();activation=cert.activate(p['cache_sources'])
+assert activation['authorization_revision']=='96fbdd1f'
+assert activation['extra_qualification_snapshot']['observed_passed'] is False
+print('Actual immediate activation metadata binding passed; no population, renderer or model was started.',flush=True)
+
+# start: 2026-11-10T14:10:25
+test_actual_absolute_manifest_ref_and_freeze_use_successful_certificate_receipt (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_all83_cached_pairs_remain_and_original_holdout_and_flip_order_are_used (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_failed_or_unfinished_population_receipt_and_changed_holdout_are_rejected (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_immediate_ended_failure_before07_and_unchanged_legacy_authorization (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_missing_pair_or_class_cannot_become_a_certificate_population (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_reload_keeps_original_mode_after_extra_run_later_passes_and_rechecks_original_manifest (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_running_missing_pass_wrongjob_and_changed_failure_bytes_do_not_activate (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_sources_cannot_be_reordered_replaced_or_extended (test_smoke_e2e_pilot_certificates.ActivationPopulationTests) ... ok
+test_real_cached_payload_sha_and_pair_check_without_any_native_source_reread (test_smoke_e2e_pilot_certificates.CachedPayloadTests) ... ok
+test_original_metadata_refs_and_nonredundant_table_ref_shape (test_smoke_e2e_pilot_certificates.MetadataCertificateTests) ... ok
+test_pending_failed_incomplete_or_changed_certificates_fail_closed (test_smoke_e2e_pilot_certificates.MetadataCertificateTests) ... ok
+test_actual_absolute_save_receipt_entry_and_unmodified_strict_loader (test_e2e_certificates_entry.CertificateEntryTests) ... ok
+test_failed_freeze_receipt_is_not_forwarded (test_e2e_certificates_entry.CertificateEntryTests) ... ok
+test_original_failure_code_and_submitter_stop_bound_remain (test_e2e_certificates_entry.CertificateEntryTests) ... ok
+test_same_original_offload_and_inputs_for_every_arm (test_e2e_certificates_entry.CertificateEntryTests) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 2.876s
+
+OK
+Actual immediate activation metadata binding passed; no population, renderer or model was started.
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.552844545978587}
+# exit_code: 0
