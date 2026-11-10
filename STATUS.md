@@ -1809,3 +1809,7 @@ E2E报告已由Hopper Git提交ce9f26bf并推送确认。旧shared test_priority
 ### 2026-11-10 06:25 ET — 导出黑帧重提准备与FIG01真实冒烟异常
 710255确认在hopper-25的GPU-d1e1ee0d-3db1-a1f2-e57e-929a37cd0e67开头黑帧退出，尚未领取任何单元。原canonical为排队173秒/分配28秒（0.0077777777777777776 GPU小时），原mixed账本全部计T02；完整黑帧guard及fresh预算preflight通过，按rotation15下一台hopper-28准备同参数retry1，20分钟未启动规则保持。此前710213的状态仍因查询超时未知，不取消未经证明未启动的作业。
 FIG01 scoped真实单对CPU冒烟diag_fig01_scoped_smoke_01于30.732797860982828秒失败：元数据阶段完成后可按当前完整见证规则排序的候选不足5。没有正式导出图像、没有GPU；已保留原失败。正在用原检查/见证metadata定位适用性，不调整任务阈值或改科学校验。
+
+
+### 2026-11-10 06:31 ET — 710255 → 710282 同参数重提
+原strict黑帧guard、完整canonical/mixed及fresh预算preflight通过后，已提交710282.hopper-m-02（gpu_pack_train_raw10_smoke_single_01_retry1，hopper-28，1GPU，00:30:55），同一个六对smoke queue与原科学参数，未提交其余六批。新旧对应710255→710282；原所有失败/UUID/账本保留，开头逐卡检查与空队列退出不变。指定节点20分钟回退仍需实际PBS qtime和fresh Q未分配证明，不用目录时间推断。FIG真实metadata诊断确认22个LookFlip原选择见证均原验收通过，但每对至少一world的选择见证在看见ownX前选了目标，导致旧FIG额外限制挡住全部候选。FIG任务没有这个限制；仅改图用观察前缀为原first_step_visible_actions排序首项，不改原检查/训练/阈值，不将图用前缀冒充原选择见证。
