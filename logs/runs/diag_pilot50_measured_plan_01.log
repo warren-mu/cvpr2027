@@ -1,0 +1,28 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot50_measured_plan_01 -- python3 -c import hashlib,json,math,subprocess
+from pathlib import Path
+def ref(p): return {'file':str(p),'sha256':hashlib.sha256(Path(p).read_bytes()).hexdigest()}
+p=Path('results/smoke_e2e_pilot_engineering_T4_01.json');r=json.loads(p.read_bytes());m=r['metrics']
+assert r['_meta']['exit_code']==0 and m['engineering_smoke_completed'] and m['actual_completed_updates']==1 and not m['errors'] and not m['cleanup_errors']
+u=m['updates'][0]['total_seconds'];h=m['holdout_evaluations'][0]['seconds'];duration=r['_meta']['duration_sec']
+fixed=duration-u-h; baseline50=fixed+50*u+4*h; baseline5=fixed+5*u
+budget=json.load(open('logs/review/diag_pilot_budget_after709803_01/report.json'));old=budget['subbudgets']['E2Epilot']['actual_charged_gpu_hours'];assert budget['subbudgets']['E2Epilot']['reserved_charged_gpu_hours']==0
+forecast=old+(2*baseline50+baseline5)/3600;assert 6<forecast<9
+driver=math.ceil(fixed+1.3*50*u+4*h);wall=driver+64;assert driver==13111 and wall==13175 and old+2*wall/3600<=9
+qualified=ref('results/smoke_e2e_pilot_pool_83_certificates_01.json')
+holdout=json.load(open('results/train_holdout_freeze.json'))['metrics']['frozen_holdout']
+plans={}
+for arm in ('T0','T4'):
+ argv=['python3','experiments/e2e_certificates83_one_update.py','--direct-arm',arm,'--train-name','smoke_e2e_pilot_'+arm+'_s0_01','--qualified-result-json',json.dumps(qualified),'--holdout-reference-json',json.dumps(holdout),'--train-seconds',str(driver)]
+ plan=json.loads(subprocess.check_output(argv,text=True));assert plan['walltime']=='03:39:35' and '--engineering-smoke' not in plan['training_argv']
+ assert not plan['population_rebuilt'] and not plan['holdout_refrozen'] and plan['critic_offload'] is False
+ plans[arm]=plan
+report={'scope':'Engineering planning only, not measured50-update results. T0/T2 speed unmeasured; T4 first-update proxy, no reduced steps or method changes. Abort bounds add30percent to repeated update work, retain measured fixed/holdout overhead, plus original64s cleanup/record reserve; not30percent on entire allocation. T2 cannot be queued concurrently at full reservations and waits for actual completed-cost release.','measured_source':ref(p),'existing_cost_source':ref('logs/review/diag_pilot_budget_after709803_01/report.json'),'actual_prior_gpu_hours':old,'measured_driver_seconds':duration,'measured_update_seconds':u,'measured_holdout_seconds':h,'inferred_fixed_overhead_seconds':fixed,'planning_T0_T4_each50_seconds':baseline50,'planning_T2_five_seconds':baseline5,'planning_total_gpu_hours_including_actual_prior':forecast,'activated_authorized_cap_gpu_hours':9,'each_driver_stop_bound_seconds':driver,'each_pbs_wall_seconds':wall,'actual_plus_two_full_reservations_gpu_hours':old+2*wall/3600,'plans':plans}
+out=Path('logs/review/diag_pilot50_measured_plan_01');out.mkdir(exist_ok=False,parents=True);path=out/'report.json';path.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+print('PILOT_PLANNING_JSON: '+json.dumps({k:v for k,v in report.items() if k!='plans'},sort_keys=True),flush=True)
+print('PLAN_REFERENCE: '+json.dumps(ref(path)),flush=True)
+
+# start: 2026-11-10T14:39:42
+PILOT_PLANNING_JSON: {"activated_authorized_cap_gpu_hours": 9, "actual_plus_two_full_reservations_gpu_hours": 8.991111111111111, "actual_prior_gpu_hours": 1.6716666666666666, "each_driver_stop_bound_seconds": 13111, "each_pbs_wall_seconds": 13175, "existing_cost_source": {"file": "logs/review/diag_pilot_budget_after709803_01/report.json", "sha256": "7fe4d468235da7bdec5ca0edef5b00fc2a5c829f267ce41324e7fa98675d6d8c"}, "inferred_fixed_overhead_seconds": 397.0684607020346, "measured_driver_seconds": 608.3, "measured_holdout_seconds": 16.67355610791128, "measured_source": {"file": "results/smoke_e2e_pilot_engineering_T4_01.json", "sha256": "d6c90c4bbd52bd615a020df7d385fef8c546d4d54f6b1e40bdc3b295d135be50"}, "measured_update_seconds": 194.55798319005407, "planning_T0_T4_each50_seconds": 10191.661844636383, "planning_T2_five_seconds": 1369.858376652305, "planning_total_gpu_hours_including_actual_prior": 7.714217240534742, "scope": "Engineering planning only, not measured50-update results. T0/T2 speed unmeasured; T4 first-update proxy, no reduced steps or method changes. Abort bounds add30percent to repeated update work, retain measured fixed/holdout overhead, plus original64s cleanup/record reserve; not30percent on entire allocation. T2 cannot be queued concurrently at full reservations and waits for actual completed-cost release."}
+PLAN_REFERENCE: {"file": "logs/review/diag_pilot50_measured_plan_01/report.json", "sha256": "3ebcb2968f9fa72b021132b51412fe71ed1a2f1d8d0ea1885d06442c9494de67"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 2.932178360002581}
+# exit_code: 0

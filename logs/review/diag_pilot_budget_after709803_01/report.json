@@ -1,0 +1,102 @@
+{
+  "current_subbudget_limits_gpu_hours": {
+    "E2E": 4.0,
+    "E2Epilot": 6.0,
+    "G01": 40.0,
+    "T01v2": 16.0,
+    "T02": 40.0
+  },
+  "current_submitter_reference": {
+    "file": "scripts/pbs/submit_phase.py",
+    "sha256": "1d9ed053ad7b30695cacedab968ed7f2ae085152b04a7035ce885dceb56a0d89"
+  },
+  "newer_successful_receipts": [],
+  "observed_at_utc": "2026-11-10T06:36:40.005627+00:00",
+  "pilot_rows": [
+    {
+      "accounted_or_reserved_allocation_gpu_hours": 1.4372222222222222,
+      "accounted_or_reserved_gpu_hours": 1.4372222222222222,
+      "accounting_result": "results/diag_pilot_pool_709593_accounting_01.json",
+      "basis": "final_accounting",
+      "budget_group": "E2Epilot",
+      "gpus": 1,
+      "job_id": "709593.hopper-m-02",
+      "name": "smoke_e2e_pilot_pool_build_83_01",
+      "payload": "logs/pbs/smoke_e2e_pilot_pool_build_83_01-20261110T033241Z-1f08cbff/payload.json",
+      "queue_charge_rate": 1.0,
+      "recorded_reservation_rate": 1.0,
+      "requested_gpu_hours": 1.5,
+      "submission_returncode": 0,
+      "task": "T01"
+    },
+    {
+      "accounted_or_reserved_gpu_hours": 0.23444444444444446,
+      "accounting_result": "results/diag_pilot709803_accounting_01.json",
+      "basis": "final_accounting",
+      "budget_group": "E2Epilot",
+      "job_id": "709803.hopper-m-02",
+      "name": "smoke_e2e_pilot_certificates_update_01",
+      "payload": "logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279/payload.json",
+      "task": "T01"
+    }
+  ],
+  "reserved_rows": [],
+  "scope": "Projection from existing successful submitter budget snapshot plus three original final canonicals and two exact mixed ledgers. No scheduler query, native validation, or new submission; current only through latest included successful receipt.",
+  "shared": {
+    "actual_charged_gpu_hours": 43.52027777777778,
+    "reserved_charged_gpu_hours": 0.0,
+    "total_limit_gpu_hours": 120.0
+  },
+  "sources": [
+    {
+      "file": "logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279/budget_before_submission.json",
+      "sha256": "195bf2feb7cc80c95e9c7d98a1b1af2c8bac4be95f1614039e0855d91d057a3d"
+    },
+    {
+      "file": "results/diag_full_shared_709763_709766_accounting_01.json",
+      "sha256": "d8ce0c46c986cfae0b66c10bee818176e27bd5390e423af088c337ccf249db23"
+    },
+    {
+      "file": "results/diag_pilot709803_accounting_01.json",
+      "sha256": "3ae2c4ecf393289beaeba5719af21ed3ef9b105e23f062b997c8e93a611f6b82"
+    },
+    {
+      "file": "logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279/payload.json",
+      "sha256": "b9d6302caf1dab14762e531904574772b75e2f832e76729b6cb2a899a1d37378"
+    },
+    {
+      "file": "logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279/submission.json",
+      "sha256": "11aaf676e8f928f85e2b6b110185925b810f66dba9bb7dc8169e8138b4d2066b"
+    }
+  ],
+  "subbudgets": {
+    "E2E": {
+      "actual_charged_gpu_hours": 1.4341666666666666,
+      "reserved_charged_gpu_hours": 0.0
+    },
+    "E2Epilot": {
+      "actual_charged_gpu_hours": 1.6716666666666666,
+      "reserved_charged_gpu_hours": 0.0
+    },
+    "G01": {
+      "actual_charged_gpu_hours": 8.891666666666667,
+      "reserved_charged_gpu_hours": 0.0
+    },
+    "T01v2": {
+      "actual_charged_gpu_hours": 12.983055555555556,
+      "reserved_charged_gpu_hours": 0.0
+    },
+    "T02": {
+      "actual_charged_gpu_hours": 6.856388888888889,
+      "reserved_charged_gpu_hours": 0.0
+    }
+  },
+  "two_3h_request_scenario": {
+    "T0_request_gpu_hours": 3.0,
+    "T4_request_gpu_hours": 3.0,
+    "cap6_would_block": true,
+    "pilot_existing_plus_two_requests_gpu_hours": 7.671666666666667,
+    "remaining_under_cap6_before_new_requests_gpu_hours": 4.328333333333333,
+    "scope": "Engineering requested reservation scenario, not predicted measured training cost; T2 still additional"
+  }
+}
