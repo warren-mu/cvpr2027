@@ -34,6 +34,22 @@ def compared(arm, **kwargs):
 
 
 class PilotDecisionTests(unittest.TestCase):
+    def test_keep_all_qualification_and_conditional_budget_are_explicit(self):
+        spec, _ = pilot.load_spec('configs/smoke_e2e_pilot.json')
+        self.assertEqual(spec['minimum_cached_pairs'], 80)
+        self.assertNotIn('minimum_balanced_pairs', spec)
+        self.assertEqual(spec['dataset_version'], 'smoke_e2e_pilot_formal_dataset_v2_keep_all')
+        self.assertEqual(spec['budget_gpu_hours'], 6)
+        self.assertEqual(spec['authorized_conditional_max_gpu_hours'], 9)
+        for key, value in [('minimum_cached_pairs', 79), ('budget_gpu_hours', 9),
+            ('authorized_conditional_max_gpu_hours', 10), ('dataset_qualification_revision', 'old')]:
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); (root / 'configs').mkdir()
+                bad = copy.deepcopy(spec); bad[key] = value
+                (root / 'configs/spec.json').write_text(json.dumps(bad))
+                with patch.object(pilot, 'ROOT', root), self.assertRaises(ValueError):
+                    pilot.load_spec('configs/spec.json')
+
     def test_engineering_cannot_enter_comparison_even_with_fabricated_full_length(self):
         for location, key, value in [('config', 'engineering_smoke', pilot.ENGINEERING_SMOKE),
             ('metrics', 'engineering_smoke_version', pilot.ENGINEERING_SMOKE),
@@ -223,7 +239,7 @@ class PilotLifecycleTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'original formal cache qualification rejected'):
                     training.pilot_train_worker(config, None)
                 loader.assert_called_once_with(config['manifest_reference'])
-                self.assertEqual(spec['minimum_balanced_pairs'], 80)
+                self.assertEqual(spec['minimum_cached_pairs'], 80)
                 self.assertEqual(spec['required_classes'], list(pilot.KINDS))
 
     def test_black_gate_precedes_model_manifest_and_worker(self):

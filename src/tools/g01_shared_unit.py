@@ -122,6 +122,19 @@ def validate_admission(plan, *, root):
     identity, keys = validate_unit(unit, root)
     if unit.get('identity') != identity or unit.get('claim_keys') != keys:
         raise ValueError('Saved G01 claim altered its scientific ticket identity')
+    # validate_unit derived these fields from the exact immutable argv.  Bind
+    # the source admission back to that declaration as well as to its allocation.
+    from src.envs import pair_v2_nearby_physics as nearby
+    if '--nearby-physics' in arguments(unit['command']):
+        if plan.get('nearby_physics_enabled') is not True:
+            raise ValueError('Shared G01 admission dropped its original nearby-physics opt-in')
+        nearby.validate_fields(plan)
+        if any(plan[key] != identity[key] for key in nearby.FIELDS):
+            raise ValueError('Shared G01 admission physics differs from its original unit')
+    elif any(key in plan for key in ('nearby_physics_enabled', *nearby.FIELDS)):
+        raise ValueError('Shared G01 legacy unit cannot acquire a different physics declaration')
+    if plan.get('g01_engineering_smoke') is not None:
+        raise ValueError('A formal shared G01 unit cannot become an engineering smoke source')
     allocation = {key: plan[key] for key in ('scratch', 'pbs_jobid', 'node', 'cpu_affinity')}
     allocation['cuda_visible_devices'] = plan['gpu_uuid']
     verified = shared.validate_saved_claim(proof['claim_reference'], allocation, MODULE,

@@ -41,16 +41,18 @@ def pool_fixture():
 
 
 class PilotPoolTests(unittest.TestCase):
-    def build(self, tables=None, packages=None):
-        original, original_packages, normalized = pool_fixture()
-        tables, packages = tables or original, packages or original_packages
+    def build(self, tables=None, packages=None, normalized=None):
+        original, original_packages, original_normalized = pool_fixture()
+        tables = original if tables is None else tables
+        packages = original_packages if packages is None else packages
+        normalized = original_normalized if normalized is None else normalized
         ref = {'file': 'results/cache.json', 'sha256': 'a' * 64}
         proof = {'source': ref}
         with patch.object(dataset, 'authenticate_cache_batch', return_value=(tables, packages, proof)), \
              patch.object(balance, 'normalize_table', side_effect=lambda table: normalized[table.dataset_key]):
             return dataset.build_pool([ref], dataset.SCENE_SPLIT)
 
-    def test_actual_balance_and_scene_holdout_preserve_world_orders_and_no_overlap(self):
+    def test_keep_all_and_scene_holdout_preserve_world_orders_and_no_overlap(self):
         manifest, tables, packages, proof = self.build()
         self.assertEqual(sum(manifest['counts_by_kind'].values()), 160)
         self.assertTrue(manifest['balance']['after']['global_balance_within_0_4_to_0_6'])
@@ -69,6 +71,41 @@ class PilotPoolTests(unittest.TestCase):
         unhashed = copy.deepcopy(manifest); unhashed.pop('common_pool_hash')
         self.assertEqual(manifest['common_pool_hash'], dataset.canonical_hash(unhashed))
 
+    def test_single_sided_stay_and_global_skew_do_not_remove_any_qualified_pair(self):
+        all_tables, all_packages, normalized = pool_fixture()
+        tables = {key: table for key, table in all_tables.items() if table.pair_id.endswith('_0')}
+        packages = {key: all_packages[key] for key in tables}
+        before = copy.deepcopy(normalized)
+        original_formal = balance.balance_pairs([normalized[key] for key in tables], seed=0)
+        self.assertEqual(len(original_formal['selected']), 40)  # Formal T04 rule remains unchanged.
+        manifest, selected, _, proof = self.build(tables, packages, normalized)
+        self.assertEqual(set(selected), set(tables))
+        self.assertEqual(len(selected), 80)
+        self.assertEqual(manifest['counts_by_kind'], {kind: 20 for kind in dataset.KINDS})
+        self.assertFalse(manifest['balance']['after']['global_balance_within_0_4_to_0_6'])
+        self.assertFalse(manifest['balance']['policy']['global_balance_is_qualification_gate'])
+        self.assertFalse(manifest['balance']['policy']['stay_downsampling_applied'])
+        self.assertEqual(manifest['balance']['dropped'], [])
+        self.assertEqual(normalized, before)
+        formal_flip = {row['dataset_key']: row for row in original_formal['selected']}
+        for row in manifest['balance']['selected']:
+            if row['kind'].endswith('flip'):
+                self.assertEqual(row, formal_flip[row['dataset_key']])
+            else:
+                self.assertEqual(row['world_order'], [0, 1])
+                self.assertFalse(row['swapped'])
+        self.assertEqual(set(proof['train_keys']) | set(proof['eval_keys']), set(tables))
+
+    def test_unknown_or_skewed_left_diagnostic_is_not_a_new_pilot_gate(self):
+        tables, packages, normalized = pool_fixture()
+        for row in normalized.values(): row['s0_target_left'] = [None, None]
+        manifest, selected, _, _ = self.build(tables, packages, normalized)
+        self.assertIsNone(manifest['balance']['after']['global_balance_within_0_4_to_0_6'])
+        self.assertEqual(set(selected), set(tables))
+        rows = list(normalized.values())
+        self.assertEqual(dataset.keep_all_with_flip_order(rows),
+            dataset.keep_all_with_flip_order(list(reversed(rows))))
+
     def test_split_is_stable_under_input_order_and_same_scene_is_indivisible(self):
         entries = self.build()[0]['entries']
         self.assertEqual(dataset.split_entries(entries, dataset.SCENE_SPLIT),
@@ -86,13 +123,13 @@ class PilotPoolTests(unittest.TestCase):
             tables, packages, _ = pool_fixture(); setattr(next(iter(tables.values())), field, value)
             with self.assertRaises(ValueError): self.build(tables, packages)
 
-    def test_size_gate_applies_after_balance_and_no_class_can_be_missing(self):
+    def test_size_gate_applies_to_authenticated_inventory_and_no_class_can_be_missing(self):
         tables, packages, _ = pool_fixture()
         reduced = {key: table for key, table in tables.items() if not table.kind.endswith('stay')}
-        with self.assertRaisesRegex(ValueError, '80 unique pairs and all four'):
+        with self.assertRaisesRegex(ValueError, '80 unique cache-verified pairs and all four'):
             self.build(reduced, {key: packages[key] for key in reduced})
-        reduced = dict(list(tables.items())[:64])
-        with self.assertRaisesRegex(ValueError, '80 unique pairs and all four'):
+        reduced = dict(list(tables.items())[:79])
+        with self.assertRaisesRegex(ValueError, '80 unique cache-verified pairs and all four'):
             self.build(reduced, {key: packages[key] for key in reduced})
 
     def test_duplicate_proposals_not_dropped_even_across_different_ids(self):
@@ -116,6 +153,10 @@ class PilotPoolTests(unittest.TestCase):
                     dataset.load_pilot_pool(badref)
                 with self.assertRaisesRegex(ValueError, 'artifact changed'):
                     dataset.load_pilot_pool(ref)
+                legacy = copy.deepcopy(manifest); legacy['version'] = 'smoke_e2e_pilot_formal_dataset_v1'
+                path.write_text(json.dumps(legacy)); oldref = {**ref, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                with self.assertRaisesRegex(ValueError, 'Unknown pilot dataset schema'):
+                    dataset.load_pilot_pool(oldref)
 
 
 class FormalBatchTests(unittest.TestCase):

@@ -29,7 +29,7 @@ from src.tools.smoke_e2e_pilot_contract import ENGINEERING_SMOKE, execution_sche
 
 VERSION = 'smoke_e2e_pilot_driver_v1'
 ENGINEERING_VERSION = 'smoke_e2e_pilot_engineering_driver_v2'
-SPEC_VERSION = 'smoke_e2e_pilot_spec_v1'
+SPEC_VERSION = 'smoke_e2e_pilot_spec_v2_keep_all'
 MODEL = 'Qwen/Qwen2.5-VL-3B-Instruct'
 ARM_UPDATES = {'T0': 50, 'T4': 50, 'T2': 5}
 EVAL_UPDATES = {'T0': [0, 20, 40, 50], 'T4': [0, 20, 40, 50], 'T2': []}
@@ -42,13 +42,16 @@ def load_spec(path):
     expected = {'version': SPEC_VERSION, 'approved_task_revision': 'fa24c4e8', 'model': MODEL,
         'arm_updates': ARM_UPDATES, 'episodes_per_update': 64, 'turns': 5, 'response_tokens': 256,
         'rho': .5, 'seed': 0, 'format_policy': 'explicit_task_zero', 'credit_pipeline': 't05_section1b',
-        'dataset_version': DATASET_VERSION, 'minimum_balanced_pairs': 80, 'required_classes': list(KINDS),
+        'dataset_version': DATASET_VERSION, 'dataset_qualification_revision': '7babc169',
+        'minimum_cached_pairs': 80, 'required_classes': list(KINDS),
         'split_policy': SCENE_SPLIT, 'holdout_updates': EVAL_UPDATES,
         'budget_group': 'E2Epilot', 'budget_gpu_hours': 6, 'gpus_per_job': 1,
+        'authorized_conditional_max_gpu_hours': 9,
+        'budget_extension_condition': 'only after one complete update measured timing predicts above6; above9 stop and report; never reduce formal update counts',
         'paper_result': False, 'automatic_common_config_mutation': False}
     require(all(spec.get(key) == value for key, value in expected.items()), 'Pilot specification differs from the approved task')
     require(all(type(spec.get(key)) is int for key in ('seed', 'episodes_per_update', 'turns',
-        'response_tokens', 'minimum_balanced_pairs', 'gpus_per_job')),
+        'response_tokens', 'minimum_cached_pairs', 'gpus_per_job')),
         'Frozen pilot integer settings cannot be boolean aliases')
     require(spec.get('holdout_eval_decoding_and_budget_contract') == {
         'decoding': 'greedy', 'temperature': 0, 'worlds_per_pair': ['w0', 'w1'],

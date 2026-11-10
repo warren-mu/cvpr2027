@@ -169,10 +169,20 @@ class UnitTests(unittest.TestCase):
                     with self.assertRaises(ValueError):units.validate_admission(changed,root=f.root)
 
     def test_actual_shared_helper_binds_original_pack_receipt_mask_cpu_and_scratch(self):
+        self._actual_shared_helper(False)
+
+    def test_actual_shared_helper_binds_nearby_argv_to_source_admission(self):
+        self._actual_shared_helper(True)
+
+    def _actual_shared_helper(self, nearby_enabled):
         # Real immutable helper path; only native rendering is outside this CPU fixture.
         from src.tools import gpu_shared_claim as shared
         with tempfile.TemporaryDirectory() as folder:
             f=Fixture(Path(folder));unit=copy.deepcopy(f.unit)
+            from src.envs import pair_v2_nearby_physics as nearby
+            if nearby_enabled:
+                unit['command'].append('--nearby-physics')
+                unit['identity'], unit['claim_keys'] = units.validate_unit(unit, f.root)
             unit.update(priority=300,unit_id=shared.canonical_hash(unit['identity']))
             shared_plan={'version':shared.VERSION,'queue_id':'g01_fixture',
                 'priority_order':list(shared.PRIORITIES),'units':[unit],'external_reservations':[]}
@@ -201,7 +211,26 @@ class UnitTests(unittest.TestCase):
                 admission={'shared_queue_claim':proof,'scratch':str(scratch),'parent_run_name':unit['name'],
                     'scenes':[row['scene'] for row in f.value['assignments']], 'stage_index':0,'concurrency':6,
                     'g01_partition':'test',**{key:proof[key] for key in ('pbs_jobid','node','gpu_uuid','cpu_affinity')}}
+                if nearby_enabled:
+                    admission.update(nearby_physics_enabled=True, **nearby.fields())
                 self.assertEqual(units.validate_admission(admission,root=f.root),proof)
+                mutations = []
+                if nearby_enabled:
+                    for key in ('nearby_physics_enabled', *nearby.FIELDS):
+                        changed = copy.deepcopy(admission); changed.pop(key)
+                        mutations.append(changed)
+                    for enabled in (False, 1):
+                        mutations.append({**admission, 'nearby_physics_enabled': enabled})
+                    mutations.append({**admission, 'nearby_physics_version': 'unknown'})
+                    mutations.append({**admission, 'nearby_physics_policy': {}})
+                else:
+                    mutations.extend([{**admission, 'nearby_physics_enabled': False},
+                        {**admission, 'nearby_physics_enabled': True, **nearby.fields()},
+                        {**admission, 'nearby_physics_version': None}])
+                mutations.append({**admission, 'g01_engineering_smoke': {'scope': 'not formal'}})
+                for changed in mutations:
+                    with self.assertRaises(ValueError):
+                        units.validate_admission(changed, root=f.root)
                 for key,new in (('CVPR_QUEUE_PARENT_MASK',f.proof['gpu_uuid']),
                                 ('CVPR_SCRATCH',str(f.root/'elsewhere')),('CUDA_VISIBLE_DEVICES',mask)):
                     changed={**env,key:new}

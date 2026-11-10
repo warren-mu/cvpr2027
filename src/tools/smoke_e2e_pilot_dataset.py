@@ -21,7 +21,7 @@ from src.tools.t01_partition import audited_result, canonical_hash
 from src.tools.merge_pair_v2 import producer_arguments
 from src.tools.t02_export import save_json
 
-VERSION = 'smoke_e2e_pilot_formal_dataset_v1'
+VERSION = 'smoke_e2e_pilot_formal_dataset_v2_keep_all'
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 SCENE_SPLIT = 'room_stratified_scene_hash_seed0_ten_percent_v1'
 
@@ -184,8 +184,46 @@ def split_entries(entries, policy):
         'scope': 'fixed T04 scene holdout shared by pilot, every-20-update evaluation and S2; main training pool remains unfrozen'}
 
 
+def keep_all_with_flip_order(rows):
+    """Pilot-only composition: original Flip swap, every Stay retained.
+
+    The approved7babc169 qualification is cache>=80 and all four classes.
+    Original T02 balance statistics remain diagnostics; its formal downsampling
+    function and all source tables are untouched.
+    """
+    from src.envs.pair_table_balance import checked_rows, seeded_digest, balance_statistics, VERSION as FLIP_VERSION
+    from src.envs.pair_table_identity import population_key
+    original = checked_rows(rows)
+    selected, measured = [], []
+    for row in sorted(original, key=lambda value: (value['scene'], value['kind'], population_key(value))):
+        assignment = seeded_digest(row['pair_id'], 0, 'flip_world_swap') if row['kind'].endswith('flip') else None
+        swapped = bool(int(assignment[:2], 16) & 1) if assignment is not None else False
+        order = [1, 0] if swapped else [0, 1]
+        mapped = {**copy.deepcopy(row), 'target_names': [row['target_names'][index] for index in order],
+            's0_target_left': [row['s0_target_left'][index] for index in order]}
+        measured.append(mapped)
+        identity = {key: copy.deepcopy(row[key]) for key in ('dataset_key', 'original_pair_id', 'dataset_identity') if key in row}
+        selected.append({'pair_id': row['pair_id'], 'scene': row['scene'], 'kind': row['kind'], **identity,
+            'world_order': order, 'swapped': swapped, 'assignment_sha256': assignment,
+            'candidate_names': copy.deepcopy(row['candidate_names']),
+            'original_target_names': copy.deepcopy(row['target_names']), 'target_names': mapped['target_names'],
+            'original_s0_target_left': copy.deepcopy(row['s0_target_left']), 's0_target_left': mapped['s0_target_left']})
+    scenes = [row['scene'] for row in original]
+    return {'version': 'pilot_keep_all_flip_swap_v1', 'approved_task_revision': '7babc169', 'seed': 0,
+        'policy': {'retain_every_authenticated_input_pair': True, 'stay_downsampling_applied': False,
+            'flip': 'unchanged original SHA256 low-bit world swap', 'flip_seed_version': FLIP_VERSION,
+            'global_balance_is_qualification_gate': False,
+            'scope': 'pilot composition only; original T04 balancing remains separate'},
+        'selected': selected, 'dropped': [],
+        'input_count_by_class': dict(Counter(row['kind'] for row in original)),
+        'selected_count_by_class': dict(Counter(row['kind'] for row in measured)),
+        'before': balance_statistics(original, scenes), 'after': balance_statistics(measured, scenes),
+        'source_tables_modified': False, 'selection_independent_of_left_measurement': True,
+        'full_T02_acceptance': None}
+
+
 def build_pool(cache_sources, split_policy):
-    from src.envs.pair_table_balance import normalize_table, balance_pairs
+    from src.envs.pair_table_balance import normalize_table
     require(isinstance(cache_sources, list) and cache_sources, 'Explicit original cache certificate sources required')
     tables, packages, cache_proofs, seen_proposals = {}, {}, [], {}
     for ref in cache_sources:
@@ -200,12 +238,10 @@ def build_pool(cache_sources, split_policy):
                     and not table.synthetic and table.export_verified and table.cache_verified,
                     'Pilot needs real current-camera native/pair/formal-cache-verified training tables')
             tables[key], packages[key], seen_proposals[identity] = table, package, key
-    balance = balance_pairs([normalize_table(table) for table in tables.values()], seed=0)
-    require(balance['after']['global_balance_within_0_4_to_0_6'] is True,
-            'Pilot requires both original T02 global balance proportions within [0.4,0.6]')
+    balance = keep_all_with_flip_order([normalize_table(table) for table in tables.values()])
     selected = {row['dataset_key']: row for row in balance['selected']}
     counts = {kind: sum(tables[key].kind == kind for key in selected) for kind in KINDS}
-    require(len(selected) >= 80 and all(counts.values()), 'Balanced pilot needs at least 80 unique pairs and all four classes')
+    require(len(selected) >= 80 and all(counts.values()), 'Pilot needs at least 80 unique cache-verified pairs and all four classes')
     entries = []
     for key in sorted(selected):
         table, package = tables[key], packages[key]
