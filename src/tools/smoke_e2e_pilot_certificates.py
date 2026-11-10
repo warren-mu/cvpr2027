@@ -1,4 +1,4 @@
-"""55753931 pilot exception: reuse original certificates, not repeat native I/O.
+"""55753931/96fbdd1f pilot exception: reuse original certificates, not repeat native I/O.
 
 This mode never certifies that the extra 709593 source reauthentication passed.
 Actual cached-table bytes and all reused certificate identities remain checked.
@@ -15,8 +15,11 @@ from src.tools.t01_partition import audited_result, canonical_hash
 from src.tools.merge_pair_v2 import producer_arguments
 
 MODE = 'approved_original_certificates83_after02_v1'
-POLICY_REFERENCE = {'file': 'configs/smoke_e2e_pilot_certificates83.json',
+LEGACY_POLICY_REFERENCE = {'file': 'configs/smoke_e2e_pilot_certificates83.json',
     'sha256': '3604c54f84e8f0cb722c93e745f2db4e3422233f28581cad7780ac8812fe5449'}
+POLICY_REFERENCE = {'file': 'configs/smoke_e2e_pilot_certificates83_immediate.json',
+    'sha256': '68ccb921104bbf20b982a92272e68fba089cb6e39d26c7daa7bd2bdcbd29dc99'}
+IMMEDIATE_REVISION = '96fbdd1f'
 NAME = 'smoke_e2e_pilot_pool_83_certificates_01'
 RESULT_FILE = 'results/' + NAME + '.json'
 MANIFEST_FILE = 'data/world_pairs/e2e_pilot_pool_83_certificates_01.json'
@@ -42,13 +45,22 @@ def read(ref, *, root=ROOT, within=None):
     return json.loads(raw)
 
 
-def policy(root=ROOT):
-    value = read(POLICY_REFERENCE, root=root)
-    need(value['version'] == MODE and value['approved_task_revision'] == '55753931'
-        and value['not_before_utc'] == '2026-11-10T07:00:00+00:00'
-        and value['exact_cached_pairs'] == 83 and value['cache_batch_sizes'] == [5, 24, 23, 31]
+def policy(root=ROOT, *, legacy=False):
+    value = read(LEGACY_POLICY_REFERENCE if legacy else POLICY_REFERENCE, root=root)
+    need(value['version'] == MODE and value['exact_cached_pairs'] == 83
+        and value['cache_batch_sizes'] == [5, 24, 23, 31]
         and value['qualification_name'] == NAME and value['manifest_file'] == MANIFEST_FILE,
         'Unknown fixed83 certificate exception')
+    if legacy:
+        need(value['approved_task_revision'] == '55753931'
+            and value['not_before_utc'] == '2026-11-10T07:00:00+00:00', 'Unknown historical authorization')
+    else:
+        need(value['approved_task_revision'] == IMMEDIATE_REVISION
+            and value['activation_condition'] == 'original709593_ended_nonpass_no_clock_wait'
+            and value['extra_qualification_job'] == '709593.hopper-m-02'
+            and value['extra_qualification_reference']['file'] == value['extra_qualification_result']
+            and value['extra_qualification_exit_code'] == 1 and bool(value['extra_qualification_end']),
+            'Unknown immediate authorization')
     return value
 
 
@@ -57,40 +69,59 @@ def utc_now():
 
 
 def activate(cache_sources, *, root=ROOT):
-    """Only a new build observes the current deadline and extra-run outcome."""
+    """New96 activation binds the already-audited ended failure; no clock wait."""
     p = policy(root); now = utc_now()
-    need(now.tzinfo is not None and now >= datetime.datetime.fromisoformat(p['not_before_utc']),
-        'Certificate mode cannot start before 2026-11-10T07:00UTC')
+    need(now.tzinfo is not None, 'Activation timestamp needs its explicit UTC offset')
     need([identity(ref) for ref in cache_sources] == p['cache_sources'], 'Certificate mode requires the fixed original four cache sources')
-    path = Path(root) / p['extra_qualification_result']
-    snapshot = {'file': p['extra_qualification_result'], 'exists': path.exists(), 'sha256': None,
-        'observed_passed': None, 'observed_end': None, 'observed_exit_code': None}
-    if path.exists():
-        body = path.read_bytes(); data = json.loads(body)
-        snapshot.update(sha256=hashlib.sha256(body).hexdigest(), observed_passed=data.get('metrics', {}).get('passed'),
-            observed_end=data.get('_meta', {}).get('end'), observed_exit_code=data.get('_meta', {}).get('exit_code'))
-        need(snapshot['observed_passed'] is not True, 'Extra qualification already reports PASS; use the original normal path')
-    return {'checked_at_utc': now.isoformat(), 'extra_qualification_snapshot': snapshot}
+    # This pinned result is the existing original709593 evidence, not a new
+    # reauthentication. read() checks its exact original SHA before metadata.
+    data = read(p['extra_qualification_reference'], root=root)
+    meta, cfg, metrics = data['_meta'], data['config'], data['metrics']
+    need(meta.get('name') == 'smoke_e2e_pilot_pool_83_01'
+        and cfg.get('pbs_jobid') == p['extra_qualification_job']
+        and meta.get('end') == p['extra_qualification_end']
+        and meta.get('exit_code') == metrics.get('producer_exit_code') == p['extra_qualification_exit_code']
+        and metrics.get('passed') is False and metrics.get('manifest') is None,
+        'Immediate activation requires original709593 ended/nonPASS; missing, running or PASS cannot activate')
+    snapshot = {'file': p['extra_qualification_result'], 'exists': True,
+        'sha256': p['extra_qualification_reference']['sha256'], 'observed_passed': False,
+        'observed_end': meta['end'], 'observed_exit_code': meta['exit_code'],
+        'pbs_jobid': cfg['pbs_jobid'], 'observed_producer_exit_code': metrics['producer_exit_code']}
+    return {'checked_at_utc': now.isoformat(), 'extra_qualification_snapshot': snapshot,
+        'authorization_revision': IMMEDIATE_REVISION}
 
 
 def qualification(activation, cache_sources, *, root=ROOT):
-    """Validate the frozen initial decision; never consult a later 709593 state."""
-    p = policy(root)
+    """Validate the frozen initial decision; never consult a later709593 state."""
+    revision = activation.get('authorization_revision')
+    need(revision in (None, IMMEDIATE_REVISION), 'Unknown activation authorization')
+    legacy = revision is None
+    p = policy(root, legacy=legacy)
     need([identity(ref) for ref in cache_sources] == p['cache_sources'], 'Frozen certificate source set changed')
     observed = datetime.datetime.fromisoformat(activation['checked_at_utc'])
     snapshot = activation['extra_qualification_snapshot']
-    need(observed.tzinfo is not None and observed >= datetime.datetime.fromisoformat(p['not_before_utc'])
-        and snapshot.get('file') == p['extra_qualification_result']
+    need(observed.tzinfo is not None and snapshot.get('file') == p['extra_qualification_result']
         and type(snapshot.get('exists')) is bool and snapshot.get('observed_passed') is not True,
         'Invalid original certificate-mode activation')
-    need((snapshot['exists'] and re.fullmatch(r'[0-9a-f]{64}', str(snapshot.get('sha256'))))
-        or (not snapshot['exists'] and all(snapshot.get(k) is None for k in
-            ('sha256', 'observed_passed', 'observed_end', 'observed_exit_code'))), 'Invalid original extra-run snapshot')
-    return {'mode': MODE, 'policy_reference': copy.deepcopy(POLICY_REFERENCE), 'activation': copy.deepcopy(activation),
-        'exact_cached_pairs': 83, 'retain_every_authenticated_input_pair': True,
+    if legacy:
+        need(observed >= datetime.datetime.fromisoformat(p['not_before_utc']), 'Historical activation predates its original07UTC authorization')
+        need((snapshot['exists'] and re.fullmatch(r'[0-9a-f]{64}', str(snapshot.get('sha256'))))
+            or (not snapshot['exists'] and all(snapshot.get(k) is None for k in
+                ('sha256', 'observed_passed', 'observed_end', 'observed_exit_code'))), 'Invalid original extra-run snapshot')
+    else:
+        need(snapshot['exists'] is True and snapshot.get('sha256') == p['extra_qualification_reference']['sha256']
+            and snapshot.get('pbs_jobid') == p['extra_qualification_job']
+            and snapshot.get('observed_end') == p['extra_qualification_end']
+            and snapshot.get('observed_exit_code') == snapshot.get('observed_producer_exit_code') == p['extra_qualification_exit_code']
+            and snapshot.get('observed_passed') is False, 'Original ended709593 activation binding changed')
+    result = {'mode': MODE, 'policy_reference': copy.deepcopy(LEGACY_POLICY_REFERENCE if legacy else POLICY_REFERENCE),
+        'activation': copy.deepcopy(activation), 'exact_cached_pairs': 83, 'retain_every_authenticated_input_pair': True,
         'extra_source_reauthentication': copy.deepcopy(EXTRA),
         'native_source_reauthentication_performed_here': False,
         'scope': 'Original T02 and formal cache certificates reused under55753931; extra709593 outcome not claimed'}
+    if not legacy:
+        result['authorization_revision'] = IMMEDIATE_REVISION
+    return result
 
 
 def _audited(ref, root):

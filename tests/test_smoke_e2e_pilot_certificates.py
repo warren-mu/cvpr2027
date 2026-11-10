@@ -43,8 +43,24 @@ class ActivationPopulationTests(unittest.TestCase):
         source = cert.ROOT / cert.POLICY_REFERENCE['file']
         target = self.root / cert.POLICY_REFERENCE['file']; target.parent.mkdir(parents=True)
         target.write_bytes(source.read_bytes())
-        self.policy = cert.policy(self.root); self.refs = self.policy['cache_sources']
-        self.now = datetime.datetime(2026, 11, 10, 7, tzinfo=datetime.timezone.utc)
+        legacy = self.root / cert.LEGACY_POLICY_REFERENCE['file']
+        legacy.write_bytes((cert.ROOT / cert.LEGACY_POLICY_REFERENCE['file']).read_bytes())
+        self.reference_patch = patch.object(cert, 'POLICY_REFERENCE', copy.deepcopy(cert.POLICY_REFERENCE))
+        self.reference_patch.start(); self.addCleanup(self.reference_patch.stop)
+        self.policy = json.loads(target.read_bytes()); self.refs = self.policy['cache_sources']
+        self.failed = {'_meta': {'name': 'smoke_e2e_pilot_pool_83_01',
+            'end': self.policy['extra_qualification_end'], 'exit_code': 1},
+            'config': {'pbs_jobid': '709593.hopper-m-02'},
+            'metrics': {'passed': False, 'manifest': None, 'producer_exit_code': 1}}
+        self.pin_failure(self.failed)
+        self.now = datetime.datetime(2026, 11, 10, 6, tzinfo=datetime.timezone.utc)
+
+    def pin_failure(self, value):
+        reference = write(self.root / self.policy['extra_qualification_result'], value, self.root)
+        self.policy['extra_qualification_reference'] = identity = {k: reference[k] for k in ('file', 'sha256')}
+        p = self.root / cert.POLICY_REFERENCE['file']
+        p.write_text(json.dumps(self.policy, indent=2) + '\n')
+        cert.POLICY_REFERENCE['sha256'] = hashlib.sha256(p.read_bytes()).hexdigest()
 
     def boundary(self, selected=None):
         tables, packages, normalized = pool_fixtures.pool_fixture()
@@ -65,26 +81,38 @@ class ActivationPopulationTests(unittest.TestCase):
         stack.enter_context(patch.object(balance, 'normalize_table', side_effect=lambda table: normalized[table.dataset_key]))
         return stack, loader, native
 
-    def test_exact_deadline_and_missing_extra_result_are_explicit(self):
-        with patch.object(cert, 'utc_now', return_value=self.now - datetime.timedelta(microseconds=1)):
-            with self.assertRaisesRegex(ValueError, 'before2026|before 2026'): cert.activate(self.refs, root=self.root)
+    def test_immediate_ended_failure_before07_and_unchanged_legacy_authorization(self):
         with patch.object(cert, 'utc_now', return_value=self.now):
             activation = cert.activate(self.refs, root=self.root)
-        self.assertFalse(activation['extra_qualification_snapshot']['exists'])
+        self.assertEqual(activation['authorization_revision'], '96fbdd1f')
+        self.assertEqual(activation['extra_qualification_snapshot']['sha256'],
+                         self.policy['extra_qualification_reference']['sha256'])
         self.assertEqual(cert.qualification(activation, self.refs, root=self.root)['extra_source_reauthentication'],
             {'status': 'not_awaited', 'passed': None})
+        old = {'checked_at_utc': '2026-11-10T07:00:00+00:00', 'extra_qualification_snapshot': {
+            'file': self.policy['extra_qualification_result'], 'exists': False, 'sha256': None,
+            'observed_passed': None, 'observed_end': None, 'observed_exit_code': None}}
+        legacy = cert.qualification(old, self.refs, root=self.root)
+        self.assertEqual(legacy['policy_reference'], cert.LEGACY_POLICY_REFERENCE)
+        self.assertNotIn('authorization_revision', legacy)
+        old['checked_at_utc'] = '2026-11-10T06:59:59+00:00'
+        with self.assertRaisesRegex(ValueError, 'Historical activation predates'):
+            cert.qualification(old, self.refs, root=self.root)
 
-    def test_extra_qualification_failed_or_unfinished_is_not_upgraded_but_pass_blocks_new_mode(self):
+    def test_running_missing_pass_wrongjob_and_changed_failure_bytes_do_not_activate(self):
         path = self.root / self.policy['extra_qualification_result']
-        for passed, end, code in ((False, None, None), (False, 'ended', 1), (True, 'ended', 0)):
-            write(path, {'metrics': {'passed': passed}, '_meta': {'end': end, 'exit_code': code}})
-            with self.subTest(passed=passed, code=code), patch.object(cert, 'utc_now', return_value=self.now):
-                if passed:
-                    with self.assertRaisesRegex(ValueError, 'already reports PASS'): cert.activate(self.refs, root=self.root)
-                else:
-                    activation = cert.activate(self.refs, root=self.root)
-                    self.assertEqual(activation['extra_qualification_snapshot']['observed_exit_code'], code)
-                    self.assertIsNone(cert.qualification(activation, self.refs, root=self.root)['extra_source_reauthentication']['passed'])
+        for label in ('running', 'pass', 'wrongjob', 'missing', 'changed_sha'):
+            self.pin_failure(copy.deepcopy(self.failed))
+            bad = copy.deepcopy(self.failed)
+            if label == 'running': bad['_meta']['end'] = None
+            elif label == 'pass': bad['metrics']['passed'] = True
+            elif label == 'wrongjob': bad['config']['pbs_jobid'] = '709999.hopper-m-02'
+            if label in ('running', 'pass', 'wrongjob'): self.pin_failure(bad)
+            elif label == 'missing': path.unlink()
+            else: path.write_text(path.read_text() + ' ')
+            with self.subTest(label=label), patch.object(cert, 'utc_now', return_value=self.now), \
+                    self.assertRaises((ValueError, FileNotFoundError)):
+                cert.activate(self.refs, root=self.root)
 
     def test_sources_cannot_be_reordered_replaced_or_extended(self):
         changed = copy.deepcopy(self.refs); changed[-1]['sha256'] = 'f' * 64

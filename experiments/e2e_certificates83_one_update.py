@@ -132,7 +132,7 @@ def run_in_pbs(args):
     from src.tools import train_holdout_freeze as holdout
     if not re.fullmatch(r'\d+\.hopper-m-\d+', os.environ.get('PBS_JOBID', '')) or not os.environ.get('CVPR_SCRATCH'):
         raise ValueError('This sequence may execute only in its original bounded PBS allocation')
-    # A job that starts before the authorized time must fail before rendering.
+    # New96 authorization requires the pinned original709593 ended/nonPASS before rendering.
     policy = certificates.policy()
     certificates.activate(policy['cache_sources'])
     run_checked(logged(NAME + '_gate', ['python3', '-u', '-m', 'src.tools.render_gate', '--name', NAME + '_gate',
@@ -193,7 +193,7 @@ def main():
     seconds = GATE_SECONDS + CLEANUP_GRACE_SECONDS + args.population_seconds + args.freeze_seconds + 20 \
         + args.train_seconds + CLEANUP_GRACE_SECONDS + RECORDING_RESERVE_SECONDS
     result = submit_preview(NAME, ['python3', '-m', 'src.tools.record_command', '--name', NAME, '--', *stage], seconds)
-    result.update(earliest_activation='2026-11-10T07:00:00Z', bounds={
+    result.update(activation_authorization='96fbdd1f: original709593 ended/nonPASS; no02ET clock wait', bounds={
         'initial_gate_main_seconds': GATE_SECONDS, 'initial_gate_cleanup_grace_seconds': CLEANUP_GRACE_SECONDS,
         'population_main_seconds': args.population_seconds, 'freeze_timeout_seconds': args.freeze_seconds,
         'freeze_kill_grace_seconds': 20, 'training_main_including_own_gate_seconds': args.train_seconds,
