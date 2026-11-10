@@ -1,0 +1,118 @@
+{
+  "metrics": {
+    "strict_black_gate_proof": {
+      "eligible_proven_black_gate_retry": true,
+      "job_id": "709866.hopper-m-02",
+      "native_kind": "smoke_e2e_pilot_training",
+      "original_payload": {
+        "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/payload.json",
+        "sha256": "9ffd5edf10acfdbb73b4a5ded1105fb9b39e86d2093daedb1dc2a8297c7ad2ba"
+      },
+      "original_job_script": {
+        "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/job.pbs",
+        "sha256": "909c050a6de42902f147152cde84d1cfbd9f12c1005b9d212e0b7a952cd7a7a6"
+      },
+      "original_receipt": {
+        "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/submission.json",
+        "sha256": "98cd7b94978b04279eaa11324b92b639225eb7eec0a580b1765e981fb8633c76"
+      },
+      "original_command_unchanged": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.smoke_e2e_pilot",
+        "run",
+        "--name",
+        "smoke_e2e_pilot_T0_s0_01",
+        "--arm",
+        "T0",
+        "--manifest",
+        "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+        "--holdout-reference",
+        "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+        "--model-source",
+        "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+        "--pilot-spec",
+        "configs/smoke_e2e_pilot.json",
+        "--timeout-seconds",
+        "13111",
+        "--gate-timeout-seconds",
+        "180"
+      ],
+      "pbs_accounting": {
+        "file": "results/diag_pilot_T0T4_first_black_accounting_01.json",
+        "sha256": "25e72715cd0f14964e2e522e6b8e02e1c6518752bc8608c1af33aafb32f38a25",
+        "metrics_sha256": "92bc826d2e315a720ceca3593ccbb9cd76c08d369a0d0c3648a10b60967f3ab6"
+      },
+      "source_results": [
+        {
+          "file": "results/smoke_e2e_pilot_T0_s0_01.json",
+          "sha256": "7481ae43da378d018c3a80fadf0c9158d2f92f398fb8860612e1125e26320199",
+          "metrics_sha256": "07e2871bd788ad03a3eca910711c97aa0fd6c9ad4676db56a06780be5faaf349"
+        },
+        {
+          "file": "results/smoke_e2e_pilot_T0_s0_01_gate.json",
+          "sha256": "845b453ada82a15ddb9ad01e297fdc99e2e9cd52f58942fadbdea6acdd6524e1",
+          "metrics_sha256": "84feae96c352ddbb340372c76ef39936fa10852f1c29cf0e7078575c6e9d3424"
+        }
+      ],
+      "node": "hopper-25",
+      "gpu_uuid": "GPU-d1e1ee0d-3db1-a1f2-e57e-929a37cd0e67",
+      "captures": [
+        {
+          "file": "logs/runs/smoke_e2e_pilot_T0_s0_01_gate/render_gate/gpu_0_after_constructor.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        },
+        {
+          "file": "logs/runs/smoke_e2e_pilot_T0_s0_01_gate/render_gate/gpu_0_after_Pass.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        }
+      ]
+    },
+    "scope": "Original native pilot opening black gate before source authentication/training; no submission or scientific acceptance"
+  },
+  "config": {
+    "name": "diag_pilot_T0_first_black_guard_01",
+    "original_job_id": "709866.hopper-m-02",
+    "original_parent": "smoke_e2e_pilot_T0_s0_01"
+  },
+  "sources": [
+    {
+      "file": "results/smoke_e2e_pilot_T0_s0_01.json",
+      "sha256": "7481ae43da378d018c3a80fadf0c9158d2f92f398fb8860612e1125e26320199",
+      "metrics_sha256": "07e2871bd788ad03a3eca910711c97aa0fd6c9ad4676db56a06780be5faaf349"
+    },
+    {
+      "file": "results/smoke_e2e_pilot_T0_s0_01_gate.json",
+      "sha256": "845b453ada82a15ddb9ad01e297fdc99e2e9cd52f58942fadbdea6acdd6524e1",
+      "metrics_sha256": "84feae96c352ddbb340372c76ef39936fa10852f1c29cf0e7078575c6e9d3424"
+    },
+    {
+      "file": "results/diag_pilot_T0T4_first_black_accounting_01.json",
+      "sha256": "25e72715cd0f14964e2e522e6b8e02e1c6518752bc8608c1af33aafb32f38a25",
+      "metrics_sha256": "92bc826d2e315a720ceca3593ccbb9cd76c08d369a0d0c3648a10b60967f3ab6"
+    }
+  ],
+  "_meta": {
+    "name": "diag_pilot_T0_first_black_guard_01",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib, importlib.util, io, json, shlex\nfrom pathlib import Path\nfrom PIL import Image\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve(); require=b.require\nname='diag_pilot_T0_first_black_guard_01'\njob='709866.hopper-m-02'; parent_name='smoke_e2e_pilot_T0_s0_01'\nfolder=r/'logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b'\ndef ref(path):\n    return {'file':str(path.relative_to(r)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}\ndef load(filename):\n    rr=ref(r/filename); data,path=b.logged(r,rr)\n    return data,dict(rr,metrics_sha256=data['_meta']['metrics_sha256'])\nparent,pref=load('results/'+parent_name+'.json')\ngate,gref=load('results/'+parent_name+'_gate.json')\naccount,aref=load('results/diag_pilot_T0T4_first_black_accounting_01.json')\nrequire(pref['sha256']=='7481ae43da378d018c3a80fadf0c9158d2f92f398fb8860612e1125e26320199' and gref['sha256']=='845b453ada82a15ddb9ad01e297fdc99e2e9cd52f58942fadbdea6acdd6524e1' and aref['sha256']=='25e72715cd0f14964e2e522e6b8e02e1c6518752bc8608c1af33aafb32f38a25','Exact original result references differ')\npp,sp,rp=(folder/p for p in ('payload.json','job.pbs','submission.json'))\npayload,receipt=json.loads(pp.read_bytes()),json.loads(rp.read_bytes())\nrequire(ref(pp)['sha256']=='9ffd5edf10acfdbb73b4a5ded1105fb9b39e86d2093daedb1dc2a8297c7ad2ba','Original submitted payload SHA differs')\nexpected=['python3', '-u', '-m', 'src.tools.smoke_e2e_pilot', 'run', '--name', 'smoke_e2e_pilot_T0_s0_01', '--arm', 'T0', '--manifest', '{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}', '--holdout-reference', '{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}', '--model-source', '{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}', '--pilot-spec', 'configs/smoke_e2e_pilot.json', '--timeout-seconds', '13111', '--gate-timeout-seconds', '180']\nrequire(payload['repo']==str(r) and payload['name']==parent_name and payload['command']==expected and payload['dry_run'] is False and payload['task_id']=='T01' and payload['budget_group']=='E2Epilot' and payload['budget_batch']=='t00b_t01_20261108' and payload['queue']=='autox' and payload['requested_host'] is None and payload['requested_gpu_count']==1 and payload['requested_wall_seconds']==13175,'Original exact pilot payload differs')\nrequire(pp.stat().st_mode & 0o222 == sp.stat().st_mode & 0o222 ==0 and receipt['returncode']==0 and receipt['stdout'].strip()==job and not receipt['stderr'],'Original immutable files/receipt differ')\nspec=importlib.util.spec_from_file_location('original_submit_for_pilot_guard',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\nrequire(sp.read_text()==phase.render_job_script((r/'scripts/pbs/job_1gpu.pbs').read_text(),1,pp,None),'Original PBS script differs from unchanged one-GPU template')\nfinal=phase._final_accounting(r,{job},paths=[r/aref['file']]);require(job in final,'Original canonical accounting missing')\nrows=[v for v in account['config']['jobs'] if v['job_id']==job];require(len(rows)==1 and rows[0]['qstat_exit']==0,'Canonical job ambiguous');f=rows[0]['fields']\nrequire(f.get('job_state')=='F' and f.get('Exit_status')=='86' and f.get('run_count')=='1' and f.get('project')=='CFP04-SF-125' and f.get('Job_Owner','').split('@')[0]=='e1583364' and f.get('Resource_List.ngpus')=='1' and f.get('Resource_List.ncpus')=='12' and f.get('Resource_List.walltime')=='03:39:35' and f.get('queue')=='smallx' and 'PBS_O_QUEUE=autox' in f.get('Variable_List','') and shlex.split(f['Submit_arguments'])==receipt['command'][1:] and f['Output_Path'].split(':',1)[1]==str(folder/'pbs.out'),'Original canonical allocation/exit differs')\ngc,gm=gate['config'],gate['metrics']; a=gc['allocation']; pm=parent['metrics']; node=gc['node'];gpu=a['cuda_visible_devices']\nproof={'eligible_proven_black_gate_retry':False,'job_id':job,'native_kind':'smoke_e2e_pilot_training','original_payload':ref(pp),'original_job_script':ref(sp),'original_receipt':ref(rp),'original_command_unchanged':expected,'pbs_accounting':aref,'source_results':[pref,gref],'node':node,'gpu_uuid':gpu,'captures':[]}\nparent_gate=b.pilot_opening_black(payload,parent,gate,proof)\nrequire(parent_gate['sha256']==gref['sha256'],'Parent gate SHA differs')\nrequire({part.split('/')[0] for part in f['exec_host'].split('+')}=={node} and parent['_meta']['host']==gate['_meta']['host']==parent['config']['node']==node and gc['pbs_jobid']==a['pbs_jobid']==job and a['cuda_driver_uuids']==[gpu] and len(a['cpu_affinity'])==len(set(a['cpu_affinity']))==12 and gc['resolution']==255 and gc['segmentation'] is True and gate['_meta']['exit_code']==gm.get('exit_code')==86 and gm.get('passed') is False and gm.get('black_frame_detected') is True and gm.get('errors')==gm.get('cleanup_errors')==[] and gm.get('expected_gpu_count')==gm.get('completed_gpu_count')==1 and len(gm['devices'])==len(a['devices'])==1,'Original native gate identities differ')\nob=gm['devices'][0]['observation'];require(gm['devices'][0]['worker_error'] is None and not ob.get('error') and not ob.get('cleanup_error') and ob['gpu_identity']==a['devices'][0] and ob['gpu_identity']['gpu_uuid']==gpu and ob['node']==node and [v['stage'] for v in ob['captures']]==['after_constructor','after_Pass'],'Native observations are incomplete')\nfor stage in ('Pass',):\n    require(any(v['stage']==stage and v['fresh_main_rgb_payloads']>0 and v['cached_metadata'] is False for v in ob['wire_packets']),'Missing fresh native constructor/Pass payload')\nfor capture in ob['captures']:\n    path=Path(capture['png']['path']).resolve();path.relative_to(r/'logs/runs'); rr=ref(path)\n    require(rr['sha256']==capture['png']['sha256'] and capture['valid_shape'] is True and capture['shape']==[255,255,3] and capture['dtype']=='uint8' and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True and capture['nonzero_rgb_values']==capture['min_rgb']==capture['max_rgb']==0,'Original native black capture invalid')\n    with Image.open(io.BytesIO(path.read_bytes())) as im:\n        require(im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3,'Original decoded capture is not all black')\n    proof['captures'].append(rr)\nproof['eligible_proven_black_gate_retry']=True\nmetrics={'strict_black_gate_proof':proof,'scope':'Original native pilot opening black gate before source authentication/training; no submission or scientific acceptance'}\nresult={'metrics':metrics,'config':{'name':name,'original_job_id':job,'original_parent':parent_name},'sources':[pref,gref,aref]}\nwith (r/'results'/f'{name}.json').open('x') as handle:json.dump(result,handle,indent=2,allow_nan=False);handle.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T15:07:12",
+    "log_path": "logs/runs/diag_pilot_T0_first_black_guard_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "218895e99f2a7f4fc82366667999c28142204f92",
+    "git_dirty": false,
+    "end": "2026-11-10T15:07:16",
+    "duration_sec": 0.5,
+    "exit_code": 0,
+    "metrics_sha256": "cbf4ba847c89375af4bd47b60fa82d34600dee991283d0a56d59afa846cb05a3"
+  }
+}
