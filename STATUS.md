@@ -1800,3 +1800,7 @@ E2E报告已由Hopper Git提交ce9f26bf并推送确认。旧shared test_priority
 
 ### 2026-11-10 06:14 ET — 首个raw10六对导出已提交
 原submit_phase已提交710255.hopper-m-02（gpu_pack_train_raw10_smoke_single_01，单卡，无host，walltime00:30:55，PACK中的T02单组），原提交结果exit0。原预算与payload见logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb；仅six20可领取，队列完成立即退出，后六批未提交。710213的四次查询均30秒超时（完整PBS路径/完整jobid，另一次-user查询），无fresh Q/R/qtime，未擅自取消；正在观察原gate/parent文件。
+
+
+### 2026-11-10 06:21 ET — FIG01读取范围修复，尚未真实导出
+原295秒FIG01失败卡在83对全表RGB/mask读取，还未排名。74eb92fd仅修改FIG01导出器及其测试：完整83总体/4cache证书/holdout与所有header重建的原采样计划照旧校验，22个LookFlip按原见证X掩码排序；仅最终选中表完整load_table、原check_pair和全部该key缓存绑定复核，不生成新训练/cache证书。原标号函数、原PNG字节、排名与295秒止损不变。Hopper原run_logged CPU测试15项通过；下一步仅原排名第一对CPU冒烟，独立logs/review目录，不占正式paper路径。710255开头黑帧exit86且未领取单元，失败保留，重提证据准备中。

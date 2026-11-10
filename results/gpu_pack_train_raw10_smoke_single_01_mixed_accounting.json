@@ -1,0 +1,124 @@
+{
+  "config": {
+    "name": "gpu_pack_train_raw10_smoke_single_01_mixed_accounting",
+    "version": "shared_gpu_units_budget_v1",
+    "payload_reference": {
+      "file": "logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb/payload.json",
+      "sha256": "ce20058b68ec9a5eb4fab5cb250048ccad45825e7ae09ce49758f6b0a1b2dbf1"
+    },
+    "pack_reference": {
+      "file": "results/gpu_pack_train_raw10_smoke_single_01.json",
+      "sha256": "e3682c6ea87a9297b62ae3df27927f823b77a8fb60d7775c50fbc3372b2f9d25"
+    },
+    "account_reference": {
+      "file": "results/diag_raw10_shared710255_accounting_01.json",
+      "sha256": "a6687974725c85e3e32ca60256d00442fa2430c4084aba4f401d81598b68ebdd"
+    }
+  },
+  "metrics": {
+    "version": "shared_gpu_units_budget_v1",
+    "possible_groups": [
+      "T02"
+    ],
+    "residual_group": "T02",
+    "zero_business": true,
+    "observed_unit_gpu_seconds_by_group": {
+      "T02": 0.0
+    },
+    "allocation_gpu_hours": 0.0077777777777777776,
+    "queue_charge_rate": 1.0,
+    "total_charged_gpu_hours": 0.0077777777777777776,
+    "charged_gpu_hours_by_group": {
+      "T02": 0.0077777777777777776
+    },
+    "charged_gpu_hours_by_group_exact": {
+      "T02": {
+        "numerator": "4861111111111111",
+        "denominator": "625000000000000000"
+      }
+    },
+    "total_charged_gpu_hours_exact": {
+      "numerator": "4861111111111111",
+      "denominator": "625000000000000000"
+    },
+    "unassigned_allocation_gpu_hours": 0.0077777777777777776,
+    "residual_charged_gpu_hours": 0.0077777777777777776,
+    "scope": "Scheduler cost attribution only; gate, idle, cleanup and timing remainder follow the predeclared priority, not scientific success. Exact fractions conserve the original canonical total; floats are display/budget values.",
+    "job_id": "710255.hopper-m-02",
+    "pack_name": "gpu_pack_train_raw10_smoke_single_01",
+    "unit_count": 0,
+    "sources": [
+      {
+        "file": "results/gpu_pack_train_raw10_smoke_single_01.json",
+        "sha256": "e3682c6ea87a9297b62ae3df27927f823b77a8fb60d7775c50fbc3372b2f9d25",
+        "metrics_sha256": "68da130096f9c15f53a6175b159fec11993868b8bbac3400aea50f617a9f3dfb"
+      },
+      {
+        "file": "results/diag_raw10_shared710255_accounting_01.json",
+        "sha256": "a6687974725c85e3e32ca60256d00442fa2430c4084aba4f401d81598b68ebdd",
+        "metrics_sha256": "b5dc1cef5d90c6bf45a6aaeb9f18f63cf28fecea09d2a5c0abff1dc54be4f4cf"
+      }
+    ],
+    "artifact_references": [
+      {
+        "file": "logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb/payload.json",
+        "sha256": "ce20058b68ec9a5eb4fab5cb250048ccad45825e7ae09ce49758f6b0a1b2dbf1"
+      },
+      {
+        "file": "logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb/submission.json",
+        "sha256": "d731564e9d52c909163e82f82d89ec80701ef39bea231376cee1d3341ce9c518",
+        "bytes": 439
+      }
+    ],
+    "canonical_accounting_result": "results/diag_raw10_shared710255_accounting_01.json"
+  },
+  "sources": [
+    {
+      "file": "results/gpu_pack_train_raw10_smoke_single_01.json",
+      "sha256": "e3682c6ea87a9297b62ae3df27927f823b77a8fb60d7775c50fbc3372b2f9d25",
+      "metrics_sha256": "68da130096f9c15f53a6175b159fec11993868b8bbac3400aea50f617a9f3dfb"
+    },
+    {
+      "file": "results/diag_raw10_shared710255_accounting_01.json",
+      "sha256": "a6687974725c85e3e32ca60256d00442fa2430c4084aba4f401d81598b68ebdd",
+      "metrics_sha256": "b5dc1cef5d90c6bf45a6aaeb9f18f63cf28fecea09d2a5c0abff1dc54be4f4cf"
+    }
+  ],
+  "_meta": {
+    "name": "gpu_pack_train_raw10_smoke_single_01_mixed_accounting",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.pbs_mixed_accounting",
+      "--name",
+      "gpu_pack_train_raw10_smoke_single_01_mixed_accounting",
+      "--payload",
+      "logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb/payload.json",
+      "--payload-sha256",
+      "ce20058b68ec9a5eb4fab5cb250048ccad45825e7ae09ce49758f6b0a1b2dbf1",
+      "--pack-result",
+      "results/gpu_pack_train_raw10_smoke_single_01.json",
+      "--pack-sha256",
+      "e3682c6ea87a9297b62ae3df27927f823b77a8fb60d7775c50fbc3372b2f9d25",
+      "--accounting-result",
+      "results/diag_raw10_shared710255_accounting_01.json",
+      "--accounting-sha256",
+      "a6687974725c85e3e32ca60256d00442fa2430c4084aba4f401d81598b68ebdd"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T19:20:54",
+    "log_path": "logs/runs/gpu_pack_train_raw10_smoke_single_01_mixed_accounting.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "74eb92fd9a55097967c8662e53a9fa4fd2ddaa17",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/gpu_pack_train_raw10_smoke_single_01_mixed_accounting.diff",
+    "end": "2026-11-10T19:21:00",
+    "duration_sec": 2.1,
+    "exit_code": 0,
+    "metrics_sha256": "8ee9f6334eb0d37cd3720e310a8041531fc145754486771ed86d053eb1fb87f0"
+  }
+}
