@@ -1,0 +1,171 @@
+# run_logged: python3 -c """One-off approved S04 full-retention retry plan; no submission or source repair."""
+import copy
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import re
+from src.tools import g01_quota_plan as quota
+from src.tools import g01_ticket_bank as bank
+from src.tools import gpu_shared_claim as shared
+from src.tools import pbs_mixed_accounting as mixed
+from src.envs import pair_v2_configuration as configurations
+
+ROOT = Path.cwd().resolve()
+NAME = 'diag_test_s16_s04_full_retry_plan_01'
+OLD_NAME = 'gen_test_s16_round2_s04'
+RUN = 'gen_test_s16_round2_s04_retry1'
+JOB = '709455.hopper-m-02'
+SCENES = ['FloorPlan325', 'FloorPlan425', 'FloorPlan26', 'FloorPlan226', 'FloorPlan326', 'FloorPlan426']
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+def read(filename, sha):
+    reference = {'file': filename, 'sha256': sha}
+    return mixed.read_reference(ROOT, reference)[0], reference
+
+def logged(filename, sha=None):
+    ref = mixed.reference(ROOT / filename, ROOT)
+    if sha is not None:
+        require(ref['sha256'] == sha, 'Original logged source changed: ' + filename)
+    data, _ = mixed.logged(ROOT, ref)
+    return data, {**ref, 'metrics_sha256': data['_meta']['metrics_sha256']}
+
+parent, pref = logged('results/' + OLD_NAME + '.json',
+    'f3f9b23d90ce18130b9f541dfb9adf3ad7988634a607f37b5b016319d7cc3859')
+account, aref = logged('results/diag_gen_test_s16_s04_accounting_01.json',
+    '8e374b077775c3b9cdb5c95e38d674f4914a8441d25e7f08d19778d392cc401a')
+require(parent['_meta']['exit_code'] == 1 and account['_meta']['exit_code'] == 0,
+        'Preserve the actual failed parent and successful original canonical accounting')
+spec = importlib.util.spec_from_file_location('s04_original_phase', ROOT / 'scripts/pbs/submit_phase.py')
+phase = importlib.util.module_from_spec(spec); spec.loader.exec_module(phase)
+final = phase._final_accounting(ROOT, {JOB}, paths=[ROOT / aref['file']])
+require(JOB in final, 'Original S04 allocation has not ended canonically')
+rows = [row for row in account['config']['jobs'] if row['job_id'] == JOB]
+require(len(rows) == 1 and rows[0]['qstat_exit'] == 0
+        and rows[0]['fields']['job_state'] == 'F' and rows[0]['fields']['Exit_status'] == '1',
+        'S04 retry requires the original F1 allocation, not an assumed missing process')
+archive, archive_ref = read('logs/review/diag_test_s16_s04_unsealed_archive_01/manifest.json',
+    'cda2a4a14929035384e1f14f338539eec8c4d770cd055434f7cc541393dd0980')
+require(archive['allocation_ended_by_original_pbs'] is True and archive['original_records_modified'] is False
+        and archive['parent']['sha256'] == pref['sha256']
+        and archive['canonical_accounting']['sha256'] == aref['sha256'], 'Original lossless failure archive differs')
+
+inventory, inventory_ref = logged('results/diag_current_test_selected_02.json',
+    'c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745')
+report, report_ref = read('logs/review/diag_current_test_selected_02/report.json',
+    '3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427')
+require(inventory['_meta']['exit_code'] == 0 and report_ref['sha256'] in
+        (ROOT / inventory['_meta']['log_path']).read_text(), 'Selected inventory report lacks its original successful logged binding')
+proof = report['proof']
+require(proof['count_basis_authenticated'] is True
+        and proof['count_basis_authority'] == 'g01_published_independent_checkpoint_receipt_v1'
+        and proof['count_stage'] == 'independent_unique_construction_before_T02_filtering'
+        and proof['outstanding_reservations'] == [], 'Not the approved original independent construction snapshot')
+expected_checkpoints = {'results/t01v2_checkpoint_test_a_full_01.json',
+    'results/t01v2_checkpoint_test_b_full_01.json',
+    *{f'results/t01v2_checkpoint_test_s16_s{i:02d}_01.json' for i in (1, 2, 3)}}
+require({r['file'] for r in proof['checkpoint_references']} == expected_checkpoints,
+        'This preparation is bound to the approved A/B+S01/S02/S03 inventory cutoff')
+require('Unsealed S04' in report['excluded'] and all(
+    OLD_NAME not in row['source_reference']['file'] and OLD_NAME not in row['pair_reference']['file']
+    for row in proof['unique_proposals']), 'Old S04 candidates already entered the published inventory; do not reallocate their ticket')
+
+old, old_ref = read('configs/gen_test_s16_round2_s04_quota.json',
+    'd7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6')
+quota.validate_structure(old)
+require(old['parent_run_name'] == OLD_NAME and old['partition'] == 'test'
+        and [r['scene'] for r in old['assignments']] == SCENES
+        and old['seed'] == 0 and old['field_of_view'] == 60, 'Original S04 scientific configuration differs')
+latest_seen = configurations.validate_seen(proof['configuration_selection']['seen_configurations'])
+original_seen = configurations.validate_seen(old['confirmed_configurations'])
+def scene_occupancy(values):
+    return sorted([row for row in values if row['configuration']['key']['scene'] in SCENES],
+                  key=lambda row: (row['configuration']['configuration_id'], row['kind']))
+require(scene_occupancy(latest_seen) == scene_occupancy(original_seen),
+        'New accepted S04-scene configurations are missing from the original exclusion set; no unchanged retry may be emitted')
+
+active, active_ref = shared.load_plan('configs/shared_test_priority_active_01.json',
+    'a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a', root=ROOT)
+external = [row for row in active['external_reservations'] if row['unit']['name'] == OLD_NAME]
+require(len(external) == 1 and shared.validate_external(external[0], ROOT) == JOB,
+        'Original S04 external must remain bound to its actual original PBS job')
+old_keys = set(external[0]['unit']['claim_keys'])
+require(not any(old_keys.intersection(unit['claim_keys']) for unit in active['units']),
+        'A runnable shared unit overlaps the preserved S04 reservation')
+ticket_bank = bank.read_reference(external[0]['unit']['references']['g01_ticket_bank'], ROOT)
+member = bank.expected_member(ticket_bank, external[0]['unit']['references']['g01_ticket_bank'], 's04', root=ROOT)
+require(member['assignments'] == old['assignments'] and member['confirmed_configurations'] == old['confirmed_configurations'],
+        'Standalone retry would change original disjoint S04 tickets')
+
+storage, storage_ref = logged('results/diag_scratch_quota_compression_01.json')
+require(storage['_meta']['command'] == ['python3', '-m', 'src.tools.record_command', '--name',
+    'diag_scratch_quota_compression_01', '--', 'hpc', 'quota']
+    and storage['config']['command'] == ['hpc', 'quota'], 'Use the original requested quota query, not a filesystem-wide free-space value')
+quota_log = (ROOT / storage['_meta']['log_path']).read_text()
+match = re.search(r'^\s*e1583364\s*\|\|\s*([0-9.]+)([GMT]B)\s*\|\s*([0-9.]+)([GMT]B)\s*\|\|\s*(\d+)\s*\|\s*(\w+)', quota_log, re.M)
+require(match is not None, 'Original account scratch quota row is unavailable')
+units_evidence, units_ref = logged('results/diag_current_storage_units_01.json')
+require(units_evidence['_meta']['exit_code'] == 0, 'Original CLI unit interpretation evidence failed')
+# The earlier logged CLI inspection established that hpc labels GB/TB using
+# binary GiB/TiB values. Preserve its labels verbatim, but interpret them using
+# that existing evidence rather than treating the display as decimal bytes.
+scale = {'MB': 2**20, 'GB': 2**30, 'TB': 2**40}
+used = float(match[1]) * scale[match[2]]; hard = float(match[3]) * scale[match[4]]
+require(hard - used >= 150 * 10**9, 'Account scratch displayed headroom is below the approved 150GB stop line')
+storage_guard = {'source': storage_ref, 'original_exit_code': storage['_meta']['exit_code'],
+    'original_account_row': match.group(0).strip(), 'unit_interpretation_source': units_ref,
+    'cli_display_unit_interpretation': 'GB=GiB, TB=TiB; original CLI labels retained',
+    'displayed_used_bytes': used, 'displayed_hard_bytes': hard, 'displayed_headroom_bytes': hard-used,
+    'minimum_headroom_bytes_decimal': 150*10**9,
+    'scope': 'Original rounded account-quota snapshot, not a reserved or exact filesystem capacity guarantee; recheck before submission if stale'}
+
+for folder in ('results', 'logs/runs'):
+    require(not list((ROOT / folder).glob(RUN + '*')), 'New retry name already has evidence')
+require(not list((ROOT / 'logs/pbs').glob(RUN + '-*'))
+    and not (Path('/scratch/e1583364/cvpr2027/g01_parallel') / RUN).exists(), 'New retry already has a reservation/raw directory')
+for path in (ROOT / 'logs/pbs').glob(OLD_NAME + '*-*/payload.json'):
+    payload = json.loads(path.read_text())
+    require(payload['name'] == OLD_NAME, 'Another S04 retry exists; coordinate its terminal state before creating a new attempt')
+plan = copy.deepcopy(old); plan['parent_run_name'] = RUN
+require({k:v for k,v in plan.items() if k!='parent_run_name'} == {k:v for k,v in old.items() if k!='parent_run_name'},
+        'Only engineering run identity may change')
+quota.validate_structure(plan)
+path = ROOT / 'configs' / (RUN + '_quota.json')
+with path.open('xb') as stream:
+    stream.write((json.dumps(plan,indent=2,sort_keys=True,allow_nan=False)+'\n').encode())
+    stream.flush(); os.fsync(stream.fileno())
+path.chmod(0o444)
+new_ref = mixed.reference(path,ROOT)
+command = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',RUN,'--scenes',*SCENES,
+    '--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json',
+    '--timeout-seconds','1600','--partition','test','--quota-plan',new_ref['file'],
+    '--quota-plan-sha256',new_ref['sha256'],'--nearby-physics']
+expected = list(parent['_meta']['command'])
+for flag,value in (('--name',RUN),('--quota-plan',new_ref['file']),('--quota-plan-sha256',new_ref['sha256'])):
+    expected[expected.index(flag)+1]=value
+require(command==expected and '--sample-rejected-raw' not in command,
+        'Full-retention retry changed original generation arguments')
+submission = ['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','G01',
+    '--name',RUN,'--gpus','1','--walltime','00:27:10','--',*command]
+metrics = {'new_quota_plan':new_ref,'command':command,'submission_command':submission,
+    'old_job_id':JOB,'old_failed_source':pref,'original_failed_evidence_archive':archive_ref,
+    'selected_inventory_snapshot':report_ref,'same_scene_configurations_already_excluded':True,
+    'original_shared_external_preserved':external[0],'unchanged_scientific_claim_keys':sorted(old_keys),
+    'only_quota_field_changed':'parent_run_name','raw_retention':'original_full',
+    'scene_timeout_seconds':1200,'parent_timeout_seconds':1600,'pbs_wall_seconds':1630,
+    'storage_floor_guard':storage_guard,'gpu_submission_performed':False,
+    'scope':'Approved79bc7426 engineering rerun of ended failed S04 on the same original tickets. No old unsealed candidate promoted, no additional quota, no modification of old queue/bank/source. Original per-process cleanup uncertainty retained.'}
+result={'metrics':metrics,'config':{'name':NAME,'approved_task_commit':'79bc7426'},
+    'sources':[pref,aref,inventory_ref,storage_ref,units_ref],
+    'artifact_references':[old_ref,new_ref,archive_ref,report_ref,active_ref]}
+with (ROOT/'results'/(NAME+'.json')).open('x') as stream:
+    json.dump(result,stream,indent=2,allow_nan=False);stream.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T12:00:05
+FINAL_METRICS_JSON: {"command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_test_s16_round2_s04_retry1", "--scenes", "FloorPlan325", "FloorPlan425", "FloorPlan26", "FloorPlan226", "FloorPlan326", "FloorPlan426", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "test", "--quota-plan", "configs/gen_test_s16_round2_s04_retry1_quota.json", "--quota-plan-sha256", "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d", "--nearby-physics"], "gpu_submission_performed": false, "new_quota_plan": {"bytes": 47068, "file": "configs/gen_test_s16_round2_s04_retry1_quota.json", "sha256": "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d"}, "old_failed_source": {"bytes": 586759, "file": "results/gen_test_s16_round2_s04.json", "metrics_sha256": "b036c377efac78b9be296e342ec55e38e417d2f11f130cd3fbe93784907ac331", "sha256": "f3f9b23d90ce18130b9f541dfb9adf3ad7988634a607f37b5b016319d7cc3859"}, "old_job_id": "709455.hopper-m-02", "only_quota_field_changed": "parent_run_name", "original_failed_evidence_archive": {"file": "logs/review/diag_test_s16_s04_unsealed_archive_01/manifest.json", "sha256": "cda2a4a14929035384e1f14f338539eec8c4d770cd055434f7cc541393dd0980"}, "original_shared_external_preserved": {"payload_reference": {"bytes": 1194, "file": "logs/pbs/gen_test_s16_round2_s04-20261110T011425Z-75eeccec/payload.json", "sha256": "a15c9c535bef9503a9c994d596d3a0d4303c1d0d4809d8c241c2d0002383db8a"}, "receipt_reference": {"bytes": 413, "file": "logs/pbs/gen_test_s16_round2_s04-20261110T011425Z-75eeccec/submission.json", "sha256": "97d2bb330971ee9b833150c5a4ef217584d1552c096a1b2659fd3c3eaa6b569f"}, "unit": {"budget_group": "G01", "claim_keys": ["08244357e7b26d1490042fcaba0866fc03429252755f6dcd7b1313b0572ebbba", "206f76cc170dfe12e32484328b25f167a424174591b4bcba3b27d10fdedcb2e3", "224bede38296fd9defca05aaf1bf765c35ad5b6b809e778acfb8b30256bda4db", "4c2ced33969a3657c43642ea0766b8c70a2df9af35da9229f7d7735011fc1376", "878fdf7d2c4d8a2e94ba1b20a225a6d289f080ce78dbf00322798f8bf07e021b", "c6a9f769961741b6e5d41e4c11828a5ff41c76186c1a8dfb7d51428ca15947fb"], "command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_test_s16_round2_s04", "--scenes", "FloorPlan325", "FloorPlan425", "FloorPlan26", "FloorPlan226", "FloorPlan326", "FloorPlan426", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "test", "--quota-plan", "configs/gen_test_s16_round2_s04_quota.json", "--quota-plan-sha256", "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6", "--nearby-physics"], "cpu_cores": 12, "gpus": 1, "identity": {"allocation_id": "bc3c8327fbfb6987278f7b28b54c417d627e5358fb566bf252ef8bfd4467bb2c", "assignments": [{"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan325"}, {"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan425"}, {"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan26"}, {"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan226"}, {"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan326"}, {"actual_output_caps": {"direct_flip": 1, "direct_stay": 1, "look_flip": 1, "look_stay": 1}, "allowed_kinds": ["direct_flip", "direct_stay", "look_flip", "look_stay"], "scene": "FloorPlan426"}], "benchmark_source": {"file": "results/gen_train_concurrency_s15_02.json", "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729"}, "concurrency": 6, "cpu_cores": 12, "field_of_view": 60, "gpus": 1, "nearby_physics_policy": {"anchor_position_error_limit_m": 0.02, "approval": "38b15551 supplement16", "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points", "distance_origin": "same settled common baseline object position in both worlds", "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed", "nearby_radius_m": 0.5, "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles", "nonanchor_position_limit_m": 0.01, "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted", "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks", "version": "nearby_nonanchor_0_5m_v1"}, "nearby_physics_version": "nearby_nonanchor_0_5m_v1", "partition": "test", "producer_module": "src.tools.g01_collect_parallel", "scene_timeout_seconds": 1200, "seed": 0, "timeout_seconds": 1600, "version": "g01_fixed40_disjoint_ticket_bank_v1"}, "name": "gen_test_s16_round2_s04", "priority": 300, "producer_module": "src.tools.g01_collect_parallel", "references": {"benchmark_source": {"file": "results/gen_train_concurrency_s15_02.json", "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729"}, "g01_ticket_bank": {"file": "configs/g01_test_priority_01_ticket_bank.json", "sha256": "2b46211a5dab4a135379f2267a93e764ab82b5fc0c4a182dc5ca21653bec78ca"}, "g01_ticket_slice": "s04", "quota_plan": {"file": "configs/gen_test_s16_round2_s04_quota.json", "sha256": "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6"}}, "timeout_seconds": 1600, "unit_id": "04376355a00197ec0779cf3dc41e37f005460e8ba1b67b4434f79a90d99c77fe"}}, "parent_timeout_seconds": 1600, "pbs_wall_seconds": 1630, "raw_retention": "original_full", "same_scene_configurations_already_excluded": true, "scene_timeout_seconds": 1200, "scope": "Approved79bc7426 engineering rerun of ended failed S04 on the same original tickets. No old unsealed candidate promoted, no additional quota, no modification of old queue/bank/source. Original per-process cleanup uncertainty retained.", "selected_inventory_snapshot": {"file": "logs/review/diag_current_test_selected_02/report.json", "sha256": "3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427"}, "storage_floor_guard": {"cli_display_unit_interpretation": "GB=GiB, TB=TiB; original CLI labels retained", "displayed_hard_bytes": 1099511627776.0, "displayed_headroom_bytes": 543528111308.80005, "displayed_used_bytes": 555983516467.2, "minimum_headroom_bytes_decimal": 150000000000, "original_account_row": "e1583364  ||    517.8GB |    1.0TB   ||  2928738  | unlimited", "original_exit_code": 1, "scope": "Original rounded account-quota snapshot, not a reserved or exact filesystem capacity guarantee; recheck before submission if stale", "source": {"bytes": 1058, "file": "results/diag_scratch_quota_compression_01.json", "metrics_sha256": "9b2911ba411fe55f1f9556394313ff530192dbf8a01feb916adfd8b70d6dff00", "sha256": "482837c0418800d718e75284f3a168b441ab93a0909f289ad6373f13970138ff"}, "unit_interpretation_source": {"bytes": 4405, "file": "results/diag_current_storage_units_01.json", "metrics_sha256": "b74c1f258acb5abdd2ed0a6a92ed4073ae77ad944e44f367a9fb51716290a2b2", "sha256": "d64023a3b394a9730c3cfbe53941e3573aa5ae5bddd44ebba7f890933a51e5be"}}, "submission_command": ["python3", "scripts/pbs/submit_phase.py", "--task", "T01", "--budget-group", "G01", "--name", "gen_test_s16_round2_s04_retry1", "--gpus", "1", "--walltime", "00:27:10", "--", "python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_test_s16_round2_s04_retry1", "--scenes", "FloorPlan325", "FloorPlan425", "FloorPlan26", "FloorPlan226", "FloorPlan326", "FloorPlan426", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "test", "--quota-plan", "configs/gen_test_s16_round2_s04_retry1_quota.json", "--quota-plan-sha256", "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d", "--nearby-physics"], "unchanged_scientific_claim_keys": ["08244357e7b26d1490042fcaba0866fc03429252755f6dcd7b1313b0572ebbba", "206f76cc170dfe12e32484328b25f167a424174591b4bcba3b27d10fdedcb2e3", "224bede38296fd9defca05aaf1bf765c35ad5b6b809e778acfb8b30256bda4db", "4c2ced33969a3657c43642ea0766b8c70a2df9af35da9229f7d7735011fc1376", "878fdf7d2c4d8a2e94ba1b20a225a6d289f080ce78dbf00322798f8bf07e021b", "c6a9f769961741b6e5d41e4c11828a5ff41c76186c1a8dfb7d51428ca15947fb"]}
+# exit_code: 0

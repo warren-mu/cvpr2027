@@ -1607,3 +1607,5 @@ G01 raw10 第二次冒烟 709595 在开头 hopper25 / GPU-2c0239b0-dff3-bf6f-0cc
 已按 79bc7426 恢复原 active01 / test_priority_01 共享队列，两个单卡消费者 709610、709615（均 00:30:55），原领取锁、科学配置和 G01 优先级不变，不带 raw10 采样选项。S04 保留旧 external 票位，另准备独立同参重跑，未重置旧队列。
 测试压缩单对 709607（00:10:30）已提交，FloorPlan322/floorplan322_00111，使用 selected02 原 72 候选清单，仅一个实际 renderer 同时保存 plain/压缩表；真实字节比较尚待运行终态。83 对来源资格 709593 在完整认证阶段，未训练更新。最近 PBS 查询有超时，以已成功提交回执和原作业输出为准，不据超时判失败或重复提交。
 最新原 hpc quota（diag_scratch_quota_compression_01）scratch 报告 11:53 SGT：517.8 GiB / 1 TiB，2,928,738 chunk files / unlimited；整体 hpc exit1 保留，scratch 段完整，不宣称命令整体通过。余量高于 150 GB 继续提交停止线。旧完整物理/生成版本已验证，不等待 raw10 第三次冒烟。
+
+S04 完整保留重跑配置已由 diag_test_s16_s04_full_retry_plan_01 生成并审计；仅新 parent_run_name，原六场景/种子/配额/时间不变，绑定原 709455 失败与未封口归档、当前独立库存及旧 external 占位。新任务不会由共享队列重复领取；quota 余量检查采用已验证 GiB/TiB 单位，150 GB 停止阈值不变。

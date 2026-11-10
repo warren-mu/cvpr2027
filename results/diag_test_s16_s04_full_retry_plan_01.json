@@ -1,0 +1,409 @@
+{
+  "metrics": {
+    "new_quota_plan": {
+      "file": "configs/gen_test_s16_round2_s04_retry1_quota.json",
+      "sha256": "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d",
+      "bytes": 47068
+    },
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_test_s16_round2_s04_retry1",
+      "--scenes",
+      "FloorPlan325",
+      "FloorPlan425",
+      "FloorPlan26",
+      "FloorPlan226",
+      "FloorPlan326",
+      "FloorPlan426",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "test",
+      "--quota-plan",
+      "configs/gen_test_s16_round2_s04_retry1_quota.json",
+      "--quota-plan-sha256",
+      "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d",
+      "--nearby-physics"
+    ],
+    "submission_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--task",
+      "T01",
+      "--budget-group",
+      "G01",
+      "--name",
+      "gen_test_s16_round2_s04_retry1",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:27:10",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_test_s16_round2_s04_retry1",
+      "--scenes",
+      "FloorPlan325",
+      "FloorPlan425",
+      "FloorPlan26",
+      "FloorPlan226",
+      "FloorPlan326",
+      "FloorPlan426",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "test",
+      "--quota-plan",
+      "configs/gen_test_s16_round2_s04_retry1_quota.json",
+      "--quota-plan-sha256",
+      "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d",
+      "--nearby-physics"
+    ],
+    "old_job_id": "709455.hopper-m-02",
+    "old_failed_source": {
+      "file": "results/gen_test_s16_round2_s04.json",
+      "sha256": "f3f9b23d90ce18130b9f541dfb9adf3ad7988634a607f37b5b016319d7cc3859",
+      "bytes": 586759,
+      "metrics_sha256": "b036c377efac78b9be296e342ec55e38e417d2f11f130cd3fbe93784907ac331"
+    },
+    "original_failed_evidence_archive": {
+      "file": "logs/review/diag_test_s16_s04_unsealed_archive_01/manifest.json",
+      "sha256": "cda2a4a14929035384e1f14f338539eec8c4d770cd055434f7cc541393dd0980"
+    },
+    "selected_inventory_snapshot": {
+      "file": "logs/review/diag_current_test_selected_02/report.json",
+      "sha256": "3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427"
+    },
+    "same_scene_configurations_already_excluded": true,
+    "original_shared_external_preserved": {
+      "payload_reference": {
+        "bytes": 1194,
+        "file": "logs/pbs/gen_test_s16_round2_s04-20261110T011425Z-75eeccec/payload.json",
+        "sha256": "a15c9c535bef9503a9c994d596d3a0d4303c1d0d4809d8c241c2d0002383db8a"
+      },
+      "receipt_reference": {
+        "bytes": 413,
+        "file": "logs/pbs/gen_test_s16_round2_s04-20261110T011425Z-75eeccec/submission.json",
+        "sha256": "97d2bb330971ee9b833150c5a4ef217584d1552c096a1b2659fd3c3eaa6b569f"
+      },
+      "unit": {
+        "budget_group": "G01",
+        "claim_keys": [
+          "08244357e7b26d1490042fcaba0866fc03429252755f6dcd7b1313b0572ebbba",
+          "206f76cc170dfe12e32484328b25f167a424174591b4bcba3b27d10fdedcb2e3",
+          "224bede38296fd9defca05aaf1bf765c35ad5b6b809e778acfb8b30256bda4db",
+          "4c2ced33969a3657c43642ea0766b8c70a2df9af35da9229f7d7735011fc1376",
+          "878fdf7d2c4d8a2e94ba1b20a225a6d289f080ce78dbf00322798f8bf07e021b",
+          "c6a9f769961741b6e5d41e4c11828a5ff41c76186c1a8dfb7d51428ca15947fb"
+        ],
+        "command": [
+          "python3",
+          "-u",
+          "-m",
+          "src.tools.g01_collect_parallel",
+          "--name",
+          "gen_test_s16_round2_s04",
+          "--scenes",
+          "FloorPlan325",
+          "FloorPlan425",
+          "FloorPlan26",
+          "FloorPlan226",
+          "FloorPlan326",
+          "FloorPlan426",
+          "--concurrency",
+          "6",
+          "--benchmark-source",
+          "results/gen_train_concurrency_s15_02.json",
+          "--timeout-seconds",
+          "1600",
+          "--partition",
+          "test",
+          "--quota-plan",
+          "configs/gen_test_s16_round2_s04_quota.json",
+          "--quota-plan-sha256",
+          "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6",
+          "--nearby-physics"
+        ],
+        "cpu_cores": 12,
+        "gpus": 1,
+        "identity": {
+          "allocation_id": "bc3c8327fbfb6987278f7b28b54c417d627e5358fb566bf252ef8bfd4467bb2c",
+          "assignments": [
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan325"
+            },
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan425"
+            },
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan26"
+            },
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan226"
+            },
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan326"
+            },
+            {
+              "actual_output_caps": {
+                "direct_flip": 1,
+                "direct_stay": 1,
+                "look_flip": 1,
+                "look_stay": 1
+              },
+              "allowed_kinds": [
+                "direct_flip",
+                "direct_stay",
+                "look_flip",
+                "look_stay"
+              ],
+              "scene": "FloorPlan426"
+            }
+          ],
+          "benchmark_source": {
+            "file": "results/gen_train_concurrency_s15_02.json",
+            "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729"
+          },
+          "concurrency": 6,
+          "cpu_cores": 12,
+          "field_of_view": 60,
+          "gpus": 1,
+          "nearby_physics_policy": {
+            "anchor_position_error_limit_m": 0.02,
+            "approval": "38b15551 supplement16",
+            "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+            "distance_origin": "same settled common baseline object position in both worlds",
+            "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+            "nearby_radius_m": 0.5,
+            "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+            "nonanchor_position_limit_m": 0.01,
+            "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+            "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+            "version": "nearby_nonanchor_0_5m_v1"
+          },
+          "nearby_physics_version": "nearby_nonanchor_0_5m_v1",
+          "partition": "test",
+          "producer_module": "src.tools.g01_collect_parallel",
+          "scene_timeout_seconds": 1200,
+          "seed": 0,
+          "timeout_seconds": 1600,
+          "version": "g01_fixed40_disjoint_ticket_bank_v1"
+        },
+        "name": "gen_test_s16_round2_s04",
+        "priority": 300,
+        "producer_module": "src.tools.g01_collect_parallel",
+        "references": {
+          "benchmark_source": {
+            "file": "results/gen_train_concurrency_s15_02.json",
+            "sha256": "ab76c90327458a52d95d051e6e1d3c7cb9a0047bc5ffab1a519584450bb7b729"
+          },
+          "g01_ticket_bank": {
+            "file": "configs/g01_test_priority_01_ticket_bank.json",
+            "sha256": "2b46211a5dab4a135379f2267a93e764ab82b5fc0c4a182dc5ca21653bec78ca"
+          },
+          "g01_ticket_slice": "s04",
+          "quota_plan": {
+            "file": "configs/gen_test_s16_round2_s04_quota.json",
+            "sha256": "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6"
+          }
+        },
+        "timeout_seconds": 1600,
+        "unit_id": "04376355a00197ec0779cf3dc41e37f005460e8ba1b67b4434f79a90d99c77fe"
+      }
+    },
+    "unchanged_scientific_claim_keys": [
+      "08244357e7b26d1490042fcaba0866fc03429252755f6dcd7b1313b0572ebbba",
+      "206f76cc170dfe12e32484328b25f167a424174591b4bcba3b27d10fdedcb2e3",
+      "224bede38296fd9defca05aaf1bf765c35ad5b6b809e778acfb8b30256bda4db",
+      "4c2ced33969a3657c43642ea0766b8c70a2df9af35da9229f7d7735011fc1376",
+      "878fdf7d2c4d8a2e94ba1b20a225a6d289f080ce78dbf00322798f8bf07e021b",
+      "c6a9f769961741b6e5d41e4c11828a5ff41c76186c1a8dfb7d51428ca15947fb"
+    ],
+    "only_quota_field_changed": "parent_run_name",
+    "raw_retention": "original_full",
+    "scene_timeout_seconds": 1200,
+    "parent_timeout_seconds": 1600,
+    "pbs_wall_seconds": 1630,
+    "storage_floor_guard": {
+      "source": {
+        "file": "results/diag_scratch_quota_compression_01.json",
+        "sha256": "482837c0418800d718e75284f3a168b441ab93a0909f289ad6373f13970138ff",
+        "bytes": 1058,
+        "metrics_sha256": "9b2911ba411fe55f1f9556394313ff530192dbf8a01feb916adfd8b70d6dff00"
+      },
+      "original_exit_code": 1,
+      "original_account_row": "e1583364  ||    517.8GB |    1.0TB   ||  2928738  | unlimited",
+      "unit_interpretation_source": {
+        "file": "results/diag_current_storage_units_01.json",
+        "sha256": "d64023a3b394a9730c3cfbe53941e3573aa5ae5bddd44ebba7f890933a51e5be",
+        "bytes": 4405,
+        "metrics_sha256": "b74c1f258acb5abdd2ed0a6a92ed4073ae77ad944e44f367a9fb51716290a2b2"
+      },
+      "cli_display_unit_interpretation": "GB=GiB, TB=TiB; original CLI labels retained",
+      "displayed_used_bytes": 555983516467.2,
+      "displayed_hard_bytes": 1099511627776.0,
+      "displayed_headroom_bytes": 543528111308.80005,
+      "minimum_headroom_bytes_decimal": 150000000000,
+      "scope": "Original rounded account-quota snapshot, not a reserved or exact filesystem capacity guarantee; recheck before submission if stale"
+    },
+    "gpu_submission_performed": false,
+    "scope": "Approved79bc7426 engineering rerun of ended failed S04 on the same original tickets. No old unsealed candidate promoted, no additional quota, no modification of old queue/bank/source. Original per-process cleanup uncertainty retained."
+  },
+  "config": {
+    "name": "diag_test_s16_s04_full_retry_plan_01",
+    "approved_task_commit": "79bc7426"
+  },
+  "sources": [
+    {
+      "file": "results/gen_test_s16_round2_s04.json",
+      "sha256": "f3f9b23d90ce18130b9f541dfb9adf3ad7988634a607f37b5b016319d7cc3859",
+      "bytes": 586759,
+      "metrics_sha256": "b036c377efac78b9be296e342ec55e38e417d2f11f130cd3fbe93784907ac331"
+    },
+    {
+      "file": "results/diag_gen_test_s16_s04_accounting_01.json",
+      "sha256": "8e374b077775c3b9cdb5c95e38d674f4914a8441d25e7f08d19778d392cc401a",
+      "bytes": 6188,
+      "metrics_sha256": "07dd0692cd1f119f4e45f08d906a0a341c5a92146e7b9eb0588a45eeedad328c"
+    },
+    {
+      "file": "results/diag_current_test_selected_02.json",
+      "sha256": "c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745",
+      "bytes": 10604,
+      "metrics_sha256": "e280204bd29edd84c07d49676b845ce410f3d40e813956829655c62dde3ca9ec"
+    },
+    {
+      "file": "results/diag_scratch_quota_compression_01.json",
+      "sha256": "482837c0418800d718e75284f3a168b441ab93a0909f289ad6373f13970138ff",
+      "bytes": 1058,
+      "metrics_sha256": "9b2911ba411fe55f1f9556394313ff530192dbf8a01feb916adfd8b70d6dff00"
+    },
+    {
+      "file": "results/diag_current_storage_units_01.json",
+      "sha256": "d64023a3b394a9730c3cfbe53941e3573aa5ae5bddd44ebba7f890933a51e5be",
+      "bytes": 4405,
+      "metrics_sha256": "b74c1f258acb5abdd2ed0a6a92ed4073ae77ad944e44f367a9fb51716290a2b2"
+    }
+  ],
+  "artifact_references": [
+    {
+      "file": "configs/gen_test_s16_round2_s04_quota.json",
+      "sha256": "d7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6"
+    },
+    {
+      "file": "configs/gen_test_s16_round2_s04_retry1_quota.json",
+      "sha256": "2791139641acd080a61675e3411b02fcde49c1cb11602bc64e2d4c8d4eec7a8d",
+      "bytes": 47068
+    },
+    {
+      "file": "logs/review/diag_test_s16_s04_unsealed_archive_01/manifest.json",
+      "sha256": "cda2a4a14929035384e1f14f338539eec8c4d770cd055434f7cc541393dd0980"
+    },
+    {
+      "file": "logs/review/diag_current_test_selected_02/report.json",
+      "sha256": "3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427"
+    },
+    {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_active_01.json",
+      "sha256": "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+      "bytes": 84011
+    }
+  ],
+  "_meta": {
+    "name": "diag_test_s16_s04_full_retry_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"One-off approved S04 full-retention retry plan; no submission or source repair.\"\"\"\nimport copy\nimport hashlib\nimport importlib.util\nimport json\nimport os\nfrom pathlib import Path\nimport re\nfrom src.tools import g01_quota_plan as quota\nfrom src.tools import g01_ticket_bank as bank\nfrom src.tools import gpu_shared_claim as shared\nfrom src.tools import pbs_mixed_accounting as mixed\nfrom src.envs import pair_v2_configuration as configurations\n\nROOT = Path.cwd().resolve()\nNAME = 'diag_test_s16_s04_full_retry_plan_01'\nOLD_NAME = 'gen_test_s16_round2_s04'\nRUN = 'gen_test_s16_round2_s04_retry1'\nJOB = '709455.hopper-m-02'\nSCENES = ['FloorPlan325', 'FloorPlan425', 'FloorPlan26', 'FloorPlan226', 'FloorPlan326', 'FloorPlan426']\n\ndef require(condition, message):\n    if not condition:\n        raise ValueError(message)\n\ndef read(filename, sha):\n    reference = {'file': filename, 'sha256': sha}\n    return mixed.read_reference(ROOT, reference)[0], reference\n\ndef logged(filename, sha=None):\n    ref = mixed.reference(ROOT / filename, ROOT)\n    if sha is not None:\n        require(ref['sha256'] == sha, 'Original logged source changed: ' + filename)\n    data, _ = mixed.logged(ROOT, ref)\n    return data, {**ref, 'metrics_sha256': data['_meta']['metrics_sha256']}\n\nparent, pref = logged('results/' + OLD_NAME + '.json',\n    'f3f9b23d90ce18130b9f541dfb9adf3ad7988634a607f37b5b016319d7cc3859')\naccount, aref = logged('results/diag_gen_test_s16_s04_accounting_01.json',\n    '8e374b077775c3b9cdb5c95e38d674f4914a8441d25e7f08d19778d392cc401a')\nrequire(parent['_meta']['exit_code'] == 1 and account['_meta']['exit_code'] == 0,\n        'Preserve the actual failed parent and successful original canonical accounting')\nspec = importlib.util.spec_from_file_location('s04_original_phase', ROOT / 'scripts/pbs/submit_phase.py')\nphase = importlib.util.module_from_spec(spec); spec.loader.exec_module(phase)\nfinal = phase._final_accounting(ROOT, {JOB}, paths=[ROOT / aref['file']])\nrequire(JOB in final, 'Original S04 allocation has not ended canonically')\nrows = [row for row in account['config']['jobs'] if row['job_id'] == JOB]\nrequire(len(rows) == 1 and rows[0]['qstat_exit'] == 0\n        and rows[0]['fields']['job_state'] == 'F' and rows[0]['fields']['Exit_status'] == '1',\n        'S04 retry requires the original F1 allocation, not an assumed missing process')\narchive, archive_ref = read('logs/review/diag_test_s16_s04_unsealed_archive_01/manifest.json',\n    'cda2a4a14929035384e1f14f338539eec8c4d770cd055434f7cc541393dd0980')\nrequire(archive['allocation_ended_by_original_pbs'] is True and archive['original_records_modified'] is False\n        and archive['parent']['sha256'] == pref['sha256']\n        and archive['canonical_accounting']['sha256'] == aref['sha256'], 'Original lossless failure archive differs')\n\ninventory, inventory_ref = logged('results/diag_current_test_selected_02.json',\n    'c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745')\nreport, report_ref = read('logs/review/diag_current_test_selected_02/report.json',\n    '3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427')\nrequire(inventory['_meta']['exit_code'] == 0 and report_ref['sha256'] in\n        (ROOT / inventory['_meta']['log_path']).read_text(), 'Selected inventory report lacks its original successful logged binding')\nproof = report['proof']\nrequire(proof['count_basis_authenticated'] is True\n        and proof['count_basis_authority'] == 'g01_published_independent_checkpoint_receipt_v1'\n        and proof['count_stage'] == 'independent_unique_construction_before_T02_filtering'\n        and proof['outstanding_reservations'] == [], 'Not the approved original independent construction snapshot')\nexpected_checkpoints = {'results/t01v2_checkpoint_test_a_full_01.json',\n    'results/t01v2_checkpoint_test_b_full_01.json',\n    *{f'results/t01v2_checkpoint_test_s16_s{i:02d}_01.json' for i in (1, 2, 3)}}\nrequire({r['file'] for r in proof['checkpoint_references']} == expected_checkpoints,\n        'This preparation is bound to the approved A/B+S01/S02/S03 inventory cutoff')\nrequire('Unsealed S04' in report['excluded'] and all(\n    OLD_NAME not in row['source_reference']['file'] and OLD_NAME not in row['pair_reference']['file']\n    for row in proof['unique_proposals']), 'Old S04 candidates already entered the published inventory; do not reallocate their ticket')\n\nold, old_ref = read('configs/gen_test_s16_round2_s04_quota.json',\n    'd7232a1856fdd65e74f2ec34cd7cad69b1a7803a1204131ef97452d5e2ffbfc6')\nquota.validate_structure(old)\nrequire(old['parent_run_name'] == OLD_NAME and old['partition'] == 'test'\n        and [r['scene'] for r in old['assignments']] == SCENES\n        and old['seed'] == 0 and old['field_of_view'] == 60, 'Original S04 scientific configuration differs')\nlatest_seen = configurations.validate_seen(proof['configuration_selection']['seen_configurations'])\noriginal_seen = configurations.validate_seen(old['confirmed_configurations'])\ndef scene_occupancy(values):\n    return sorted([row for row in values if row['configuration']['key']['scene'] in SCENES],\n                  key=lambda row: (row['configuration']['configuration_id'], row['kind']))\nrequire(scene_occupancy(latest_seen) == scene_occupancy(original_seen),\n        'New accepted S04-scene configurations are missing from the original exclusion set; no unchanged retry may be emitted')\n\nactive, active_ref = shared.load_plan('configs/shared_test_priority_active_01.json',\n    'a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a', root=ROOT)\nexternal = [row for row in active['external_reservations'] if row['unit']['name'] == OLD_NAME]\nrequire(len(external) == 1 and shared.validate_external(external[0], ROOT) == JOB,\n        'Original S04 external must remain bound to its actual original PBS job')\nold_keys = set(external[0]['unit']['claim_keys'])\nrequire(not any(old_keys.intersection(unit['claim_keys']) for unit in active['units']),\n        'A runnable shared unit overlaps the preserved S04 reservation')\nticket_bank = bank.read_reference(external[0]['unit']['references']['g01_ticket_bank'], ROOT)\nmember = bank.expected_member(ticket_bank, external[0]['unit']['references']['g01_ticket_bank'], 's04', root=ROOT)\nrequire(member['assignments'] == old['assignments'] and member['confirmed_configurations'] == old['confirmed_configurations'],\n        'Standalone retry would change original disjoint S04 tickets')\n\nstorage, storage_ref = logged('results/diag_scratch_quota_compression_01.json')\nrequire(storage['_meta']['command'] == ['python3', '-m', 'src.tools.record_command', '--name',\n    'diag_scratch_quota_compression_01', '--', 'hpc', 'quota']\n    and storage['config']['command'] == ['hpc', 'quota'], 'Use the original requested quota query, not a filesystem-wide free-space value')\nquota_log = (ROOT / storage['_meta']['log_path']).read_text()\nmatch = re.search(r'^\\s*e1583364\\s*\\|\\|\\s*([0-9.]+)([GMT]B)\\s*\\|\\s*([0-9.]+)([GMT]B)\\s*\\|\\|\\s*(\\d+)\\s*\\|\\s*(\\w+)', quota_log, re.M)\nrequire(match is not None, 'Original account scratch quota row is unavailable')\nunits_evidence, units_ref = logged('results/diag_current_storage_units_01.json')\nrequire(units_evidence['_meta']['exit_code'] == 0, 'Original CLI unit interpretation evidence failed')\n# The earlier logged CLI inspection established that hpc labels GB/TB using\n# binary GiB/TiB values. Preserve its labels verbatim, but interpret them using\n# that existing evidence rather than treating the display as decimal bytes.\nscale = {'MB': 2**20, 'GB': 2**30, 'TB': 2**40}\nused = float(match[1]) * scale[match[2]]; hard = float(match[3]) * scale[match[4]]\nrequire(hard - used >= 150 * 10**9, 'Account scratch displayed headroom is below the approved 150GB stop line')\nstorage_guard = {'source': storage_ref, 'original_exit_code': storage['_meta']['exit_code'],\n    'original_account_row': match.group(0).strip(), 'unit_interpretation_source': units_ref,\n    'cli_display_unit_interpretation': 'GB=GiB, TB=TiB; original CLI labels retained',\n    'displayed_used_bytes': used, 'displayed_hard_bytes': hard, 'displayed_headroom_bytes': hard-used,\n    'minimum_headroom_bytes_decimal': 150*10**9,\n    'scope': 'Original rounded account-quota snapshot, not a reserved or exact filesystem capacity guarantee; recheck before submission if stale'}\n\nfor folder in ('results', 'logs/runs'):\n    require(not list((ROOT / folder).glob(RUN + '*')), 'New retry name already has evidence')\nrequire(not list((ROOT / 'logs/pbs').glob(RUN + '-*'))\n    and not (Path('/scratch/e1583364/cvpr2027/g01_parallel') / RUN).exists(), 'New retry already has a reservation/raw directory')\nfor path in (ROOT / 'logs/pbs').glob(OLD_NAME + '*-*/payload.json'):\n    payload = json.loads(path.read_text())\n    require(payload['name'] == OLD_NAME, 'Another S04 retry exists; coordinate its terminal state before creating a new attempt')\nplan = copy.deepcopy(old); plan['parent_run_name'] = RUN\nrequire({k:v for k,v in plan.items() if k!='parent_run_name'} == {k:v for k,v in old.items() if k!='parent_run_name'},\n        'Only engineering run identity may change')\nquota.validate_structure(plan)\npath = ROOT / 'configs' / (RUN + '_quota.json')\nwith path.open('xb') as stream:\n    stream.write((json.dumps(plan,indent=2,sort_keys=True,allow_nan=False)+'\\n').encode())\n    stream.flush(); os.fsync(stream.fileno())\npath.chmod(0o444)\nnew_ref = mixed.reference(path,ROOT)\ncommand = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',RUN,'--scenes',*SCENES,\n    '--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json',\n    '--timeout-seconds','1600','--partition','test','--quota-plan',new_ref['file'],\n    '--quota-plan-sha256',new_ref['sha256'],'--nearby-physics']\nexpected = list(parent['_meta']['command'])\nfor flag,value in (('--name',RUN),('--quota-plan',new_ref['file']),('--quota-plan-sha256',new_ref['sha256'])):\n    expected[expected.index(flag)+1]=value\nrequire(command==expected and '--sample-rejected-raw' not in command,\n        'Full-retention retry changed original generation arguments')\nsubmission = ['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','G01',\n    '--name',RUN,'--gpus','1','--walltime','00:27:10','--',*command]\nmetrics = {'new_quota_plan':new_ref,'command':command,'submission_command':submission,\n    'old_job_id':JOB,'old_failed_source':pref,'original_failed_evidence_archive':archive_ref,\n    'selected_inventory_snapshot':report_ref,'same_scene_configurations_already_excluded':True,\n    'original_shared_external_preserved':external[0],'unchanged_scientific_claim_keys':sorted(old_keys),\n    'only_quota_field_changed':'parent_run_name','raw_retention':'original_full',\n    'scene_timeout_seconds':1200,'parent_timeout_seconds':1600,'pbs_wall_seconds':1630,\n    'storage_floor_guard':storage_guard,'gpu_submission_performed':False,\n    'scope':'Approved79bc7426 engineering rerun of ended failed S04 on the same original tickets. No old unsealed candidate promoted, no additional quota, no modification of old queue/bank/source. Original per-process cleanup uncertainty retained.'}\nresult={'metrics':metrics,'config':{'name':NAME,'approved_task_commit':'79bc7426'},\n    'sources':[pref,aref,inventory_ref,storage_ref,units_ref],\n    'artifact_references':[old_ref,new_ref,archive_ref,report_ref,active_ref]}\nwith (ROOT/'results'/(NAME+'.json')).open('x') as stream:\n    json.dump(result,stream,indent=2,allow_nan=False);stream.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T12:00:05",
+    "log_path": "logs/runs/diag_test_s16_s04_full_retry_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "69a4458741bbcaee727938049e808f2ee4e91aef",
+    "git_dirty": false,
+    "end": "2026-11-10T12:00:11",
+    "duration_sec": 1.5,
+    "exit_code": 0,
+    "metrics_sha256": "721685e94c8b5e516b61a42fd09adf90f5a7b737488269b0288c4cf2428786f2"
+  }
+}
