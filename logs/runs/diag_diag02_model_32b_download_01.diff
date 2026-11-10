@@ -1,0 +1,66 @@
+diff --git a/src/tools/smoke_e2e_pilot_contract.py b/src/tools/smoke_e2e_pilot_contract.py
+index 96673314..9bf24599 100644
+--- a/src/tools/smoke_e2e_pilot_contract.py
++++ b/src/tools/smoke_e2e_pilot_contract.py
+@@ -83,8 +83,11 @@ def episode_observation(plan, traces, *, kind, final_info, selected_name, succes
+     premature = bool(selections) and (seen is None or selections[0]['decision_index'] < seen)
+     # E2E learning metric includes any parsed terminal select, even an invalid
+     # mark. T4 independently requires a legal select for its auxiliary term.
++    # x_seen_step counts completed environment steps. Decision index k consumes
++    # the state after k steps and completes step k+1, so equality means the
++    # anchor was already in the input before the terminal select action.
+     seen_reason = ('no_parseable_select' if not selections else 'anchor_never_seen' if seen is None
+-                   else 'anchor_not_strictly_before_select' if seen >= selections[-1]['decision_index'] else None)
++                   else 'anchor_not_strictly_before_select' if seen > selections[-1]['decision_index'] else None)
+     return {**plan, 'kind': kind, 'task_reward_sum': sum(row['reward'] for row in traces),
+         'success': bool(success), 'tau': final_info['tau'], 'x_seen_step': seen,
+         'selected_name': selected_name,
+diff --git a/tests/test_smoke_e2e_pilot_contract.py b/tests/test_smoke_e2e_pilot_contract.py
+index 5c8b0ab9..593a8975 100644
+--- a/tests/test_smoke_e2e_pilot_contract.py
++++ b/tests/test_smoke_e2e_pilot_contract.py
+@@ -73,11 +73,14 @@ class PilotContractTests(unittest.TestCase):
+ 
+     def test_learning_seen_uses_strict_parsed_select_boundary_and_all_episode_denominator(self):
+         earlier = self.observed(seen=1)
+-        simultaneous = self.observed(seen=2)
++        preceding = self.observed(seen=2)
++        simultaneous = self.observed(seen=3)
+         invalid = self.observed(seen=1, invalid_select=True)
+         self.assertTrue(earlier['seen_before_select'])
++        self.assertTrue(preceding['seen_before_select'])
++        self.assertFalse(preceding['premature_commit'])
+         self.assertFalse(simultaneous['seen_before_select'])
+-        self.assertFalse(simultaneous['premature_commit'])
++        self.assertTrue(simultaneous['premature_commit'])
+         self.assertTrue(invalid['seen_before_select'])
+         self.assertIsNone(invalid['seen_before_select_reason'])
+         simultaneous['episode_id'], invalid['episode_id'] = 'e2', 'e3'
+@@ -86,6 +89,27 @@ class PilotContractTests(unittest.TestCase):
+         self.assertEqual(row['seen_before_select_count'], 2)
+         self.assertEqual(row['seen_before_select_fraction_of_episodes'], 2 / 3)
+ 
++    def test_immediately_preceding_observation_is_seen_before_the_next_select(self):
++        plan = {'episode_id': 'e', 'pair_id': 'dataset:a', 'world_id': 'w0'}
++        traces = [{**plan, 'decision_index': 0, 'parse_valid': True, 'action_valid': True,
++                   'action_kind': 'observe', 'reward': -.05, 'sample_id': 'sample0'},
++                  {**plan, 'decision_index': 1, 'parse_valid': True, 'action_valid': True,
++                   'action_kind': 'select', 'reward': 1., 'sample_id': 'sample1'}]
++        row = pilot.episode_observation(plan, traces, kind='look_flip',
++            final_info={'tau': 1, 'x_seen_step': 1, 'selected': True}, selected_name='A', success=True)
++        self.assertTrue(row['seen_before_select'])
++        self.assertIsNone(row['seen_before_select_reason'])
++        self.assertFalse(row['premature_commit'])
++
++    def test_visible_initial_state_precedes_first_select_even_for_unavailable_mark(self):
++        plan = {'episode_id': 'e', 'pair_id': 'dataset:a', 'world_id': 'w0'}
++        traces = [{**plan, 'decision_index': 0, 'parse_valid': True, 'action_valid': False,
++                   'action_kind': 'select', 'reward': 0., 'sample_id': 'sample0'}]
++        row = pilot.episode_observation(plan, traces, kind='look_stay',
++            final_info={'tau': 0, 'x_seen_step': 0, 'selected': True}, selected_name=None, success=False)
++        self.assertTrue(row['seen_before_select'])
++        self.assertFalse(row['valid_terminal_selection'])
++
+     def test_seen_without_any_parsed_select_still_counts_false(self):
+         plan = {'episode_id': 'e', 'pair_id': 'dataset:a', 'world_id': 'w0'}
+         traces = [{**plan, 'decision_index': 0, 'parse_valid': False, 'action_valid': False,
