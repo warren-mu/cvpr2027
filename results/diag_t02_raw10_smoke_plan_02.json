@@ -1,0 +1,58 @@
+{
+  "metrics": {
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_export_raw10_smoke_01",
+      "--source",
+      "results/t01v2_checkpoint_flip_geometry_01.json",
+      "--pair-id",
+      "floorplan203_00002",
+      "--pair-file",
+      "data/world_pairs/v2/pilot_pairs_v2_flip60_fp203_s15_r01_j707737_hopper_m_02_g0_floorplan203/floorplan203_00002/pair.json",
+      "--timeout-seconds",
+      "600",
+      "--pair-timeout-seconds",
+      "390",
+      "--gate-timeout-seconds",
+      "180",
+      "--sample-rejected-raw"
+    ],
+    "configuration": {
+      "file": "configs/t02_raw10_smoke_02.json",
+      "sha256": "5495aff5028a347d61e6ed753747ad23819189f96adec686f1b3353ebf566251"
+    },
+    "GPU_submitted": false,
+    "scientific_parameters_unchanged": true
+  },
+  "config": {
+    "name": "diag_t02_raw10_smoke_plan_02",
+    "scope": "Only run-name prefix corrected to original submitter T02 rule; first attempt had no PBS receipt"
+  },
+  "_meta": {
+    "name": "diag_t02_raw10_smoke_plan_02",
+    "command": [
+      "python3",
+      "-c",
+      "import json,hashlib\nfrom pathlib import Path\nn='diag_t02_raw10_smoke_plan_02'\np=Path('configs/t02_raw10_smoke_01.json');d=json.loads(p.read_text())\nold='t02_rejected_raw_smoke_01';new='t02_export_raw10_smoke_01'\nassert not list(Path('logs/pbs').glob(old+'-*')) and not list(Path('logs/pbs').glob(new+'-*'))\ncmd=d['command'];assert cmd.count(old)==1;cmd=[new if x==old else x for x in cmd];d['command']=cmd\nd['previous_plan']={'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}\nd['correction']='Only run-name prefix corrected to original submitter T02 rule; first attempt had no PBS receipt'\nout=Path('configs/t02_raw10_smoke_02.json')\nwith out.open('x') as f:json.dump(d,f,indent=2);f.write('\\n')\nout.chmod(0o444)\nmetrics={'command':cmd,'configuration':{'file':str(out),'sha256':hashlib.sha256(out.read_bytes()).hexdigest()},'GPU_submitted':False,'scientific_parameters_unchanged':True}\nPath('results',n+'.json').write_text(json.dumps({'metrics':metrics,'config':{'name':n,'scope':d['correction']}},indent=2));print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T11:03:36",
+    "log_path": "logs/runs/diag_t02_raw10_smoke_plan_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "92a4e39e12f0d8c7bb132a873fdde455f1c9e154",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_t02_raw10_smoke_plan_02.diff",
+    "end": "2026-11-10T11:03:43",
+    "duration_sec": 0.1,
+    "exit_code": 0,
+    "metrics_sha256": "8230713645834ad658da6ace6d37dc1203d76ad9a6f3f089e8d3b26d2ea79418"
+  }
+}

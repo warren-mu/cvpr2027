@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 11.802089534001425
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_quota_and_future_storage_audit_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_quota_and_future_storage_audit_01",
+      "--",
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T11:02:36",
+    "log_path": "logs/runs/diag_quota_and_future_storage_audit_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "92a4e39e12f0d8c7bb132a873fdde455f1c9e154",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_quota_and_future_storage_audit_01.diff",
+    "end": "2026-11-10T11:02:49",
+    "duration_sec": 11.9,
+    "exit_code": 0,
+    "metrics_sha256": "c993adb80dc27e65bfc2b9b191676a8e94c550edb7042569942c5fb33b8f9e32"
+  }
+}
