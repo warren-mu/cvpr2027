@@ -1,0 +1,123 @@
+{
+  "config": {
+    "name": "gpu_pack_test_selected05_remaining_single_01_mixed_accounting",
+    "version": "shared_gpu_units_budget_v1",
+    "payload_reference": {
+      "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/payload.json",
+      "sha256": "4aefa5528e12d4366e788587af1348b34d2d82aa29feb940ebc3130bf2782b04"
+    },
+    "pack_reference": {
+      "file": "results/gpu_pack_test_selected05_remaining_single_01.json",
+      "sha256": "562016badf1d8198ea4131b8528d2f007078a452e15a324f6790703f408ce298"
+    },
+    "account_reference": {
+      "file": "results/diag_test_selected05_remaining_710571_accounting_01.json",
+      "sha256": "09cddc4aef32a878f4223cf847c3d029484b4a38fc3909550085a33af73ec4b1"
+    }
+  },
+  "metrics": {
+    "version": "shared_gpu_units_budget_v1",
+    "possible_groups": [
+      "T02"
+    ],
+    "residual_group": "T02",
+    "zero_business": true,
+    "observed_unit_gpu_seconds_by_group": {
+      "T02": 0.0
+    },
+    "allocation_gpu_hours": 0.0075,
+    "queue_charge_rate": 1.0,
+    "total_charged_gpu_hours": 0.0075,
+    "charged_gpu_hours_by_group": {
+      "T02": 0.0075
+    },
+    "charged_gpu_hours_by_group_exact": {
+      "T02": {
+        "numerator": "3",
+        "denominator": "400"
+      }
+    },
+    "total_charged_gpu_hours_exact": {
+      "numerator": "3",
+      "denominator": "400"
+    },
+    "unassigned_allocation_gpu_hours": 0.0075,
+    "residual_charged_gpu_hours": 0.0075,
+    "scope": "Scheduler cost attribution only; gate, idle, cleanup and timing remainder follow the predeclared priority, not scientific success. Exact fractions conserve the original canonical total; floats are display/budget values.",
+    "job_id": "710571.hopper-m-02",
+    "pack_name": "gpu_pack_test_selected05_remaining_single_01",
+    "unit_count": 0,
+    "sources": [
+      {
+        "file": "results/gpu_pack_test_selected05_remaining_single_01.json",
+        "sha256": "562016badf1d8198ea4131b8528d2f007078a452e15a324f6790703f408ce298",
+        "metrics_sha256": "f03d02346392947baff452600133b6d86ca06bb62ae19bd29e5865aabbfaa272"
+      },
+      {
+        "file": "results/diag_test_selected05_remaining_710571_accounting_01.json",
+        "sha256": "09cddc4aef32a878f4223cf847c3d029484b4a38fc3909550085a33af73ec4b1",
+        "metrics_sha256": "02aad471ad22c8aaadd8c6c0fd5b428cf69d346620d8ae211ca95f1325a7a1a8"
+      }
+    ],
+    "artifact_references": [
+      {
+        "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/payload.json",
+        "sha256": "4aefa5528e12d4366e788587af1348b34d2d82aa29feb940ebc3130bf2782b04"
+      },
+      {
+        "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/submission.json",
+        "sha256": "65f20599929401ea4ca0a6d95b341bd00af98746c8e2a693a54466720308a65e",
+        "bytes": 455
+      }
+    ],
+    "canonical_accounting_result": "results/diag_test_selected05_remaining_710571_accounting_01.json"
+  },
+  "sources": [
+    {
+      "file": "results/gpu_pack_test_selected05_remaining_single_01.json",
+      "sha256": "562016badf1d8198ea4131b8528d2f007078a452e15a324f6790703f408ce298",
+      "metrics_sha256": "f03d02346392947baff452600133b6d86ca06bb62ae19bd29e5865aabbfaa272"
+    },
+    {
+      "file": "results/diag_test_selected05_remaining_710571_accounting_01.json",
+      "sha256": "09cddc4aef32a878f4223cf847c3d029484b4a38fc3909550085a33af73ec4b1",
+      "metrics_sha256": "02aad471ad22c8aaadd8c6c0fd5b428cf69d346620d8ae211ca95f1325a7a1a8"
+    }
+  ],
+  "_meta": {
+    "name": "gpu_pack_test_selected05_remaining_single_01_mixed_accounting",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.pbs_mixed_accounting",
+      "--name",
+      "gpu_pack_test_selected05_remaining_single_01_mixed_accounting",
+      "--payload",
+      "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/payload.json",
+      "--payload-sha256",
+      "4aefa5528e12d4366e788587af1348b34d2d82aa29feb940ebc3130bf2782b04",
+      "--pack-result",
+      "results/gpu_pack_test_selected05_remaining_single_01.json",
+      "--pack-sha256",
+      "562016badf1d8198ea4131b8528d2f007078a452e15a324f6790703f408ce298",
+      "--accounting-result",
+      "results/diag_test_selected05_remaining_710571_accounting_01.json",
+      "--accounting-sha256",
+      "09cddc4aef32a878f4223cf847c3d029484b4a38fc3909550085a33af73ec4b1"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-11T00:22:57",
+    "log_path": "logs/runs/gpu_pack_test_selected05_remaining_single_01_mixed_accounting.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d801aa8076e48ecea0b4e9a717f95f8e954f878a",
+    "git_dirty": false,
+    "end": "2026-11-11T00:22:57",
+    "duration_sec": 0.6,
+    "exit_code": 0,
+    "metrics_sha256": "ec64de5bc5eb741b7aeba0f855be609a3ec8a00ddc9b610c307630203738bc33"
+  }
+}

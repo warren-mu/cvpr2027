@@ -1,0 +1,49 @@
+# run_logged: python3 -c import hashlib, importlib.util, io, json, shlex
+from pathlib import Path
+from PIL import Image
+from src.tools import pbs_black_retry as b
+r=Path.cwd().resolve(); require=b.require
+name='diag_test_selected05_remaining_single01_black_guard_01'
+job='710571.hopper-m-02'; parent_name='gpu_pack_test_selected05_remaining_single_01'
+folder=r/'logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d'
+def ref(path):
+    return {'file':str(path.relative_to(r)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+def load(filename):
+    rr=ref(r/filename); data,path=b.logged(r,rr)
+    return data,dict(rr,metrics_sha256=data['_meta']['metrics_sha256'])
+parent,pref=load('results/'+parent_name+'.json')
+gate,gref=load('results/'+parent_name+'_gate_0.json')
+account,aref=load('results/diag_test_selected05_remaining_710571_accounting_01.json')
+cost,cref=load('results/'+parent_name+'_mixed_accounting.json')
+pp,sp,rp=(folder/p for p in ('payload.json','job.pbs','submission.json'))
+payload,receipt=json.loads(pp.read_bytes()),json.loads(rp.read_bytes())
+expected=['python3','-u','-m','src.tools.gpu_pack','--name',parent_name,'--queue-plan','configs/shared_test_selected05_raw10_compressed_remaining_01.json','--queue-plan-sha256','8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff','--queue-root','/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_remaining_01','--gpus','1','--timeout-seconds','4616','--gate-timeout-seconds','180']
+require(payload['repo']==str(r) and payload['name']==parent_name and payload['command']==expected and payload['dry_run'] is False and payload['task_id']=='T01' and payload['budget_group']=='PACK' and payload['budget_batch']=='t00b_t01_20261108' and payload['queue']=='autox' and payload['requested_host'] is None and payload['requested_gpu_count']==1 and payload['requested_wall_seconds']==4646,'Original exact PACK payload differs')
+require(pp.stat().st_mode & 0o222 == sp.stat().st_mode & 0o222 ==0 and receipt['returncode']==0 and receipt['stdout'].strip()==job and not receipt['stderr'],'Original immutable files/receipt differ')
+spec=importlib.util.spec_from_file_location('original_submit_for_pack_guard',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+require(sp.read_text()==phase.render_job_script((r/'scripts/pbs/job_1gpu.pbs').read_text(),1,pp,None),'Original PBS script differs from unchanged one-GPU template')
+final=phase._final_accounting(r,{job},paths=[r/aref['file']]);require(job in final,'Original canonical accounting missing')
+rows=[v for v in account['config']['jobs'] if v['job_id']==job];require(len(rows)==1 and rows[0]['qstat_exit']==0,'Canonical job ambiguous');f=rows[0]['fields']
+require(f.get('job_state')=='F' and f.get('Exit_status')=='86' and f.get('run_count')=='1' and f.get('project')=='CFP04-SF-125' and f.get('Job_Owner','').split('@')[0]=='e1583364' and f.get('Resource_List.ngpus')=='1' and f.get('Resource_List.ncpus')=='12' and f.get('Resource_List.walltime')=='01:17:26' and f.get('queue')=='smallx' and 'PBS_O_QUEUE=autox' in f.get('Variable_List','') and shlex.split(f['Submit_arguments'])==receipt['command'][1:] and f['Output_Path'].split(':',1)[1]==str(folder/'pbs.out'),'Original canonical allocation/exit differs')
+gc,gm=gate['config'],gate['metrics']; a=gc['allocation']; pm=parent['metrics']; node=gc['node'];gpu=a['cuda_visible_devices']
+proof={'eligible_proven_black_gate_retry':True,'job_id':job,'native_kind':'gpu_shared_pack','original_payload':ref(pp),'original_job_script':ref(sp),'original_receipt':ref(rp),'original_command_unchanged':expected,'pbs_accounting':aref,'mixed_accounting':cref,'source_results':[pref,gref],'node':node,'gpu_uuid':gpu,'captures':[]}
+parent_gate=b.pack_opening_black(r,payload,pp,rp,parent,gate,proof,final[job])
+require(parent_gate['sha256']==gref['sha256'],'Parent gate SHA differs')
+require({part.split('/')[0] for part in f['exec_host'].split('+')}=={node} and parent['_meta']['host']==gate['_meta']['host']==parent['config']['node']==node and gc['pbs_jobid']==a['pbs_jobid']==job and a['cuda_driver_uuids']==[gpu] and len(a['cpu_affinity'])==len(set(a['cpu_affinity']))==12 and gc['resolution']==255 and gc['segmentation'] is True and gate['_meta']['exit_code']==gm.get('exit_code')==86 and gm.get('passed') is False and gm.get('black_frame_detected') is True and gm.get('errors')==gm.get('cleanup_errors')==[] and gm.get('expected_gpu_count')==gm.get('completed_gpu_count')==1 and len(gm['devices'])==len(a['devices'])==1,'Original native gate identities differ')
+ob=gm['devices'][0]['observation'];require(gm['devices'][0]['worker_error'] is None and not ob.get('error') and not ob.get('cleanup_error') and ob['gpu_identity']==a['devices'][0] and ob['gpu_identity']['gpu_uuid']==gpu and ob['node']==node and [v['stage'] for v in ob['captures']]==['after_constructor','after_Pass'],'Native observations are incomplete')
+for stage in ('constructor','Pass'):
+    require(any(v['stage']==stage and v['fresh_main_rgb_payloads']>0 and v['cached_metadata'] is False for v in ob['wire_packets']),'Missing fresh native constructor/Pass payload')
+for capture in ob['captures']:
+    path=Path(capture['png']['path']).resolve();path.relative_to(r/'logs/runs'); rr=ref(path)
+    require(rr['sha256']==capture['png']['sha256'] and capture['valid_shape'] is True and capture['shape']==[255,255,3] and capture['dtype']=='uint8' and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True and capture['nonzero_rgb_values']==capture['min_rgb']==capture['max_rgb']==0,'Original native black capture invalid')
+    with Image.open(io.BytesIO(path.read_bytes())) as im:
+        require(im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3,'Original decoded capture is not all black')
+    proof['captures'].append(rr)
+metrics={'strict_black_gate_proof':proof,'scope':'Original single-GPU PACK opening native-black, no owned business; no submission or scientific acceptance'}
+result={'metrics':metrics,'config':{'name':name,'original_job_id':job,'original_parent':parent_name},'sources':[pref,gref,aref,cref]}
+with (r/'results'/f'{name}.json').open('x') as handle:json.dump(result,handle,indent=2,allow_nan=False);handle.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-11T00:25:03
+FINAL_METRICS_JSON: {"scope": "Original single-GPU PACK opening native-black, no owned business; no submission or scientific acceptance", "strict_black_gate_proof": {"captures": [{"file": "logs/runs/gpu_pack_test_selected05_remaining_single_01_gate_0/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"file": "logs/runs/gpu_pack_test_selected05_remaining_single_01_gate_0/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310", "job_id": "710571.hopper-m-02", "mixed_accounting": {"file": "results/gpu_pack_test_selected05_remaining_single_01_mixed_accounting.json", "metrics_sha256": "ec64de5bc5eb741b7aeba0f855be609a3ec8a00ddc9b610c307630203738bc33", "sha256": "fe6984f7cf58092ee3c7585d4cae1299a964942146a9611d7b28e77cbdede0dd"}, "native_kind": "gpu_shared_pack", "node": "hopper-20", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.gpu_pack", "--name", "gpu_pack_test_selected05_remaining_single_01", "--queue-plan", "configs/shared_test_selected05_raw10_compressed_remaining_01.json", "--queue-plan-sha256", "8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff", "--queue-root", "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_remaining_01", "--gpus", "1", "--timeout-seconds", "4616", "--gate-timeout-seconds", "180"], "original_job_script": {"file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/job.pbs", "sha256": "9235cbbf44faf0544d0d04e63f427bf13b7d20e325b52f8c1107587f9cd28249"}, "original_payload": {"file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/payload.json", "sha256": "4aefa5528e12d4366e788587af1348b34d2d82aa29feb940ebc3130bf2782b04"}, "original_receipt": {"file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/submission.json", "sha256": "65f20599929401ea4ca0a6d95b341bd00af98746c8e2a693a54466720308a65e"}, "pbs_accounting": {"file": "results/diag_test_selected05_remaining_710571_accounting_01.json", "metrics_sha256": "02aad471ad22c8aaadd8c6c0fd5b428cf69d346620d8ae211ca95f1325a7a1a8", "sha256": "09cddc4aef32a878f4223cf847c3d029484b4a38fc3909550085a33af73ec4b1"}, "source_results": [{"file": "results/gpu_pack_test_selected05_remaining_single_01.json", "metrics_sha256": "f03d02346392947baff452600133b6d86ca06bb62ae19bd29e5865aabbfaa272", "sha256": "562016badf1d8198ea4131b8528d2f007078a452e15a324f6790703f408ce298"}, {"file": "results/gpu_pack_test_selected05_remaining_single_01_gate_0.json", "metrics_sha256": "de3e924034dc1768ff389c39db5b3ecf091f1c8bab2e99978443437044cc9d40", "sha256": "04d7323b48f7792597db1d0bc875a39a41a8990b92a0b18bb720e5b057f4d9d6"}]}}
+# exit_code: 0

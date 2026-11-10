@@ -1,0 +1,163 @@
+# run_logged: python3 -c """Third same-queue preflight; original two receipts, D3 final proof and scratch parser; no job submission.
+
+Original hpc quota exit1 (home awk) is preserved. Only its complete scratch
+row can satisfy the storage guard. The real submitter still checks fresh
+canonical/reserved budgets under its original submission lock.
+"""
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import re
+import signal
+import time
+from src.tools import pbs_mixed_accounting as mixed
+
+ROOT=Path.cwd().resolve()
+NAME='diag_test_selected05_remaining_third_preflight_01'
+PLAN_RESULT='results/diag_test_selected05_remaining_plan_01.json'
+QUOTA_RESULT='results/diag_test_selected05_remaining_scratch_quota_02.json'
+SOURCES=[]
+
+
+def require(condition,message):
+    if not condition:raise ValueError(message)
+
+
+def logged(path):
+    reference=mixed.reference(ROOT/path,ROOT)
+    data,p=mixed.logged(ROOT,reference)
+    SOURCES.append({**reference,'metrics_sha256':data['_meta']['metrics_sha256']})
+    return data,p
+
+
+def main():
+    require(not (ROOT/'results'/(NAME+'.json')).exists(),'Unique preflight already exists')
+    prepared,prepared_path=logged(PLAN_RESULT)
+    require(prepared['_meta']['exit_code']==0 and prepared['metrics'].get('prepared') is True
+            and prepared['metrics'].get('configuration_files_written') is True
+            and prepared['metrics'].get('remaining_pairs')==88
+            and len(prepared['metrics'].get('planned_units',[]))==15
+            and prepared['metrics']['plan_reference']['sha256']=='8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff',
+            'Original successful fixed remaining88 plan required')
+    quota,quota_path=logged(QUOTA_RESULT)
+    require(quota['config'].get('command')==['hpc','quota']
+            and quota['_meta']['exit_code']==quota['metrics'].get('command_exit_code')
+            and quota['_meta']['exit_code'] in (0,1)
+            and 0<=time.time()-quota_path.stat().st_mtime<=900,
+            'Require fresh original hpc quota result, preserving its real exit')
+    log=ROOT/quota['_meta']['log_path'];text=log.read_text()
+    require('Disk space for Hopper /scratch/e1583364 ' in text,'Missing original scratch account section')
+    rows=re.findall(r'^\s*e1583364\s*\|\|\s*([0-9]+(?:\.[0-9]+)?)([KMGTP]B)\s*\|\s*([0-9]+(?:\.[0-9]+)?)([KMGTP]B)\s*\|\|\s*([0-9]+)\s*\|\s*(\S+)\s*$',text,re.M)
+    require(len(rows)==1,'Missing or ambiguous complete scratch account quota row')
+    used,u_unit,hard,h_unit,files,file_hard=rows[0]
+    from decimal import Decimal
+    units={symbol:Decimal(1024)**power for power,symbol in enumerate(('B','KB','MB','GB','TB','PB'))}
+    used_bytes=Decimal(used)*units[u_unit];hard_bytes=Decimal(hard)*units[h_unit]
+    free_bytes=hard_bytes-used_bytes
+    require(free_bytes>=150*1024**3,'Scratch quota free below original 150GiB floor')
+    # Existing logged units note authenticates the CLI's binary GB/TB labels.
+    units_note,units_path=logged('results/diag_current_storage_units_01.json')
+    require(units_note['_meta']['exit_code']==0,'Original storage-unit evidence failed')
+    prior,prior_path=logged('results/diag_test_selected05_remaining_preflight_02.json')
+    require(mixed.reference(prior_path,ROOT)['sha256']=='7fa51bfc936ac94b003c73660d26483e98bf6203ff0aa2ee28366b74ad78ce78'
+            and prior['_meta']['exit_code']==0 and prior['metrics']['validated'] is True,
+            'Original first-two preflight differs')
+    commands=prepared['metrics']['review_only_submit_argv']
+    require(commands==prior['metrics']['submit_commands'] and len(commands)==2,
+            'Original two consumer commands changed')
+    spec=importlib.util.spec_from_file_location('third_original_submitter',ROOT/'scripts/pbs/submit_phase.py')
+    phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+    account,account_path=logged('results/diag_diag01_d3_final_accounting_01.json')
+    require(mixed.reference(account_path,ROOT)['sha256']=='92667c746551b27a2e0a19e21f6f8f26230af766b16dab750bd876570d12b175'
+            and account['_meta']['exit_code']==0,'Original D3 final accounting differs')
+    final=phase._final_accounting(ROOT,{'710558.hopper-m-02'},paths=[account_path])
+    require(set(final)=={'710558.hopper-m-02'},'D3 original final PBS allocation not proved')
+    d3,d3_path=logged('results/diag_diag01_baselines_s0_01_retry1.json')
+    require(mixed.reference(d3_path,ROOT)['sha256']=='20bb119d047a580591f46c9613cdacf06d946a0c63e842503bba9477f4732313'
+            and d3['_meta']['exit_code']==0 and d3['metrics']['completed'] is True
+            and d3['metrics']['cleanup_errors']==[]
+            and d3['config']['identity']['pbs_jobid']=='710558.hopper-m-02',
+            'D3 is not the original completed clean run')
+    receipts=[]
+    for argv,suffix in zip(commands,('01','02')):
+        name='gpu_pack_test_selected05_remaining_single_'+suffix
+        require(argv[:13]==['python3','scripts/pbs/submit_phase.py','--name',name,'--task','T01',
+                '--budget-group','PACK','--gpus','1','--walltime','01:17:26','--'],
+                'Original first-two request changed')
+        paths=list((ROOT/'logs/pbs').glob(name+'-*/payload.json'))
+        require(len(paths)==1,'First-two submission missing/ambiguous: '+name)
+        path=paths[0];payload=json.loads(path.read_bytes());receipt_path=path.with_name('submission.json')
+        require(receipt_path.is_file(),'Submission still in flight: '+name)
+        receipt=json.loads(receipt_path.read_bytes())
+        require(path.stat().st_mode & 0o222 == 0 and payload['name']==name
+                and payload['command']==argv[13:] and payload['task_id']=='T01'
+                and payload['budget_group']=='PACK' and payload['requested_gpu_count']==1
+                and payload['requested_wall_seconds']==4646 and payload['requested_host'] is None
+                and payload['dry_run'] is False and payload['retry_of'] is None,
+                'Original immutable first-two payload differs')
+        mixed.validate_payload(ROOT,payload)
+        require(receipt.get('returncode')==0 and not receipt.get('stderr')
+                and re.fullmatch(r'\d+\.hopper-m-\d+\s*',receipt.get('stdout',''))
+                and receipt['command'][0]=='qsub'
+                and receipt['command'][receipt['command'].index('-l')+1]=='walltime=01:17:26'
+                and Path(receipt['command'][-1]).resolve()==path.with_name('job.pbs').resolve(),
+                'First-two successful real receipts not available')
+        receipts.append({'name':name,'job_id':receipt['stdout'].strip(),
+            'payload_reference':mixed.reference(path,ROOT),'receipt_reference':mixed.reference(receipt_path,ROOT)})
+    require(len({r['job_id'] for r in receipts})==2,'First-two receipts repeat a PBS job')
+    oldname='gpu_pack_test_selected05_remaining_single_01'
+    name='gpu_pack_test_selected05_remaining_single_03'
+    argv=[name if value==oldname else value for value in commands[0]]
+    require([oldname if value==name else value for value in argv]==commands[0],
+            'Third consumer changed more than its run name')
+    command=argv[13:];binding=mixed.validate_submission(ROOT,command,name,1)
+    require((ROOT/binding['plan_reference']['file']).resolve()==(ROOT/prepared['metrics']['plan_reference']['file']).resolve()
+            and all(binding['plan_reference'][key]==prepared['metrics']['plan_reference'][key] for key in ('sha256','bytes'))
+            and binding['possible_groups']==['T02'], 'Third consumer plan/group differs')
+    require(not list((ROOT/'logs/pbs').glob(name+'-*')) and not (ROOT/'results'/(name+'.json')).exists(),
+            'Third consumer was already submitted or started')
+    require(phase.TOTAL_LIMIT==120 and phase.SUBBUDGET_LIMITS['T02']==40,'Original checker limits differ')
+    bindings=[binding];commands=[argv]
+    return {'validated':True,'producer_exit_code':0,'errors':[],
+        'plan_reference':prepared['metrics']['plan_reference'],'submit_commands':commands,'mixed_budget_authorizations':bindings,
+        'first_two_successful_submissions':receipts,'D3_final_accounting_reference':mixed.reference(account_path,ROOT),
+        'D3_completed_reference':mixed.reference(d3_path,ROOT),
+        'scratch':{'used_display':used+u_unit,'hard_display':hard+h_unit,
+            'unit_interpretation':'Original hpc CLI GB/TB are GiB/TiB; no decimal conversion',
+            'used_bytes':str(used_bytes),'hard_bytes':str(hard_bytes),'free_bytes':str(free_bytes),
+            'floor_bytes':150*1024**3,'files_used':int(files),'files_hard':file_hard,
+            'original_command_exit_code':quota['_meta']['exit_code'],
+            'home_error_preserved':'division by zero' in text,'scratch_row_complete':True},
+        'budget_scope':{'task':'T01','group':'PACK','possible_groups':['T02'],
+            'T02_cap_gpu_hours':40,'shared_cap_gpu_hours':120,
+            'fresh_state_validation':'Original submit_phase repeats actual+full-reserved accounting under lock before qsub; not performed or claimed by this metadata preflight'},
+        'gpu_submission_performed':False,'requested_host':None,
+        'black_retry_rule':'Only an original proven opening black F86 with zero claims, complete canonical/mixed+native gate evidence permits existing 28/30 rotation; if still freshQ/no allocation at actualqtime+20min root may cancel then nohost retry; running jobs untouched',
+        'slot_scope':'D3 clean completed and original F confirmed; two actual successful consumer receipts precede this third single-GPU same-queue request. No four-GPU request or changed population.',
+        'fresh_cache_status':'not_performed','downstream_allowed':False}
+
+
+def finish(metrics):
+    with (ROOT/'results'/(NAME+'.json')).open('x') as stream:
+        json.dump({'config':{'name':NAME},'metrics':metrics,'sources':SOURCES},stream,indent=2,allow_nan=False)
+        stream.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+
+if __name__=='__main__':
+    def expired(*_):raise TimeoutError('90-second metadata-only selected05 preflight bound')
+    signal.signal(signal.SIGALRM,expired);signal.alarm(90)
+    try:metrics=main()
+    except BaseException as error:
+        signal.alarm(0)
+        if not (ROOT/'results'/(NAME+'.json')).exists():
+            finish({'validated':False,'producer_exit_code':1,'errors':[{'type':type(error).__name__,'message':str(error)}],
+                'gpu_submission_performed':False,'downstream_allowed':False})
+        raise
+    else:finish(metrics)
+    finally:signal.alarm(0)
+
+# start: 2026-11-11T00:25:57
+FINAL_METRICS_JSON: {"D3_completed_reference": {"bytes": 21526, "file": "results/diag_diag01_baselines_s0_01_retry1.json", "sha256": "20bb119d047a580591f46c9613cdacf06d946a0c63e842503bba9477f4732313"}, "D3_final_accounting_reference": {"bytes": 10413, "file": "results/diag_diag01_d3_final_accounting_01.json", "sha256": "92667c746551b27a2e0a19e21f6f8f26230af766b16dab750bd876570d12b175"}, "black_retry_rule": "Only an original proven opening black F86 with zero claims, complete canonical/mixed+native gate evidence permits existing 28/30 rotation; if still freshQ/no allocation at actualqtime+20min root may cancel then nohost retry; running jobs untouched", "budget_scope": {"T02_cap_gpu_hours": 40, "fresh_state_validation": "Original submit_phase repeats actual+full-reserved accounting under lock before qsub; not performed or claimed by this metadata preflight", "group": "PACK", "possible_groups": ["T02"], "shared_cap_gpu_hours": 120, "task": "T01"}, "downstream_allowed": false, "errors": [], "first_two_successful_submissions": [{"job_id": "710571.hopper-m-02", "name": "gpu_pack_test_selected05_remaining_single_01", "payload_reference": {"bytes": 1806, "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/payload.json", "sha256": "4aefa5528e12d4366e788587af1348b34d2d82aa29feb940ebc3130bf2782b04"}, "receipt_reference": {"bytes": 455, "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_01-20261110T161735Z-34b11b5d/submission.json", "sha256": "65f20599929401ea4ca0a6d95b341bd00af98746c8e2a693a54466720308a65e"}}, {"job_id": "710574.hopper-m-02", "name": "gpu_pack_test_selected05_remaining_single_02", "payload_reference": {"bytes": 1806, "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_02-20261110T161958Z-787d9409/payload.json", "sha256": "87a3327cbff8c7e946ebdf1e7faaaa82660507ac836ef6c89e80a03c8a3b3d76"}, "receipt_reference": {"bytes": 455, "file": "logs/pbs/gpu_pack_test_selected05_remaining_single_02-20261110T161958Z-787d9409/submission.json", "sha256": "b5b895e78733b698d69548d4dca40a93e852310710efaa1df53b00fb8716fd1c"}}], "fresh_cache_status": "not_performed", "gpu_submission_performed": false, "mixed_budget_authorizations": [{"plan_reference": {"bytes": 61444, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_selected05_raw10_compressed_remaining_01.json", "sha256": "8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff"}, "possible_groups": ["T02"], "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget", "residual_priority": ["T02"], "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business", "total_rule": "one_allocation_once_in_T01_and_shared", "version": "shared_gpu_units_budget_v1"}], "plan_reference": {"bytes": 61444, "file": "configs/shared_test_selected05_raw10_compressed_remaining_01.json", "sha256": "8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff"}, "producer_exit_code": 0, "requested_host": null, "scratch": {"files_hard": "unlimited", "files_used": 3246845, "floor_bytes": 161061273600, "free_bytes": "452152682086.4", "hard_bytes": "1099511627776.0", "hard_display": "1.0TB", "home_error_preserved": false, "original_command_exit_code": 1, "scratch_row_complete": true, "unit_interpretation": "Original hpc CLI GB/TB are GiB/TiB; no decimal conversion", "used_bytes": "647358945689.6", "used_display": "602.9GB"}, "slot_scope": "D3 clean completed and original F confirmed; two actual successful consumer receipts precede this third single-GPU same-queue request. No four-GPU request or changed population.", "submit_commands": [["python3", "scripts/pbs/submit_phase.py", "--name", "gpu_pack_test_selected05_remaining_single_03", "--task", "T01", "--budget-group", "PACK", "--gpus", "1", "--walltime", "01:17:26", "--", "python3", "-u", "-m", "src.tools.gpu_pack", "--name", "gpu_pack_test_selected05_remaining_single_03", "--queue-plan", "configs/shared_test_selected05_raw10_compressed_remaining_01.json", "--queue-plan-sha256", "8de11ad34ab1eebefa637e95dc797e7c5f2face3b4317669449127302d0db3ff", "--queue-root", "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_remaining_01", "--gpus", "1", "--timeout-seconds", "4616", "--gate-timeout-seconds", "180"]], "validated": true}
+# exit_code: 0
