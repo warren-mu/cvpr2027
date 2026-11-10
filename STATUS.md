@@ -1897,3 +1897,9 @@ DIAG01完整报告和33个封口结果的原审计（0 FAIL）已于11:30前后�
 710574在hopper-27/GPU-2c9376c7-5d82-d36d-b753-697927c88368通过出图检查；第三单卡consumer710584在hopper-16/GPU-d023b691-b356-0c67-bdd5-ac55e5a1dd09通过，二者共用原不可变队列和锁，无重复领取。six02、six03、six04原封口结果分别为5 exported/1 error、5 exported/1 error、6 exported。six02失败是floorplan222_00000的TeleportFull与Box碰撞；six03失败是floorplan323_00169的Native graph domain unavailable，均为原错误，未改称科学拒绝，未删候选或重置领取键。原失败、raw和日志全部保留；已通过原导出检查不等于cache_matches_live通过，95对总体未缩减。
 
 six02原8文件审计和six03/04原16文件审计均0 FAIL，原P5/P7警告保留。运行中的PACK parent尚未封口，不据此写最终用量或完成状态；两consumer继续领取后续单元。710586的20分钟规则只在确认实际qtime并取得fresh Q/未分配证据后执行，已运行作业不取消。
+
+
+### 2026-11-10 11:52 ET — 测试导出six05/06封口
+原six05完成4 exported/2 error：floorplan222_00035碰撞Laptop，floorplan426_00106碰撞Towel。原six06完成5 exported/1 error：floorplan422_00012的native graph unavailable。原errors均保留，不改称科学拒绝；两批children全部结束、清理无错误，原16文件审计0 FAIL。上述exported仍不是cache通过；原95候选总体不变。710574/710584继续原共享队列，不新增生成、不提交主实验。
+
+710586的current-only PBS查询也在30秒超时，原失败及独立1文件审计（0 FAIL，P7保留）一并提交；这说明目前不只是历史查询不可用。没有可靠的Q/R或actual qtime，不执行可能误伤已运行作业的取消。继续通过原出图gate与parent文件观察真实启动，并在超过提交完成后20分钟时尝试fresh原查询；不以缺少gate推断它仍在排队。
