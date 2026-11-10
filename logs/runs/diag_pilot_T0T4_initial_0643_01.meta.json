@@ -1,0 +1,28 @@
+{
+  "name": "diag_pilot_T0T4_initial_0643_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pilot_T0T4_initial_0643_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,re,signal,subprocess\nfrom pathlib import Path\nNAME='diag_pilot_T0T4_initial_0643_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\nsignal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('45s metadata plus single30s PBSquery')));signal.alarm(45)\ndef ref(p):\n b=p.read_bytes();return {'file':str(p),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)}\ndef result(name):\n p=Path('results')/(name+'.json');r={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  b=p.read_bytes();d=json.loads(b);r.update(reference=ref(p),meta={k:d.get('_meta',{}).get(k) for k in ('name','start','end','exit_code')},original_metrics={k:d.get('metrics',{}).get(k) for k in ('kind','producer_exit_code','passed','pilot_completed','actual_completed_updates','black_frame_detected','errors','cleanup_errors','gate') if k in d.get('metrics',{})})\n log=Path('logs/runs')/(name+'.log');r['log_exists']=log.is_file()\n if log.is_file():\n  with log.open('rb') as f:f.seek(max(0,log.stat().st_size-1800));r['original_log_tail']=f.read().decode(errors='replace')\n return r\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'arms':[],'query':None,'unchanged_checkpoint_sources':[]};jobs=[]\nfor arm in ('T0','T4'):\n name='smoke_e2e_pilot_'+arm+'_s0_01';r={'name':name,'submission_directories':[],'result':result(name),'gate':result(name+'_gate')}\n for folder in sorted(Path('logs/pbs').glob(name+'-*')):\n  entry={'directory':str(folder)}\n  for suffix in ('payload.json','submission.json'):\n   p=folder/suffix;entry[suffix+'_exists']=p.is_file()\n   if p.is_file():\n    d=json.loads(p.read_bytes());entry[suffix]={'reference':ref(p),'original':d}\n    if suffix=='submission.json':jobs.extend(re.findall(r'\\b\\d+\\.hopper-m-\\d+\\b',d.get('stdout','')))\n  p=folder/'pbs.out';entry['pbs_out_exists']=p.is_file()\n  if p.is_file():\n   with p.open('rb') as f:f.seek(max(0,p.stat().st_size-1800));entry['pbs_out_tail']=f.read().decode(errors='replace')\n  r['submission_directories'].append(entry)\n record['arms'].append(r)\nsnapshot=Path('logs/review/diag_test_s16_s06s07_terminal_0615_01/snapshot.json');b=snapshot.read_bytes();assert hashlib.sha256(b).hexdigest()=='49d7ea500734f9009085ffb8578fb4b7ec8a95295e6279da13fe2a000027a282'\nfor job in json.loads(b)['jobs']:\n sources=[]\n for row in job['scene_sources']:\n  p=Path(row['file']);actual=ref(p);assert actual==row['reference'];d=json.loads(p.read_bytes());assert d['_meta']['end'] and d['_meta']['exit_code']==row['meta']['exit_code']\n  sources.append({'reference':actual,'meta':row['meta']})\n record['unchanged_checkpoint_sources'].append({'original_source_parent':job['source_parent']['reference'],'all_original_assigned_sources':sources})\nif jobs:\n cmd=['/cm/shared/apps/pbspro/current/bin/qstat','-xf','-F','json',*jobs]\n try:\n  p=subprocess.run(cmd,capture_output=True,text=True,timeout=30);q={'command':cmd,'returncode':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timed_out':False}\n  if p.returncode==0:q['selected_original_fields']={j:{k:r.get(k) for k in ('job_state','qtime','etime','stime','Exit_status','resources_used','exec_host','exec_vnode')} for j,r in json.loads(p.stdout).get('Jobs',{}).items()}\n  record['query']=q\n except subprocess.TimeoutExpired as e:record['query']={'command':cmd,'timed_out':True,'status':'unknown','stdout':(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':(e.stderr or b'').decode() if isinstance(e.stderr,bytes) else e.stderr}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':ref(p),'observed_at_utc':record['observed_at_utc'],'query':None if record['query'] is None else record['query'].get('selected_original_fields',record['query']),'arms':[],'unchanged_checkpoint_sources':record['unchanged_checkpoint_sources']}\nfor r in record['arms']:\n a={k:r[k] for k in ('name','result','gate')};a['submission_directories']=[]\n for entry in r['submission_directories']:\n  e={k:v for k,v in entry.items() if k not in ('payload.json','submission.json')}\n  if 'submission.json' in entry:e['submission_reference']=entry['submission.json']['reference'];e['original_receipt']=entry['submission.json']['original']\n  if 'payload.json' in entry:\n   e['payload_reference']=entry['payload.json']['reference'];d=entry['payload.json']['original'];e['payload_fields']={k:d.get(k) for k in ('name','command','budget_group','requested_gpu_count','requested_wall_seconds')}\n  a['submission_directories'].append(e)\n brief['arms'].append(a)\nprint('ORIGINAL_FORMAL_PILOT_SNAPSHOT: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T14:43:22",
+  "log_path": "logs/runs/diag_pilot_T0T4_initial_0643_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5ec8d86e72ed794e5e3e5119a0ee0695cbb1379a",
+  "git_dirty": false,
+  "end": "2026-11-10T14:43:27",
+  "duration_sec": 0.6,
+  "exit_code": 0,
+  "metrics_sha256": "d78913f84e61a7de128d2511a7a83a3f5d9e5eab29bc345a615f706916f4cc3c"
+}

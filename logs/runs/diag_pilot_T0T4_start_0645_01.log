@@ -1,0 +1,55 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot_T0T4_start_0645_01 -- python3 -c import datetime,hashlib,json,os,re,signal,subprocess
+from pathlib import Path
+NAME='diag_pilot_T0T4_start_0645_01'
+assert os.environ.get('CVPR_RUN_NAME')==NAME
+signal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('45s metadata plus single30s PBSquery')));signal.alarm(45)
+def ref(p):
+ b=p.read_bytes();return {'file':str(p),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)}
+def result(name):
+ p=Path('results')/(name+'.json');r={'file':str(p),'exists':p.is_file()}
+ if p.is_file():
+  b=p.read_bytes();d=json.loads(b);r.update(reference=ref(p),meta={k:d.get('_meta',{}).get(k) for k in ('name','start','end','exit_code')},original_metrics={k:d.get('metrics',{}).get(k) for k in ('kind','producer_exit_code','passed','pilot_completed','actual_completed_updates','black_frame_detected','errors','cleanup_errors','gate') if k in d.get('metrics',{})})
+ log=Path('logs/runs')/(name+'.log');r['log_exists']=log.is_file()
+ if log.is_file():
+  with log.open('rb') as f:f.seek(max(0,log.stat().st_size-1800));r['original_log_tail']=f.read().decode(errors='replace')
+ return r
+record={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'arms':[],'query':None,'unchanged_checkpoint_sources':[]};jobs=[]
+for arm in ('T0','T4'):
+ name='smoke_e2e_pilot_'+arm+'_s0_01';r={'name':name,'submission_directories':[],'result':result(name),'gate':result(name+'_gate')}
+ for folder in sorted(Path('logs/pbs').glob(name+'-*')):
+  entry={'directory':str(folder)}
+  for suffix in ('payload.json','submission.json'):
+   p=folder/suffix;entry[suffix+'_exists']=p.is_file()
+   if p.is_file():
+    d=json.loads(p.read_bytes());entry[suffix]={'reference':ref(p),'original':d}
+    if suffix=='submission.json':jobs.extend(re.findall(r'\b\d+\.hopper-m-\d+\b',d.get('stdout','')))
+  p=folder/'pbs.out';entry['pbs_out_exists']=p.is_file()
+  if p.is_file():
+   with p.open('rb') as f:f.seek(max(0,p.stat().st_size-1800));entry['pbs_out_tail']=f.read().decode(errors='replace')
+  r['submission_directories'].append(entry)
+ record['arms'].append(r)
+if jobs:
+ cmd=['/cm/shared/apps/pbspro/current/bin/qstat','-xf','-F','json',*jobs]
+ try:
+  p=subprocess.run(cmd,capture_output=True,text=True,timeout=30);q={'command':cmd,'returncode':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timed_out':False}
+  if p.returncode==0:q['selected_original_fields']={j:{k:r.get(k) for k in ('job_state','qtime','etime','stime','Exit_status','resources_used','exec_host','exec_vnode')} for j,r in json.loads(p.stdout).get('Jobs',{}).items()}
+  record['query']=q
+ except subprocess.TimeoutExpired as e:record['query']={'command':cmd,'timed_out':True,'status':'unknown','stdout':(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':(e.stderr or b'').decode() if isinstance(e.stderr,bytes) else e.stderr}
+out=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'
+with p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)
+brief={'report':ref(p),'observed_at_utc':record['observed_at_utc'],'query':None if record['query'] is None else record['query'].get('selected_original_fields',record['query']),'arms':[],'unchanged_checkpoint_sources':record['unchanged_checkpoint_sources']}
+for r in record['arms']:
+ a={k:r[k] for k in ('name','result','gate')};a['submission_directories']=[]
+ for entry in r['submission_directories']:
+  e={k:v for k,v in entry.items() if k not in ('payload.json','submission.json')}
+  if 'submission.json' in entry:e['submission_reference']=entry['submission.json']['reference'];e['original_receipt']=entry['submission.json']['original']
+  if 'payload.json' in entry:
+   e['payload_reference']=entry['payload.json']['reference'];d=entry['payload.json']['original'];e['payload_fields']={k:d.get(k) for k in ('name','command','budget_group','requested_gpu_count','requested_wall_seconds')}
+  a['submission_directories'].append(e)
+ brief['arms'].append(a)
+print('ORIGINAL_FORMAL_PILOT_SNAPSHOT: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)
+
+# start: 2026-11-10T14:44:29
+ORIGINAL_FORMAL_PILOT_SNAPSHOT: {"arms": [{"gate": {"exists": false, "file": "results/smoke_e2e_pilot_T0_s0_01_gate.json", "log_exists": false}, "name": "smoke_e2e_pilot_T0_s0_01", "result": {"exists": false, "file": "results/smoke_e2e_pilot_T0_s0_01.json", "log_exists": false}, "submission_directories": [{"directory": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b", "original_receipt": {"command": ["qsub", "-N", "cvpr27_c42f163b", "-l", "walltime=03:39:35", "-o", "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/pbs.out", "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/job.pbs"], "returncode": 0, "stderr": "", "stdout": "709866.hopper-m-02\n"}, "payload.json_exists": true, "payload_fields": {"budget_group": "E2Epilot", "command": ["python3", "-u", "-m", "src.tools.smoke_e2e_pilot", "run", "--name", "smoke_e2e_pilot_T0_s0_01", "--arm", "T0", "--manifest", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}", "--holdout-reference", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}", "--model-source", "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}", "--pilot-spec", "configs/smoke_e2e_pilot.json", "--timeout-seconds", "13111", "--gate-timeout-seconds", "180"], "name": "smoke_e2e_pilot_T0_s0_01", "requested_gpu_count": 1, "requested_wall_seconds": 13175}, "payload_reference": {"bytes": 1465, "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/payload.json", "sha256": "9ffd5edf10acfdbb73b4a5ded1105fb9b39e86d2093daedb1dc2a8297c7ad2ba"}, "pbs_out_exists": false, "submission.json_exists": true, "submission_reference": {"bytes": 415, "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/submission.json", "sha256": "98cd7b94978b04279eaa11324b92b639225eb7eec0a580b1765e981fb8633c76"}}]}, {"gate": {"exists": false, "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json", "log_exists": false}, "name": "smoke_e2e_pilot_T4_s0_01", "result": {"exists": false, "file": "results/smoke_e2e_pilot_T4_s0_01.json", "log_exists": false}, "submission_directories": []}], "observed_at_utc": "2026-11-10T06:44:36.341550+00:00", "query": {"709866.hopper-m-02": {"Exit_status": null, "etime": "Tue Nov 10 14:43:44 2026", "exec_host": null, "exec_vnode": null, "job_state": "Q", "qtime": "Tue Nov 10 14:43:44 2026", "resources_used": null, "stime": null}}, "report": {"bytes": 7976, "file": "logs/review/diag_pilot_T0T4_start_0645_01/snapshot.json", "sha256": "8196e4c3628837a1dba7e1bc7de19616aaaedc1623732da728f9e7d39ab6bed4"}, "unchanged_checkpoint_sources": []}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 20.376265943981707}
+# exit_code: 0

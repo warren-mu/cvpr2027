@@ -1,0 +1,136 @@
+{
+  "arms": [
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T0_s0_01",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01.json",
+        "log_exists": false
+      },
+      "submission_directories": [
+        {
+          "directory": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b",
+          "payload.json": {
+            "original": {
+              "budget_batch": "t00b_t01_20261108",
+              "budget_group": "E2Epilot",
+              "budget_revision": "20261110_human7babc169_measured709803_premium_120_t01v2_16_e2e_4_e2epilot_9_g01_40_t02_40_shared_gpu_units_v1",
+              "command": [
+                "python3",
+                "-u",
+                "-m",
+                "src.tools.smoke_e2e_pilot",
+                "run",
+                "--name",
+                "smoke_e2e_pilot_T0_s0_01",
+                "--arm",
+                "T0",
+                "--manifest",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+                "--holdout-reference",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+                "--model-source",
+                "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+                "--pilot-spec",
+                "configs/smoke_e2e_pilot.json",
+                "--timeout-seconds",
+                "13111",
+                "--gate-timeout-seconds",
+                "180"
+              ],
+              "dry_run": false,
+              "environment": {
+                "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+              },
+              "name": "smoke_e2e_pilot_T0_s0_01",
+              "queue": "autox",
+              "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+              "requested_gpu_count": 1,
+              "requested_host": null,
+              "requested_queue_charge_rate": 1.0,
+              "requested_wall_seconds": 13175,
+              "retry_of": null,
+              "task_id": "T01"
+            },
+            "reference": {
+              "bytes": 1465,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/payload.json",
+              "sha256": "9ffd5edf10acfdbb73b4a5ded1105fb9b39e86d2093daedb1dc2a8297c7ad2ba"
+            }
+          },
+          "payload.json_exists": true,
+          "pbs_out_exists": false,
+          "submission.json": {
+            "original": {
+              "command": [
+                "qsub",
+                "-N",
+                "cvpr27_c42f163b",
+                "-l",
+                "walltime=03:39:35",
+                "-o",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/pbs.out",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/job.pbs"
+              ],
+              "returncode": 0,
+              "stderr": "",
+              "stdout": "709866.hopper-m-02\n"
+            },
+            "reference": {
+              "bytes": 415,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/submission.json",
+              "sha256": "98cd7b94978b04279eaa11324b92b639225eb7eec0a580b1765e981fb8633c76"
+            }
+          },
+          "submission.json_exists": true
+        }
+      ]
+    },
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T4_s0_01",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01.json",
+        "log_exists": false
+      },
+      "submission_directories": []
+    }
+  ],
+  "observed_at_utc": "2026-11-10T06:44:36.341550+00:00",
+  "query": {
+    "command": [
+      "/cm/shared/apps/pbspro/current/bin/qstat",
+      "-xf",
+      "-F",
+      "json",
+      "709866.hopper-m-02"
+    ],
+    "returncode": 0,
+    "selected_original_fields": {
+      "709866.hopper-m-02": {
+        "Exit_status": null,
+        "etime": "Tue Nov 10 14:43:44 2026",
+        "exec_host": null,
+        "exec_vnode": null,
+        "job_state": "Q",
+        "qtime": "Tue Nov 10 14:43:44 2026",
+        "resources_used": null,
+        "stime": null
+      }
+    },
+    "stderr": "",
+    "stdout": "{\n    \"timestamp\":1794293076,\n    \"pbs_version\":\"2024.1.0.20240130071604\",\n    \"pbs_server\":\"hopper-m-02.cm.cluster\",\n    \"Jobs\":{\n        \"709866.hopper-m-02\":{\n            \"Job_Name\":\"cvpr27_c42f163b\",\n            \"Job_Owner\":\"e1583364@hopper-l-01.cm.cluster\",\n            \"job_state\":\"Q\",\n            \"queue\":\"smallx\",\n            \"server\":\"hopper-m-02.cm.cluster\",\n            \"Checkpoint\":\"u\",\n            \"ctime\":\"Tue Nov 10 14:43:44 2026\",\n            \"Error_Path\":\"hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cvpr27_c42f163b.e709866\",\n            \"Hold_Types\":\"n\",\n            \"Join_Path\":\"oe\",\n            \"Keep_Files\":\"oed\",\n            \"Mail_Points\":\"a\",\n            \"mtime\":\"Tue Nov 10 14:43:44 2026\",\n            \"Output_Path\":\"hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/pbs.out\",\n            \"Priority\":0,\n            \"qtime\":\"Tue Nov 10 14:43:44 2026\",\n            \"Rerunable\":\"True\",\n            \"Resource_List\":{\n                \"am_job_cache\":\"{\\\"job.ngpus\\\": 1.0, \\\"job.walltime\\\": 13175, \\\"job.ncpus\\\": 12.0, \\\"job.queue_charge_rate\\\": 0, \\\"formula_constants\\\": \\\"\\\", \\\"am_cloud_enabled\\\": false}\",\n                \"mem\":\"225gb\",\n                \"ncpus\":12,\n                \"ngpus\":1,\n                \"nodect\":1,\n                \"nodes\":1,\n                \"place\":\"free\",\n                \"queue_charge_rate\":1,\n                \"select\":\"1:ngpus=1:ncpus=12:mem=225GB\",\n                \"walltime\":\"03:39:35\"\n            },\n            \"substate\":10,\n            \"Variable_List\":{\n                \"PBS_O_HOME\":\"/home/svu/e1583364\",\n                \"PBS_O_LANG\":\"C.UTF-8\",\n                \"PBS_O_LOGNAME\":\"e1583364\",\n                \"PBS_O_PATH\":\"/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr2027/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/python/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin\",\n                \"PBS_O_SHELL\":\"/bin/bash\",\n                \"PBS_O_HOST\":\"hopper-l-01.cm.cluster\",\n                \"PBS_O_WORKDIR\":\"/home/svu/e1583364/CVPR2027/cvpr2027\",\n                \"PBS_O_SYSTEM\":\"Linux\",\n                \"PBS_O_QUEUE\":\"autox\"\n            },\n            \"comment\":\"Not Running: Insufficient amount of resource: ngpus \",\n            \"etime\":\"Tue Nov 10 14:43:44 2026\",\n            \"Submit_arguments\":\"-N cvpr27_c42f163b -l walltime=03:39:35 -o /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01-20261110T064235Z-c42f163b/job.pbs\",\n            \"project\":\"CFP04-SF-125\",\n            \"Submit_Host\":\"hopper-l-01.cm.cluster\"\n        }\n    }\n}\n",
+    "timed_out": false
+  },
+  "unchanged_checkpoint_sources": []
+}
