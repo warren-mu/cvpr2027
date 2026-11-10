@@ -164,7 +164,7 @@ def first_seen_metadata(header, table_reference, world_order, checked, accessed)
     return result, None
 
 
-def validate_selected_table(record):
+def validate_selected_table(record, *, expected_kind='look_flip'):
     """Full selected-table checks; original full-batch cache proof is reused.
 
     This is an ephemeral figure authorization, not a new population certificate
@@ -175,7 +175,8 @@ def validate_selected_table(record):
     ref = evidence['certificate']['tables'][key]
     table = load_table(ref['file'], expected_sha256=ref['sha256'])
     need(table.manifest_reference == ref and table.dataset_key == key and not table.synthetic
-         and table.kind == 'look_flip' and table.pair_id == entry['pair_id']
+         and expected_kind in ('look_flip', 'look_stay') and table.kind == record['package']['kind'] == expected_kind
+         and table.pair_id == entry['pair_id']
          and table.source.get('t01') == package['source_provenance'], 'Selected full table identity differs')
     for declared in (record['row'], record['details'], record['details']['native_checks'],
                      record['details']['pair_checks'], evidence['certificate']['table_shadow_metadata'][key]):
