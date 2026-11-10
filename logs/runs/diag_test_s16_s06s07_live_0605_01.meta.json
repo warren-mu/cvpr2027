@@ -1,0 +1,29 @@
+{
+  "name": "diag_test_s16_s06s07_live_0605_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_s16_s06s07_live_0605_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive,observed_counts\nfrom src.tools.t01_partition import ROOT\nNAME='diag_test_s16_s06s07_live_0605_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s small original source/journal prefix snapshot')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef read(ref):\n p=Path(ref['file']);assert p.stat().st_size<16*1024*1024\n raw=p.read_bytes();assert hashlib.sha256(raw).hexdigest()==ref['sha256'];return json.loads(raw)\nprior={'file':'logs/review/diag_shared709763709766_claims_0600_01/snapshot.json','sha256':'c93d219d512a059bffbafc2b5883c6598604109e396af9a6bc36243552d92f54'}\nsnapshot=read(prior);out=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);evidence=out/'evidence';evidence.mkdir();rows=[];parents=[]\nfor owner in snapshot['jobs']:\n for original in owner['owned_claims']:\n  claim=read(original['claim_reference']);assert claim==original['claim'];unit=original['unit'];parent=claim['name'];assert unit['name']==parent\n  p=ROOT/'results'/(parent+'.json');pr={'name':parent,'job_id':owner['job_id'],'exists':p.is_file()}\n  if p.is_file():\n   raw=p.read_bytes();data=json.loads(raw);pr.update(reference=archive(raw,evidence,parent+'_result.json'),meta={k:data.get('_meta',{}).get(k) for k in ('start','end','exit_code')},metrics={k:data.get('metrics',{}).get(k) for k in ('status','error','errors','cleanup_errors','scene_runs','stages')})\n  parents.append(pr)\n  for assignment in unit['identity']['assignments']:\n   scene=assignment['scene'];child=parent+'_c6_'+scene.lower();row={'name':child,'scene':scene,'job_id':owner['job_id'],'claim_reference':original['claim_reference'],'source_reported_counts':None,'independent_acceptance':None}\n   log=ROOT/'logs/runs'/(child+'.log');row['log_exists']=log.is_file()\n   if log.is_file():\n    with log.open('rb') as f:head=f.read(4096).decode(errors='replace')\n    row['original_log_header']=head.splitlines()[:5]\n   p=ROOT/'results'/(child+'.json');row['result_exists']=p.is_file()\n   if p.is_file():\n    raw=p.read_bytes();data=json.loads(raw);m=data.get('metrics',{});row.update(source_reference=archive(raw,evidence,child+'_result.json'),meta={k:data.get('_meta',{}).get(k) for k in ('start','end','exit_code')},original_metrics={k:m.get(k) for k in ('status','error','errors','attempts','passed_by_class','black_frame_detected','cleanup_errors','scene_excluded')})\n   journal=ROOT/'data/world_pairs/v2'/(child+'_attempts.jsonl');row['journal_exists']=journal.is_file()\n   if journal.is_file():\n    raw,extent=read_prefix(journal);row['journal_extent']=extent;row['journal_snapshot']=archive(raw,evidence,child+'_attempts.jsonl');row['source_reported_counts']=observed_counts(raw,scene)\n   rows.append(row)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'prior_claim_snapshot':prior,'parents':parents,'scenes':rows,'scope':'Only original archived complete journal prefixes and original metadata; live producer-reported candidates are not independent acceptance. Missing/unsealed sources remain unknown.'}\np=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'parents':parents,'scenes':[{k:r[k] for k in ('name','scene','job_id','result_exists','log_exists','journal_exists','source_reported_counts','original_metrics','meta','journal_extent') if k in r} for r in rows]}\nprint('G01_PROGRESS_SNAPSHOT: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T14:05:21",
+  "log_path": "logs/runs/diag_test_s16_s06s07_live_0605_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "96fbdd1f8e5648dee7f94092c44d82cccaf7c4ee",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_test_s16_s06s07_live_0605_01.diff",
+  "end": "2026-11-10T14:05:25",
+  "duration_sec": 0.5,
+  "exit_code": 0,
+  "metrics_sha256": "e07c037ba382612d28da2d703db7d472ec088477393680f32abc7adbfc1dfe1f"
+}

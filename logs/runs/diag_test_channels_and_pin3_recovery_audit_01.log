@@ -1,0 +1,79 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_channels_and_pin3_recovery_audit_01 -- python3 -c import subprocess,json
+from pathlib import Path
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.append(str(p))
+assert names
+print('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T14:02:01
+SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified
+WARN  results/diag_full01_retry3_pin20_cancel_02.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_cancel_02.diff
+WARN  results/diag_full01_retry3_pin20_cancel_accounting_03.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_cancel_accounting_03.diff
+WARN  results/diag_full01_retry3_pin20_post_03.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_post_03.diff
+WARN  results/diag_full01_retry3_pin20_pre_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_pre_01.diff
+WARN  results/diag_full01_retry3_pin20_pre_02.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_pre_02.diff
+WARN  results/diag_full01_retry3_pin20_state_recovery_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full01_retry3_pin20_state_recovery_01.diff
+WARN  results/diag_full_shared_709761_accounting_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full_shared_709761_accounting_01.diff
+WARN  results/diag_full_shared_709761_audit_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_full_shared_709761_audit_01.diff
+WARN  results/diag_gpu_pack_full_single03_black_guard_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_gpu_pack_full_single03_black_guard_01.diff
+WARN  results/diag_gpu_pack_full_single03_host_preflight_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_gpu_pack_full_single03_host_preflight_01.diff
+WARN  results/diag_pack709714_20min_status_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_pack709714_20min_status_01.diff
+WARN  results/diag_s04s05_review_final_audit_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_s04s05_review_final_audit_01.diff
+PASS  results/diag_s04s05_review_snapshot_0532_01.json
+WARN  results/diag_shared709761_snapshot_0550_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_shared709761_snapshot_0550_01.diff
+WARN  results/diag_shared709763709766_claims_0600_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_shared709763709766_claims_0600_01.diff
+WARN  results/diag_shared709763709766_initial_audit_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_shared709763709766_initial_audit_01.diff
+WARN  results/diag_shared709763709766_snapshot_0557_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_shared709763709766_snapshot_0557_01.diff
+WARN  results/diag_submit_gpu_pack_test_priority_full_single_01_retry4.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_submit_gpu_pack_test_priority_full_single_01_retry4.diff
+WARN  results/diag_submit_gpu_pack_test_priority_full_single_03.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_submit_gpu_pack_test_priority_full_single_03.diff
+WARN  results/diag_submit_gpu_pack_test_priority_full_single_04.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_submit_gpu_pack_test_priority_full_single_04.diff
+PASS  results/diag_test_s16_s0405_review_accounting_01.json
+WARN  results/gen_test_s16_round2_s06_j709763_hopper_m_02_gate.json
+      warn P5 run used uncommitted changes; see logs/runs/gen_test_s16_round2_s06_j709763_hopper_m_02_gate.diff
+WARN  results/gen_test_s16_round2_s07_j709766_hopper_m_02_gate.json
+      warn P5 run used uncommitted changes; see logs/runs/gen_test_s16_round2_s07_j709766_hopper_m_02_gate.diff
+WARN  results/gpu_pack_test_priority_full_single_01_retry4_gate_0.json
+      warn P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_01_retry4_gate_0.diff
+WARN  results/gpu_pack_test_priority_full_single_03.json
+      warn P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03.diff
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+WARN  results/gpu_pack_test_priority_full_single_03_gate_0.json
+      warn P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03_gate_0.diff
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+WARN  results/gpu_pack_test_priority_full_single_03_mixed_accounting.json
+      warn P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03_mixed_accounting.diff
+WARN  results/gpu_pack_test_priority_full_single_04_gate_0.json
+      warn P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_04_gate_0.diff
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+
+30 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 12.513446326018311}
+# exit_code: 0

@@ -1,0 +1,41 @@
+# run_logged: python3 -m src.tools.record_command --name diag_shared709761_snapshot_0550_01 -- python3 -c import datetime,hashlib,json,os,signal
+from pathlib import Path
+NAME='diag_shared709761_snapshot_0550_01';JOB='709761.hopper-m-02';PACK='gpu_pack_test_priority_full_single_03'
+assert os.environ.get('CVPR_RUN_NAME')==NAME
+root=Path.cwd().resolve()
+def expired(*_):raise TimeoutError('12s metadata-only snapshot')
+signal.signal(signal.SIGALRM,expired);signal.alarm(12)
+def read(path,ref=None):
+ p=Path(path);assert p.stat().st_size<16*1024*1024,'small-metadata-only bound';raw=p.read_bytes();digest=hashlib.sha256(raw).hexdigest()
+ if ref is not None:assert digest==ref['sha256']
+ return json.loads(raw),{'file':str(p),'sha256':digest,'bytes':len(raw)}
+def result(name):
+ path=Path('results')/(name+'.json');answer={'file':str(path),'exists':path.is_file()}
+ if path.is_file():
+  data,ref=read(path);answer['reference']=ref;answer['lifecycle']={k:data.get('_meta',{}).get(k) for k in ('start','end','exit_code')};m=data.get('metrics',{})
+  answer['metrics_keys']=sorted(m);answer['original_metrics']={k:m[k] for k in ('kind','status','passed','black_frame_detected','all_owned_units_ended','errors','cleanup_errors','gates','unit_claims','unit_runs','passed_by_class','scene_runs','producer_exit_code') if k in m}
+  if 'devices' in m:answer['original_devices']=[{k:d.get(k) for k in ('worker_identity','unity_identity','worker_error')}|{'observation':{k:d.get('observation',{}).get(k) for k in ('node','gpu_identity','valid','captures')}} for d in m['devices']]
+ return answer
+folder=Path('logs/pbs/gpu_pack_test_priority_full_single_03-20261110T054302Z-10f7d5c4')
+payload,payload_ref=read(folder/'payload.json');command=payload['command'];i=command.index('--queue-root');queue=Path(command[i+1]).resolve();queue.relative_to(Path('/scratch/e1583364/cvpr2027/shared_gpu_queue').resolve())
+record={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'payload_reference':payload_ref,'parent':result(PACK),'gate':result(PACK+'_gate_0'),'owned_claims':[]}
+state_path=queue/'state.json'
+if state_path.is_file():
+ state,state_ref=read(state_path);record['queue_state_reference']=state_ref
+ for unit_id,entry in state['units'].items():
+  ref=entry['claim_reference'];path=Path(ref['file']).resolve();path.relative_to(queue/'claims');claim,_=read(path,ref)
+  if claim.get('pbs_jobid')!=JOB:continue
+  own={'unit_id':unit_id,'state_entry':entry,'claim':claim,'source_result':result(claim['name'])}
+  if entry.get('release_reference'):
+   ref=entry['release_reference'];path=Path(ref['file']).resolve();path.relative_to(queue/'releases');release,_=read(path,ref);own['release']=release
+  record['owned_claims'].append(own)
+else:record['queue_state_reference']=None
+out=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'
+with path.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)
+print('ORIGINAL_SHARED_SNAPSHOT_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},**record},sort_keys=True),flush=True)
+signal.alarm(0)
+
+# start: 2026-11-10T13:50:28
+ORIGINAL_SHARED_SNAPSHOT_JSON: {"gate": {"exists": true, "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json", "lifecycle": {"end": "2026-11-10T13:45:46", "exit_code": 86, "start": "2026-11-10T13:45:28"}, "metrics_keys": ["black_frame_detected", "cleanup_errors", "completed_gpu_count", "devices", "errors", "exit_code", "expected_gpu_count", "passed"], "original_devices": [{"observation": {"captures": [{"action": "Initialize", "action_success": true, "black": true, "dtype": "uint8", "error_message": "", "max_rgb": 0, "min_rgb": 0, "nonzero_rgb_values": 0, "png": {"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/gpu_pack_test_priority_full_single_03_gate_0/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, "segmentation": {"black": true, "dtype": "uint8", "max_rgb": 0, "min_rgb": 0, "nonzero_rgb_values": 0, "shape": [255, 255, 3], "valid": false, "valid_shape": true}, "shape": [255, 255, 3], "stage": "after_constructor", "valid": false, "valid_shape": true}, {"action": "Pass", "action_success": true, "black": true, "dtype": "uint8", "error_message": "", "max_rgb": 0, "min_rgb": 0, "nonzero_rgb_values": 0, "png": {"path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/gpu_pack_test_priority_full_single_03_gate_0/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, "segmentation": {"black": true, "dtype": "uint8", "max_rgb": 0, "min_rgb": 0, "nonzero_rgb_values": 0, "shape": [255, 255, 3], "valid": false, "valid_shape": true}, "shape": [255, 255, 3], "stage": "after_Pass", "valid": false, "valid_shape": true}], "gpu_identity": {"gpu_index": 0, "gpu_name": "NVIDIA H200", "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d", "logical_index": 0, "mig_mode": "Disabled", "vulkan_device_index": 0}, "node": "hopper-16", "valid": false}, "unity_identity": {"pgid": 3099124, "pid": 3100790, "sid": 3099124, "start_ticks": 93746677}, "worker_error": null, "worker_identity": {"pgid": 3098179, "pid": 3099124, "sid": 3098179, "start_ticks": 93746536}}], "original_metrics": {"black_frame_detected": true, "cleanup_errors": [], "errors": [], "passed": false}, "reference": {"bytes": 9674, "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json", "sha256": "e12f386c5601c687fb0d33f3bdb28b2a3b72b7dd5dd97128a26cad6bc3acd15d"}}, "observed_at_utc": "2026-11-10T05:50:31.174795+00:00", "owned_claims": [], "parent": {"exists": true, "file": "results/gpu_pack_test_priority_full_single_03.json", "lifecycle": {"end": "2026-11-10T13:45:46", "exit_code": 86, "start": "2026-11-10T13:45:25"}, "metrics_keys": ["all_owned_units_ended", "cleanup_errors", "downstream_allowed", "errors", "gates", "kind", "producer_exit_code", "retired_gpu_uuids", "status", "stopping_reasons", "unit_claims", "unit_runs"], "original_metrics": {"all_owned_units_ended": true, "cleanup_errors": [], "errors": [], "gates": [{"cpu_affinity": [49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71], "exit_code": 86, "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d", "source": {"audit": {"fail": [], "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json", "warn": ["P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03_gate_0.diff", "P7 run failed (exit_code 86); keep it, do not cite it"]}, "exit_code": 86, "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json", "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471", "metrics_sha256": "0f9a2b2fadba18d3e7b2c9444607ecb18f1ff64df8e83ab7fa3d2901b8825f38", "sha256": "e12f386c5601c687fb0d33f3bdb28b2a3b72b7dd5dd97128a26cad6bc3acd15d"}, "status": "black"}], "kind": "gpu_shared_pack", "producer_exit_code": 86, "status": "stopped_with_original_work_preserved", "unit_claims": [], "unit_runs": []}, "reference": {"bytes": 5240, "file": "results/gpu_pack_test_priority_full_single_03.json", "sha256": "5550e78d63962727a2d5fb0a4fe4d07fc27f8deb0d329f6002ef70e83602151e"}}, "payload_reference": {"bytes": 1746, "file": "logs/pbs/gpu_pack_test_priority_full_single_03-20261110T054302Z-10f7d5c4/payload.json", "sha256": "a9f73507d3447a13a02819486d27754147bcda28387972abeb0a4cc950aff265"}, "queue_state_reference": {"bytes": 216681, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01/state.json", "sha256": "b3503701da903d3da65d10dd80bd24df0c3337a73547561776cf9bf050daf822"}, "report": {"file": "logs/review/diag_shared709761_snapshot_0550_01/snapshot.json", "sha256": "2699fb22ecf975c2bb5a8989834ba6b4b2bdc05fc2a68b30298f968beb528f01"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.09632973902625963}
+# exit_code: 0

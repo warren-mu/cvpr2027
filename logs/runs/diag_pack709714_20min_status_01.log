@@ -1,0 +1,30 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pack709714_20min_status_01 -- python3 -c import datetime,hashlib,json,os,signal,subprocess
+from pathlib import Path
+NAME='diag_pack709714_20min_status_01'
+assert os.environ.get('CVPR_RUN_NAME')==NAME
+def expired(*_):raise TimeoutError('40s metadata query bound')
+signal.signal(signal.SIGALRM,expired);signal.alarm(40)
+record={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+command=['/cm/shared/apps/pbspro/current/bin/qstat','-xf','-F','json','709714.hopper-m-02']
+try:
+ p=subprocess.run(command,capture_output=True,text=True,timeout=30)
+ record['query']={'command':command,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timed_out':False}
+ if p.returncode==0:
+  d=json.loads(p.stdout);record['original_fields']={job:{k:v.get(k) for k in ('job_state','qtime','etime','stime','run_count','Exit_status','exec_host','exec_vnode','resources_used')} for job,v in d.get('Jobs',{}).items()}
+except subprocess.TimeoutExpired as e:
+ record['query']={'command':command,'timed_out':True,'status':'unknown','stdout':e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':e.stderr.decode() if isinstance(e.stderr,bytes) else e.stderr}
+path=Path('results/gpu_pack_test_priority_full_single_01_retry3.json');row={'file':str(path),'exists':path.exists()}
+if path.is_file():
+ assert path.stat().st_size<16*1024*1024
+ raw=path.read_bytes();d=json.loads(raw);row['sha256']=hashlib.sha256(raw).hexdigest();row['lifecycle']={k:d.get('_meta',{}).get(k) for k in ('start','end','exit_code')};m=d.get('metrics',{})
+ row['metrics']={k:m[k] for k in ('errors','cleanup_errors','black_frame_detected','all_owned_units_ended','unit_runs','gates') if k in m}
+record['parent']=row
+out=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'
+with path.open('x') as f:json.dump(record,f,indent=2,sort_keys=True)
+print('ORIGINAL_PACK_STATUS_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'fields':record.get('original_fields',{'status':'unknown'}),'parent':row},sort_keys=True),flush=True)
+signal.alarm(0)
+
+# start: 2026-11-10T13:36:28
+ORIGINAL_PACK_STATUS_JSON: {"fields": {"status": "unknown"}, "observed_at_utc": "2026-11-10T05:36:32.610870+00:00", "parent": {"exists": false, "file": "results/gpu_pack_test_priority_full_single_01_retry3.json"}, "report": {"file": "logs/review/diag_pack709714_20min_status_01/snapshot.json", "sha256": "1a9d28f7dad12382df1cb6089b1d93ecf387ab8344551cb9487cb4069054047f"}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 30.096916236972902}
+# exit_code: 0

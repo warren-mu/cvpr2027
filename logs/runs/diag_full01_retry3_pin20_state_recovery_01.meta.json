@@ -1,0 +1,29 @@
+{
+  "name": "diag_full01_retry3_pin20_state_recovery_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_full01_retry3_pin20_state_recovery_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,sys\ncommand=['qstat','-xf','-F','json','709714.hopper-m-02']\ntry:\n p=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=30)\n print(p.stdout,end='');print(p.stderr,end='',file=sys.stderr)\n raise SystemExit(p.returncode)\nexcept subprocess.TimeoutExpired as e:\n print('QUERY_TIMED_OUT_STATUS_UNKNOWN',flush=True)\n if e.stdout:print(e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout)\n raise SystemExit(124)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:40:51",
+  "log_path": "logs/runs/diag_full01_retry3_pin20_state_recovery_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_full01_retry3_pin20_state_recovery_01.diff",
+  "end": "2026-11-10T13:41:16",
+  "duration_sec": 20.3,
+  "exit_code": 0,
+  "metrics_sha256": "78f747c3c73611364faf570f18c5e80abf047cbb3fe4c550a965fa7c6cc06131"
+}

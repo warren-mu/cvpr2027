@@ -1,0 +1,158 @@
+{
+  "config": {
+    "name": "gpu_pack_test_priority_full_single_03",
+    "queue_plan": "configs/shared_test_priority_active_01.json",
+    "queue_plan_sha256": "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+    "queue_root": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01",
+    "gpus": 1,
+    "timeout_seconds": 1825.0,
+    "gate_timeout_seconds": 180.0,
+    "version": "shared_gpu_pack_v1",
+    "pbs_jobid": "709761.hopper-m-02",
+    "node": "hopper-16",
+    "scope": "shared scheduling and allocation cost only; original unit science unchanged",
+    "plan_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_active_01.json",
+      "sha256": "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+      "bytes": 84011
+    },
+    "allocated_gpu_uuids": [
+      "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d"
+    ],
+    "parent_cuda_visible_devices": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d",
+    "cpu_affinity": [
+      49,
+      51,
+      53,
+      55,
+      57,
+      59,
+      61,
+      63,
+      65,
+      67,
+      69,
+      71
+    ],
+    "parent_payload_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_test_priority_full_single_03-20261110T054302Z-10f7d5c4/payload.json",
+      "sha256": "a9f73507d3447a13a02819486d27754147bcda28387972abeb0a4cc950aff265",
+      "bytes": 1746
+    },
+    "parent_receipt_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_test_priority_full_single_03-20261110T054302Z-10f7d5c4/submission.json",
+      "sha256": "107efc17688c8050b0c3f40c250a89faf78550c9891aa0d4a0af6f47b1005637",
+      "bytes": 441
+    }
+  },
+  "metrics": {
+    "kind": "gpu_shared_pack",
+    "status": "stopped_with_original_work_preserved",
+    "unit_runs": [],
+    "unit_claims": [],
+    "gates": [
+      {
+        "gpu_uuid": "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d",
+        "cpu_affinity": [
+          49,
+          51,
+          53,
+          55,
+          57,
+          59,
+          61,
+          63,
+          65,
+          67,
+          69,
+          71
+        ],
+        "source": {
+          "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json",
+          "sha256": "e12f386c5601c687fb0d33f3bdb28b2a3b72b7dd5dd97128a26cad6bc3acd15d",
+          "metrics_sha256": "0f9a2b2fadba18d3e7b2c9444607ecb18f1ff64df8e83ab7fa3d2901b8825f38",
+          "exit_code": 86,
+          "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+          "audit": {
+            "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json",
+            "fail": [],
+            "warn": [
+              "P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03_gate_0.diff",
+              "P7 run failed (exit_code 86); keep it, do not cite it"
+            ]
+          }
+        },
+        "exit_code": 86,
+        "status": "black"
+      }
+    ],
+    "retired_gpu_uuids": [
+      "GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d"
+    ],
+    "errors": [],
+    "cleanup_errors": [],
+    "all_owned_units_ended": true,
+    "downstream_allowed": false,
+    "stopping_reasons": [
+      "insufficient_remaining_time_for_full_original_unit"
+    ],
+    "producer_exit_code": 86
+  },
+  "sources": [
+    {
+      "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json",
+      "sha256": "e12f386c5601c687fb0d33f3bdb28b2a3b72b7dd5dd97128a26cad6bc3acd15d",
+      "metrics_sha256": "0f9a2b2fadba18d3e7b2c9444607ecb18f1ff64df8e83ab7fa3d2901b8825f38",
+      "exit_code": 86,
+      "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+      "audit": {
+        "file": "results/gpu_pack_test_priority_full_single_03_gate_0.json",
+        "fail": [],
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/gpu_pack_test_priority_full_single_03_gate_0.diff",
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      }
+    }
+  ],
+  "_meta": {
+    "name": "gpu_pack_test_priority_full_single_03",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.gpu_pack",
+      "--name",
+      "gpu_pack_test_priority_full_single_03",
+      "--queue-plan",
+      "configs/shared_test_priority_active_01.json",
+      "--queue-plan-sha256",
+      "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+      "--queue-root",
+      "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01",
+      "--gpus",
+      "1",
+      "--timeout-seconds",
+      "1825",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-16",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-10T13:45:25",
+    "log_path": "logs/runs/gpu_pack_test_priority_full_single_03.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/gpu_pack_test_priority_full_single_03.diff",
+    "end": "2026-11-10T13:45:46",
+    "duration_sec": 20.2,
+    "exit_code": 86,
+    "metrics_sha256": "f25437650e26412aebdf78a39534e76630fd933e982ca94f4411943af29b9238"
+  }
+}

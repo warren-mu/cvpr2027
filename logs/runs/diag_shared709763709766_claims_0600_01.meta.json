@@ -1,0 +1,29 @@
+{
+  "name": "diag_shared709763709766_claims_0600_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_shared709763709766_claims_0600_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_shared709763709766_claims_0600_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\nROOT=Path.cwd().resolve()\ndef expired(*_):raise TimeoutError('12s original claim metadata only')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef read(path,ref=None):\n p=Path(path);assert p.stat().st_size<16*1024*1024\n raw=p.read_bytes();sha=hashlib.sha256(raw).hexdigest()\n if ref is not None:assert sha==ref['sha256']\n return json.loads(raw),{'file':str(p),'sha256':sha,'bytes':len(raw)}\ndef source(name):\n p=Path('results')/(name+'.json');row={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  d,ref=read(p);row.update(reference=ref,lifecycle={k:d.get('_meta',{}).get(k) for k in ('start','end','exit_code')},metrics={k:d.get('metrics',{}).get(k) for k in ('kind','status','errors','cleanup_errors','scene_runs','all_owned_units_ended','unit_claims','unit_runs') if k in d.get('metrics',{})})\n return row\ninputs=[('709763.hopper-m-02','gpu_pack_test_priority_full_single_04','logs/pbs/gpu_pack_test_priority_full_single_04-20261110T054702Z-4435a7f5'),('709766.hopper-m-02','gpu_pack_test_priority_full_single_01_retry4','logs/pbs/gpu_pack_test_priority_full_single_01_retry4-20261110T055116Z-27c6dda4')]\nrows=[]\nfor job,name,folder in inputs:\n payload,pref=read(Path(folder)/'payload.json');command=payload['command'];qroot=Path(command[command.index('--queue-root')+1]).resolve();qroot.relative_to(Path('/scratch/e1583364/cvpr2027/shared_gpu_queue'))\n planpath=Path(command[command.index('--queue-plan')+1]);plan,planref=read(planpath,{'sha256':command[command.index('--queue-plan-sha256')+1]})\n state,stateref=read(qroot/'state.json');row={'job_id':job,'payload_reference':pref,'plan_reference':planref,'state_reference':stateref,'parent':source(name),'owned_claims':[]}\n for uid,entry in state['units'].items():\n  cref=entry['claim_reference'];cp=Path(cref['file']).resolve();cp.relative_to(qroot/'claims');claim,_=read(cp,cref)\n  if claim.get('pbs_jobid')!=job:continue\n  matches=[u for u in plan['units'] if u['unit_id']==uid];assert len(matches)==1\n  unit=matches[0];assert unit['name']==claim['name']\n  item={'unit_id':uid,'claim_reference':cref,'claim':claim,'unit':unit,'state_entry':entry,'source_result':source(claim['name'])}\n  if entry.get('release_reference'):\n   rref=entry['release_reference'];rp=Path(rref['file']).resolve();rp.relative_to(qroot/'releases');item['release']=read(rp,rref)[0]\n  row['owned_claims'].append(item)\n rows.append(row)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':rows}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'\nwith path.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'jobs':[{'job_id':r['job_id'],'parent':r['parent'],'claims':[{'unit_id':c['unit_id'],'name':c['claim']['name'],'claim_reference':c['claim_reference'],'claim':c['claim'],'unit_identity':c['unit']['identity'],'unit_command':c['unit']['command'],'source_result':c['source_result']} for c in r['owned_claims']]} for r in rows]}\nprint('ORIGINAL_SHARED_CLAIMS_JSON: '+json.dumps(brief,sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:59:53",
+  "log_path": "logs/runs/diag_shared709763709766_claims_0600_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_shared709763709766_claims_0600_01.diff",
+  "end": "2026-11-10T13:59:54",
+  "duration_sec": 0.4,
+  "exit_code": 0,
+  "metrics_sha256": "11bbc626bc16aec40f03b59c4b7713584421d5067f2c5fbb23b772031e0230ff"
+}

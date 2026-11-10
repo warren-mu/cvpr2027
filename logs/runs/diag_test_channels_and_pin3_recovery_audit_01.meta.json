@@ -1,0 +1,29 @@
+{
+  "name": "diag_test_channels_and_pin3_recovery_audit_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_channels_and_pin3_recovery_audit_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T14:02:01",
+  "log_path": "logs/runs/diag_test_channels_and_pin3_recovery_audit_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_test_channels_and_pin3_recovery_audit_01.diff",
+  "end": "2026-11-10T14:02:18",
+  "duration_sec": 12.6,
+  "exit_code": 0,
+  "metrics_sha256": "b7608fd0a2ad3906b4fb4719f128e61dfb7d44e803815ec6ec4976a47d9499e1"
+}

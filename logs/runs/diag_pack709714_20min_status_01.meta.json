@@ -1,0 +1,29 @@
+{
+  "name": "diag_pack709714_20min_status_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pack709714_20min_status_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,signal,subprocess\nfrom pathlib import Path\nNAME='diag_pack709714_20min_status_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('40s metadata query bound')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(40)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()}\ncommand=['/cm/shared/apps/pbspro/current/bin/qstat','-xf','-F','json','709714.hopper-m-02']\ntry:\n p=subprocess.run(command,capture_output=True,text=True,timeout=30)\n record['query']={'command':command,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timed_out':False}\n if p.returncode==0:\n  d=json.loads(p.stdout);record['original_fields']={job:{k:v.get(k) for k in ('job_state','qtime','etime','stime','run_count','Exit_status','exec_host','exec_vnode','resources_used')} for job,v in d.get('Jobs',{}).items()}\nexcept subprocess.TimeoutExpired as e:\n record['query']={'command':command,'timed_out':True,'status':'unknown','stdout':e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':e.stderr.decode() if isinstance(e.stderr,bytes) else e.stderr}\npath=Path('results/gpu_pack_test_priority_full_single_01_retry3.json');row={'file':str(path),'exists':path.exists()}\nif path.is_file():\n assert path.stat().st_size<16*1024*1024\n raw=path.read_bytes();d=json.loads(raw);row['sha256']=hashlib.sha256(raw).hexdigest();row['lifecycle']={k:d.get('_meta',{}).get(k) for k in ('start','end','exit_code')};m=d.get('metrics',{})\n row['metrics']={k:m[k] for k in ('errors','cleanup_errors','black_frame_detected','all_owned_units_ended','unit_runs','gates') if k in m}\nrecord['parent']=row\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'\nwith path.open('x') as f:json.dump(record,f,indent=2,sort_keys=True)\nprint('ORIGINAL_PACK_STATUS_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'fields':record.get('original_fields',{'status':'unknown'}),'parent':row},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:36:28",
+  "log_path": "logs/runs/diag_pack709714_20min_status_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_pack709714_20min_status_01.diff",
+  "end": "2026-11-10T13:37:02",
+  "duration_sec": 30.3,
+  "exit_code": 0,
+  "metrics_sha256": "922cfad4644549c5b70812ca3872d7032f1208b9dad3fc74eca0b6ace45d795a"
+}

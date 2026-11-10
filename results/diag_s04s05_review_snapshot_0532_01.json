@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 2.8466309210052714
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_s04s05_review_snapshot_0532_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12-second small-metadata snapshot bound')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\nroot=Path.cwd().resolve();rows=[]\nfor name in ['gen_test_s16_s04_retry1_review_01','gen_test_s16_s04_retry1_review_01_gate','t01v2_checkpoint_test_s16_s04_retry1_01','gen_test_s16_s05_review_01','gen_test_s16_s05_review_01_gate','t01v2_checkpoint_test_s16_s05_01']:\n path=Path('results')/(name+'.json');row={'file':str(path),'exists':path.exists()}\n if path.is_file():\n  assert path.stat().st_size<=16*1024*1024,'metadata size bound'\n  raw=path.read_bytes();row['sha256']=hashlib.sha256(raw).hexdigest();data=json.loads(raw);m=data.get('metrics',{});meta=data.get('_meta',{})\n  row['lifecycle']={k:meta.get(k) for k in ('name','start','end','exit_code')}\n  row['metrics_keys']=sorted(m)\n  row['observed_metrics']={k:m[k] for k in ('status','kind','producer_exit_code','errors','cleanup_errors','passed','devices','black_frame_detected','independently_verified_by_class','independently_verified_pair_count','published_pair_count','published_by_class','duplicate_pairs','review_files','rejection_counts') if k in m}\n  if name.startswith('t01v2_checkpoint_') and meta.get('end') and meta.get('exit_code')==0 and not m.get('errors'):\n   from src.tools.t01_partition import audited_result\n   _,verified=audited_result(root/path)\n   selected=[];split={k:{'true':0,'false':0,'unknown':0} for k in ('direct_flip','direct_stay','look_flip','look_stay')}\n   for entry in m['candidate_pairs']:\n    ref=entry['pair_reference'];pair_path=(root/ref['file']).resolve();pair_path.relative_to(root/'data/world_pairs/v2')\n    assert pair_path.stat().st_size<=16*1024*1024\n    body=pair_path.read_bytes();assert hashlib.sha256(body).hexdigest()==ref['sha256'];pair=json.loads(body)\n    assert entry['independent_verification']['validity']['acceptance_passed'] is True\n    assert pair['pair_id']==entry['pair_id'] and pair['kind']==entry['kind'] and pair['scene']==entry['scene']\n    flag=pair.get('passes_original_physics_rule');category=str(flag).lower() if type(flag) is bool else 'unknown'\n    split[entry['kind']][category]+=1\n    selected.append({'pair_id':entry['pair_id'],'scene':entry['scene'],'kind':entry['kind'],'pair_reference':ref,'passes_original_physics_rule':flag if type(flag) is bool else None,'proposal_identity':entry['proposal_identity'],'source_file':entry['source_file'],'review_image':entry['review_image']})\n   assert len(selected)==m['published_pair_count'] and {k:sum(v.values()) for k,v in split.items()}==m['published_by_class']\n   row['published_only_summary']={'checkpoint_reference':verified,'by_class_and_original_physics_rule':split,'pairs':selected,'scope':'Only original independently published selected pair JSON, original SHA verified; no source candidates, no inferred oldrule flag, no new native/scientific reauthentication'}\n rows.append(row)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'records':rows}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'report.json'\nwith path.open('x') as stream:json.dump(record,stream,indent=2,sort_keys=True)\nprint('ORIGINAL_REVIEW_SNAPSHOT_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},**record},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_s04s05_review_snapshot_0532_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_s04s05_review_snapshot_0532_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_s04s05_review_snapshot_0532_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12-second small-metadata snapshot bound')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\nroot=Path.cwd().resolve();rows=[]\nfor name in ['gen_test_s16_s04_retry1_review_01','gen_test_s16_s04_retry1_review_01_gate','t01v2_checkpoint_test_s16_s04_retry1_01','gen_test_s16_s05_review_01','gen_test_s16_s05_review_01_gate','t01v2_checkpoint_test_s16_s05_01']:\n path=Path('results')/(name+'.json');row={'file':str(path),'exists':path.exists()}\n if path.is_file():\n  assert path.stat().st_size<=16*1024*1024,'metadata size bound'\n  raw=path.read_bytes();row['sha256']=hashlib.sha256(raw).hexdigest();data=json.loads(raw);m=data.get('metrics',{});meta=data.get('_meta',{})\n  row['lifecycle']={k:meta.get(k) for k in ('name','start','end','exit_code')}\n  row['metrics_keys']=sorted(m)\n  row['observed_metrics']={k:m[k] for k in ('status','kind','producer_exit_code','errors','cleanup_errors','passed','devices','black_frame_detected','independently_verified_by_class','independently_verified_pair_count','published_pair_count','published_by_class','duplicate_pairs','review_files','rejection_counts') if k in m}\n  if name.startswith('t01v2_checkpoint_') and meta.get('end') and meta.get('exit_code')==0 and not m.get('errors'):\n   from src.tools.t01_partition import audited_result\n   _,verified=audited_result(root/path)\n   selected=[];split={k:{'true':0,'false':0,'unknown':0} for k in ('direct_flip','direct_stay','look_flip','look_stay')}\n   for entry in m['candidate_pairs']:\n    ref=entry['pair_reference'];pair_path=(root/ref['file']).resolve();pair_path.relative_to(root/'data/world_pairs/v2')\n    assert pair_path.stat().st_size<=16*1024*1024\n    body=pair_path.read_bytes();assert hashlib.sha256(body).hexdigest()==ref['sha256'];pair=json.loads(body)\n    assert entry['independent_verification']['validity']['acceptance_passed'] is True\n    assert pair['pair_id']==entry['pair_id'] and pair['kind']==entry['kind'] and pair['scene']==entry['scene']\n    flag=pair.get('passes_original_physics_rule');category=str(flag).lower() if type(flag) is bool else 'unknown'\n    split[entry['kind']][category]+=1\n    selected.append({'pair_id':entry['pair_id'],'scene':entry['scene'],'kind':entry['kind'],'pair_reference':ref,'passes_original_physics_rule':flag if type(flag) is bool else None,'proposal_identity':entry['proposal_identity'],'source_file':entry['source_file'],'review_image':entry['review_image']})\n   assert len(selected)==m['published_pair_count'] and {k:sum(v.values()) for k,v in split.items()}==m['published_by_class']\n   row['published_only_summary']={'checkpoint_reference':verified,'by_class_and_original_physics_rule':split,'pairs':selected,'scope':'Only original independently published selected pair JSON, original SHA verified; no source candidates, no inferred oldrule flag, no new native/scientific reauthentication'}\n rows.append(row)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'records':rows}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'report.json'\nwith path.open('x') as stream:json.dump(record,stream,indent=2,sort_keys=True)\nprint('ORIGINAL_REVIEW_SNAPSHOT_JSON: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},**record},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T13:32:59",
+    "log_path": "logs/runs/diag_s04s05_review_snapshot_0532_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+    "git_dirty": false,
+    "end": "2026-11-10T13:33:03",
+    "duration_sec": 3.0,
+    "exit_code": 0,
+    "metrics_sha256": "a3969d529285170a72cee09a732bfcc7b6d903afd299b9853aaf1446cf89ca29"
+  }
+}

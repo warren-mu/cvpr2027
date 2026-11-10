@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.07117435004329309
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_shared709763709766_snapshot_0557_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s metadata-only snapshot')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef result(name):\n p=Path('results')/(name+'.json');a={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  assert p.stat().st_size<16*1024*1024\n  raw=p.read_bytes();d=json.loads(raw);m=d.get('metrics',{});a.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},lifecycle={k:d.get('_meta',{}).get(k) for k in ('start','end','exit_code')},metrics={k:m[k] for k in ('kind','status','passed','all_owned_units_ended','errors','cleanup_errors','gates','unit_claims','unit_runs','producer_exit_code','devices') if k in m})\n return a\nrows=[]\nfor job,name,folder in [('709763.hopper-m-02','gpu_pack_test_priority_full_single_04','logs/pbs/gpu_pack_test_priority_full_single_04-20261110T054702Z-4435a7f5'),('709766.hopper-m-02','gpu_pack_test_priority_full_single_01_retry4','logs/pbs/gpu_pack_test_priority_full_single_01_retry4-20261110T055116Z-27c6dda4')]:\n out=Path(folder)/'pbs.out';rows.append({'job_id':job,'parent':result(name),'gate':result(name+'_gate_0'),'pbs_out_exists':out.is_file(),'pbs_out_tail':out.read_text(errors='replace')[-6000:] if out.is_file() else None})\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':rows}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nprint('ORIGINAL_SHARED_STATUS_JSON: '+json.dumps({'report':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},**record},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_shared709763709766_snapshot_0557_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_shared709763709766_snapshot_0557_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nNAME='diag_shared709763709766_snapshot_0557_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s metadata-only snapshot')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\ndef result(name):\n p=Path('results')/(name+'.json');a={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  assert p.stat().st_size<16*1024*1024\n  raw=p.read_bytes();d=json.loads(raw);m=d.get('metrics',{});a.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},lifecycle={k:d.get('_meta',{}).get(k) for k in ('start','end','exit_code')},metrics={k:m[k] for k in ('kind','status','passed','all_owned_units_ended','errors','cleanup_errors','gates','unit_claims','unit_runs','producer_exit_code','devices') if k in m})\n return a\nrows=[]\nfor job,name,folder in [('709763.hopper-m-02','gpu_pack_test_priority_full_single_04','logs/pbs/gpu_pack_test_priority_full_single_04-20261110T054702Z-4435a7f5'),('709766.hopper-m-02','gpu_pack_test_priority_full_single_01_retry4','logs/pbs/gpu_pack_test_priority_full_single_01_retry4-20261110T055116Z-27c6dda4')]:\n out=Path(folder)/'pbs.out';rows.append({'job_id':job,'parent':result(name),'gate':result(name+'_gate_0'),'pbs_out_exists':out.is_file(),'pbs_out_tail':out.read_text(errors='replace')[-6000:] if out.is_file() else None})\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jobs':rows}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nprint('ORIGINAL_SHARED_STATUS_JSON: '+json.dumps({'report':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},**record},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T13:57:33",
+    "log_path": "logs/runs/diag_shared709763709766_snapshot_0557_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8643fd3d600a288c7d5ab81d6915c115a27e9471",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_shared709763709766_snapshot_0557_01.diff",
+    "end": "2026-11-10T13:57:36",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "56c4312d9066f894e1114ea77875b20651343841d1041b75166174a6da51700b"
+  }
+}

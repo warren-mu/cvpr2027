@@ -1,0 +1,35 @@
+diff --git a/STATUS.md b/STATUS.md
+index c04d71a6..934bdc34 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1642,3 +1642,30 @@ Pushed entry code 0e98ed2e before running `t04_pilot_certificate83_entry_cpu_01`
+ ### 2026-11-10 00:32 ET — complete-update launch prepared, not executed
+ 
+ Pushed the one-job launch script in fdb7a31f. The additional original `t04_pilot_certificate83_entry_interface_cpu_01` passed all 4 interface tests with zero skips, including actual save_json absolute references consumed by the unchanged frozen-holdout loader. This is separate from the preceding 108-test production regression; no GPU update is claimed. `diag_pilot_certificate83_one_update_plan_01` records the exact reviewable original submit command for 02:00 ET: one GPU, PBS 00:51:28 total abort bound, certificate table-loading main bound 900s and complete-update driver main bound 1800s, plus explicit gate/freeze/cleanup/recording margins. These are stop-loss bounds, not predicted speed. The script keeps critic_offload=False consistently with the existing driver/default; all formal arms must retain the same setting. It creates the original 83-pair certificate population and freeze only inside the approved post-02:00 PBS job, then performs one complete T4 engineering update. If population and freeze succeed but training fails, a direct retry reuses their original references and does not recreate them. No 50-step rollout is authorized by the CPU result alone.
++
++### 2026-11-10 00:34 ET — S04/S05 independent test acceptance and review images
++
++The original all-six-source independent checkpoints passed for both completed test shards. Their figures and original results are pushed in 8643fd3d: `logs/review/t01v2_checkpoint_test_s16_s04_retry1_01/` and `logs/review/t01v2_checkpoint_test_s16_s05_01/`. The original failures within their input shards remain preserved; acceptance below comes only from the independent checker, not source candidate counts. This is a per-batch report, not a new global deduplicated test-pool freeze.
++
++| Batch / class | passes_original_physics_rule=true | passes_original_physics_rule=false |
++| --- | ---: | ---: |
++| S04 direct Flip | 0 | 1 |
++| S04 direct Stay | 0 | 2 |
++| S04 Look→Flip | 0 | 0 |
++| S04 Look→Stay | 1 | 1 |
++| S05 direct Flip | 2 | 0 |
++| S05 direct Stay | 3 | 1 |
++| S05 Look→Flip | 1 | 0 |
++| S05 Look→Stay | 2 | 1 |
++
++All entries have a verified original-rule flag; none is filled in or inferred. Original logged source/SHA binding and the table are in `diag_s04s05_review_snapshot_0532_01`. New rule acceptance does not change anchor displacement, legal placement, visibility, evidence, prefix, solvability or witness thresholds. The 709714 pinned retry still has a fresh Q-only cancellation boundary of 05:36:08 UTC, based on actual PBS qtime; current state must be rechecked before cancellation.
++
++### 2026-11-10 01:00 ET — test channels restored and pinned retry cancellation
++
++S04/S05 independent review jobs 709717 and 709729 are both PBS F/exit0. Original `diag_test_s16_s0405_review_accounting_01` reports 184s/0.05111111111111111 GPU-hours (queue374s) and 206s/0.05722222222222222 GPU-hours (queue171s), respectively; combined 0.10833333333333334 allocation GPU-hours at queue rate1. Their original nine-file audit has no FAIL.
++
++The pinned 709714 was not started. After its actual 05:16:08 UTC qtime crossed the 20-minute boundary, the first cancellation attempt and a later post-query wrapper timed out; their unfinished original logs are retained, without fabricated end markers. A fresh successful Q/no-allocation pre-query, successful qdel, and complete F/no-allocation post-query now form the original chain `diag_full01_retry3_pin20_pre_02` / `cancel_02` / `post_03`. The unchanged original accounting verifier in `diag_full01_retry3_pin20_cancel_accounting_03` certifies zero allocation. Exact same-command/resource no-host replacement: 709714 → 709766 (`gpu_pack_test_priority_full_single_01_retry4`). No running job was cancelled.
++
++New original shared consumers 709761 (`full_single_03`) and 709763 (`full_single_04`) were submitted to restore empty small-job slots. 709761 exited at the opening gate on hopper-16 / GPU-d4b2af74-eab6-1f94-ff09-70f35ddb1d6d, with zero claims/business and clean teardown. Original canonical/mixed accounting records 23s, 0.006388888888888889 GPU-hours, queue101s, entirely G01. Its strict native-black guard passes; retry node rotation remains hopper-28/30. Do not add hopper-20: earlier original 709182/709190 gates already establish black GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310 there; later success on another device does not clear the node.
++
++The 05:57 original snapshot records successful gates for 709763 (hopper-23 / GPU-498d9ab2-aa77-5311-2764-a76269bd601a) and 709766 (hopper-15 / GPU-75bb9dde-c22d-4017-1a63-06dd9deba534). Their parent jobs were still unsealed at that snapshot. Gate success alone is not a claimed shard or science PASS. No hostname is added to the whitelist on this basis. The 02:00 certificate83/holdout/complete-update entry remains ready; the first original 709593 qualification failure and all four cache certificates are unchanged.

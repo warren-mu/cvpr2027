@@ -1,0 +1,25 @@
+diff --git a/STATUS.md b/STATUS.md
+index c04d71a6..29249908 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1642,3 +1642,20 @@ Pushed entry code 0e98ed2e before running `t04_pilot_certificate83_entry_cpu_01`
+ ### 2026-11-10 00:32 ET — complete-update launch prepared, not executed
+ 
+ Pushed the one-job launch script in fdb7a31f. The additional original `t04_pilot_certificate83_entry_interface_cpu_01` passed all 4 interface tests with zero skips, including actual save_json absolute references consumed by the unchanged frozen-holdout loader. This is separate from the preceding 108-test production regression; no GPU update is claimed. `diag_pilot_certificate83_one_update_plan_01` records the exact reviewable original submit command for 02:00 ET: one GPU, PBS 00:51:28 total abort bound, certificate table-loading main bound 900s and complete-update driver main bound 1800s, plus explicit gate/freeze/cleanup/recording margins. These are stop-loss bounds, not predicted speed. The script keeps critic_offload=False consistently with the existing driver/default; all formal arms must retain the same setting. It creates the original 83-pair certificate population and freeze only inside the approved post-02:00 PBS job, then performs one complete T4 engineering update. If population and freeze succeed but training fails, a direct retry reuses their original references and does not recreate them. No 50-step rollout is authorized by the CPU result alone.
++
++### 2026-11-10 00:34 ET — S04/S05 independent test acceptance and review images
++
++The original all-six-source independent checkpoints passed for both completed test shards. Their figures and original results are pushed in 8643fd3d: `logs/review/t01v2_checkpoint_test_s16_s04_retry1_01/` and `logs/review/t01v2_checkpoint_test_s16_s05_01/`. The original failures within their input shards remain preserved; acceptance below comes only from the independent checker, not source candidate counts. This is a per-batch report, not a new global deduplicated test-pool freeze.
++
++| Batch / class | passes_original_physics_rule=true | passes_original_physics_rule=false |
++| --- | ---: | ---: |
++| S04 direct Flip | 0 | 1 |
++| S04 direct Stay | 0 | 2 |
++| S04 Look→Flip | 0 | 0 |
++| S04 Look→Stay | 1 | 1 |
++| S05 direct Flip | 2 | 0 |
++| S05 direct Stay | 3 | 1 |
++| S05 Look→Flip | 1 | 0 |
++| S05 Look→Stay | 2 | 1 |
++
++All entries have a verified original-rule flag; none is filled in or inferred. Original logged source/SHA binding and the table are in `diag_s04s05_review_snapshot_0532_01`. New rule acceptance does not change anchor displacement, legal placement, visibility, evidence, prefix, solvability or witness thresholds. The 709714 pinned retry still has a fresh Q-only cancellation boundary of 05:36:08 UTC, based on actual PBS qtime; current state must be rechecked before cancellation.
