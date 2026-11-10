@@ -86,12 +86,12 @@ def read_manifest(path, expected_sha):
     return data, {'file': str(path), 'sha256': expected_sha}
 
 
-def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds, sample_rejected_raw=False):
+def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds, sample_rejected_raw=False, compression_reference=None):
     return [sys.executable, '-u', '-m', 'src.tools.t02_export', '--name', name,
             '--source', entry['source']['file'], '--pair-id', entry['pair_id'],
             '--pair-file', entry['pair']['file'], '--timeout-seconds', str(unit_seconds),
             '--pair-timeout-seconds', str(pair_seconds), '--gate-timeout-seconds', str(gate_seconds)] + (
-            ['--sample-rejected-raw'] if sample_rejected_raw else [])
+            ['--sample-rejected-raw'] if sample_rejected_raw else []) + export.compression.command_suffix(compression_reference)
 
 
 def child_outcome(record, data, identity, command, entry):
@@ -118,6 +118,14 @@ def child_outcome(record, data, identity, command, entry):
             or (sampling and cfg.get('raw_retention_policy') != export.rejected_raw.POLICY)
             or (not sampling and 'raw_retention_policy' in cfg)):
         raise ValueError('Original child raw retention differs from its explicit command')
+    compressed = '--compress-test-tables' in command
+    declared = cfg.get('test_selection')
+    if (cfg.get('compress_test_tables', False) is not compressed
+            or cfg.get('compression_smoke_dual', False) is not False
+            or (compressed and (declared != command[command.index('--test-selection') + 1]
+                 or cfg.get('test_compression_policy') != export.compression.codec.POLICY))
+            or (not compressed and (declared is not None or 'test_compression_policy' in cfg))):
+        raise ValueError('Original child compression differs from its explicit command')
     runtime = cfg.get('runtime')
     if runtime is not None and any(runtime.get(key) != identity[key] for key in
             ('pbs_jobid', 'cuda_visible_devices', 'cpu_affinity', 'scratch')):
@@ -161,7 +169,7 @@ def child_outcome(record, data, identity, command, entry):
 
 
 def run_units(entries, *, name, concurrency, directory, identity, deadline,
-              unit_seconds, pair_seconds, gate_seconds, sources, stopping, sample_rejected_raw=False):
+              unit_seconds, pair_seconds, gate_seconds, sources, stopping, sample_rejected_raw=False, compression_reference=None):
     if concurrency not in (1, 2, 4, 6) or len(identity['cpu_affinity']) != 12:
         raise ValueError('Require at most six single-Unity units on the shared twelve-CPU allocation')
     active, finished, errors, cleanup = {}, [], [], []
@@ -214,7 +222,7 @@ def run_units(entries, *, name, concurrency, directory, identity, deadline,
                 index = next_index
                 child_name = f'{name}_u{index:04d}'
                 command = unit_command(child_name, entries[index], unit_seconds, pair_seconds, gate_seconds,
-                                       sample_rejected_raw=sample_rejected_raw)
+                                       sample_rejected_raw=sample_rejected_raw, compression_reference=compression_reference)
                 child = launch_logged(child_name, command, os.environ, directory)
                 child['producer_command'] = command
                 active[index] = child
@@ -267,7 +275,9 @@ def main(argv=None):
     parser.add_argument('--pair-timeout-seconds', type=float, required=True)
     parser.add_argument('--gate-timeout-seconds', type=float, default=180)
     parser.add_argument('--sample-rejected-raw', action='store_true')
+    export.compression.arguments(parser, dual=False)
     args = parser.parse_args(argv)
+    compression_ref = export.compression.option_values(args)
     if (not re.fullmatch(r't02_export_[A-Za-z0-9_]+', args.name)
             or not all(math.isfinite(x) and x > 0 for x in (args.timeout_seconds, args.unit_timeout_seconds,
                                                            args.pair_timeout_seconds, args.gate_timeout_seconds))
@@ -285,6 +295,8 @@ def main(argv=None):
               'unit_producer': 'src.tools.t02_export', 'unit_producer_version': export.VERSION,
               'gate_policy': 'parent gate completes first; each original child retains its own original gate',
               'scope': 'same GPU UUID and shared12CPU; independent original results; no scientific acceptance inferred'}
+    if compression_ref is not None:
+        config['test_compression_policy'] = copy.deepcopy(export.compression.codec.POLICY)
     if args.sample_rejected_raw:
         config['raw_retention_policy'] = copy.deepcopy(export.rejected_raw.POLICY)
     metrics = {'kind': 't02_parallel_export', 'status': 'failed_before_gate', 'units': [],
@@ -321,11 +333,15 @@ def main(argv=None):
             export.gate_runtime(gate, identity, config['node'], directory / 'unused_parent_unity')
             if cleanup:
                 raise RuntimeError('Original parent gate cleanup is uncertain')
+            if compression_ref is not None:
+                selection = export.compression.load_selection(compression_ref)
+                export.compression.validate_entries(selection, manifest)
+                sources.append(selection['logged_reference'])
             result = run_units(manifest['entries'], name=args.name, concurrency=args.concurrency,
                 directory=directory, identity=identity, deadline=deadline,
                 unit_seconds=args.unit_timeout_seconds, pair_seconds=args.pair_timeout_seconds,
                 gate_seconds=args.gate_timeout_seconds, sources=sources, stopping=stopping,
-                sample_rejected_raw=args.sample_rejected_raw)
+                sample_rejected_raw=args.sample_rejected_raw, compression_reference=compression_ref)
             metrics.update(result)
             complete = result['all_units_ended'] and all(row.get('export_checks_complete') for row in result['units'])
             code = 0 if complete else 1

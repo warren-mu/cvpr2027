@@ -123,6 +123,13 @@ def t02_identity(unit, root):
     sample_rejected_raw = '--sample-rejected-raw' in command
     if sample_rejected_raw:
         expected.append('--sample-rejected-raw')
+    compressed = '--compress-test-tables' in command
+    selection_ref = None
+    if compressed:
+        from src.tools import t02_test_compression as compression
+        selection_ref = compression.selection_reference(_argument(command, '--test-selection'))
+        require(manifest['partition'] == 'test', 'Compressed shared exports require test inputs')
+        expected += compression.command_suffix(selection_ref)
     require(command == expected and params['concurrency'] == '6', 'Shared T02 command differs from the original fixed six-way entry')
     require(float(params['timeout-seconds']) == unit['timeout_seconds'], 'Unit time grant differs')
     identity = {'kind': 't02_export_batch', 'manifest': manifest_ref,
@@ -130,6 +137,9 @@ def t02_identity(unit, root):
     if sample_rejected_raw:
         from src.tools.t02_rejected_raw import POLICY
         identity['raw_retention_policy'] = copy.deepcopy(POLICY)
+    if compressed:
+        identity['test_compression'] = {'policy': copy.deepcopy(compression.codec.POLICY),
+                                        'selection_reference': selection_ref}
     return identity, sorted(keys)
 
 
@@ -278,6 +288,11 @@ def validate_t02_child_claim(environment, identity, arguments, *, root=ROOT):
             and arguments.gate_timeout_seconds == float(_argument(command,'--gate-timeout-seconds'))
             and getattr(arguments, 'sample_rejected_raw', False) is ('--sample-rejected-raw' in command),
             'T02 child source or complete grant differs from its claimed original batch')
+    compressed = '--compress-test-tables' in command
+    require(getattr(arguments, 'compress_test_tables', False) is compressed
+            and getattr(arguments, 'compression_smoke_dual', False) is False
+            and getattr(arguments, 'test_selection', None) == (_argument(command, '--test-selection') if compressed else None),
+            'T02 child compression differs from its claimed original batch')
     return {**proof, 't02_child_index':index, 't02_child_entry':copy.deepcopy(entry)}
 
 

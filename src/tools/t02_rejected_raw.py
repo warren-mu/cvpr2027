@@ -118,23 +118,30 @@ def apply_retention(row, owner_reference, *, cleanup_confirmed):
     for reference in index['files']:
         if Path(reference['file']).suffix in RAW_SUFFIXES:
             candidates.append(_payload(reference, root / 'raw', RAW_SUFFIXES))
+    table_suffixes = TABLE_SUFFIXES
     manifest_ref = row.get('table_manifest')
     if manifest_ref is not None:
         if Path(manifest_ref['file']) != root / 'table/table.json':
             raise ValueError('Table is not private to the rejected attempt')
         # save_table's extra payload_bytes is metadata, not part of the file reference.
         manifest = read(manifest_ref)
+        if manifest.get('storage_encoding') is not None:
+            from src.envs.pair_table_codec import POLICY as compression_policy
+            if manifest['storage_encoding'] != compression_policy or any(
+                    ref.get('encoding') != compression_policy for ref in manifest['files']):
+                raise ValueError('Unknown rejected table compression declaration')
+            table_suffixes = frozenset(('.npz',))
         for reference in manifest['files']:
             name = reference['file']
             if Path(name).name != name:
                 raise ValueError('Table payload name escapes its private directory')
             candidates.append(_payload({**reference, 'file': str(root / 'table' / name)},
-                                       root / 'table', TABLE_SUFFIXES))
+                                       root / 'table', table_suffixes))
     paths = [item['original_path'] for item in candidates]
     if len(paths) != len(set(paths)):
         raise ValueError('Duplicate payload in original raw/table index')
     # Unexpected binaries are retained and block ALL omission before the first unlink.
-    for folder, suffixes in ((root / 'raw', RAW_SUFFIXES), (root / 'table', TABLE_SUFFIXES)):
+    for folder, suffixes in ((root / 'raw', RAW_SUFFIXES), (root / 'table', table_suffixes | TABLE_SUFFIXES)):
         if folder.exists():
             if folder.is_symlink() or folder.resolve() != folder:
                 raise ValueError('Private payload directory became a symlink')

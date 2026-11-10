@@ -1,0 +1,90 @@
+{
+  "stage": "qualification_only",
+  "qualification_mode": "normal_default_at_least80",
+  "submit_argv": [
+    "python3",
+    "-u",
+    "scripts/run_logged.py",
+    "--name",
+    "diag_submit_smoke_e2e_pilot_pool_build_83_01",
+    "--seed",
+    "0",
+    "--",
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_submit_smoke_e2e_pilot_pool_build_83_01",
+    "--",
+    "python3",
+    "scripts/pbs/submit_phase.py",
+    "--name",
+    "smoke_e2e_pilot_pool_build_83_01",
+    "--task",
+    "T01",
+    "--budget-group",
+    "E2Epilot",
+    "--gpus",
+    "1",
+    "--walltime",
+    "01:30:00",
+    "--",
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "smoke_e2e_pilot_pool_build_83_01",
+    "--",
+    "bash",
+    "-c",
+    "python3 -u scripts/run_logged.py --name smoke_e2e_pilot_pool_build_83_01_gate --seed 0 -- python3 -u -m src.tools.render_gate --name smoke_e2e_pilot_pool_build_83_01_gate --gpus 1 --resolution 255 --segmentation --timeout-seconds 180 && python3 -u scripts/run_logged.py --name smoke_e2e_pilot_pool_83_01 --seed 0 -- python3 -u -m src.tools.smoke_e2e_pilot_dataset --name smoke_e2e_pilot_pool_83_01 --cache-source '{\"file\":\"results/t02_export_cache_first5_01_retry2.json\",\"sha256\":\"0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187\"}' --cache-source '{\"file\":\"results/t02_export_cache_remaining24_01.json\",\"sha256\":\"a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70\"}' --cache-source '{\"file\":\"results/t02_export_cache_six05_08_01_retry2.json\",\"sha256\":\"24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14\"}' --cache-source '{\"file\":\"results/t02_export_cache_six09_14_01_retry4.json\",\"sha256\":\"f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b\"}' --split-policy room_stratified_scene_hash_seed0_ten_percent_v1 --out data/world_pairs/e2e_pilot_pool_83_01.json --timeout-seconds 5160"
+  ],
+  "expected_result": "results/smoke_e2e_pilot_pool_83_01.json",
+  "expected_manifest": "data/world_pairs/e2e_pilot_pool_83_01.json",
+  "exact_cache_sources": [
+    {
+      "file": "results/t02_export_cache_first5_01_retry2.json",
+      "sha256": "0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"
+    },
+    {
+      "file": "results/t02_export_cache_remaining24_01.json",
+      "sha256": "a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"
+    },
+    {
+      "file": "results/t02_export_cache_six05_08_01_retry2.json",
+      "sha256": "24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"
+    },
+    {
+      "file": "results/t02_export_cache_six09_14_01_retry4.json",
+      "sha256": "f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"
+    }
+  ],
+  "fixed31_plan_reference": {
+    "file": "configs/t02_cache_six09_14_fixed.json",
+    "sha256": "03888e80a440e6fc28a7847b9aa4cdc4cdd44cd1591538d8a13fac0431994f9f"
+  },
+  "scope": "Original3 fixed52 certificates plus the exact fully successful fixed31 certificate. No fallback flag. Actual original build_pool must fully authenticate all83, keep every pair, preserve Flip seed0 and whole-scene holdout; this preview is not qualification.",
+  "bounds": {
+    "gate_seconds": 180,
+    "authentication_seconds": 5160,
+    "PBS_seconds": 5400,
+    "tail_margin_seconds": 60,
+    "interpretation": "stop-loss, not forecast"
+  },
+  "budget": "E2Epilot inside sharedT01/120; original fresh submitter reserves1.5 allocation GPUh times actual scheduler rate; current subbudget6.",
+  "accounting_argv_template": [
+    "python3",
+    "-u",
+    "scripts/run_logged.py",
+    "--name",
+    "smoke_e2e_pilot_pool_build_83_01_accounting",
+    "--seed",
+    "0",
+    "--",
+    "python3",
+    "src/tools/pbs_usage.py",
+    "--name",
+    "smoke_e2e_pilot_pool_build_83_01_accounting",
+    "<actual_job_id>"
+  ]
+}

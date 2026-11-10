@@ -1,0 +1,402 @@
+diff --git a/src/envs/pair_table_export.py b/src/envs/pair_table_export.py
+index 33b4bed6..487b8958 100644
+--- a/src/envs/pair_table_export.py
++++ b/src/envs/pair_table_export.py
+@@ -320,27 +320,39 @@ class SimulatorTableRenderer:
+         return left, right
+ 
+ 
+-def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_bytes=512 * 1024 * 1024):
++def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_bytes=512 * 1024 * 1024, compression=None):
+     """Content-addressed immutable export. Shared *public* RGB stored once.
+ 
+     Both original RGB measurements remain in evidence for independent audits;
+     public_rgb references explicitly alias w0 only for verified shared states.
+     No data deletion or overwriting, including after a partial failure.
+     """
++    from . import pair_table_codec as codec
++    if compression is not None:
++        if compression != codec.VERSION:
++            raise ValueError('Unknown table storage codec')
++        codec.require_test_table(table.scene, table.source)
+     root = Path(directory)
+     root.mkdir(parents=True, exist_ok=False)
+-    written, total = {}, 0
++    written, total, uncompressed_total = {}, 0, 0
+ 
+     def put(data, suffix):
+-        nonlocal total
++        nonlocal total, uncompressed_total
+         sha = hashlib.sha256(data).hexdigest()
+-        name = sha + suffix
++        name = sha + suffix + ('.npz' if compression else '')
+         if name not in written:
+-            if len(data) > max_file_bytes or total + len(data) > max_total_bytes:
++            if len(data) > max_file_bytes:
+                 raise ValueError('Table export byte cap exceeded; partial evidence retained')
+-            (root / name).write_bytes(data)
+-            total += len(data)
+-            written[name] = {'file': name, 'sha256': sha, 'bytes': len(data)}
++            body, fields = codec.encode(data) if compression else (data, {'sha256': sha, 'bytes': len(data)})
++            if total + len(body) > max_total_bytes or uncompressed_total + len(data) > max_total_bytes:
++                raise ValueError('Table export byte cap exceeded; partial evidence retained')
++            (root / name).write_bytes(body)
++            # Validate bytes read back from the actual compressed file immediately.
++            if compression and codec.decode((root / name).read_bytes(), fields) != data:
++                raise ValueError('Stored compressed table roundtrip changed original bytes')
++            total += len(body)
++            uncompressed_total += len(data)
++            written[name] = {'file': name, **fields}
+         return written[name]
+ 
+     rows = {}
+@@ -365,8 +377,11 @@ def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_b
+         export_verified=False, cache_verified=False,
+         status='exported_evidence_pending_independent_checks', stored_payload_bytes=total)
+     manifest['export_measurements'] = copy.deepcopy(getattr(table, 'export_measurements', None))
++    if compression:
++        manifest.update(storage_encoding=copy.deepcopy(codec.POLICY), uncompressed_payload_bytes=uncompressed_total)
+     content = encoded(manifest)
+-    if len(content) > max_file_bytes or total + len(content) > max_total_bytes:
++    if (len(content) > max_file_bytes or total + len(content) > max_total_bytes
++            or (compression and uncompressed_total + len(content) > max_total_bytes)):
+         raise ValueError('Table manifest cap exceeded; partial evidence retained')
+     path = root / 'table.json'
+     path.write_bytes(content)
+@@ -385,6 +400,17 @@ def load_table(path, *, expected_sha256):
+     manifest = json.loads(raw)
+     if manifest['version'] != TABLE_VERSION:
+         raise ValueError('Unknown table version')
++    from . import pair_table_codec as codec
++    compressed = 'storage_encoding' in manifest
++    payloads, used = {}, set()
++    if compressed:
++        if manifest['storage_encoding'] != codec.POLICY:
++            raise ValueError('Unknown compressed table declaration')
++        codec.require_test_table(manifest['scene'], manifest['source'])
++        for item in manifest['files']:
++            if item['file'] in payloads or item.get('encoding') != codec.POLICY:
++                raise ValueError('Ambiguous or mixed compressed payload inventory')
++            payloads[item['file']] = item
+ 
+     def read(ref):
+         target = (path.parent / ref['file']).resolve()
+@@ -393,6 +419,13 @@ def load_table(path, *, expected_sha256):
+         data = target.read_bytes()
+         if len(data) != ref['bytes'] or hashlib.sha256(data).hexdigest() != ref['sha256']:
+             raise ValueError('Table payload changed')
++        if compressed:
++            if payloads.get(ref['file']) != ref:
++                raise ValueError('Compressed state reference differs from complete inventory')
++            used.add(ref['file'])
++            return codec.decode(data, ref)
++        if any(key in ref for key in ('encoding', 'raw_sha256', 'raw_bytes', 'encoder_versions')):
++            raise ValueError('Encoded payload lacks its explicit test storage declaration')
+         return data
+ 
+     states = {}
+@@ -409,6 +442,9 @@ def load_table(path, *, expected_sha256):
+             row['frame_max_abs_diff'], tuple(row['anchor_pixels']))
+         if row.get('shadow_divergent') is not states[key].shadow_divergent:
+             raise ValueError('Stored state shadow classification differs from its measurements')
++    if compressed and (used != set(payloads) or manifest.get('uncompressed_payload_bytes') != sum(ref['raw_bytes'] for ref in payloads.values())
++            or manifest.get('stored_payload_bytes') != sum(ref['bytes'] for ref in payloads.values())):
++        raise ValueError('Compressed payload inventory or length totals differ')
+     args = {key: manifest[key] for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
+         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
+     table = PairTable(**args, states=states, export_verified=False, cache_verified=False)
+diff --git a/src/tools/gpu_shared_claim.py b/src/tools/gpu_shared_claim.py
+index 3a5f898e..6c723894 100644
+--- a/src/tools/gpu_shared_claim.py
++++ b/src/tools/gpu_shared_claim.py
+@@ -123,6 +123,13 @@ def t02_identity(unit, root):
+     sample_rejected_raw = '--sample-rejected-raw' in command
+     if sample_rejected_raw:
+         expected.append('--sample-rejected-raw')
++    compressed = '--compress-test-tables' in command
++    selection_ref = None
++    if compressed:
++        from src.tools import t02_test_compression as compression
++        selection_ref = compression.selection_reference(_argument(command, '--test-selection'))
++        require(manifest['partition'] == 'test', 'Compressed shared exports require test inputs')
++        expected += compression.command_suffix(selection_ref)
+     require(command == expected and params['concurrency'] == '6', 'Shared T02 command differs from the original fixed six-way entry')
+     require(float(params['timeout-seconds']) == unit['timeout_seconds'], 'Unit time grant differs')
+     identity = {'kind': 't02_export_batch', 'manifest': manifest_ref,
+@@ -130,6 +137,9 @@ def t02_identity(unit, root):
+     if sample_rejected_raw:
+         from src.tools.t02_rejected_raw import POLICY
+         identity['raw_retention_policy'] = copy.deepcopy(POLICY)
++    if compressed:
++        identity['test_compression'] = {'policy': copy.deepcopy(compression.codec.POLICY),
++                                        'selection_reference': selection_ref}
+     return identity, sorted(keys)
+ 
+ 
+@@ -278,6 +288,11 @@ def validate_t02_child_claim(environment, identity, arguments, *, root=ROOT):
+             and arguments.gate_timeout_seconds == float(_argument(command,'--gate-timeout-seconds'))
+             and getattr(arguments, 'sample_rejected_raw', False) is ('--sample-rejected-raw' in command),
+             'T02 child source or complete grant differs from its claimed original batch')
++    compressed = '--compress-test-tables' in command
++    require(getattr(arguments, 'compress_test_tables', False) is compressed
++            and getattr(arguments, 'compression_smoke_dual', False) is False
++            and getattr(arguments, 'test_selection', None) == (_argument(command, '--test-selection') if compressed else None),
++            'T02 child compression differs from its claimed original batch')
+     return {**proof, 't02_child_index':index, 't02_child_entry':copy.deepcopy(entry)}
+ 
+ 
+diff --git a/src/tools/t02_export.py b/src/tools/t02_export.py
+index 47f0a4cc..facee975 100644
+--- a/src/tools/t02_export.py
++++ b/src/tools/t02_export.py
+@@ -26,6 +26,7 @@ from src.envs.pair_table_checks import check_pair, verify_render_sources
+ from src.tools.t01_partition import audited_result, cpu_shards, sha_file
+ from src.tools.t01_parallel_approved import stop_logged
+ from src.tools import t02_rejected_raw as rejected_raw
++from src.tools import t02_test_compression as compression
+ 
+ 
+ VERSION = "t02_single_gpu_export_shadow_v2"
+@@ -87,7 +88,7 @@ def gate_runtime(data, identity, node, log_dir):
+             "log_dir": str(log_dir), "ai2thor_version": allocation["ai2thor_version"]}
+ 
+ 
+-def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
++def export_checked(sim, package, directory, evidence_roots, max_table_bytes, *, compression_proof=None, dual=False):
+     """One complete graph only; serialized flags are never trusted on reload."""
+     worlds = package["worlds"]
+     if (len(worlds) != 2 or worlds[0].get("clone_context") != worlds[1].get("clone_context")
+@@ -128,6 +129,8 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
+             "candidate_policy": package['source_config'].get('candidate_policy'),
+             "field_of_view": package['source_config'].get('field_of_view', 100),
+             "render_source_worlds": [world["reference"] for world in worlds]})
++    if compression_proof is not None:
++        table.source.update(g01_partition="test", test_compression_selection=compression_proof)
+     table.export_measurements['frozen_pose_readbacks'] = {}
+     for scope, stages in (('requested_vs_actual', {'setup', 'capture'}),
+                           ('actual_w0_vs_w1_nonanchor', {'paired_nonanchor'})):
+@@ -140,21 +143,36 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
+             'max_raw_rotation_component_delta_degrees': max((row['max_raw_rotation_component_delta_degrees']
+                                                             for row in measured), default=None),
+             'scope': 'read-only diagnostics; existing physical/restore/image thresholds unchanged'}
+-    manifest = save_table(table, directory, max_total_bytes=max_table_bytes)
++    manifest = save_table(table, directory, max_total_bytes=max_table_bytes,
++                          compression=compression.codec.VERSION if compression_proof is not None else None)
+     # Check the bytes that downstream consumers will actually load, not only
+     # the in-memory object that produced them. load_table clears both flags.
+     loaded = load_table(manifest["file"], expected_sha256=manifest["sha256"])
++    comparison = None
++    if dual:
++        if compression_proof is None:
++            raise ValueError("Dual export requires explicitly authorized test compression")
++        plain_ref = save_table(table, Path(directory).parent / "table_plain", max_total_bytes=max_table_bytes)
++        plain = load_table(plain_ref["file"], expected_sha256=plain_ref["sha256"])
++        comparison = {**compression.compare_tables(plain, loaded), "plain_manifest": plain_ref,
++            "compressed_manifest": manifest, "plain_payload_bytes": plain_ref["payload_bytes"],
++            "compressed_payload_bytes": manifest["payload_bytes"],
++            "compressed_to_plain_ratio": manifest["payload_bytes"] / plain_ref["payload_bytes"]}
+     native = verify_render_sources(loaded, evidence_roots=evidence_roots)
+     if native.get("passed") is not True or loaded.synthetic or loaded.export_verified is not True:
+         raise ValueError("native_evidence_verification_failed")
+     checks = check_pair(loaded, package["t01"])
+-    return {"table_manifest": manifest, "table_complete": True, "native_checks": native,
++    result = {"table_manifest": manifest, "table_complete": True, "native_checks": native,
+             **loaded.shadow_metadata,
+             "pair_checks": checks, "restoration": restoration, "reachable_scope": catalog_scope,
+             "reachable_reference": reference, "export_measurements": table.export_measurements,
+             "frozen_restore_readbacks": renderer.restore_checks,
+             "cache_matches_live": None, "cache_status": "not_run_requires_at_least_200_paired_states",
+             "downstream_allowed": False, "task_acceptance": None}
++    if compression_proof is not None:
++        result["test_compression"] = {"policy": compression.codec.POLICY, "selection": compression_proof,
++                                      "dual_format_comparison": comparison}
++    return result
+ 
+ 
+ def pair_worker(config, connection):
+@@ -176,7 +194,10 @@ def pair_worker(config, connection):
+                 cls = V2CloneSimulator if package["clone_context"] is not None else V2Simulator
+                 sim = cls(controller, config, directory / "raw")
+                 detail = export_checked(sim, package, directory / "table",
+-                    [*package["evidence_roots"], str(directory)], config["max_table_bytes"])
++                    [*package["evidence_roots"], str(directory)], config["max_table_bytes"],
++                    compression_proof=config.get("test_compression_proof"), dual=config.get("compression_smoke_dual", False))
++                if "test_compression" in detail:
++                    report["test_compression"] = detail["test_compression"]
+                 report["detail"] = save_json(directory / "checks.json", detail)
+                 report.update(table_complete=True, table_manifest=detail["table_manifest"],
+                     shadow_divergent_states=detail["shadow_divergent_states"],
+@@ -302,7 +323,11 @@ def main():
+     parser.add_argument("--max-table-mib", type=int, default=512)
+     parser.add_argument("--sample-rejected-raw", action="store_true",
+         help="For new scientific rejections only: retain seed0 ~10% binary raw, all metadata/logs")
++    compression.arguments(parser)
+     args = parser.parse_args()
++    compression_ref = compression.option_values(args)
++    if args.compression_smoke_dual and (len(args.pair_id) != 1 or args.sample_rejected_raw):
++        parser.error("Dual-format smoke is one selected pair and retains both formats in full")
+     if (not re.fullmatch(r"t02_[A-Za-z0-9_]+", args.name)
+             or len(set(args.pair_id)) != len(args.pair_id) or (args.pair_file and len(args.pair_id) != 1)
+             or not all(math.isfinite(x) and x > 0 for x in (args.timeout_seconds, args.pair_timeout_seconds))
+@@ -316,6 +341,8 @@ def main():
+     config = {**vars(args), "source": str(args.source), "version": VERSION, "gpus": 1, "resolution": 255,
+               "depth": 4, "node": socket.gethostname(), "human_review_status": "not_inferred_from_source",
+               "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review"}
++    if compression_ref is not None:
++        config["test_compression_policy"] = copy.deepcopy(compression.codec.POLICY)
+     if args.sample_rejected_raw:
+         config["raw_retention_policy"] = copy.deepcopy(rejected_raw.POLICY)
+     metrics = {"kind": "t02_table_export", "status": "failed", "pairs": [], "unstarted_pair_ids": list(args.pair_id),
+@@ -352,12 +379,17 @@ def main():
+             # Stop unusable allocations before the CPU source checks, while
+             # still authenticating every requested pair before any export.
+             from src.envs.pair_table_source import load_reviewed_pair
++            selection = compression.load_selection(compression_ref) if compression_ref is not None else None
++            if selection is not None:
++                sources.append(selection["logged_reference"])
+             packages = []
+             for pair_id in args.pair_id:
+                 package = load_reviewed_pair(args.source, pair_id, pair_file=args.pair_file)
+                 for reference in package["sources"]:
+                     if reference not in sources:
+                         sources.append(reference)
++                if selection is not None:
++                    package["test_compression_proof"] = compression.validate_package(selection, package)
+                 packages.append(package)
+             for index, package in enumerate(packages):
+                 if time.time() >= deadline - 30:
+@@ -372,6 +404,9 @@ def main():
+                     "runtime": pair_runtime(runtime, pair_dir), "package": package, "directory": str(pair_dir),
+                     "deadline": min(deadline - 15, time.time() + args.pair_timeout_seconds),
+                     "max_raw_bytes": args.max_raw_mib * 1024 * 1024, "max_table_bytes": args.max_table_mib * 1024 * 1024}
++                if selection is not None:
++                    child.update(test_compression_proof=package["test_compression_proof"],
++                                 compression_smoke_dual=args.compression_smoke_dual)
+                 for key in ("grid_size", "visibility_distance", "field_of_view"):
+                     child[key] = package["source_config"][key]
+                 worker = Worker(pair_worker, child)
+diff --git a/src/tools/t02_export_parallel.py b/src/tools/t02_export_parallel.py
+index 1b6034e8..d7e06d78 100644
+--- a/src/tools/t02_export_parallel.py
++++ b/src/tools/t02_export_parallel.py
+@@ -86,12 +86,12 @@ def read_manifest(path, expected_sha):
+     return data, {'file': str(path), 'sha256': expected_sha}
+ 
+ 
+-def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds, sample_rejected_raw=False):
++def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds, sample_rejected_raw=False, compression_reference=None):
+     return [sys.executable, '-u', '-m', 'src.tools.t02_export', '--name', name,
+             '--source', entry['source']['file'], '--pair-id', entry['pair_id'],
+             '--pair-file', entry['pair']['file'], '--timeout-seconds', str(unit_seconds),
+             '--pair-timeout-seconds', str(pair_seconds), '--gate-timeout-seconds', str(gate_seconds)] + (
+-            ['--sample-rejected-raw'] if sample_rejected_raw else [])
++            ['--sample-rejected-raw'] if sample_rejected_raw else []) + export.compression.command_suffix(compression_reference)
+ 
+ 
+ def child_outcome(record, data, identity, command, entry):
+@@ -118,6 +118,14 @@ def child_outcome(record, data, identity, command, entry):
+             or (sampling and cfg.get('raw_retention_policy') != export.rejected_raw.POLICY)
+             or (not sampling and 'raw_retention_policy' in cfg)):
+         raise ValueError('Original child raw retention differs from its explicit command')
++    compressed = '--compress-test-tables' in command
++    declared = cfg.get('test_selection')
++    if (cfg.get('compress_test_tables', False) is not compressed
++            or cfg.get('compression_smoke_dual', False) is not False
++            or (compressed and (declared != command[command.index('--test-selection') + 1]
++                 or cfg.get('test_compression_policy') != export.compression.codec.POLICY))
++            or (not compressed and (declared is not None or 'test_compression_policy' in cfg))):
++        raise ValueError('Original child compression differs from its explicit command')
+     runtime = cfg.get('runtime')
+     if runtime is not None and any(runtime.get(key) != identity[key] for key in
+             ('pbs_jobid', 'cuda_visible_devices', 'cpu_affinity', 'scratch')):
+@@ -161,7 +169,7 @@ def child_outcome(record, data, identity, command, entry):
+ 
+ 
+ def run_units(entries, *, name, concurrency, directory, identity, deadline,
+-              unit_seconds, pair_seconds, gate_seconds, sources, stopping, sample_rejected_raw=False):
++              unit_seconds, pair_seconds, gate_seconds, sources, stopping, sample_rejected_raw=False, compression_reference=None):
+     if concurrency not in (1, 2, 4, 6) or len(identity['cpu_affinity']) != 12:
+         raise ValueError('Require at most six single-Unity units on the shared twelve-CPU allocation')
+     active, finished, errors, cleanup = {}, [], [], []
+@@ -214,7 +222,7 @@ def run_units(entries, *, name, concurrency, directory, identity, deadline,
+                 index = next_index
+                 child_name = f'{name}_u{index:04d}'
+                 command = unit_command(child_name, entries[index], unit_seconds, pair_seconds, gate_seconds,
+-                                       sample_rejected_raw=sample_rejected_raw)
++                                       sample_rejected_raw=sample_rejected_raw, compression_reference=compression_reference)
+                 child = launch_logged(child_name, command, os.environ, directory)
+                 child['producer_command'] = command
+                 active[index] = child
+@@ -267,7 +275,9 @@ def main(argv=None):
+     parser.add_argument('--pair-timeout-seconds', type=float, required=True)
+     parser.add_argument('--gate-timeout-seconds', type=float, default=180)
+     parser.add_argument('--sample-rejected-raw', action='store_true')
++    export.compression.arguments(parser, dual=False)
+     args = parser.parse_args(argv)
++    compression_ref = export.compression.option_values(args)
+     if (not re.fullmatch(r't02_export_[A-Za-z0-9_]+', args.name)
+             or not all(math.isfinite(x) and x > 0 for x in (args.timeout_seconds, args.unit_timeout_seconds,
+                                                            args.pair_timeout_seconds, args.gate_timeout_seconds))
+@@ -285,6 +295,8 @@ def main(argv=None):
+               'unit_producer': 'src.tools.t02_export', 'unit_producer_version': export.VERSION,
+               'gate_policy': 'parent gate completes first; each original child retains its own original gate',
+               'scope': 'same GPU UUID and shared12CPU; independent original results; no scientific acceptance inferred'}
++    if compression_ref is not None:
++        config['test_compression_policy'] = copy.deepcopy(export.compression.codec.POLICY)
+     if args.sample_rejected_raw:
+         config['raw_retention_policy'] = copy.deepcopy(export.rejected_raw.POLICY)
+     metrics = {'kind': 't02_parallel_export', 'status': 'failed_before_gate', 'units': [],
+@@ -321,11 +333,15 @@ def main(argv=None):
+             export.gate_runtime(gate, identity, config['node'], directory / 'unused_parent_unity')
+             if cleanup:
+                 raise RuntimeError('Original parent gate cleanup is uncertain')
++            if compression_ref is not None:
++                selection = export.compression.load_selection(compression_ref)
++                export.compression.validate_entries(selection, manifest)
++                sources.append(selection['logged_reference'])
+             result = run_units(manifest['entries'], name=args.name, concurrency=args.concurrency,
+                 directory=directory, identity=identity, deadline=deadline,
+                 unit_seconds=args.unit_timeout_seconds, pair_seconds=args.pair_timeout_seconds,
+                 gate_seconds=args.gate_timeout_seconds, sources=sources, stopping=stopping,
+-                sample_rejected_raw=args.sample_rejected_raw)
++                sample_rejected_raw=args.sample_rejected_raw, compression_reference=compression_ref)
+             metrics.update(result)
+             complete = result['all_units_ended'] and all(row.get('export_checks_complete') for row in result['units'])
+             code = 0 if complete else 1
+diff --git a/src/tools/t02_rejected_raw.py b/src/tools/t02_rejected_raw.py
+index 7ef5dde7..03901572 100644
+--- a/src/tools/t02_rejected_raw.py
++++ b/src/tools/t02_rejected_raw.py
+@@ -118,23 +118,30 @@ def apply_retention(row, owner_reference, *, cleanup_confirmed):
+     for reference in index['files']:
+         if Path(reference['file']).suffix in RAW_SUFFIXES:
+             candidates.append(_payload(reference, root / 'raw', RAW_SUFFIXES))
++    table_suffixes = TABLE_SUFFIXES
+     manifest_ref = row.get('table_manifest')
+     if manifest_ref is not None:
+         if Path(manifest_ref['file']) != root / 'table/table.json':
+             raise ValueError('Table is not private to the rejected attempt')
+         # save_table's extra payload_bytes is metadata, not part of the file reference.
+         manifest = read(manifest_ref)
++        if manifest.get('storage_encoding') is not None:
++            from src.envs.pair_table_codec import POLICY as compression_policy
++            if manifest['storage_encoding'] != compression_policy or any(
++                    ref.get('encoding') != compression_policy for ref in manifest['files']):
++                raise ValueError('Unknown rejected table compression declaration')
++            table_suffixes = frozenset(('.npz',))
+         for reference in manifest['files']:
+             name = reference['file']
+             if Path(name).name != name:
+                 raise ValueError('Table payload name escapes its private directory')
+             candidates.append(_payload({**reference, 'file': str(root / 'table' / name)},
+-                                       root / 'table', TABLE_SUFFIXES))
++                                       root / 'table', table_suffixes))
+     paths = [item['original_path'] for item in candidates]
+     if len(paths) != len(set(paths)):
+         raise ValueError('Duplicate payload in original raw/table index')
+     # Unexpected binaries are retained and block ALL omission before the first unlink.
+-    for folder, suffixes in ((root / 'raw', RAW_SUFFIXES), (root / 'table', TABLE_SUFFIXES)):
++    for folder, suffixes in ((root / 'raw', RAW_SUFFIXES), (root / 'table', table_suffixes | TABLE_SUFFIXES)):
+         if folder.exists():
+             if folder.is_symlink() or folder.resolve() != folder:
+                 raise ValueError('Private payload directory became a symlink')

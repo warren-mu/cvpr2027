@@ -26,6 +26,7 @@ from src.envs.pair_table_checks import check_pair, verify_render_sources
 from src.tools.t01_partition import audited_result, cpu_shards, sha_file
 from src.tools.t01_parallel_approved import stop_logged
 from src.tools import t02_rejected_raw as rejected_raw
+from src.tools import t02_test_compression as compression
 
 
 VERSION = "t02_single_gpu_export_shadow_v2"
@@ -87,7 +88,7 @@ def gate_runtime(data, identity, node, log_dir):
             "log_dir": str(log_dir), "ai2thor_version": allocation["ai2thor_version"]}
 
 
-def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
+def export_checked(sim, package, directory, evidence_roots, max_table_bytes, *, compression_proof=None, dual=False):
     """One complete graph only; serialized flags are never trusted on reload."""
     worlds = package["worlds"]
     if (len(worlds) != 2 or worlds[0].get("clone_context") != worlds[1].get("clone_context")
@@ -128,6 +129,8 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
             "candidate_policy": package['source_config'].get('candidate_policy'),
             "field_of_view": package['source_config'].get('field_of_view', 100),
             "render_source_worlds": [world["reference"] for world in worlds]})
+    if compression_proof is not None:
+        table.source.update(g01_partition="test", test_compression_selection=compression_proof)
     table.export_measurements['frozen_pose_readbacks'] = {}
     for scope, stages in (('requested_vs_actual', {'setup', 'capture'}),
                           ('actual_w0_vs_w1_nonanchor', {'paired_nonanchor'})):
@@ -140,21 +143,36 @@ def export_checked(sim, package, directory, evidence_roots, max_table_bytes):
             'max_raw_rotation_component_delta_degrees': max((row['max_raw_rotation_component_delta_degrees']
                                                             for row in measured), default=None),
             'scope': 'read-only diagnostics; existing physical/restore/image thresholds unchanged'}
-    manifest = save_table(table, directory, max_total_bytes=max_table_bytes)
+    manifest = save_table(table, directory, max_total_bytes=max_table_bytes,
+                          compression=compression.codec.VERSION if compression_proof is not None else None)
     # Check the bytes that downstream consumers will actually load, not only
     # the in-memory object that produced them. load_table clears both flags.
     loaded = load_table(manifest["file"], expected_sha256=manifest["sha256"])
+    comparison = None
+    if dual:
+        if compression_proof is None:
+            raise ValueError("Dual export requires explicitly authorized test compression")
+        plain_ref = save_table(table, Path(directory).parent / "table_plain", max_total_bytes=max_table_bytes)
+        plain = load_table(plain_ref["file"], expected_sha256=plain_ref["sha256"])
+        comparison = {**compression.compare_tables(plain, loaded), "plain_manifest": plain_ref,
+            "compressed_manifest": manifest, "plain_payload_bytes": plain_ref["payload_bytes"],
+            "compressed_payload_bytes": manifest["payload_bytes"],
+            "compressed_to_plain_ratio": manifest["payload_bytes"] / plain_ref["payload_bytes"]}
     native = verify_render_sources(loaded, evidence_roots=evidence_roots)
     if native.get("passed") is not True or loaded.synthetic or loaded.export_verified is not True:
         raise ValueError("native_evidence_verification_failed")
     checks = check_pair(loaded, package["t01"])
-    return {"table_manifest": manifest, "table_complete": True, "native_checks": native,
+    result = {"table_manifest": manifest, "table_complete": True, "native_checks": native,
             **loaded.shadow_metadata,
             "pair_checks": checks, "restoration": restoration, "reachable_scope": catalog_scope,
             "reachable_reference": reference, "export_measurements": table.export_measurements,
             "frozen_restore_readbacks": renderer.restore_checks,
             "cache_matches_live": None, "cache_status": "not_run_requires_at_least_200_paired_states",
             "downstream_allowed": False, "task_acceptance": None}
+    if compression_proof is not None:
+        result["test_compression"] = {"policy": compression.codec.POLICY, "selection": compression_proof,
+                                      "dual_format_comparison": comparison}
+    return result
 
 
 def pair_worker(config, connection):
@@ -176,7 +194,10 @@ def pair_worker(config, connection):
                 cls = V2CloneSimulator if package["clone_context"] is not None else V2Simulator
                 sim = cls(controller, config, directory / "raw")
                 detail = export_checked(sim, package, directory / "table",
-                    [*package["evidence_roots"], str(directory)], config["max_table_bytes"])
+                    [*package["evidence_roots"], str(directory)], config["max_table_bytes"],
+                    compression_proof=config.get("test_compression_proof"), dual=config.get("compression_smoke_dual", False))
+                if "test_compression" in detail:
+                    report["test_compression"] = detail["test_compression"]
                 report["detail"] = save_json(directory / "checks.json", detail)
                 report.update(table_complete=True, table_manifest=detail["table_manifest"],
                     shadow_divergent_states=detail["shadow_divergent_states"],
@@ -302,7 +323,11 @@ def main():
     parser.add_argument("--max-table-mib", type=int, default=512)
     parser.add_argument("--sample-rejected-raw", action="store_true",
         help="For new scientific rejections only: retain seed0 ~10% binary raw, all metadata/logs")
+    compression.arguments(parser)
     args = parser.parse_args()
+    compression_ref = compression.option_values(args)
+    if args.compression_smoke_dual and (len(args.pair_id) != 1 or args.sample_rejected_raw):
+        parser.error("Dual-format smoke is one selected pair and retains both formats in full")
     if (not re.fullmatch(r"t02_[A-Za-z0-9_]+", args.name)
             or len(set(args.pair_id)) != len(args.pair_id) or (args.pair_file and len(args.pair_id) != 1)
             or not all(math.isfinite(x) and x > 0 for x in (args.timeout_seconds, args.pair_timeout_seconds))
@@ -316,6 +341,8 @@ def main():
     config = {**vars(args), "source": str(args.source), "version": VERSION, "gpus": 1, "resolution": 255,
               "depth": 4, "node": socket.gethostname(), "human_review_status": "not_inferred_from_source",
               "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review"}
+    if compression_ref is not None:
+        config["test_compression_policy"] = copy.deepcopy(compression.codec.POLICY)
     if args.sample_rejected_raw:
         config["raw_retention_policy"] = copy.deepcopy(rejected_raw.POLICY)
     metrics = {"kind": "t02_table_export", "status": "failed", "pairs": [], "unstarted_pair_ids": list(args.pair_id),
@@ -352,12 +379,17 @@ def main():
             # Stop unusable allocations before the CPU source checks, while
             # still authenticating every requested pair before any export.
             from src.envs.pair_table_source import load_reviewed_pair
+            selection = compression.load_selection(compression_ref) if compression_ref is not None else None
+            if selection is not None:
+                sources.append(selection["logged_reference"])
             packages = []
             for pair_id in args.pair_id:
                 package = load_reviewed_pair(args.source, pair_id, pair_file=args.pair_file)
                 for reference in package["sources"]:
                     if reference not in sources:
                         sources.append(reference)
+                if selection is not None:
+                    package["test_compression_proof"] = compression.validate_package(selection, package)
                 packages.append(package)
             for index, package in enumerate(packages):
                 if time.time() >= deadline - 30:
@@ -372,6 +404,9 @@ def main():
                     "runtime": pair_runtime(runtime, pair_dir), "package": package, "directory": str(pair_dir),
                     "deadline": min(deadline - 15, time.time() + args.pair_timeout_seconds),
                     "max_raw_bytes": args.max_raw_mib * 1024 * 1024, "max_table_bytes": args.max_table_mib * 1024 * 1024}
+                if selection is not None:
+                    child.update(test_compression_proof=package["test_compression_proof"],
+                                 compression_smoke_dual=args.compression_smoke_dual)
                 for key in ("grid_size", "visibility_distance", "field_of_view"):
                     child[key] = package["source_config"][key]
                 worker = Worker(pair_worker, child)

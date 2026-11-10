@@ -320,27 +320,39 @@ class SimulatorTableRenderer:
         return left, right
 
 
-def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_bytes=512 * 1024 * 1024):
+def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_bytes=512 * 1024 * 1024, compression=None):
     """Content-addressed immutable export. Shared *public* RGB stored once.
 
     Both original RGB measurements remain in evidence for independent audits;
     public_rgb references explicitly alias w0 only for verified shared states.
     No data deletion or overwriting, including after a partial failure.
     """
+    from . import pair_table_codec as codec
+    if compression is not None:
+        if compression != codec.VERSION:
+            raise ValueError('Unknown table storage codec')
+        codec.require_test_table(table.scene, table.source)
     root = Path(directory)
     root.mkdir(parents=True, exist_ok=False)
-    written, total = {}, 0
+    written, total, uncompressed_total = {}, 0, 0
 
     def put(data, suffix):
-        nonlocal total
+        nonlocal total, uncompressed_total
         sha = hashlib.sha256(data).hexdigest()
-        name = sha + suffix
+        name = sha + suffix + ('.npz' if compression else '')
         if name not in written:
-            if len(data) > max_file_bytes or total + len(data) > max_total_bytes:
+            if len(data) > max_file_bytes:
                 raise ValueError('Table export byte cap exceeded; partial evidence retained')
-            (root / name).write_bytes(data)
-            total += len(data)
-            written[name] = {'file': name, 'sha256': sha, 'bytes': len(data)}
+            body, fields = codec.encode(data) if compression else (data, {'sha256': sha, 'bytes': len(data)})
+            if total + len(body) > max_total_bytes or uncompressed_total + len(data) > max_total_bytes:
+                raise ValueError('Table export byte cap exceeded; partial evidence retained')
+            (root / name).write_bytes(body)
+            # Validate bytes read back from the actual compressed file immediately.
+            if compression and codec.decode((root / name).read_bytes(), fields) != data:
+                raise ValueError('Stored compressed table roundtrip changed original bytes')
+            total += len(body)
+            uncompressed_total += len(data)
+            written[name] = {'file': name, **fields}
         return written[name]
 
     rows = {}
@@ -365,8 +377,11 @@ def save_table(table, directory, *, max_file_bytes=48 * 1024 * 1024, max_total_b
         export_verified=False, cache_verified=False,
         status='exported_evidence_pending_independent_checks', stored_payload_bytes=total)
     manifest['export_measurements'] = copy.deepcopy(getattr(table, 'export_measurements', None))
+    if compression:
+        manifest.update(storage_encoding=copy.deepcopy(codec.POLICY), uncompressed_payload_bytes=uncompressed_total)
     content = encoded(manifest)
-    if len(content) > max_file_bytes or total + len(content) > max_total_bytes:
+    if (len(content) > max_file_bytes or total + len(content) > max_total_bytes
+            or (compression and uncompressed_total + len(content) > max_total_bytes)):
         raise ValueError('Table manifest cap exceeded; partial evidence retained')
     path = root / 'table.json'
     path.write_bytes(content)
@@ -385,6 +400,17 @@ def load_table(path, *, expected_sha256):
     manifest = json.loads(raw)
     if manifest['version'] != TABLE_VERSION:
         raise ValueError('Unknown table version')
+    from . import pair_table_codec as codec
+    compressed = 'storage_encoding' in manifest
+    payloads, used = {}, set()
+    if compressed:
+        if manifest['storage_encoding'] != codec.POLICY:
+            raise ValueError('Unknown compressed table declaration')
+        codec.require_test_table(manifest['scene'], manifest['source'])
+        for item in manifest['files']:
+            if item['file'] in payloads or item.get('encoding') != codec.POLICY:
+                raise ValueError('Ambiguous or mixed compressed payload inventory')
+            payloads[item['file']] = item
 
     def read(ref):
         target = (path.parent / ref['file']).resolve()
@@ -393,6 +419,13 @@ def load_table(path, *, expected_sha256):
         data = target.read_bytes()
         if len(data) != ref['bytes'] or hashlib.sha256(data).hexdigest() != ref['sha256']:
             raise ValueError('Table payload changed')
+        if compressed:
+            if payloads.get(ref['file']) != ref:
+                raise ValueError('Compressed state reference differs from complete inventory')
+            used.add(ref['file'])
+            return codec.decode(data, ref)
+        if any(key in ref for key in ('encoding', 'raw_sha256', 'raw_bytes', 'encoder_versions')):
+            raise ValueError('Encoded payload lacks its explicit test storage declaration')
         return data
 
     states = {}
@@ -409,6 +442,9 @@ def load_table(path, *, expected_sha256):
             row['frame_max_abs_diff'], tuple(row['anchor_pixels']))
         if row.get('shadow_divergent') is not states[key].shadow_divergent:
             raise ValueError('Stored state shadow classification differs from its measurements')
+    if compressed and (used != set(payloads) or manifest.get('uncompressed_payload_bytes') != sum(ref['raw_bytes'] for ref in payloads.values())
+            or manifest.get('stored_payload_bytes') != sum(ref['bytes'] for ref in payloads.values())):
+        raise ValueError('Compressed payload inventory or length totals differ')
     args = {key: manifest[key] for key in ('pair_id', 'scene', 'kind', 'instruction', 'anchor_name',
         'candidate_names', 'target_names', 'initial_state', 'positions', 'depth', 'source')}
     table = PairTable(**args, states=states, export_verified=False, cache_verified=False)
