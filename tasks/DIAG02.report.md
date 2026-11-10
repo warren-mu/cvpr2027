@@ -8,7 +8,7 @@
 
 `x_seen_step` 是已完成的环境步数，select 的 `decision_index` 从零开始；二者相等时，锚点已经出现在该次选择的输入中。因此将错误的 `seen >= select_index` 改为 `seen > select_index` 才判未看到，保留无可解析 select 时为 false 的定义。
 
-原 T0/T4 全部训练及四次留出回合重算后，看到率判定与 DIAG01 独立读取真实掩码的结果逐回合一致；除 seen 及其原因外，其余字段完全相同。
+对原 T0/T4 全部 50 次更新及四次留出中的 Look 回合重算后，看到率判定与 DIAG01 独立读取真实掩码的结果逐回合一致；除 seen 及其原因外，episode_observation 返回的其余字段完全相同。
 
 | 原始范围 | Look 回合数 | 旧 seen | 修后／独立 seen |
 |---|---:|---:|---:|

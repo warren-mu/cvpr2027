@@ -1983,3 +1983,10 @@ T02 remaining b01 passed the unchanged live-cache check on 200/200 states for it
 ### 2026-11-10 16:14 ET — DIAG02 完成
 
 DIAG02 E1–E6 已完成，见 [任务报告](tasks/DIAG02.report.md)。固定 83 对上，3B、7B、32B 的 LF 触发观察相对不观察分别为 +2.27、+11.36、0.00 个百分点；三模型 LF 的当场共视选择实际均为 0/44。五份 PBS 记录合计 0.316111 GPU·小时。最终来源审计 70 份，0 FAIL，历史 WARN 保留。正式训练未启动，训练池未冻结。
+
+
+### 2026-11-10 16:16 ET
+
+三组论文插图预览均取自已有并通过缓存复核的非留出训练对。A：FloorPlan17 Bottle（Flip）＋FloorPlan19 Bread（Stay）；B：FloorPlan13 DishSponge＋FloorPlan7 Bread；C：FloorPlan203 Box＋FloorPlan19 Cup。每组均核对实际输入的 6 张 255×255 PNG、锚点掩码、固定标号及双世界共享起点。未生成新场景，未使用测试数据，新增 GPU 用量为 0。见[来源和验证](logs/review/diag_fig_kettle_previews_01/report.json)。等人类选组后交付对应原帧。
+
+原定测试集缓存复核继续进行，b05 首投 710922 不指定节点；此为提交记录，并非已通过验收。DIAG02 报告明确了 E1 复核范围为 Look 回合，结果数字不变。

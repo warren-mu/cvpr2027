@@ -1,0 +1,28 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_selected05_three_slot_cutover_01 -- python3 -c from pathlib import Path
+import json,hashlib,importlib.util
+r=Path.cwd().resolve()
+spec=importlib.util.spec_from_file_location("original_t02_submit",r/"scripts/pbs/submit_phase.py");phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+rows=[]
+for folder in sorted((r/"logs/pbs").glob("t02_export_cache_test_selected05_*-*")):
+ p=folder/"payload.json";s=folder/"submission.json"
+ if not p.is_file() or not s.is_file():continue
+ d=json.loads(p.read_text());receipt=json.loads(s.read_text())
+ if d.get("dry_run") or receipt.get("returncode")!=0:continue
+ assert d["budget_group"]=="T02" and d["requested_gpu_count"]==1 and d["task_id"]=="T01"
+ rows.append({"name":d["name"],"job_id":receipt["stdout"].strip(),"payload":str(p.relative_to(r)),"receipt_sha256":hashlib.sha256(s.read_bytes()).hexdigest(),"host":d.get("requested_host")})
+ids={v["job_id"] for v in rows};assert len(ids)==len(rows)
+paths=sorted((r/"results").glob("diag_t02_cache_test_selected05_*_accounting_*.json"))+sorted((r/"results").glob("diag_t02_cache_*_pin20_accounting_*.json"))
+final=phase._final_accounting(r,ids,paths=paths)
+reserved=[]
+for v in rows:
+ v["canonical_final"]=v["job_id"] in final
+ if v["canonical_final"]:v["canonical_accounting_result"]=final[v["job_id"]]["accounting_result"]
+ else:reserved.append(v["job_id"])
+assert set(reserved)=={"710904.hopper-m-02","710908.hopper-m-02"}
+assert not any(v["name"]=="t02_export_cache_test_selected05_remaining_b05" for v in rows)
+print(json.dumps({"scope":"Fixed selected05 test-cache submissions only. All successful receipts without original canonical final accounting count as occupying a slot, including unknown/queued/running states. This is a conservative upper bound, not a guessed Q/R state.","successful_receipts":rows,"reserved_job_ids":reserved,"occupied_upper_bound":len(reserved),"authorized_smallx_slots":3,"next_batch":"b05"},sort_keys=True))
+
+# start: 2026-11-11T05:08:46
+{"authorized_smallx_slots": 3, "next_batch": "b05", "occupied_upper_bound": 2, "reserved_job_ids": ["710904.hopper-m-02", "710908.hopper-m-02"], "scope": "Fixed selected05 test-cache submissions only. All successful receipts without original canonical final accounting count as occupying a slot, including unknown/queued/running states. This is a conservative upper bound, not a guessed Q/R state.", "successful_receipts": [{"canonical_accounting_result": "results/diag_t02_cache_test_selected05_first6_accounting_01.json", "canonical_final": true, "host": null, "job_id": "710859.hopper-m-02", "name": "t02_export_cache_test_selected05_first6_01", "payload": "logs/pbs/t02_export_cache_test_selected05_first6_01-20261110T200532Z-13d279e0/payload.json", "receipt_sha256": "c3c383f00b403bbb05178c2f2472e409af525fb00ffbfa214125b0becebce5e5"}, {"canonical_accounting_result": "results/diag_t02_cache_test_selected05_b01_accounting_01.json", "canonical_final": true, "host": null, "job_id": "710875.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b01", "payload": "logs/pbs/t02_export_cache_test_selected05_remaining_b01-20261110T203117Z-8d73e36f/payload.json", "receipt_sha256": "d3cbdfa32229b1cab5485ba26042fc85ca089c799fbe46c26f8c101f4922e84f"}, {"canonical_accounting_result": "results/diag_t02_cache_test_selected05_b02_accounting_01.json", "canonical_final": true, "host": null, "job_id": "710881.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b02", "payload": "logs/pbs/t02_export_cache_test_selected05_remaining_b02-20261110T203600Z-4b3f7a78/payload.json", "receipt_sha256": "1a4aa572f10963cbde690369fb09b16029f8cb3749819d64e2e921e31a59b6a9"}, {"canonical_accounting_result": "results/diag_t02_cache_test_selected05_b03_accounting_01.json", "canonical_final": true, "host": null, "job_id": "710892.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b03", "payload": "logs/pbs/t02_export_cache_test_selected05_remaining_b03-20261110T204608Z-b7caf8da/payload.json", "receipt_sha256": "10718c2aceea73d793637cd30270b9f7b02b83ec8dce845773258f3e1dcfda30"}, {"canonical_final": false, "host": "hopper-28", "job_id": "710904.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b03_retry1", "payload": "logs/pbs/t02_export_cache_test_selected05_remaining_b03_retry1-20261110T205816Z-07e88c1c/payload.json", "receipt_sha256": "9826b55075269f0b36ab3f54f6839e72a3df62e27e3964f95a705ba53d5f312d"}, {"canonical_final": false, "host": null, "job_id": "710908.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b04", "payload": "logs/pbs/t02_export_cache_test_selected05_remaining_b04-20261110T210149Z-b38038d1/payload.json", "receipt_sha256": "e375a832de3c502d4147f097e1635ea3482fbab8ae56934a0b18d601f88a0503"}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.15874968300340697}
+# exit_code: 0
