@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.10588096705032513
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01_partition import ROOT\nNAME='diag_pilot709803_completed_summary_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\nsignal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('12s original terminal metadata summary')));signal.alarm(12)\ndef read(name):\n p=ROOT/'results'/(name+'.json');b=p.read_bytes();d=json.loads(b);assert d['_meta'].get('end') and d['_meta']['exit_code']==0\n return d,{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(b).hexdigest(),'metrics_sha256':d['_meta']['metrics_sha256']}\nouter,outer_ref=read('smoke_e2e_pilot_certificates_update_01');run,run_ref=read('smoke_e2e_pilot_engineering_T4_01');m=run['metrics']\nassert m['engineering_smoke_completed'] is True and m['pilot_completed'] is False and m['actual_completed_updates']==1 and m['checkpoint_saved'] is True\nassert m['errors']==[] and m['cleanup_errors']==[]\nkeys=['update','actual_completed_updates','episodes','independent_units','generation_seconds','scoring_seconds','critic_update_seconds','actor_update_seconds','total_seconds','update_seconds','by_class','t4_consistency','native_actor_minibatch_steps','native_actor_optimizer_step_calls','memory','episode_log','generation_calls','physical_policy_sampling_calls','teacher_forced_scoring_calls']\nupdates=[{k:r[k] for k in keys if k in r} for r in m['updates']]\nevals=[{k:v for k,v in r.items() if k in ['update','by_class','episodes','elapsed_seconds','total_seconds','generation_seconds','decoding','episode_log','scope','greedy']} for r in m['holdout_evaluations']]\nreport={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original completed one-update engineering metrics only. No formal 50-step completion or learning decision; no model/native payload reread.','outer_reference':outer_ref,'training_reference':run_ref,'outer_meta':{k:outer['_meta'][k] for k in ['start','end','exit_code']},'training_meta':{k:run['_meta'][k] for k in ['start','end','exit_code']},'metric_keys':list(m),'scalar_metrics':{k:v for k,v in m.items() if not isinstance(v,(dict,list))},'checkpoint_metadata':{k:v for k,v in m.items() if 'checkpoint' in k or k in ['dataset_proof','dataset_reference','holdout_reference','population_authority']},'updates':updates,'holdout_evaluations':evals,'original_config':run['config']}\nout=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'report.json'\nwith p.open('x') as f:json.dump(report,f,sort_keys=True,indent=2)\nprint('ORIGINAL_PILOT_COMPLETED_SUMMARY: '+json.dumps({'report':{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'training_reference':run_ref,'outer_reference':outer_ref,'metric_keys':list(m),'scalar_metrics':report['scalar_metrics'],'checkpoint_metadata':{k:v for k,v in report['checkpoint_metadata'].items() if k!='dataset_proof'},'updates':updates,'holdout_evaluations':evals},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot709803_completed_summary_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot709803_completed_summary_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01_partition import ROOT\nNAME='diag_pilot709803_completed_summary_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\nsignal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('12s original terminal metadata summary')));signal.alarm(12)\ndef read(name):\n p=ROOT/'results'/(name+'.json');b=p.read_bytes();d=json.loads(b);assert d['_meta'].get('end') and d['_meta']['exit_code']==0\n return d,{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(b).hexdigest(),'metrics_sha256':d['_meta']['metrics_sha256']}\nouter,outer_ref=read('smoke_e2e_pilot_certificates_update_01');run,run_ref=read('smoke_e2e_pilot_engineering_T4_01');m=run['metrics']\nassert m['engineering_smoke_completed'] is True and m['pilot_completed'] is False and m['actual_completed_updates']==1 and m['checkpoint_saved'] is True\nassert m['errors']==[] and m['cleanup_errors']==[]\nkeys=['update','actual_completed_updates','episodes','independent_units','generation_seconds','scoring_seconds','critic_update_seconds','actor_update_seconds','total_seconds','update_seconds','by_class','t4_consistency','native_actor_minibatch_steps','native_actor_optimizer_step_calls','memory','episode_log','generation_calls','physical_policy_sampling_calls','teacher_forced_scoring_calls']\nupdates=[{k:r[k] for k in keys if k in r} for r in m['updates']]\nevals=[{k:v for k,v in r.items() if k in ['update','by_class','episodes','elapsed_seconds','total_seconds','generation_seconds','decoding','episode_log','scope','greedy']} for r in m['holdout_evaluations']]\nreport={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original completed one-update engineering metrics only. No formal 50-step completion or learning decision; no model/native payload reread.','outer_reference':outer_ref,'training_reference':run_ref,'outer_meta':{k:outer['_meta'][k] for k in ['start','end','exit_code']},'training_meta':{k:run['_meta'][k] for k in ['start','end','exit_code']},'metric_keys':list(m),'scalar_metrics':{k:v for k,v in m.items() if not isinstance(v,(dict,list))},'checkpoint_metadata':{k:v for k,v in m.items() if 'checkpoint' in k or k in ['dataset_proof','dataset_reference','holdout_reference','population_authority']},'updates':updates,'holdout_evaluations':evals,'original_config':run['config']}\nout=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'report.json'\nwith p.open('x') as f:json.dump(report,f,sort_keys=True,indent=2)\nprint('ORIGINAL_PILOT_COMPLETED_SUMMARY: '+json.dumps({'report':{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'training_reference':run_ref,'outer_reference':outer_ref,'metric_keys':list(m),'scalar_metrics':report['scalar_metrics'],'checkpoint_metadata':{k:v for k,v in report['checkpoint_metadata'].items() if k!='dataset_proof'},'updates':updates,'holdout_evaluations':evals},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:31:57",
+    "log_path": "logs/runs/diag_pilot709803_completed_summary_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "e3b71cb8c30c39d1073266f0e4b3a4bf22ce7139",
+    "git_dirty": false,
+    "end": "2026-11-10T14:31:58",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "f27e75d9ca97a96527486d96e4b2d6d8d38fded88d51e8e42f670cf0d1c0cf10"
+  }
+}

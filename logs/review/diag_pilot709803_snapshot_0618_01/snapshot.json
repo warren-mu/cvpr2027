@@ -1,0 +1,275 @@
+{
+  "observed_at_utc": "2026-11-10T06:18:16.998991+00:00",
+  "pbs_out_exists": false,
+  "query": {
+    "command": [
+      "/cm/shared/apps/pbspro/current/bin/qstat",
+      "-xf",
+      "-F",
+      "json",
+      "709803.hopper-m-02"
+    ],
+    "status": "unknown",
+    "stderr": null,
+    "stdout": null,
+    "timed_out": true
+  },
+  "stages": [
+    {
+      "exists": false,
+      "file": "results/smoke_e2e_pilot_certificates_update_01.json",
+      "log_exists": true,
+      "original_log_tail": "'Root reviews one complete T4 engineering update before T0/T4, then T2; preview is not launch authorization')\n    return result\n\n\ndef run_in_pbs(args):\n    sys.path.insert(0, str(Path.cwd()))\n    from src.tools import smoke_e2e_pilot_certificates as certificates\n    from src.tools import smoke_e2e_pilot_dataset as dataset\n    from src.tools import train_holdout_freeze as holdout\n    if not re.fullmatch(r'\\d+\\.hopper-m-\\d+', os.environ.get('PBS_JOBID', '')) or not os.environ.get('CVPR_SCRATCH'):\n        raise ValueError('This sequence may execute only in its original bounded PBS allocation')\n    # New96 authorization requires the pinned original709593 ended/nonPASS before rendering.\n    policy = certificates.policy()\n    certificates.activate(policy['cache_sources'])\n    run_checked(logged(NAME + '_gate', ['python3', '-u', '-m', 'src.tools.render_gate', '--name', NAME + '_gate',\n        '--gpus', '1', '--resolution', '255', '--segmentation', '--timeout-seconds', str(GATE_SECONDS)]))\n    population = ['python3', '-u', '-m', 'src.tools.smoke_e2e_pilot_dataset', '--name', certificates.NAME]\n    for ref in policy['cache_sources']: population += ['--cache-source', encoded(ref)]\n    population += ['--split-policy', dataset.SCENE_SPLIT, '--certificates-after-02', '--out', certificates.MANIFEST_FILE,\n        '--timeout-seconds', str(args.population_seconds)]\n    run_checked(logged(certificates.NAME, population))\n    result_ref = file_reference(certificates.RESULT_FILE)\n    # Original logged metadata receipt validation, not another cached/native scan.\n    manifest, proof, _, manifest_ref = certificates.authenticate_certificate_qualification(result_ref)\n    freeze = logged('train_holdout_freeze', ['python3', '-u', '-m', 'src.tools.train_holdout_freeze',\n        '--name', 'train_holdout_freeze', '--qualification-result', encoded(result_ref), '--certificates-after-02'])\n    # The freeze producer is metadata-only and spawns no renderer/model/children.\n    # GNU timeout bounds this original logged stage, preserving any failure.\n    run_checked(['timeout', '--signal=TERM', '--kill-after=20s', str(args.freeze_seconds) + 's', *freeze])\n    holdout_ref = frozen_reference_from_receipt(Path('results') / (holdout.NAME + '.json'))\n    frozen, holdout_ref = holdout.load_frozen_holdout(holdout_ref)\n    holdout.assert_pilot_split(manifest['entries'], manifest['split'], frozen)\n    train = training_argv(TRAIN_NAME, 'T4', manifest_ref, holdout_ref, args.train_seconds, engineering=True)\n    print('FROZEN_TRAINING_INPUTS_JSON: ' + encoded({'manifest': manifest_ref, 'holdout': holdout_ref,\n        'qualification_result': result_ref, 'common_pool_hash': proof['common_pool_hash'],\n        'extra_source_reauthentication': manifest['qualification']['extra_source_reauthentication'],\n        'critic_offload': False}), flush=True)\n    # This original driver runs its own gate and reloads certified cached bytes.\n    run_checked(logged(TRAIN_NAME, train))\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--population-seconds', type=int)\n    parser.add_argument('--train-seconds', type=int, required=True)\n    parser.add_argument('--freeze-seconds', type=int, default=120)\n    parser.add_argument('--run-in-pbs', action='store_true')\n    parser.add_argument('--direct-arm', choices=('one-update', 'T0', 'T4', 'T2'))\n    parser.add_argument('--train-name')\n    parser.add_argument('--qualified-result-json')\n    parser.add_argument('--holdout-reference-json')\n    args = parser.parse_args()\n    if args.direct_arm:\n        if args.run_in_pbs or args.population_seconds is not None or not 300 <= args.train_seconds <= 14336:\n            raise ValueError('Direct mode is metadata-only preview; pass only a training bound plus immutable inputs')\n        print(json.dumps(direct_preview(args), sort_keys=True, indent=2)); return\n    if not (args.population_seconds is not None and 60 <= args.population_seconds <= 1800\n            and 300 <= args.train_seconds <= 3600 and 30 <= args.freeze_seconds <= 180):\n        raise ValueError('Explicit bounded stages are required; these are stop-loss limits, not speed forecasts')\n    if args.run_in_pbs:\n        run_in_pbs(args)\n        return\n    body = Path(__file__).read_text()\n    stage = ['python3', '-c', body, '--population-seconds', str(args.population_seconds),\n        '--train-seconds', str(args.train_seconds), '--freeze-seconds', str(args.freeze_seconds), '--run-in-pbs']\n    # The first gate's180 timer stops BEFORE stop_workers'4s cleanup. The\n    # training driver's own gate is within its total timer; its final owned\n    # worker cleanup has another4s grace. Result/log I/O has no strict wall\n    # guarantee;60s is a recording reserve and PBS remains the final stop bound.\n    seconds = GATE_SECONDS + CLEANUP_GRACE_SECONDS + args.population_seconds + args.freeze_seconds + 20 \\\n        + args.train_seconds + CLEANUP_GRACE_SECONDS + RECORDING_RESERVE_SECONDS\n    result = submit_preview(NAME, ['python3', '-m', 'src.tools.record_command', '--name', NAME, '--', *stage], seconds)\n    result.update(activation_authorization='96fbdd1f: original709593 ended/nonPASS; no02ET clock wait', bounds={\n        'initial_gate_main_seconds': GATE_SECONDS, 'initial_gate_cleanup_grace_seconds': CLEANUP_GRACE_SECONDS,\n        'population_main_seconds': args.population_seconds, 'freeze_timeout_seconds': args.freeze_seconds,\n        'freeze_kill_grace_seconds': 20, 'training_main_including_own_gate_seconds': args.train_seconds,\n        'training_cleanup_grace_seconds': CLEANUP_GRACE_SECONDS, 'recording_reserve_seconds': RECORDING_RESERVE_SECONDS},\n        retry_instruction='If population/freeze succeeded, use direct-arm with their original exact refs; never repeat this combined build')\n    print(json.dumps(result, sort_keys=True, indent=2))\n\n\nif __name__ == '__main__': main()\n --population-seconds 900 --train-seconds 1800 --freeze-seconds 120 --run-in-pbs\n# start: 2026-11-10T14:15:16\n"
+    },
+    {
+      "exists": true,
+      "file": "results/smoke_e2e_pilot_certificates_update_01_gate.json",
+      "log_exists": true,
+      "meta": {
+        "end": "2026-11-10T14:15:25",
+        "exit_code": 0,
+        "name": "smoke_e2e_pilot_certificates_update_01_gate",
+        "start": "2026-11-10T14:15:19"
+      },
+      "metrics": {
+        "black_frame_detected": false,
+        "cleanup_errors": [],
+        "devices": [
+          {
+            "observation": {
+              "actual_fresh_rgb_payload_count": 7,
+              "captures": [
+                {
+                  "action": "Initialize",
+                  "action_success": true,
+                  "black": false,
+                  "dtype": "uint8",
+                  "error_message": "",
+                  "max_rgb": 255,
+                  "min_rgb": 9,
+                  "nonzero_rgb_values": 195075,
+                  "png": {
+                    "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_certificates_update_01_gate/render_gate/gpu_0_after_constructor.png",
+                    "sha256": "45ced779e3094f7a45516c655842c4edb9b49ab6dbce4905a8bb3e2530aaa8ba"
+                  },
+                  "segmentation": {
+                    "black": false,
+                    "dtype": "uint8",
+                    "max_rgb": 255,
+                    "min_rgb": 10,
+                    "nonzero_rgb_values": 195075,
+                    "shape": [
+                      255,
+                      255,
+                      3
+                    ],
+                    "valid": true,
+                    "valid_shape": true
+                  },
+                  "shape": [
+                    255,
+                    255,
+                    3
+                  ],
+                  "stage": "after_constructor",
+                  "valid": true,
+                  "valid_shape": true
+                },
+                {
+                  "action": "Pass",
+                  "action_success": true,
+                  "black": false,
+                  "dtype": "uint8",
+                  "error_message": "",
+                  "max_rgb": 255,
+                  "min_rgb": 9,
+                  "nonzero_rgb_values": 195075,
+                  "png": {
+                    "path": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_certificates_update_01_gate/render_gate/gpu_0_after_Pass.png",
+                    "sha256": "d35f5d65d1dc1b906a46eff92cfdb65f9980fdb0676f9b1f256e383990b58d58"
+                  },
+                  "segmentation": {
+                    "black": false,
+                    "dtype": "uint8",
+                    "max_rgb": 255,
+                    "min_rgb": 10,
+                    "nonzero_rgb_values": 195075,
+                    "shape": [
+                      255,
+                      255,
+                      3
+                    ],
+                    "valid": true,
+                    "valid_shape": true
+                  },
+                  "shape": [
+                    255,
+                    255,
+                    3
+                  ],
+                  "stage": "after_Pass",
+                  "valid": true,
+                  "valid_shape": true
+                }
+              ],
+              "gpu_identity": {
+                "gpu_index": 0,
+                "gpu_name": "NVIDIA H200",
+                "gpu_uuid": "GPU-75bb9dde-c22d-4017-1a63-06dd9deba534",
+                "logical_index": 0,
+                "mig_mode": "Disabled",
+                "vulkan_device_index": 0
+              },
+              "logical_index": 0,
+              "node": "hopper-15",
+              "unity_build_commit": "f0825767cd50d69f666c7f282e54abfe58f1e917",
+              "valid": true,
+              "wire_packets": [
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    360000
+                  ],
+                  "payload_sha256": [
+                    "b53fd212cca68517a40b81cdf416ed9a1b4eae870700d396c1ce12b6a46203ef"
+                  ],
+                  "screen_height": 300,
+                  "screen_width": 300,
+                  "sequence_id": 0,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "85f15e2deebc2a39ce1e665616a21a574da6f66527a5c31fe804adf2c0b11406"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 1,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "c5112de22ef4c9c5478db2945e1cc35cd689fca34eac1ad394671a9474e12491"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 2,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "711816700ee528568a9e7ba8cdc23b216fe1d29fc5fbb176ec16d92921d55e8d"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 0,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "352597770f0e9bfa7f4e520ad27b4f56e8e2738ac97ebcf12f724977d68f0500"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 1,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "f37a846178ceab08ee3cc2e5ac2baa62058e127f98624902f405105d4ef94898"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 2,
+                  "stage": "constructor"
+                },
+                {
+                  "cached_metadata": false,
+                  "fresh_main_rgb_payloads": 1,
+                  "payload_bytes": [
+                    260100
+                  ],
+                  "payload_sha256": [
+                    "b38c4f1e4723c3a12694c779a23c1e1bba2bb8e3a4dc6ef9a38e04645631bade"
+                  ],
+                  "screen_height": 255,
+                  "screen_width": 255,
+                  "sequence_id": 3,
+                  "stage": "Pass"
+                }
+              ]
+            },
+            "unity_identity": {
+              "pgid": 69007,
+              "pid": 69035,
+              "sid": 69007,
+              "start_ticks": 87428918
+            },
+            "worker_error": null,
+            "worker_identity": {
+              "pgid": 66549,
+              "pid": 69007,
+              "sid": 66549,
+              "start_ticks": 87428847
+            }
+          }
+        ],
+        "errors": [],
+        "passed": true
+      },
+      "original_log_tail": "# run_logged: python3 -u -m src.tools.render_gate --name smoke_e2e_pilot_certificates_update_01_gate --gpus 1 --resolution 255 --segmentation --timeout-seconds 180\n# start: 2026-11-10T14:15:19\nALLOCATION_CONFIG: {\"ai2thor_version\": \"5.0.0\", \"cpu_affinity\": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22], \"cuda_driver_uuids\": [\"GPU-75bb9dde-c22d-4017-1a63-06dd9deba534\"], \"cuda_visible_devices\": \"GPU-75bb9dde-c22d-4017-1a63-06dd9deba534\", \"devices\": [{\"gpu_index\": 0, \"gpu_name\": \"NVIDIA H200\", \"gpu_uuid\": \"GPU-75bb9dde-c22d-4017-1a63-06dd9deba534\", \"logical_index\": 0, \"mig_mode\": \"Disabled\", \"vulkan_device_index\": 0}], \"log_dir\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_certificates_update_01_gate\", \"name\": \"smoke_e2e_pilot_certificates_update_01_gate\", \"pbs_jobid\": \"709803.hopper-m-02\", \"scratch\": \"/scratch/e1583364/cvpr2027\"}\nFINAL_METRICS_JSON: {\"black_frame_detected\": false, \"cleanup_errors\": [], \"completed_gpu_count\": 1, \"devices\": [{\"observation\": {\"actual_fresh_rgb_payload_count\": 7, \"captures\": [{\"action\": \"Initialize\", \"action_success\": true, \"black\": false, \"dtype\": \"uint8\", \"error_message\": \"\", \"max_rgb\": 255, \"min_rgb\": 9, \"nonzero_rgb_values\": 195075, \"png\": {\"path\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_certificates_update_01_gate/render_gate/gpu_0_after_constructor.png\", \"sha256\": \"45ced779e3094f7a45516c655842c4edb9b49ab6dbce4905a8bb3e2530aaa8ba\"}, \"segmentation\": {\"black\": false, \"dtype\": \"uint8\", \"max_rgb\": 255, \"min_rgb\": 10, \"nonzero_rgb_values\": 195075, \"shape\": [255, 255, 3], \"valid\": true, \"valid_shape\": true}, \"shape\": [255, 255, 3], \"stage\": \"after_constructor\", \"valid\": true, \"valid_shape\": true}, {\"action\": \"Pass\", \"action_success\": true, \"black\": false, \"dtype\": \"uint8\", \"error_message\": \"\", \"max_rgb\": 255, \"min_rgb\": 9, \"nonzero_rgb_values\": 195075, \"png\": {\"path\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_certificates_update_01_gate/render_gate/gpu_0_after_Pass.png\", \"sha256\": \"d35f5d65d1dc1b906a46eff92cfdb65f9980fdb0676f9b1f256e383990b58d58\"}, \"segmentation\": {\"black\": false, \"dtype\": \"uint8\", \"max_rgb\": 255, \"min_rgb\": 10, \"nonzero_rgb_values\": 195075, \"shape\": [255, 255, 3], \"valid\": true, \"valid_shape\": true}, \"shape\": [255, 255, 3], \"stage\": \"after_Pass\", \"valid\": true, \"valid_shape\": true}], \"gpu_identity\": {\"gpu_index\": 0, \"gpu_name\": \"NVIDIA H200\", \"gpu_uuid\": \"GPU-75bb9dde-c22d-4017-1a63-06dd9deba534\", \"logical_index\": 0, \"mig_mode\": \"Disabled\", \"vulkan_device_index\": 0}, \"logical_index\": 0, \"node\": \"hopper-15\", \"unity_build_commit\": \"f0825767cd50d69f666c7f282e54abfe58f1e917\", \"valid\": true, \"wire_packets\": [{\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [360000], \"payload_sha256\": [\"b53fd212cca68517a40b81cdf416ed9a1b4eae870700d396c1ce12b6a46203ef\"], \"screen_height\": 300, \"screen_width\": 300, \"sequence_id\": 0, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"85f15e2deebc2a39ce1e665616a21a574da6f66527a5c31fe804adf2c0b11406\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 1, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"c5112de22ef4c9c5478db2945e1cc35cd689fca34eac1ad394671a9474e12491\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 2, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"711816700ee528568a9e7ba8cdc23b216fe1d29fc5fbb176ec16d92921d55e8d\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 0, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"352597770f0e9bfa7f4e520ad27b4f56e8e2738ac97ebcf12f724977d68f0500\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 1, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"f37a846178ceab08ee3cc2e5ac2baa62058e127f98624902f405105d4ef94898\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 2, \"stage\": \"constructor\"}, {\"cached_metadata\": false, \"fresh_main_rgb_payloads\": 1, \"payload_bytes\": [260100], \"payload_sha256\": [\"b38c4f1e4723c3a12694c779a23c1e1bba2bb8e3a4dc6ef9a38e04645631bade\"], \"screen_height\": 255, \"screen_width\": 255, \"sequence_id\": 3, \"stage\": \"Pass\"}]}, \"unity_identity\": {\"pgid\": 69007, \"pid\": 69035, \"sid\": 69007, \"start_ticks\": 87428918}, \"worker_error\": null, \"worker_identity\": {\"pgid\": 66549, \"pid\": 69007, \"sid\": 66549, \"start_ticks\": 87428847}}], \"errors\": [], \"exit_code\": 0, \"expected_gpu_count\": 1, \"passed\": true}\n# exit_code: 0\n",
+      "reference": {
+        "bytes": 9590,
+        "file": "results/smoke_e2e_pilot_certificates_update_01_gate.json",
+        "sha256": "a5450fe5944730efd2e4ef42e03f667b0b5dcd25610444452f4cc458d022e16f"
+      }
+    },
+    {
+      "exists": false,
+      "file": "results/smoke_e2e_pilot_pool_83_certificates_01.json",
+      "log_exists": true,
+      "original_log_tail": "# run_logged: python3 -u -m src.tools.smoke_e2e_pilot_dataset --name smoke_e2e_pilot_pool_83_certificates_01 --cache-source {\"file\":\"results/t02_export_cache_first5_01_retry2.json\",\"sha256\":\"0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187\"} --cache-source {\"file\":\"results/t02_export_cache_remaining24_01.json\",\"sha256\":\"a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70\"} --cache-source {\"file\":\"results/t02_export_cache_six05_08_01_retry2.json\",\"sha256\":\"24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14\"} --cache-source {\"file\":\"results/t02_export_cache_six09_14_01_retry4.json\",\"sha256\":\"f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b\"} --split-policy room_stratified_scene_hash_seed0_ten_percent_v1 --certificates-after-02 --out data/world_pairs/e2e_pilot_pool_83_certificates_01.json --timeout-seconds 900\n# start: 2026-11-10T14:15:25\n"
+    },
+    {
+      "exists": false,
+      "file": "results/train_holdout_freeze.json",
+      "log_exists": false
+    },
+    {
+      "exists": false,
+      "file": "results/smoke_e2e_pilot_engineering_T4_01.json",
+      "log_exists": false
+    },
+    {
+      "exists": false,
+      "file": "results/smoke_e2e_pilot_engineering_T4_01_gate.json",
+      "log_exists": false
+    }
+  ]
+}

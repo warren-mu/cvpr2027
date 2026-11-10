@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.08360704797087237
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal,subprocess\nfrom pathlib import Path\nNAME='diag_pilot709803_snapshot_0622_01';JOB='709803.hopper-m-02'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s original stage metadata only')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'query':{},'stages':[]}\nnames=['smoke_e2e_pilot_certificates_update_01','smoke_e2e_pilot_certificates_update_01_gate','smoke_e2e_pilot_pool_83_certificates_01','train_holdout_freeze','smoke_e2e_pilot_engineering_T4_01','smoke_e2e_pilot_engineering_T4_01_gate']\nfor name in names:\n p=Path('results')/(name+'.json');row={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  raw=p.read_bytes();assert len(raw)<16*1024*1024;d=json.loads(raw);m=d.get('metrics',{});meta=d.get('_meta',{});row.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},meta={k:meta.get(k) for k in ('name','start','end','exit_code')},metrics={k:m[k] for k in ('kind','producer_exit_code','passed','counts_by_kind','manifest','frozen_holdout','errors','cleanup_errors','black_frame_detected','completed','pilot_completed','actual_completed_updates','worker','worker_error','gate','extra_source_reauthentication','devices') if k in m})\n  if 'dataset_proof' in m and isinstance(m['dataset_proof'],dict):row['dataset_proof_fields']={k:m['dataset_proof'][k] for k in ('counts_by_kind','split','common_pool_hash','cache_authorized','qualification') if k in m['dataset_proof']}\n  if name=='train_holdout_freeze' and meta.get('end') and meta.get('exit_code')==0 and m.get('passed') is True:\n   ref=m['frozen_holdout'];p2=Path(ref['file']);b2=p2.read_bytes();assert hashlib.sha256(b2).hexdigest()==ref['sha256'];frozen=json.loads(b2);row['original_frozen_fields']={k:frozen[k] for k in ('selected_scenes','counts_by_partition','population_authority','split','version','authorization_revision') if k in frozen}\n log=Path('logs/runs')/(name+'.log');row['log_exists']=log.is_file()\n if log.is_file():\n  with log.open('rb') as f:\n   f.seek(max(0,log.stat().st_size-6000));row['original_log_tail']=f.read().decode(errors='replace')\n record['stages'].append(row)\nfolder=Path('logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279')\np=folder/'pbs.out';record['pbs_out_exists']=p.is_file()\nif p.is_file():\n with p.open('rb') as f:f.seek(max(0,p.stat().st_size-6000));record['pbs_out_tail']=f.read().decode(errors='replace')\nrecord['query']={'status':'not_requested_metadata_only'}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'\nwith path.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nprint('ORIGINAL_PILOT_STAGE_SNAPSHOT: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'query':record['query'].get('selected_original_fields',record['query']),'stages':[{**{k:v for k,v in row.items() if k != 'original_log_tail'},'original_log_tail':row.get('original_log_tail','')[-1800:]} for row in record['stages']],'pbs_out_exists':record['pbs_out_exists'],'pbs_out_tail':record.get('pbs_out_tail')},sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot709803_snapshot_0622_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot709803_snapshot_0622_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,json,os,signal,subprocess\nfrom pathlib import Path\nNAME='diag_pilot709803_snapshot_0622_01';JOB='709803.hopper-m-02'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s original stage metadata only')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'query':{},'stages':[]}\nnames=['smoke_e2e_pilot_certificates_update_01','smoke_e2e_pilot_certificates_update_01_gate','smoke_e2e_pilot_pool_83_certificates_01','train_holdout_freeze','smoke_e2e_pilot_engineering_T4_01','smoke_e2e_pilot_engineering_T4_01_gate']\nfor name in names:\n p=Path('results')/(name+'.json');row={'file':str(p),'exists':p.is_file()}\n if p.is_file():\n  raw=p.read_bytes();assert len(raw)<16*1024*1024;d=json.loads(raw);m=d.get('metrics',{});meta=d.get('_meta',{});row.update(reference={'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},meta={k:meta.get(k) for k in ('name','start','end','exit_code')},metrics={k:m[k] for k in ('kind','producer_exit_code','passed','counts_by_kind','manifest','frozen_holdout','errors','cleanup_errors','black_frame_detected','completed','pilot_completed','actual_completed_updates','worker','worker_error','gate','extra_source_reauthentication','devices') if k in m})\n  if 'dataset_proof' in m and isinstance(m['dataset_proof'],dict):row['dataset_proof_fields']={k:m['dataset_proof'][k] for k in ('counts_by_kind','split','common_pool_hash','cache_authorized','qualification') if k in m['dataset_proof']}\n  if name=='train_holdout_freeze' and meta.get('end') and meta.get('exit_code')==0 and m.get('passed') is True:\n   ref=m['frozen_holdout'];p2=Path(ref['file']);b2=p2.read_bytes();assert hashlib.sha256(b2).hexdigest()==ref['sha256'];frozen=json.loads(b2);row['original_frozen_fields']={k:frozen[k] for k in ('selected_scenes','counts_by_partition','population_authority','split','version','authorization_revision') if k in frozen}\n log=Path('logs/runs')/(name+'.log');row['log_exists']=log.is_file()\n if log.is_file():\n  with log.open('rb') as f:\n   f.seek(max(0,log.stat().st_size-6000));row['original_log_tail']=f.read().decode(errors='replace')\n record['stages'].append(row)\nfolder=Path('logs/pbs/smoke_e2e_pilot_certificates_update_01-20261110T061341Z-7584c279')\np=folder/'pbs.out';record['pbs_out_exists']=p.is_file()\nif p.is_file():\n with p.open('rb') as f:f.seek(max(0,p.stat().st_size-6000));record['pbs_out_tail']=f.read().decode(errors='replace')\nrecord['query']={'status':'not_requested_metadata_only'}\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);path=out/'snapshot.json'\nwith path.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nprint('ORIGINAL_PILOT_STAGE_SNAPSHOT: '+json.dumps({'report':{'file':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'query':record['query'].get('selected_original_fields',record['query']),'stages':[{**{k:v for k,v in row.items() if k != 'original_log_tail'},'original_log_tail':row.get('original_log_tail','')[-1800:]} for row in record['stages']],'pbs_out_exists':record['pbs_out_exists'],'pbs_out_tail':record.get('pbs_out_tail')},sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:22:19",
+    "log_path": "logs/runs/diag_pilot709803_snapshot_0622_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "e3b71cb8c30c39d1073266f0e4b3a4bf22ce7139",
+    "git_dirty": false,
+    "end": "2026-11-10T14:22:23",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "9083bd7cd9f839c057653dface08038bdd4036bdc03dbdd6f2fee4c1b0b7bfd0"
+  }
+}

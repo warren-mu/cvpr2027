@@ -1,0 +1,28 @@
+{
+  "name": "diag_pilot709803_training_0626_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pilot709803_training_0626_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01v2_live_progress import read_prefix,archive\nfrom src.tools.t01_partition import ROOT\nNAME='diag_pilot709803_training_0626_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_):raise TimeoutError('12s pilot original metadata/journal snapshot')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(12)\nout=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);evidence=out/'evidence';evidence.mkdir()\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'results':[],'training_artifacts':[]}\nfor stem in ['smoke_e2e_pilot_certificates_update_01','smoke_e2e_pilot_engineering_T4_01']:\n p=ROOT/'results'/(stem+'.json');r={'file':str(p.relative_to(ROOT)),'exists':p.is_file()}\n if p.is_file():\n  b=p.read_bytes();assert len(b)<32*1024*1024;d=json.loads(b);r.update(reference=archive(b,evidence,stem+'_result.json'),meta=d.get('_meta'),original_metrics=d.get('metrics'))\n log=ROOT/'logs/runs'/(stem+'.log');r['log_exists']=log.is_file()\n if log.is_file():\n  with log.open('rb') as f:f.seek(max(0,log.stat().st_size-10000));r['original_log_tail']=f.read().decode(errors='replace')\n record['results'].append(r)\nbase=ROOT/'logs/runs/smoke_e2e_pilot_engineering_T4_01'\nfor suffix in ['resolved_pilot_config.json','ppo/holdout_000.jsonl','ppo/update_001.jsonl']:\n p=base/suffix;r={'file':str(p.relative_to(ROOT)),'exists':p.is_file()}\n if p.is_file():\n  r['observed_bytes']=p.stat().st_size\n  if p.suffix=='.jsonl':\n   b,extent=read_prefix(p,limit=2*1024*1024);r['extent']=extent;r['original_prefix']=archive(b,evidence,p.name);r['original_stage_records']=[row for row in (json.loads(line) for line in b.splitlines() if line.strip()) if row.get('record_kind') in ('pilot_holdout_complete','pilot_update_begin','actual_actor_consistency_update','pilot_update_complete','pilot_update_failed')]\n record['training_artifacts'].append(r)\np=out/'snapshot.json'\nwith p.open('x') as f:json.dump(record,f,sort_keys=True,indent=2)\nbrief={'report':{'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'observed_at_utc':record['observed_at_utc'],'results':[],'training_artifacts':record['training_artifacts']}\nfor r in record['results']:\n brief['results'].append({**{k:r[k] for k in ('file','exists','reference') if k in r},'meta':{k:r.get('meta',{}).get(k) for k in ('start','end','exit_code')},'metrics':{k:r.get('original_metrics',{}).get(k) for k in ('kind','producer_exit_code','engineering_smoke_completed','pilot_completed','actual_completed_updates','errors','cleanup_errors','checkpoint_saved','source_authentication_seconds','model_initialization_seconds')},'original_log_tail':r.get('original_log_tail','')[-5000:]})\nprint('ORIGINAL_PILOT_TRAINING_SNAPSHOT: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T14:29:41",
+  "log_path": "logs/runs/diag_pilot709803_training_0626_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "e3b71cb8c30c39d1073266f0e4b3a4bf22ce7139",
+  "git_dirty": false,
+  "end": "2026-11-10T14:29:50",
+  "duration_sec": 0.5,
+  "exit_code": 0,
+  "metrics_sha256": "c9d25790c4e9694c9b6155ac20ed49ec2a24cd396454eae6a6ef0edb3480fb59"
+}
