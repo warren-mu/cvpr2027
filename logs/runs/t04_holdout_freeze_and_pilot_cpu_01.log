@@ -1,0 +1,83 @@
+# run_logged: python3 -m src.tools.record_command --name t04_holdout_freeze_and_pilot_cpu_01 -- nice -n 10 python3 -c import sys,unittest
+sys.path.insert(0,'tests')
+patterns=['test_train_holdout_freeze.py','test_smoke_e2e_pilot*.py']
+suite=unittest.TestSuite(unittest.TestLoader().discover('tests',pattern=p,top_level_dir='tests') for p in patterns)
+result=unittest.TextTestRunner(verbosity=2).run(suite)
+raise SystemExit(not result.wasSuccessful())
+# start: 2026-11-10T12:30:45
+test_absent_room_is_reported_without_supplementary_selection (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_actual_completed_metadata_freezes_exact_original_split_once (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_duplicate_test_scene_and_edited_population_hash_rejected (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_expansion_never_reselects_scenes_or_calls_original_selector (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_failed_pending_or_fallback_cannot_freeze_even_if_manifest_exists (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_hash_and_original_audit_failures_propagate (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_manifest_source_population_and_original_split_tampering_rejected (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_only_fixed_repository_destination_is_loadable (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_pilot_requires_original_population_and_every_scene_assignment (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_self_consistent_file_without_successful_freeze_receipt_is_not_authorized (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_both_arms_both_small_changes_stop_without_mutating_configuration (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_current_spec_and_unknown_or_pending_t4_definition (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_either_arm_change_and_exact_threshold_prevent_stop (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_engineering_cannot_enter_comparison_even_with_fabricated_full_length (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_keep_all_qualification_and_conditional_budget_are_explicit (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_missing_updates_empty_look_or_incomplete_eval_cannot_mean_no_change (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_pools_and_public_hyperparameters_must_match (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_window_gives_each_update_equal_weight_with_unequal_episode_counts (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_black_gate_precedes_model_manifest_and_worker (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_complete_worker_and_same_common_inputs_are_recorded (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_failure_and_uncertain_cleanup_preserve_incomplete_status (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_namespace_and_black_gate_cannot_bypass_authorization (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_success_is_one_update_without_formal_pilot_permission (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_worker_reauthenticates_original_qualified_pool_before_ray (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_failed_update_or_uncertain_cleanup_is_not_completion (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_real_auxiliary_gradient_accumulates_before_original_step_with_full_N (test_smoke_e2e_pilot_actor.ActorGradientOrderTests) ... ok
+test_missing_t4_episode_or_unapproved_dynamic_batch_fails_before_update (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_native_skipped_optimizer_is_retained_but_never_completed (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_original_minibatch_order_and_optimizer_methods_survive_context (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_unfinished_or_extra_minibatch_is_not_complete_and_hooks_restore (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+INFO 11-10 12:31:25 [__init__.py:243] No platform detected, vLLM is running on UnspecifiedPlatform
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+test_actual_colocated_factory_keeps_actor_critic_and_reference_role_dispatch (test_smoke_e2e_pilot_actor.PinnedPilotWorkerWiring) ... ok
+test_original_default_hooks_and_new_arm_dispatch_are_explicit (test_smoke_e2e_pilot_actor.PinnedPilotWorkerWiring) ... ok
+test_empty_classes_remain_unknown_and_denominators_are_explicit (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_engineering_mode_is_only_an_explicit_t4_prefix_of_original_schedule (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_holdout_is_exact_both_worlds_without_training_draws_or_fake_t2_endpoint (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_learning_seen_uses_strict_parsed_select_boundary_and_all_episode_denominator (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_seen_without_any_parsed_select_still_counts_false (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_training_uses_only_explicit_train_keys_and_exact_frozen_arm_budget (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_unparseable_unavailable_and_terminal_select_are_distinct (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_51_and_missing_class_rejected_after_complete_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_default80_gate_has_no_exception_and_no_qualification_fields (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_early_selection_rejected_before_any_native_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_exact52_all_retained_with_original_flip_and_scene_split (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_frozen_fallback_reload_reauthenticates_exact_sources_and_policy (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_reload_before_deadline_still_rejected (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_source_replacement_or_later_cache_addition_rejected_before_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_failed_missing_or_unsealed_cache_is_not_training_authorization (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_chain_and_immutable_reports_are_required (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_native_failure_and_reused_process_propagate (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_only_fresh_audit_annotation_is_ignored_not_source_bytes_or_membership (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_duplicate_proposals_not_dropped_even_across_different_ids (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_keep_all_and_scene_holdout_preserve_world_orders_and_no_overlap (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_manifest_recomputed_not_trusting_saved_authorization_flags (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_single_sided_stay_and_global_skew_do_not_remove_any_qualified_pair (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_size_gate_applies_to_authenticated_inventory_and_no_class_can_be_missing (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_split_is_stable_under_input_order_and_same_scene_is_indivisible (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_test_scene_nonformal_and_other_camera_cannot_enter (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_unknown_or_skewed_left_diagnostic_is_not_a_new_pilot_gate (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_missing_or_changed_original_freeze_receipt_is_rejected (test_smoke_e2e_pilot_holdout.PilotHoldoutTests) ... ok
+test_no_second_scene_selection_or_native_revalidation (test_smoke_e2e_pilot_holdout.PilotHoldoutTests) ... ok
+test_real_frozen_loader_binds_completed_population_and_exact_split (test_smoke_e2e_pilot_holdout.PilotHoldoutTests) ... ok
+test_success_flag_cannot_replace_full_manifest_population_binding (test_smoke_e2e_pilot_holdout.PilotHoldoutTests) ... ok
+
+----------------------------------------------------------------------
+Ran 62 tests in 40.448s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 50.145839239005}
+# exit_code: 0

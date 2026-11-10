@@ -1,0 +1,31 @@
+{
+  "name": "t04_holdout_freeze_and_pilot_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "t04_holdout_freeze_and_pilot_cpu_01",
+    "--",
+    "nice",
+    "-n",
+    "10",
+    "python3",
+    "-c",
+    "import sys,unittest\nsys.path.insert(0,'tests')\npatterns=['test_train_holdout_freeze.py','test_smoke_e2e_pilot*.py']\nsuite=unittest.TestSuite(unittest.TestLoader().discover('tests',pattern=p,top_level_dir='tests') for p in patterns)\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nraise SystemExit(not result.wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T12:30:45",
+  "log_path": "logs/runs/t04_holdout_freeze_and_pilot_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "6d31852cbc1ec98f6233e1d1cb4e57a6d577bd77",
+  "git_dirty": false,
+  "end": "2026-11-10T12:31:40",
+  "duration_sec": 50.3,
+  "exit_code": 0,
+  "metrics_sha256": "100ce134202c7adda4b638b55f68697d9d5eb07ede4dc0d4aa67ee2515d5aab8"
+}
