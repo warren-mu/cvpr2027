@@ -52,6 +52,10 @@ CVPR 2027 投稿：*Don't Reward Lucky Guesses: Counterfactual World Pairs Teach
   - **可以直接删除**（删前把清单写进 STATUS：路径、大小、文件数、类别；删后记录释放量）：
     - A 类，可重新生成的缓存：pip/conda 包缓存、torch/triton/inductor 编译缓存、vLLM 缓存、Unity/AI2-THOR 崩溃转储和日志缓存、`__pycache__`、已结束作业的临时工作目录；
     - B 类，不进论文的训练权重：名字以 `smoke_`、`t00b_`、`e2e_` 开头，或其他冒烟、测速、调试运行留下的模型权重、critic 权重和优化器状态。这些运行的 results JSON、日志、指标一律保留，只删权重文件。
+  - **2026-11-09 21:30 追加（人类原话：「不用了吧，全部专注于我们目前的论文内容」；Claude 定范围）**：
+    - C 类：scratch 下的 `Video-MME` 目录（约 101 GB，公开视频评测数据集，与本项目无关，需要时可重新下载）可以删除。删前确认路径在本账号自己的 scratch 下、文件所有者是本账号、内容是数据集本身（不是本项目的结果）；任何一条不符合就先停下报告。
+    - D 类：`hf_ckpts` 中除 Qwen2.5-VL-3B-Instruct 和被 configs/、results/ 引用的模型以外的模型（例如不再评测的 7B/32B）可以删除，需要时可重新下载。
+    - `t00b_scale` 里的模型权重、critic、优化器状态属于 B 类；其中的结果、日志、指标保留。
   - **不能删**：基础模型（Qwen2.5-VL-3B 的 HF 缓存）、正在使用的 conda 环境、`data/world_pairs` 下的世界对和视角表、训练池和测试集文件、`results/`、被任何 results/*.json 或审计引用的文件、其他用户的文件、`/mnt/data2/linghao/latent`。
   - 删除 A、B 两类后空间仍不够，先停下报告，给出下一步方案（例如：被拒尝试的原始构造记录占多少、审计怎么跟着改），由人类或 Claude 决定。
   - **以后防止再满**：冒烟和试跑不保存中间 checkpoint，只保留最后一个 actor 权重（不存优化器和 critic）；主实验的保存方式在 T04 冻结时定。每份报告附 scratch 已用/上限（容量和文件数）。
