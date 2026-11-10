@@ -1602,3 +1602,8 @@ Video-MME 的公开 metadata 字节、标注、全部视频ID及MP4头已和[公
 G01 raw10 第二次冒烟 709595 在开头 hopper25 / GPU-2c0239b0-dff3-bf6f-0cc1-3097d771dcc8 黑帧退出，零生成业务；保留原记录，按黑帧规则准备同参数重提，未把失败当作通过。
 
 测试压缩正式 CPU：diag_test_table_compression_cpu_01，167 项全部通过（unittest 32.588 秒），原审计无 FAIL；真实测试对的双格式 GPU/CPU 解码比较仍待运行。新增上游 79bc7426 已合并：剩余 22 个测试场景按完整保留已验证版立即恢复，不等 raw10 冒烟。
+
+### 2026-11-09 22:57 ET — 测试完整保留通道恢复；压缩冒烟已提交
+已按 79bc7426 恢复原 active01 / test_priority_01 共享队列，两个单卡消费者 709610、709615（均 00:30:55），原领取锁、科学配置和 G01 优先级不变，不带 raw10 采样选项。S04 保留旧 external 票位，另准备独立同参重跑，未重置旧队列。
+测试压缩单对 709607（00:10:30）已提交，FloorPlan322/floorplan322_00111，使用 selected02 原 72 候选清单，仅一个实际 renderer 同时保存 plain/压缩表；真实字节比较尚待运行终态。83 对来源资格 709593 在完整认证阶段，未训练更新。最近 PBS 查询有超时，以已成功提交回执和原作业输出为准，不据超时判失败或重复提交。
+最新原 hpc quota（diag_scratch_quota_compression_01）scratch 报告 11:53 SGT：517.8 GiB / 1 TiB，2,928,738 chunk files / unlimited；整体 hpc exit1 保留，scratch 段完整，不宣称命令整体通过。余量高于 150 GB 继续提交停止线。旧完整物理/生成版本已验证，不等待 raw10 第三次冒烟。
