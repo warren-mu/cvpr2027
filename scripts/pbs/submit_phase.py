@@ -49,8 +49,40 @@ def native_pilot_budget_command(command, name, arm, group):
             and "--engineering-smoke" not in args)
 
 
+
+def diag01_timeout(command, name):
+    """Only the explicitly approved native one-GPU diagnostic, never a subbudget alias."""
+    if (not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command)
+            or not re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(command[0]).name)):
+        raise ValueError("DIAG01 requires its native Python module command")
+    args = command[1:]
+    if args[:1] == ["-u"]:
+        args = args[1:]
+    if args[:2] != ["-m", "src.tools.diag01_baselines"] or args.count("-m") != 1:
+        raise ValueError("DIAG01 requires its exact native producer")
+    def option(flag):
+        if args.count(flag) != 1 or args.index(flag) + 1 >= len(args):
+            raise ValueError("Missing/ambiguous DIAG01 argument: " + flag)
+        return args[args.index(flag) + 1]
+    if option("--name") != name:
+        raise ValueError("DIAG01 command name differs")
+    try:
+        timeout = float(option("--timeout-seconds"))
+    except (TypeError, ValueError) as error:
+        raise ValueError("DIAG01 needs an explicit finite driver timeout") from error
+    if not math.isfinite(timeout) or not 300 <= timeout <= 3540:
+        raise ValueError("DIAG01 driver timeout is outside its original 300..3540 second bound")
+    return timeout
+
+
 def budget_group(task, name, command, declared=None):
     """Subbudgets share the approved120 total; historical diagnostic routes are retained."""
+    diag01 = isinstance(name, str) and re.fullmatch(r"diag_diag01_baselines_[A-Za-z0-9_]+", name)
+    if diag01 or "src.tools.diag01_baselines" in (command or []):
+        if task != "T01" or not diag01 or declared is not None:
+            raise ValueError("DIAG01 requires task T01, its own name and no subbudget declaration")
+        diag01_timeout(command, name)
+        return None
     pack = isinstance(name, str) and name.startswith("gpu_pack_")
     pack_launch = "src.tools.gpu_pack" in (command or [])
     if pack or pack_launch or declared == PACK_GROUP:
@@ -488,9 +520,15 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
-    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+|gpu_pack_[A-Za-z0-9_]+)"
+    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:diag_diag01_baselines_[A-Za-z0-9_]+|t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+|gpu_pack_[A-Za-z0-9_]+)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
+    diag01 = bool(re.fullmatch(r"diag_diag01_baselines_[A-Za-z0-9_]+", name))
+    if diag01 or "src.tools.diag01_baselines" in (command or []):
+        budget_group(task, name, command, group)
+        timeout = diag01_timeout(command, name)
+        if gpus != 1 or not 0 < seconds <= 3600 or timeout > seconds - 60:
+            raise ValueError("DIAG01 requires one GPU, PBS <=3600 seconds and >=60 seconds driver cleanup margin")
     if any(row["name"] == name for row in state["submissions"]):
         raise ValueError("Run name already has a submission; use a distinct evidence name")
     long_pilot = (task == "T01" and group == "E2Epilot" and any(
@@ -500,6 +538,8 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
     if not 0 < seconds <= maximum_seconds:
         raise ValueError("Request exceeds this task's per-job walltime limit")
     proposed = gpus * seconds / 3600 * positive_rate(state["charge_policy"]["rates"][queue_for_gpus(gpus)])
+    if diag01 and proposed > 1.0 + 1e-12:
+        raise ValueError("DIAG01 request exceeds its one scheduler-charged GPU-hour cap")
     if gpus >= 8 and seconds < 7201:
         raise ValueError("largex requires walltime of at least 02:00:01")
     if gpus * seconds / 3600 > 20:
@@ -508,7 +548,7 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
         raise ValueError("Request would exceed the task's measured-plus-reserved GPU budget")
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 120 GPU-hour budget")
-    group = budget_group(task, name, [], group)
+    group = budget_group(task, name, command if diag01 else [], group)
     if group == PACK_GROUP:
         from src.tools.pbs_mixed_accounting import VERSION, PRIORITY
         groups = (mixed_authorization or {}).get("possible_groups")
