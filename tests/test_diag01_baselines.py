@@ -5,7 +5,7 @@ import unittest
 
 from src.envs.pair_table import TableEnvironment, TableObservationBackend
 from src.tools import diag01_baselines as d3
-from tests.test_pair_table import table
+from test_pair_table import table
 
 
 class Policy:
