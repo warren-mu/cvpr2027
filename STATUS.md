@@ -1929,3 +1929,20 @@ DIAG02 E1已修已完成环境步数与零基decision_index边界。原真实轨
 E2原表CPU诊断：LF44个world均有一步揭示X，但仅6/44存在一步X与两个带标号候选同屏，D≤4为9/44；LS相应32/36和32/36。详细全部一步动作、最短路径、真实mask/距离引用在原report。E1/E2原5文件审计0FAIL，首次unittest模块入口失败保留。
 E6扫描无新增训练cache证书；不做Stay位移/AB平衡为DF6/DS26/LF18/LS13（63对、12场景）；只用原seed0 AB平衡为DF6/DS11/LF18/LS5（40对、9场景）。固定holdout不变，未冻结池。原12项测试及2文件审计通过。
 7B和32B已从官方Hub按各自固定revision下载完成到scratch，模型源原2文件审计0FAIL；GPUworker加载前再核官方LFS权重SHA。预算/黑帧94项CPU回归通过；首轮失败只是旧预算表的全字典断言尚未列新DIAG02组，原失败保留。DIAG02 GPU尚未提交，等待新策略测试后先3B首对单卡冒烟。
+
+
+### 2026-11-10 15:03 ET — DIAG02提交检查与测试视角表导出收尾
+T02 selected05 的原 95 个去重候选均已有导出结局：76 对导出完成，19 对保留原错误。按直接 Flip / 直接 Stay / Look→Flip / Look→Stay，导出完成数为 18 / 35 / 8 / 15，分别来自 12 / 22 / 7 / 11 个场景；错误数为 0 / 6 / 8 / 5。这里仍是导出检查结果，`cache_matches_live` 均未由本次 CPU 收尾变成 PASS，不能作为已过缓存复核的测试集。完整 95 对结局和 76 个成功来源记录在 `logs/review/diag_test_selected05_final_export_inventory_02/report.json`。
+
+末六批的成功/错误数依次为：six11 4/2、six12 5/1、six13 5/1、six14 5/1、six15 6/0、six16 4/0。新增五个原错误均为 TeleportFull 碰撞：FP425_00087（Towel）、FP22_00062（Kettle）、FP225_00055（Box）、FP322_00021（AlarmClock）、FP222_00062（Box）。未删除或重置这些来源及队列键。
+
+原共享队列 02–16 的 15 个单元全部 `ended`，只读快照的 `available_units` 为空。710574 在 hopper-27 / GPU-2c9376c7-5d82-d36d-b753-697927c88368 上完成批次 02、03、06、08、10、12、14、15；710584 在 hopper-16 / GPU-d023b691-b356-0c67-bdd5-ac55e5a1dd09 上完成 04、05、07、09、11、13、16。两项原 PACK 都因保留了子单元错误而退出 1，但所有已领取单元都已结束、无 cleanup error；不把调度完成等同于科研验收通过。
+
+原 PBS 最终计费：710574 排队 405 秒、运行 00:45:22、0.756111 GPU·小时；710584 排队 29 秒、运行 00:37:27、0.624167 GPU·小时。两项 queue_charge_rate 均为 1，原 mixed_accounting 将合计 1.380278 GPU·小时全部归 T02，含开卡检查与收尾余量。710586 的未启动取消和零计费由主执行者另行封口，本 CPU 收尾未动任何作业。
+
+本次原审计覆盖 96 个结果，0 FAIL。失败的 inventory_01 也保留：它把最早压缩冒烟误认成 selected05 当时生成，实际上该原来源绑定 selected02；inventory_02 对原 selected02 证据和当前 selected05 的同一完整路径与 pair SHA 分别核对后完成汇总，没有放宽任何导出或缓存规则。原错误、旧结果、原始记录未改动。本收尾没有新增 GPU 用量。
+
+首批固定六对、200 状态、seed 0 的原缓存复核命令已准备在本地 `work/test_selected05_finalization/first6_cache_command.sh`，未执行。最早复用的是压缩冒烟的 FP322_00111 直接 Stay，不能用其他来源同名的 Look Stay 替换。后续完整成功来源清单在 `work/test_selected05_finalization/successful_sources.txt`；所有来源及 SHA、表 manifest、95 对原错误账本保存在同目录 `inventory.json`，仅供后续原 T02 检查使用，不冻结测试池。
+
+DIAG02 原3B提交wrapper因现有两个PACK mixed_accounting的Python可执行路径与原校验器要求不符而exit2，尚未生成payload/调用qsub，无GPU用量。保留原失败，使用原run_logged按原字面python3入口重跑mixed记账并归档旧结果，不修改校验器。
+新策略CPU回归21项通过，原4文件提交前补审计0FAIL（P7失败保留）。下载7B、32B后的原hpc quota片段报告scratch735.8GB/1.0TB、3,814,575文件/无限，home18.97G/40G；hpc命令整体exit1，raw输出有效但不标全命令PASS。没有删除新数据或改变存储格式。

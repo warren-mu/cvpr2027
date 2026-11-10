@@ -1,0 +1,26 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_selected05_remaining_six16_outcomes_01 -- python3 -c from pathlib import Path
+from collections import Counter
+import json,hashlib
+from src.tools.t01_partition import audited_result
+from src.tools.t02_export_parallel import child_outcome
+name="t02_export_test_selected05_six16"
+data,ref=audited_result("results/"+name+".json")
+cfg,m=data["config"],data["metrics"]
+assert data["_meta"]["end"] and m["all_units_ended"] is True and m["cleanup_errors"]==[] and m["errors"]==[]
+rows=m["units"];assert [v["unit_index"] for v in rows]==list(range(4))
+identity={k:cfg[k] for k in ("pbs_jobid","cuda_visible_devices","cpu_affinity","scratch","node")}
+counts=Counter();out=[]
+for row in rows:
+ child,source=audited_result(row["result_path"])
+ assert all(source[k]==row["source"][k] for k in ("file","sha256","metrics_sha256"))
+ proof=child_outcome(row,child,identity,row["command"],row["entry"])
+ assert all(row[k]==v for k,v in proof.items())
+ for pair in proof["original_pairs"]:
+  counts[pair["status"]]+=1
+  out.append({"unit_index":row["unit_index"],"pair_id":pair["pair_id"],"status":pair["status"],"error":pair.get("error"),"exit_code":proof["producer_exit_code"],"export_checks_complete":proof["export_checks_complete"],"source":source})
+print(json.dumps({"parent":ref,"parent_exit":data["_meta"]["exit_code"],"status_counts":dict(counts),"outcomes":out,"cache_matches_live":None,"downstream_allowed":False,"scope":"Original sealed export outcomes and scheduling provenance rechecked; no native or cache rerun and no error-key reset"},sort_keys=True))
+
+# start: 2026-11-11T03:43:43
+{"cache_matches_live": null, "downstream_allowed": false, "outcomes": [{"error": null, "exit_code": 0, "export_checks_complete": true, "pair_id": "floorplan23_00054", "source": {"audit": {"fail": [], "file": "results/t02_export_test_selected05_six16_u0000.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_test_selected05_six16_u0000.json", "git_commit": "f0cb8abf0697a4f9017de9c822481229190f51ac", "metrics_sha256": "a46868e86937f8c2d117a2571daec005e411e43502d2a0a936cef4fcdd71bef3", "sha256": "7b5e0a4ab15e3f970989586e37ce98064df5665d4a58f53dc51b2364b51a5ebe"}, "status": "exported", "unit_index": 0}, {"error": null, "exit_code": 0, "export_checks_complete": true, "pair_id": "floorplan221_00090", "source": {"audit": {"fail": [], "file": "results/t02_export_test_selected05_six16_u0001.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_test_selected05_six16_u0001.json", "git_commit": "f0cb8abf0697a4f9017de9c822481229190f51ac", "metrics_sha256": "e78b8806694b1d43ad3e63357947d1f416066a11a7defd0732b648d2fc85a4bf", "sha256": "ca75f3d6d40706d74a1fe9a37a2ab556f516898e7a2ad0a05c256afefd76b7a1"}, "status": "exported", "unit_index": 1}, {"error": null, "exit_code": 0, "export_checks_complete": true, "pair_id": "floorplan326_00073", "source": {"audit": {"fail": [], "file": "results/t02_export_test_selected05_six16_u0002.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_test_selected05_six16_u0002.json", "git_commit": "f0cb8abf0697a4f9017de9c822481229190f51ac", "metrics_sha256": "92fcf767abb819f17c473b7a909f6d30bd9f354c425dcaed326f2bdff61fd478", "sha256": "8bbb848f0e737524a839a266c9b13ae6bd447d5fe2776611d204ef4c6b3453f7"}, "status": "exported", "unit_index": 2}, {"error": null, "exit_code": 0, "export_checks_complete": true, "pair_id": "floorplan326_00043", "source": {"audit": {"fail": [], "file": "results/t02_export_test_selected05_six16_u0003.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_test_selected05_six16_u0003.json", "git_commit": "f0cb8abf0697a4f9017de9c822481229190f51ac", "metrics_sha256": "6e3ddc1e1236f83a75165f48125dd90c1c904307504040a73953ed7a092f2eac", "sha256": "d0ddc8b7808bd0740c00e14e53d85c84699e56d99102de5129aca4a61649c296"}, "status": "exported", "unit_index": 3}], "parent": {"audit": {"fail": [], "file": "results/t02_export_test_selected05_six16.json", "warn": []}, "exit_code": 0, "file": "results/t02_export_test_selected05_six16.json", "git_commit": "f0cb8abf0697a4f9017de9c822481229190f51ac", "metrics_sha256": "dfd6bf55c0f6afb7fa496863205a9560d9c8c845a7812f87a4004c70121a88cb", "sha256": "4e2f480910c42e53e348bd2326e521e35642d52cd5eaaa4cad5268966ebda5d1"}, "parent_exit": 0, "scope": "Original sealed export outcomes and scheduling provenance rechecked; no native or cache rerun and no error-key reset", "status_counts": {"exported": 4}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 2.679067291028332}
+# exit_code: 0

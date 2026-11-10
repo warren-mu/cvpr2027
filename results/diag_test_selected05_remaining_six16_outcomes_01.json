@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 2.679067291028332
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nfrom collections import Counter\nimport json,hashlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.t02_export_parallel import child_outcome\nname=\"t02_export_test_selected05_six16\"\ndata,ref=audited_result(\"results/\"+name+\".json\")\ncfg,m=data[\"config\"],data[\"metrics\"]\nassert data[\"_meta\"][\"end\"] and m[\"all_units_ended\"] is True and m[\"cleanup_errors\"]==[] and m[\"errors\"]==[]\nrows=m[\"units\"];assert [v[\"unit_index\"] for v in rows]==list(range(4))\nidentity={k:cfg[k] for k in (\"pbs_jobid\",\"cuda_visible_devices\",\"cpu_affinity\",\"scratch\",\"node\")}\ncounts=Counter();out=[]\nfor row in rows:\n child,source=audited_result(row[\"result_path\"])\n assert all(source[k]==row[\"source\"][k] for k in (\"file\",\"sha256\",\"metrics_sha256\"))\n proof=child_outcome(row,child,identity,row[\"command\"],row[\"entry\"])\n assert all(row[k]==v for k,v in proof.items())\n for pair in proof[\"original_pairs\"]:\n  counts[pair[\"status\"]]+=1\n  out.append({\"unit_index\":row[\"unit_index\"],\"pair_id\":pair[\"pair_id\"],\"status\":pair[\"status\"],\"error\":pair.get(\"error\"),\"exit_code\":proof[\"producer_exit_code\"],\"export_checks_complete\":proof[\"export_checks_complete\"],\"source\":source})\nprint(json.dumps({\"parent\":ref,\"parent_exit\":data[\"_meta\"][\"exit_code\"],\"status_counts\":dict(counts),\"outcomes\":out,\"cache_matches_live\":None,\"downstream_allowed\":False,\"scope\":\"Original sealed export outcomes and scheduling provenance rechecked; no native or cache rerun and no error-key reset\"},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_selected05_remaining_six16_outcomes_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_selected05_remaining_six16_outcomes_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nfrom collections import Counter\nimport json,hashlib\nfrom src.tools.t01_partition import audited_result\nfrom src.tools.t02_export_parallel import child_outcome\nname=\"t02_export_test_selected05_six16\"\ndata,ref=audited_result(\"results/\"+name+\".json\")\ncfg,m=data[\"config\"],data[\"metrics\"]\nassert data[\"_meta\"][\"end\"] and m[\"all_units_ended\"] is True and m[\"cleanup_errors\"]==[] and m[\"errors\"]==[]\nrows=m[\"units\"];assert [v[\"unit_index\"] for v in rows]==list(range(4))\nidentity={k:cfg[k] for k in (\"pbs_jobid\",\"cuda_visible_devices\",\"cpu_affinity\",\"scratch\",\"node\")}\ncounts=Counter();out=[]\nfor row in rows:\n child,source=audited_result(row[\"result_path\"])\n assert all(source[k]==row[\"source\"][k] for k in (\"file\",\"sha256\",\"metrics_sha256\"))\n proof=child_outcome(row,child,identity,row[\"command\"],row[\"entry\"])\n assert all(row[k]==v for k,v in proof.items())\n for pair in proof[\"original_pairs\"]:\n  counts[pair[\"status\"]]+=1\n  out.append({\"unit_index\":row[\"unit_index\"],\"pair_id\":pair[\"pair_id\"],\"status\":pair[\"status\"],\"error\":pair.get(\"error\"),\"exit_code\":proof[\"producer_exit_code\"],\"export_checks_complete\":proof[\"export_checks_complete\"],\"source\":source})\nprint(json.dumps({\"parent\":ref,\"parent_exit\":data[\"_meta\"][\"exit_code\"],\"status_counts\":dict(counts),\"outcomes\":out,\"cache_matches_live\":None,\"downstream_allowed\":False,\"scope\":\"Original sealed export outcomes and scheduling provenance rechecked; no native or cache rerun and no error-key reset\"},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-11T03:43:43",
+    "log_path": "logs/runs/diag_test_selected05_remaining_six16_outcomes_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8a83c1b15785e50476d574794f63bc95b72831fa",
+    "git_dirty": false,
+    "end": "2026-11-11T03:43:46",
+    "duration_sec": 2.7,
+    "exit_code": 0,
+    "metrics_sha256": "5c76c4e98f9ceef9dc33ed754d302301e160fdde1e1bc58103f5064e9c87cbd2"
+  }
+}

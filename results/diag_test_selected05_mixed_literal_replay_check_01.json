@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 1.011166368960403
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,importlib.util\nfrom pathlib import Path\nfrom src.tools.pbs_mixed_accounting import finalized_split\nroot=Path.cwd().resolve()\nspec=importlib.util.spec_from_file_location(\"original_final_budget\",root/\"scripts/pbs/submit_phase.py\")\nphase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\njobs={\"710574.hopper-m-02\",\"710584.hopper-m-02\"}\ncanonical=phase._final_accounting(root,jobs,paths=[root/\"results/diag_test_selected05_remaining_finished_accounting_01.json\"])\nout=[]\nfor seq,folder in [(\"02\",\"gpu_pack_test_selected05_remaining_single_02-20261110T161958Z-787d9409\"),(\"03\",\"gpu_pack_test_selected05_remaining_single_03-20261110T163408Z-c4cc03b0\")]:\n payload=\"logs/pbs/\"+folder+\"/payload.json\"\n p=json.loads((root/payload).read_text());receipt=json.loads((root/\"logs/pbs\"/folder/\"submission.json\").read_text())\n row={\"name\":p[\"name\"],\"payload\":payload,\"job_id\":receipt[\"stdout\"].strip()}\n split=finalized_split(root,row,canonical[row[\"job_id\"]])\n assert split is not None\n out.append({\"name\":p[\"name\"],\"job_id\":row[\"job_id\"],\"original_finalized_split_pass\":True,\"charged_gpu_hours_by_group\":split[\"charged_gpu_hours_by_group\"],\"total_charged_gpu_hours\":split[\"total_charged_gpu_hours\"]})\nprint(json.dumps({\"scope\":\"Read-only call to original submitter finalized_split; no submissions, no validator changes; original payload, receipt and PBS accounting used\",\"jobs\":out},sort_keys=True))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_selected05_mixed_literal_replay_check_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_selected05_mixed_literal_replay_check_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,importlib.util\nfrom pathlib import Path\nfrom src.tools.pbs_mixed_accounting import finalized_split\nroot=Path.cwd().resolve()\nspec=importlib.util.spec_from_file_location(\"original_final_budget\",root/\"scripts/pbs/submit_phase.py\")\nphase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\njobs={\"710574.hopper-m-02\",\"710584.hopper-m-02\"}\ncanonical=phase._final_accounting(root,jobs,paths=[root/\"results/diag_test_selected05_remaining_finished_accounting_01.json\"])\nout=[]\nfor seq,folder in [(\"02\",\"gpu_pack_test_selected05_remaining_single_02-20261110T161958Z-787d9409\"),(\"03\",\"gpu_pack_test_selected05_remaining_single_03-20261110T163408Z-c4cc03b0\")]:\n payload=\"logs/pbs/\"+folder+\"/payload.json\"\n p=json.loads((root/payload).read_text());receipt=json.loads((root/\"logs/pbs\"/folder/\"submission.json\").read_text())\n row={\"name\":p[\"name\"],\"payload\":payload,\"job_id\":receipt[\"stdout\"].strip()}\n split=finalized_split(root,row,canonical[row[\"job_id\"]])\n assert split is not None\n out.append({\"name\":p[\"name\"],\"job_id\":row[\"job_id\"],\"original_finalized_split_pass\":True,\"charged_gpu_hours_by_group\":split[\"charged_gpu_hours_by_group\"],\"total_charged_gpu_hours\":split[\"total_charged_gpu_hours\"]})\nprint(json.dumps({\"scope\":\"Read-only call to original submitter finalized_split; no submissions, no validator changes; original payload, receipt and PBS accounting used\",\"jobs\":out},sort_keys=True))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-11T03:58:58",
+    "log_path": "logs/runs/diag_test_selected05_mixed_literal_replay_check_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+    "git_dirty": false,
+    "end": "2026-11-11T03:59:00",
+    "duration_sec": 1.1,
+    "exit_code": 0,
+    "metrics_sha256": "c5d35b59e0726dd34709aa5e35ab6342599858244c1ba654660bdd6569f2296f"
+  }
+}

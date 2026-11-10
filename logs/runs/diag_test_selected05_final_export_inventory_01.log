@@ -1,0 +1,45 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_selected05_final_export_inventory_01 -- python3 -c import json,hashlib
+from pathlib import Path
+from collections import Counter,defaultdict
+from src.tools.t01_partition import audited_result
+root=Path.cwd().resolve()
+selection_path=Path("logs/review/diag_current_test_selected_05/report.json")
+selection_bytes=selection_path.read_bytes()
+selection_sha=hashlib.sha256(selection_bytes).hexdigest()
+assert selection_sha=="e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff"
+sel=json.loads(selection_bytes)
+selected={x["pair_reference"]["file"]:x for x in sel["proof"]["configuration_selection"]["selected"]}
+sources=["results/t02_export_test_compression_smoke_01.json"]
+for batch in range(1,17):
+ parent,pref=audited_result("results/t02_export_test_selected05_six%02d.json"%batch)
+ assert parent["_meta"]["end"] and parent["metrics"]["all_units_ended"] and parent["metrics"]["cleanup_errors"]==[]
+ sources.extend(row["result_path"] for row in parent["metrics"]["units"])
+rows=[];counts=Counter();kinds=defaultdict(Counter);seen=set();scenes=defaultdict(set)
+for f in sources:
+ d,ref=audited_result(f);cfg=d["config"];m=d["metrics"]
+ pair_file=cfg["pair_file"];sr=selected[pair_file]
+ assert pair_file not in seen;seen.add(pair_file)
+ binding=json.loads(cfg["test_selection"])
+ assert binding["file"]==str(selection_path) and binding["sha256"]==selection_sha
+ assert hashlib.sha256((root/pair_file).read_bytes()).hexdigest()==sr["pair_reference"]["sha256"]
+ assert len(m["pairs"])==1 and m["cleanup_errors"]==[]
+ p=m["pairs"][0];assert p["kind"]==sr["kind"] and p["scene"]==sr["scene"]
+ status=p["status"]
+ if status=="exported":
+  assert d["_meta"]["exit_code"]==0 and m["export_checks_complete"] is True and p["pair_checks_passed"] is True and p["table_complete"] is True
+  assert p["table_manifest"] and p["table_manifest"]["sha256"]
+ counts[status]+=1;kinds[status][p["kind"]]+=1;scenes[(status,p["kind"])].add(p["scene"])
+ rows.append({"pair_id":p["pair_id"],"scene":p["scene"],"kind":p["kind"],"status":status,"source":ref,"pair_reference":sr["pair_reference"],"configuration_id":sr["configuration"]["configuration_id"],"table_manifest":p.get("table_manifest"),"error":p.get("error"),"rejection_reasons":p.get("rejection_reasons"),"export_checks_complete":m["export_checks_complete"],"cache_matches_live":m["cache_matches_live"],"downstream_allowed":m["downstream_allowed"]})
+assert seen==set(selected)
+report={"scope":"Exact original selected05 export outcomes only. This does not run or certify cache_matches_live, does not freeze a test pool, and does not remove errors or reset claim keys.","selection":{"file":str(selection_path),"sha256":selection_sha},"selected_denominator":sel["selected_count"],"status_counts":dict(counts),"counts_by_status_and_kind":{k:dict(v) for k,v in kinds.items()},"scene_counts_by_status_and_kind":{s:{k:len(v) for (s2,k),v in scenes.items() if s2==s} for s in counts},"successful_source_files":[r["source"]["file"] for r in rows if r["status"]=="exported"],"outcomes":rows,"cache_matches_live":None,"downstream_allowed":False}
+out=Path("logs/review/diag_test_selected05_final_export_inventory_01/report.json");out.parent.mkdir(parents=True,exist_ok=True)
+out.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+print(json.dumps({k:v for k,v in report.items() if k not in ("outcomes","successful_source_files")},sort_keys=True))
+print(json.dumps({"report":{"file":str(out),"sha256":hashlib.sha256(out.read_bytes()).hexdigest()}},sort_keys=True))
+
+# start: 2026-11-11T03:51:35
+Traceback (most recent call last):
+  File "<string>", line 23, in <module>
+AssertionError
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 0.6184855009778403}
+# exit_code: 1

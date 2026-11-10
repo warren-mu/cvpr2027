@@ -1,0 +1,22 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_selected05_mixed_literal_replay_check_01 -- python3 -c import json,importlib.util
+from pathlib import Path
+from src.tools.pbs_mixed_accounting import finalized_split
+root=Path.cwd().resolve()
+spec=importlib.util.spec_from_file_location("original_final_budget",root/"scripts/pbs/submit_phase.py")
+phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+jobs={"710574.hopper-m-02","710584.hopper-m-02"}
+canonical=phase._final_accounting(root,jobs,paths=[root/"results/diag_test_selected05_remaining_finished_accounting_01.json"])
+out=[]
+for seq,folder in [("02","gpu_pack_test_selected05_remaining_single_02-20261110T161958Z-787d9409"),("03","gpu_pack_test_selected05_remaining_single_03-20261110T163408Z-c4cc03b0")]:
+ payload="logs/pbs/"+folder+"/payload.json"
+ p=json.loads((root/payload).read_text());receipt=json.loads((root/"logs/pbs"/folder/"submission.json").read_text())
+ row={"name":p["name"],"payload":payload,"job_id":receipt["stdout"].strip()}
+ split=finalized_split(root,row,canonical[row["job_id"]])
+ assert split is not None
+ out.append({"name":p["name"],"job_id":row["job_id"],"original_finalized_split_pass":True,"charged_gpu_hours_by_group":split["charged_gpu_hours_by_group"],"total_charged_gpu_hours":split["total_charged_gpu_hours"]})
+print(json.dumps({"scope":"Read-only call to original submitter finalized_split; no submissions, no validator changes; original payload, receipt and PBS accounting used","jobs":out},sort_keys=True))
+
+# start: 2026-11-11T03:58:58
+{"jobs": [{"charged_gpu_hours_by_group": {"T02": 0.7561111111111111}, "job_id": "710574.hopper-m-02", "name": "gpu_pack_test_selected05_remaining_single_02", "original_finalized_split_pass": true, "total_charged_gpu_hours": 0.7561111111111111}, {"charged_gpu_hours_by_group": {"T02": 0.6241666666666666}, "job_id": "710584.hopper-m-02", "name": "gpu_pack_test_selected05_remaining_single_03", "original_finalized_split_pass": true, "total_charged_gpu_hours": 0.6241666666666666}], "scope": "Read-only call to original submitter finalized_split; no submissions, no validator changes; original payload, receipt and PBS accounting used"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.011166368960403}
+# exit_code: 0
