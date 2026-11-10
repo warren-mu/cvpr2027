@@ -1,0 +1,23 @@
+{
+  "name": "diag_g01_raw10_smoke_plan_03",
+  "command": [
+    "python3",
+    "-c",
+    "\"\"\"One-off exact second engineering smoke plan; root runs via run_logged.\"\"\"\nimport copy\nimport hashlib\nimport json\nimport os\nfrom pathlib import Path\nfrom src.tools import g01_physics_smoke as smoke\nfrom src.tools.t01_partition import audited_result\n\nroot = Path.cwd().resolve()\nname = 'diag_g01_raw10_smoke_plan_03'\nrun = 'gen_test_s16_smoke_raw10_02'\nold_path = root / 'configs/gen_test_s16_smoke_raw10_01_quota.json'\nold_bytes = old_path.read_bytes()\nold_sha = hashlib.sha256(old_bytes).hexdigest()\nassert old_sha == '4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4'\noriginal_path = root / 'results/gen_test_s16_smoke_raw10_01.json'\nassert hashlib.sha256(original_path.read_bytes()).hexdigest() == '6a9748f3b54eacfeaa7519f7806ea427e840a6bc81c6f32ab4aeaab00872a635'\noriginal, original_ref = audited_result(original_path)\nassert original['_meta']['end'] and original['_meta']['exit_code'] == 1\nassert original['metrics']['engineering_gate_passed'] is False\nassert not (root / 'results' / (run + '.json')).exists()\nassert not list((root / 'logs/runs').glob(run + '*'))\nassert not list((root / 'logs/pbs').glob(run + '-*'))\nassert not (Path('/scratch/e1583364/cvpr2027/g01_parallel') / run).exists()\nold = json.loads(old_bytes)\nassert old['parent_run_name'] == 'gen_test_s16_smoke_raw10_01'\nplan = copy.deepcopy(old)\nplan['parent_run_name'] = run\nassert {k: v for k, v in plan.items() if k != 'parent_run_name'} == {\n    k: v for k, v in old.items() if k != 'parent_run_name'}\nsmoke.validate_quota(plan, run)\npath = root / 'configs' / (run + '_quota.json')\nwith path.open('xb') as stream:\n    stream.write((json.dumps(plan, indent=2, sort_keys=True, allow_nan=False) + '\\n').encode())\n    stream.flush()\n    os.fsync(stream.fileno())\npath.chmod(0o444)\nnew_ref = {'file': str(path.relative_to(root)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}\ncommand = ['python3', '-u', '-m', smoke.MODULE, '--name', run, '--scene', 'FloorPlan21',\n    '--quota-plan', new_ref['file'], '--quota-plan-sha256', new_ref['sha256'],\n    '--timeout-seconds', '1000', '--sample-rejected-raw']\n# Both are emitted for review only; neither is executed by this preparation.\nsubmission = ['python3', 'scripts/pbs/submit_phase.py', '--task', 'T01', '--budget-group',\n    'G01', '--name', run, '--gpus', '1', '--walltime', '00:17:10', '--', *command]\nmetrics = {'validated': True, 'new_quota_plan': new_ref, 'command': command,\n    'submission_command': submission, 'scene_timeout_seconds': 600,\n    'parent_timeout_seconds': 1000, 'pbs_wall_seconds': 1030,\n    'formal_collection_eligible': False, 'old_engineering_gate_passed': False,\n    'old_engineering_observations': copy.deepcopy(original['metrics']['engineering_observations']),\n    'only_quota_field_changed': 'parent_run_name', 'gpu_submission_performed': False,\n    'scope': 'Exact second engineering smoke; original native Teleport timeout remains a failure, never an ordinary scene boundary. No scientific quota or threshold change.'}\nresult = {'metrics': metrics, 'config': {'name': name, 'original_smoke_result': original_ref},\n    'sources': [original_ref], 'artifact_references': [\n        {'file': str(old_path.relative_to(root)), 'sha256': old_sha}, new_ref]}\nwith (root / 'results' / (name + '.json')).open('x') as stream:\n    json.dump(result, stream, indent=2, allow_nan=False)\n    stream.write('\\n')\nassert old_path.read_bytes() == old_bytes\nassert hashlib.sha256(original_path.read_bytes()).hexdigest() == original_ref['sha256']\nprint('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T11:28:27",
+  "log_path": "logs/runs/diag_g01_raw10_smoke_plan_03.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "6eeab702c39b14cf45989399ebb64b1ad3b7f7c0",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_g01_raw10_smoke_plan_03.diff",
+  "end": "2026-11-10T11:28:31",
+  "duration_sec": 0.7,
+  "exit_code": 0,
+  "metrics_sha256": "73f0a9bf7c09652788cb5c11e79f34b8e6c9a04f65f8d563912f39dff9908599"
+}

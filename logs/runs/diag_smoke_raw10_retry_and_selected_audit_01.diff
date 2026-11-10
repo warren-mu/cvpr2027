@@ -1,0 +1,17 @@
+diff --git a/STATUS.md b/STATUS.md
+index d8c84f05..24d4f452 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1586,3 +1586,12 @@ Video-MME 的公开 metadata 字节、标注、全部视频ID及MP4头已和[公
+ 按最大完整导出每对×240，加40个六对parent最大开销，再加30%规划余量，未来全目标测试导出情景为 432.002 GB。此训练场景样本外推未测测试场景的图规模，既非实测上界也非硬上界。
+ 原242.533 GB规划保持原记录；若该测试全目标情景另行全部发生，两者假设相加为 674.535 GB。仍未含无限重试和测试集fresh-cache；不得当全项目容量保证。尚未对新拒绝10%策略计任何节省，待新单元实测后再更新。
+ 
++
++
++## 2026-11-09 22:25 ET — 两项拒绝采样冒烟与压缩范围
++
++生成工程709556未通过：原TeleportFull原生TimeoutError，不能当普通scene deadline；19个已返回attempt，10个两世界通过新物理检查，合格世界对0，worker_failed=False、cleanup空。异常原始证据完整保留；新生成采样暂不推广，将按完全相同参数另名重试。实际0.1661111111 GPU·小时，排队100秒。
++
++导出工程709559通过：原已cache通过的floorplan203_00002工程重导出为exported，完整原始accepted保留，errors/cleanup空；本次没有scientific rejected，删除分支仍仅CPU覆盖，不能声称新cache通过或增加池规模。实际0.0691666667 GPU·小时，排队371秒。两项与当前selection原审计8文件0FAIL，失败P7保留。
++
++原配置去重当前测试候选72对（T02前增量，非最终冻结）：直接Flip14/8场景，直接Stay32/16，Look→Flip13/7，Look→Stay13/8；来源diag_current_test_selected_02。T02§8 6eeab702已拉取：只对新selected测试表无损压缩，训练/试跑/旧格式不变，正在做CPU等价与单对双格式冒烟代码。22:30主线仍先判断原31完整结果，否则固定52备用源。
