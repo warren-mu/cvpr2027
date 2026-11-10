@@ -1,0 +1,130 @@
+{
+  "config": {
+    "episode_directory": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag01_baselines_s0_01",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "holdout_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+      "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+    },
+    "identity": {
+      "cpu_affinity": [
+        73,
+        75,
+        77,
+        79,
+        81,
+        83,
+        85,
+        87,
+        89,
+        91,
+        93,
+        95
+      ],
+      "cuda_visible_devices": "GPU-9317c80e-33a9-8f2c-b611-9a459bb1818e",
+      "pbs_jobid": "710523.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "manifest": "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "maximum_requested_gpu_hours": 1.0,
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "model_settings_reused_from": "src.tools.smoke_e2e_eval.VllmPolicy",
+    "model_source": {
+      "file": "results/smoke_e2e_eval_03.json",
+      "sha256": "d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9"
+    },
+    "name": "diag_diag01_baselines_s0_01",
+    "node": "hopper-18",
+    "strategies": [
+      "obs_never",
+      "obs_always",
+      "obs_trigger",
+      "diag_base"
+    ],
+    "timeout_seconds": 3240.0,
+    "training_config_changed": false,
+    "version": "diag01_fixed83_original_model_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cleanup_errors": [],
+    "completed": false,
+    "errors": [],
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag01_baselines_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/diag_diag01_baselines_s0_01_gate.json",
+      "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+      "metrics_sha256": "13d9b045b11cbcee81093c964784c427b1f26474769e42322223a4c509679ffa",
+      "sha256": "9aca4af5a885e2f69fd71fc369f04238fc78e15d8767712c9da8a6ed01b74475"
+    },
+    "journals": [],
+    "kind": "diag01_original_model",
+    "paper_result": false,
+    "producer_exit_code": 86
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag01_baselines_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/diag_diag01_baselines_s0_01_gate.json",
+      "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+      "metrics_sha256": "13d9b045b11cbcee81093c964784c427b1f26474769e42322223a4c509679ffa",
+      "sha256": "9aca4af5a885e2f69fd71fc369f04238fc78e15d8767712c9da8a6ed01b74475"
+    }
+  ],
+  "_meta": {
+    "name": "diag_diag01_baselines_s0_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.diag01_baselines",
+      "--name",
+      "diag_diag01_baselines_s0_01",
+      "--manifest",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+      "--holdout-reference",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\", \"sha256\": \"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+      "--model-source",
+      "{\"audit\": {\"fail\": [], \"file\": \"results/smoke_e2e_eval_03.json\", \"warn\": []}, \"exit_code\": 0, \"file\": \"results/smoke_e2e_eval_03.json\", \"git_commit\": \"340f031bc48e729909ac56676e82d522bf9cd44a\", \"metrics_sha256\": \"712403d3dfb331402a59b13406edb0df756eee16fe8db1c16ea736e1dfd4f9ca\", \"sha256\": \"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+      "--timeout-seconds",
+      "3240",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-18",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-10T23:31:27",
+    "log_path": "logs/runs/diag_diag01_baselines_s0_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+    "git_dirty": false,
+    "end": "2026-11-10T23:31:46",
+    "duration_sec": 16.8,
+    "exit_code": 86,
+    "metrics_sha256": "806dcf8f67062a44e5174f754f194350f43055ee1d1367f831b3dfa291395e0c"
+  }
+}
