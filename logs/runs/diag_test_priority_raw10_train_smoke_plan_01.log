@@ -1,0 +1,297 @@
+# run_logged: python3 -c """Unexecuted one-off: validate seven pending batches; migrate only the first.
+
+Run directly under the original run_logged wrapper, never same-name
+record_command. This script writes new immutable configs and one result, not
+the old queue or any PBS submission. No native scientific checks are replaced.
+"""
+import copy
+import fcntl
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import signal
+import sys
+from types import SimpleNamespace
+
+from src.tools import gpu_shared_claim as shared
+from src.tools import pbs_mixed_accounting as mixed
+
+ROOT = Path.cwd().resolve()
+WRITE_CONFIGS = sys.argv[1:] == ['--write-configs']
+NAME = ('diag_test_priority_raw10_train_smoke_plan_01' if WRITE_CONFIGS
+        else 'diag_test_priority_raw10_train_smoke_validate_01')
+OLD = {'file': 'configs/shared_test_priority_active_01.json',
+       'sha256': 'a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a'}
+OLD_QUEUE = Path('/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01')
+STATE_SHA = 'c57d18399a284bc9bba8f1556b2defb7879156aac4981021050ab94bfaa8396c'
+NEW_QUEUE_ID = 'test_priority_raw10_train_smoke_01'
+PENDING = [f't02_export_train_six_{i:02d}' for i in range(20, 27)]
+ENDED = [f'gen_test_s16_round2_s{i:02d}' for i in (5, 6, 7)]
+BUDGET_REVIEW = {'file': 'results/diag_train_look_first_unit_retry1_review_plan_01.json',
+                 'sha256': 'b647727d2fd778ce6c74d07f4af3b250728b827f4388cd357a2d10fac4c435e5'}
+EXPORT_SMOKE = {'file': 'results/t02_export_raw10_smoke_01.json',
+                'sha256': '20112639aa293301c9129fbca03432072b1cb75549f08c40d62d835275e898b2'}
+SOURCES = {}
+
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+def reference(path):
+    return mixed.reference(path, ROOT)
+
+
+def logged(ref):
+    data, path = mixed.logged(ROOT, ref)
+    source = {**reference(path), 'metrics_sha256': data['_meta']['metrics_sha256']}
+    SOURCES[source['file']] = source
+    return data, source
+
+
+def write_new(relative, value=None, raw=None):
+    path = ROOT / relative
+    require(path.parent == ROOT / 'configs', 'Only explicit new configs may be written')
+    body = shared.canonical(value) + b'\n' if raw is None else raw
+    require(not path.exists(), 'Planned new config already exists')
+    if not WRITE_CONFIGS:
+        return {'file':relative, 'sha256':hashlib.sha256(body).hexdigest(), 'bytes':len(body)}
+    with path.open('xb') as stream:
+        stream.write(body)
+        stream.flush()
+        os.fsync(stream.fileno())
+    path.chmod(0o444)
+    return reference(path)
+
+
+def consumers():
+    rows = []
+    for path in sorted((ROOT / 'logs/pbs').glob('gpu_pack_*/payload.json')):
+        payload = json.loads(path.read_bytes())
+        command = payload.get('command', [])
+        if payload.get('dry_run') is True or '--queue-plan' not in command:
+            continue
+        if (ROOT / mixed.option(command, '--queue-plan')).resolve() != (ROOT / OLD['file']).resolve():
+            continue
+        require(mixed.option(command, '--queue-plan-sha256') == OLD['sha256'], 'Old plan SHA changed')
+        require(Path(mixed.option(command, '--queue-root')).resolve() == OLD_QUEUE,
+                'Old consumer changed its original queue root')
+        receipt_path = path.with_name('submission.json')
+        require(receipt_path.is_file(), 'An old submission is still in flight')
+        receipt = json.loads(receipt_path.read_bytes())
+        if receipt.get('returncode') != 0:
+            require(not shared.re.search(r'\d+\.hopper-m-\d+', receipt.get('stdout', '')),
+                    'Failed submission has an ambiguous job ID')
+            continue
+        job = receipt.get('stdout', '').strip()
+        require(shared.re.fullmatch(r'\d+\.hopper-m-\d+', job)
+                and path.stat().st_mode & 0o222 == 0, 'Invalid original immutable receipt')
+        rows.append({'job_id': job, 'name': payload['name'], 'payload': str(path.relative_to(ROOT)),
+                     'payload_reference': reference(path), 'receipt_reference': reference(receipt_path)})
+    require(rows and len({r['job_id'] for r in rows}) == len(rows), 'Missing/duplicate original consumers')
+    return rows
+
+
+def ended_consumers(rows):
+    # The already sealed original budget snapshot supplies exact receipt paths,
+    # not an authority to skip original final/mixed accounting verification.
+    review, _ = logged(BUDGET_REVIEW)
+    require(review['_meta']['exit_code'] == 0, 'Original budget projection failed')
+    budget, _ = mixed.read_reference(ROOT, review['metrics']['budget_snapshot'])
+    indexed = {r['job_id']: r for r in budget['submissions']}
+    accounts, cancelled = {}, set()
+    for row in rows:
+        old = indexed.get(row['job_id'])
+        require(old and old['basis'] == 'final_accounting' and old['payload'] == row['payload'],
+                'Old consumer is not in the authenticated terminal cutoff')
+        path = ROOT / old['accounting_result']
+        account, ref = logged(reference(path))
+        require(account['_meta']['exit_code'] == 0, 'Original canonical accounting failed')
+        accounts[ref['file']] = ref
+        cancelled.update(account['metrics'].get('verified_never_started_cancelled_jobs', []))
+    spec = importlib.util.spec_from_file_location('original_handoff_phase', ROOT/'scripts/pbs/submit_phase.py')
+    phase = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(phase)
+    final = phase._final_accounting(ROOT, {r['job_id'] for r in rows},
+                                    paths=[ROOT / x for x in accounts])
+    require(set(final) == {r['job_id'] for r in rows}, 'Every old consumer needs original final PBS evidence')
+    proof, owned = [], {}
+    for row in rows:
+        path = ROOT / 'results' / (row['name'] + '.json')
+        if row['job_id'] in cancelled:
+            require(final[row['job_id']]['gpu_hours'] == 0 and not path.exists(),
+                    'Never-started cancellation is not a completed runtime')
+            proof.append({**row, 'lifecycle': 'verified_never_started_cancelled',
+                          'accounting_reference': accounts[final[row['job_id']]['accounting_result']]})
+            continue
+        result, result_ref = logged(reference(path))
+        payload, _ = mixed.read_reference(ROOT, row['payload_reference'])
+        require(result['_meta']['command'] == payload['command']
+                and result['metrics'].get('kind') == 'gpu_shared_pack'
+                and result['metrics'].get('all_owned_units_ended') is True
+                and result['metrics'].get('cleanup_errors') == [], 'Old consumer cleanup is incomplete')
+        actual = mixed.finalized_split(ROOT, row, final[row['job_id']])
+        require(actual is not None, 'Missing original complete mixed accounting')
+        report, report_ref = logged(reference(ROOT/'results'/(row['name']+'_mixed_accounting.json')))
+        require(actual == report['metrics'], 'Original mixed accounting changed')
+        for unit in result['metrics']['unit_runs']:
+            require(unit['unit_id'] not in owned, 'Duplicate claimed scientific unit')
+            owned[unit['unit_id']] = unit
+        proof.append({**row, 'lifecycle': 'ended_original_work_preserved',
+                      'result_reference': result_ref, 'mixed_accounting_reference': report_ref,
+                      'original_exit_code': result['_meta']['exit_code'],
+                      'accounting_reference': accounts[final[row['job_id']]['accounting_result']]})
+    return proof, owned
+
+
+def export_smoke():
+    data, source = logged(EXPORT_SMOKE)
+    m, cfg, command = data['metrics'], data['config'], data['_meta']['command']
+    require(data['_meta']['exit_code'] == 0 and command[1:4] == ['-u','-m','src.tools.t02_export']
+            and command.count('--sample-rejected-raw') == 1 and cfg.get('sample_rejected_raw') is True
+            and m.get('kind') == 't02_table_export' and m.get('export_checks_complete') is True
+            and m.get('cleanup_errors') == [] and m.get('errors') == []
+            and len(m.get('pairs', [])) == 1, 'Require the original clean one-unit T02 storage smoke')
+    pair = m['pairs'][0]
+    from src.tools.t02_rejected_raw import POLICY
+    require(cfg.get('raw_retention_policy') == POLICY and pair.get('status') == 'exported'
+            and pair.get('cleanup_errors') == []
+            and pair.get('raw_retention', {}).get('binary_payloads_retained') is True
+            and pair['raw_retention'].get('cleanup_confirmed') is True,
+            'The accepted smoke must retain its original full raw evidence')
+    gate, _ = logged(m['gate'])
+    require(gate['_meta']['exit_code'] == 0 and gate['metrics'].get('passed') is True
+            and gate['metrics'].get('cleanup_errors') == [], 'Original smoke render gate failed')
+    return source
+
+
+def upgrade(original):
+    unit = copy.deepcopy(original)
+    require(unit['name'] in PENDING and unit['budget_group'] == 'T02'
+            and '--sample-rejected-raw' not in unit['command'], 'Only seven original training batches may migrate')
+    name = unit['name']
+    for directory in (ROOT/'results', ROOT/'logs/runs', OLD_QUEUE.parent.parent/'t02_export_parallel',
+                      OLD_QUEUE.parent.parent/'t02_export'):
+        for path in directory.glob(name+'*'):
+            suffix = path.name[len(name):]
+            require(not (suffix == '' or suffix[0] in '._-'),
+                    'Formerly pending output already exists: '+str(path))
+    require(not list((ROOT/'logs/pbs').glob(name+'-*')), 'Formerly pending standalone job already submitted')
+    unit['command'].append('--sample-rejected-raw')
+    identity, keys = shared.t02_identity(unit, ROOT)
+    require(identity['partition'] == 'train' and keys == original['claim_keys'], 'Scientific identity changed')
+    unit.update(identity=identity, unit_id=shared.canonical_hash(identity), claim_keys=keys)
+    shared.validate_unit(unit, ROOT)
+    reverted = copy.deepcopy(unit)
+    reverted['command'].pop()
+    reverted.update(identity=original['identity'], unit_id=original['unit_id'])
+    require(reverted == original, 'Only retention argv and corresponding storage identity may change')
+    return unit
+
+
+def main():
+    require(sys.argv[1:] in ([], ['--write-configs']), 'Only explicit --write-configs enables configuration creation')
+    require(not (ROOT/'results'/(NAME+'.json')).exists(), 'Unique result already exists')
+    smoke_ref = export_smoke()
+    old, old_ref = shared.load_plan(OLD['file'], OLD['sha256'], root=ROOT)
+    require([u['name'] for u in old['units']] == ENDED+PENDING, 'Original fixed population changed')
+    require(not (OLD_QUEUE.parent/NEW_QUEUE_ID).exists(), 'New queue already exists')
+    original_consumers = consumers()
+    lifecycle, owned = ended_consumers(original_consumers)
+    with (OLD_QUEUE/'queue.lock').open('r') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(json.loads((OLD_QUEUE/'plan_reference.json').read_bytes()) == old_ref, 'Old queue plan changed')
+        state_raw = (OLD_QUEUE/'state.json').read_bytes()
+        require(hashlib.sha256(state_raw).hexdigest() == STATE_SHA, 'Original approved queue cutoff changed')
+        state = json.loads(state_raw)
+        require(state['version'] == shared.VERSION and set(state['units']) == set(owned),
+                'Queue state differs from complete original consumer ownership')
+        expected_keys, history = {}, []
+        for item in old['external_reservations']:
+            job = shared.validate_external(item, ROOT)
+            for key in item['unit']['claim_keys']:
+                require(key not in expected_keys, 'Overlapping original external reservations')
+                expected_keys[key] = {'type':'external','job_id':job,'reservation':item}
+        by_id = {u['unit_id']:u for u in old['units']}
+        for uid, row in owned.items():
+            require(by_id[uid]['name'] in ENDED and state['units'][uid] == {
+                'status':'ended','claim_reference':row['claim_reference'],'release_reference':row['release_reference']},
+                'Only the original ended S05-S07 claims may be excluded')
+            for key in by_id[uid]['claim_keys']:
+                require(key not in expected_keys, 'Claim conflicts with original occupancy')
+                expected_keys[key] = {'type':'shared','unit_id':uid,'claim_reference':row['claim_reference']}
+            history.append({'unit':by_id[uid],'claim_reference':row['claim_reference'],
+                            'release_reference':row['release_reference']})
+        require(state['keys'] == expected_keys, 'Original scientific occupancy is incomplete')
+        for folder in ('claims','releases'):
+            require({p.stem for p in (OLD_QUEUE/folder).glob('*.json')} == set(owned), 'Hidden claim/release record')
+        pending = shared.SharedQueue.available(SimpleNamespace(plan=old), state)
+        require([u['name'] for u in pending] == PENDING, 'Pending cutoff changed')
+        # The production consumer has no max-units option. A one-unit plan,
+        # rather than an estimated runtime, enforces the first-batch boundary.
+        upgraded = [upgrade(pending[0])]
+        require(all(not set(u['claim_keys']).intersection(state['keys']) for u in upgraded),
+                'A migrated scientific key is already occupied')
+        require(consumers() == original_consumers and (OLD_QUEUE/'state.json').read_bytes() == state_raw,
+                'Old queue changed while preparing the handoff')
+        snapshot = write_new('configs/test_priority_raw10_train_smoke_01_original_state.json', raw=state_raw)
+        new = copy.deepcopy(old)
+        new.update(queue_id=NEW_QUEUE_ID, units=upgraded)
+        new['raw_sampling_handoff'] = {'scope':'Storage-only first-unit handoff of six20; remaining six21-six26 stay unsubmitted; no scientific/cache authorization',
+            'old_plan_reference':old_ref,'old_queue_root':str(OLD_QUEUE),'old_state_snapshot':snapshot,
+            'old_consumer_lifecycles':lifecycle,'ended_claim_exclusions':history,
+            'original_external_reservations_preserved':True,'raw10_export_smoke_source':smoke_ref,
+            'unit_identity_mapping':[{'name':pending[0]['name'],'old_unit_id':pending[0]['unit_id'],
+                'new_unit_id':upgraded[0]['unit_id'],'unchanged_claim_keys':pending[0]['claim_keys']}],
+            'remaining_unmigrated_units':copy.deepcopy(pending[1:]),
+            'expansion_precondition':'A separate later immutable plan may include only six21-six26 after the first unit has completed cleanly and its original claim/release/results are authenticated; never replace this queue binding',
+            'operational_precondition':'Root must never submit another old-queue consumer; old queue bytes/history remain untouched'}
+        require(new['external_reservations'] == old['external_reservations'], 'Original reservations changed')
+        shared.validate_plan(new, ROOT)
+        require(consumers() == original_consumers and (OLD_QUEUE/'state.json').read_bytes() == state_raw,
+                'Old queue changed before final freeze')
+        new_ref = write_new('configs/shared_test_priority_raw10_train_smoke_01.json', new)
+    metrics = {'prepared':True,'configuration_files_written':WRITE_CONFIGS,
+               ('new_plan' if WRITE_CONFIGS else 'planned_new_plan'):new_ref,
+               ('old_state_snapshot' if WRITE_CONFIGS else 'planned_old_state_snapshot'):snapshot,
+               'queue_id':NEW_QUEUE_ID,'runnable_units':PENDING[:1],
+               'remaining_unmigrated_units':PENDING[1:],'old_queue_modified':False,
+               'gpu_submission_performed':False,'ended_claim_history_retained':True,
+               'scientific_claim_keys_unchanged':True,'scope':new['raw_sampling_handoff']['scope']}
+    with (ROOT/'results'/(NAME+'.json')).open('x') as stream:
+        json.dump({'metrics':metrics,'config':{'name':NAME},'sources':list(SOURCES.values())},stream,indent=2,allow_nan=False)
+        stream.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+
+if __name__ == '__main__':
+    def expired(*_):
+        raise TimeoutError('150 second metadata-only handoff bound')
+    signal.signal(signal.SIGALRM, expired)
+    signal.alarm(150)
+    try:
+        main()
+    except BaseException as error:
+        signal.alarm(0)
+        path = ROOT/'results'/(NAME+'.json')
+        if not path.exists():
+            metrics = {'prepared':False,'producer_exit_code':1,
+                       'errors':[{'type':type(error).__name__,'message':str(error)}],
+                       'configuration_creation_requested':WRITE_CONFIGS,
+                       'old_queue_modified':False,'gpu_submission_performed':False,
+                       'scope':'Failed metadata handoff; preserve all original evidence and any partial new artifacts'}
+            with path.open('x') as stream:
+                json.dump({'metrics':metrics,'config':{'name':NAME},
+                           'sources':list(SOURCES.values())},stream,indent=2,allow_nan=False)
+                stream.write('\n')
+            print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+        raise
+    finally:
+        signal.alarm(0)
+ --write-configs
+# start: 2026-11-10T19:09:01
+FINAL_METRICS_JSON: {"configuration_files_written": true, "ended_claim_history_retained": true, "gpu_submission_performed": false, "new_plan": {"bytes": 103870, "file": "configs/shared_test_priority_raw10_train_smoke_01.json", "sha256": "f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0"}, "old_queue_modified": false, "old_state_snapshot": {"bytes": 222219, "file": "configs/test_priority_raw10_train_smoke_01_original_state.json", "sha256": "c57d18399a284bc9bba8f1556b2defb7879156aac4981021050ab94bfaa8396c"}, "prepared": true, "queue_id": "test_priority_raw10_train_smoke_01", "remaining_unmigrated_units": ["t02_export_train_six_21", "t02_export_train_six_22", "t02_export_train_six_23", "t02_export_train_six_24", "t02_export_train_six_25", "t02_export_train_six_26"], "runnable_units": ["t02_export_train_six_20"], "scientific_claim_keys_unchanged": true, "scope": "Storage-only first-unit handoff of six20; remaining six21-six26 stay unsubmitted; no scientific/cache authorization"}
+# exit_code: 0
