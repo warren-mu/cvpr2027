@@ -1,0 +1,29 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "gen_test_s16_s07_review_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "gen_test_s16_s07_review_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json,os,re,subprocess,sys,time\nfrom pathlib import Path\nfrom src.tools.t01_parallel_approved import stop_logged\nroot=Path.cwd().resolve()\nassert re.fullmatch(r'\\d+\\.hopper-m-\\d+',os.environ.get('PBS_JOBID',''))\nassert re.fullmatch(r'GPU-[0-9a-fA-F-]{36}',os.environ.get('CUDA_VISIBLE_DEVICES',''))\nassert len(os.sched_getaffinity(0))==12\n\ndef run_logged_bounded(command,seconds):\n    process=subprocess.Popen(command,cwd=root,start_new_session=True)\n    try:\n        return process.wait(timeout=seconds)\n    except subprocess.TimeoutExpired:\n        print('Original logged stage exceeded its explicit engineering bound; no independent PASS inferred.',flush=True)\n        errors=stop_logged(process,grace_deadline=time.monotonic()+20,hard_deadline=time.monotonic()+30)\n        print('Original scoped cleanup errors: '+json.dumps(errors),flush=True)\n        raise SystemExit(124 if not errors else 1)\n\ngate_command=['python3', '-u', 'scripts/run_logged.py', '--name', 'gen_test_s16_s07_review_01_gate', '--seed', '0', '--', 'python3', '-u', '-m', 'src.tools.render_gate', '--name', 'gen_test_s16_s07_review_01_gate', '--gpus', '1', '--resolution', '255', '--segmentation', '--timeout-seconds', '120']\ncode=run_logged_bounded(gate_command,180)\nif code!=0: raise SystemExit(code)\nexpected_sources=[{'file': 'results/gen_test_s16_round2_s07_c6_floorplan30.json', 'sha256': '77982dda942677fc29f60c0c17c1559766ede59b9e417e6e1f6ff7e7aa85409c'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan230.json', 'sha256': '3ea72a80b66e1a442e2ba31b8e253f52de9ca246fd2e6cebf1a80036e0fa8d52'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan330.json', 'sha256': 'f8023a6a6a3e4c617748ca4b1d7525b0bb01bfefb50c2625dbda8e0d8458c081'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan430.json', 'sha256': 'd22f21afc73741e8d5dd32d727c63eabf788dce42c7e6b7831f6574466b6bfdb'}]\nfor reference in expected_sources:\n    path=root/reference['file'];body=path.read_bytes()\n    assert hashlib.sha256(body).hexdigest()==reference['sha256'],'Original completed source changed'\n    data=json.loads(body)\n    assert data['_meta'].get('end') and type(data['_meta'].get('exit_code')) is int,'Do not pass a live source'\n    assert data['config']['g01_partition']=='test'\n    assert data['config']['nearby_physics_version']=='nearby_nonanchor_0_5m_v1'\n    assert data['config'].get('raw_sampling_version') is None,'Keep original full-retention source policy'\ncheckpoint_command=['python3', '-u', 'scripts/run_logged.py', '--name', 't01v2_checkpoint_test_s16_s07_01', '--seed', '0', '--', 'python3', '-m', 'src.tools.t01v2_g01_review_checkpoint', '--name', 't01v2_checkpoint_test_s16_s07_01', '--source', 'results/gen_test_s16_round2_s07_c6_floorplan30.json', 'results/gen_test_s16_round2_s07_c6_floorplan230.json', 'results/gen_test_s16_round2_s07_c6_floorplan330.json', 'results/gen_test_s16_round2_s07_c6_floorplan430.json']\nraise SystemExit(run_logged_bounded(checkpoint_command,195))\n"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 420,
+  "requested_host": null,
+  "dry_run": false,
+  "budget_revision": "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1",
+  "queue": "autox",
+  "retry_of": null,
+  "budget_group": "G01",
+  "requested_queue_charge_rate": 1.0
+}

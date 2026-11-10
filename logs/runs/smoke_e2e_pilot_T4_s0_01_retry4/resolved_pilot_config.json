@@ -1,0 +1,370 @@
+{
+  "common_config": {
+    "upstream": {
+      "VAGEN": "4e2976d87c0f92c97f9a820803e71908cde5fb71",
+      "verl": "3f55021e08b98315213e10d10b709c7f6bbe84f7"
+    },
+    "config": {
+      "data": {
+        "tokenizer": null,
+        "train_files": "~/data/rlhf/gsm8k/train.parquet",
+        "val_files": "~/data/rlhf/gsm8k/test.parquet",
+        "prompt_key": "prompt",
+        "max_prompt_length": 1024,
+        "max_response_length": 256,
+        "max_trajectory_length": 5000,
+        "train_batch_size": 64,
+        "val_batch_size": 8,
+        "return_raw_input_ids": false,
+        "return_raw_chat": false,
+        "shuffle": true,
+        "filter_overlong_prompts": false,
+        "truncation": "error",
+        "image_key": "images"
+      },
+      "actor_rollout_ref": {
+        "hybrid_engine": true,
+        "model": {
+          "path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+          "external_lib": null,
+          "override_config": {},
+          "enable_gradient_checkpointing": true,
+          "use_remove_padding": true
+        },
+        "actor": {
+          "strategy": "fsdp",
+          "ppo_mini_batch_size": 32,
+          "ppo_micro_batch_size": null,
+          "ppo_micro_batch_size_per_gpu": 1,
+          "use_dynamic_bsz": false,
+          "ppo_max_token_len_per_gpu": 16384,
+          "grad_clip": 1.0,
+          "grad_norm_threshold": 1000,
+          "clip_ratio": 0.2,
+          "entropy_coeff": 0.001,
+          "use_kl_loss": true,
+          "kl_loss_coef": 0.001,
+          "kl_loss_type": "low_var_kl",
+          "ppo_epochs": 1,
+          "shuffle": false,
+          "ulysses_sequence_parallel_size": 1,
+          "optim": {
+            "lr": 1e-06,
+            "lr_warmup_steps_ratio": 0.0,
+            "min_lr_ratio": null,
+            "warmup_style": "constant",
+            "total_training_steps": 50
+          },
+          "fsdp_config": {
+            "wrap_policy": {
+              "min_num_params": 0
+            },
+            "param_offload": true,
+            "optimizer_offload": true,
+            "fsdp_size": -1
+          },
+          "seed": 0
+        },
+        "ref": {
+          "fsdp_config": {
+            "param_offload": true,
+            "wrap_policy": {
+              "min_num_params": 0
+            }
+          },
+          "log_prob_micro_batch_size": null,
+          "log_prob_micro_batch_size_per_gpu": 1,
+          "log_prob_use_dynamic_bsz": false,
+          "log_prob_max_token_len_per_gpu": 16384,
+          "ulysses_sequence_parallel_size": 1
+        },
+        "rollout": {
+          "name": "vllm",
+          "temperature": 0.7,
+          "top_k": -1,
+          "top_p": 0.95,
+          "use_fire_sampling": false,
+          "prompt_length": 1024,
+          "response_length": 256,
+          "max_trajectory_length": 5000,
+          "dtype": "bfloat16",
+          "gpu_memory_utilization": 0.1,
+          "ignore_eos": false,
+          "enforce_eager": true,
+          "free_cache_engine": false,
+          "load_format": "dummy_dtensor",
+          "tensor_model_parallel_size": 1,
+          "max_num_batched_tokens": 8192,
+          "max_model_len": null,
+          "max_num_seqs": 64,
+          "log_prob_micro_batch_size": null,
+          "log_prob_micro_batch_size_per_gpu": 1,
+          "log_prob_use_dynamic_bsz": false,
+          "log_prob_max_token_len_per_gpu": 16384,
+          "disable_log_stats": true,
+          "enable_chunked_prefill": false,
+          "do_sample": true,
+          "n": 1,
+          "limit_mm_per_prompt": 5,
+          "seed": 0
+        }
+      },
+      "critic": {
+        "strategy": "fsdp",
+        "optim": {
+          "lr": 1e-05,
+          "lr_warmup_steps_ratio": 0.0,
+          "min_lr_ratio": null,
+          "warmup_style": "constant",
+          "total_training_steps": 50
+        },
+        "model": {
+          "path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+          "tokenizer_path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+          "override_config": {},
+          "external_lib": null,
+          "enable_gradient_checkpointing": true,
+          "use_remove_padding": true,
+          "fsdp_config": {
+            "param_offload": false,
+            "optimizer_offload": false,
+            "wrap_policy": {
+              "min_num_params": 0
+            },
+            "fsdp_size": -1
+          }
+        },
+        "ppo_mini_batch_size": 32,
+        "ppo_micro_batch_size": null,
+        "ppo_micro_batch_size_per_gpu": 1,
+        "forward_micro_batch_size": null,
+        "forward_micro_batch_size_per_gpu": 1,
+        "use_dynamic_bsz": false,
+        "ppo_max_token_len_per_gpu": 32768,
+        "forward_max_token_len_per_gpu": 32768,
+        "ulysses_sequence_parallel_size": 1,
+        "ppo_epochs": 1,
+        "shuffle": false,
+        "grad_clip": 1.0,
+        "cliprange_value": 0.5,
+        "use_reward_mask": false,
+        "seed": 0
+      },
+      "reward_model": {
+        "enable": false,
+        "strategy": "fsdp",
+        "model": {
+          "input_tokenizer": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+          "path": "~/models/FsfairX-LLaMA3-RM-v0.1",
+          "external_lib": null,
+          "use_remove_padding": false,
+          "fsdp_config": {
+            "wrap_policy": {
+              "min_num_params": 0
+            },
+            "param_offload": false,
+            "fsdp_size": -1
+          }
+        },
+        "micro_batch_size": null,
+        "micro_batch_size_per_gpu": null,
+        "max_length": null,
+        "ulysses_sequence_parallel_size": 1,
+        "use_dynamic_bsz": false,
+        "forward_max_token_len_per_gpu": 32768,
+        "reward_manager": "naive"
+      },
+      "custom_reward_function": {
+        "path": null,
+        "name": "compute_score"
+      },
+      "algorithm": {
+        "gamma": 1.0,
+        "high_level_gamma": 0.95,
+        "lam": 1.0,
+        "adv_estimator": "masked_gae",
+        "kl_penalty": "kl",
+        "kl_ctrl": {
+          "type": "fixed",
+          "kl_coef": 0.001
+        },
+        "use_kl_in_reward": false
+      },
+      "trainer": {
+        "balance_batch": true,
+        "total_epochs": 30,
+        "total_training_steps": 50,
+        "project_name": "cvpr2027_smoke_e2e",
+        "experiment_name": "e2e_step6_pilot",
+        "logger": [
+          "console"
+        ],
+        "val_generations_to_log_to_wandb": 0,
+        "nnodes": 1,
+        "n_gpus_per_node": 1,
+        "save_freq": -1,
+        "resume_mode": "disable",
+        "resume_from_path": false,
+        "test_freq": 20,
+        "critic_warmup": 0,
+        "default_hdfs_dir": null,
+        "remove_previous_ckpt_in_save": false,
+        "del_local_ckpt_after_load": false,
+        "default_local_dir": "<run_specific_scratch_final_checkpoint>",
+        "val_before_train": false,
+        "val_only": false
+      },
+      "rollout_manager": {
+        "max_trajectory_length": 5000,
+        "window_size": 5,
+        "max_turns": 5,
+        "n_gpus_per_node": 1,
+        "n_trajectory": 1,
+        "use_multi_turn_reward": true,
+        "use_loss_mask": true,
+        "use_gae_mask": true,
+        "special_token_for_loss_mask": [
+          "<|box_start|>",
+          "<|box_end|>"
+        ],
+        "truncation": "error",
+        "base_url": "http://localhost:5000",
+        "use_service": false,
+        "timeout": 1200,
+        "max_workers": 8
+      }
+    },
+    "pilot_spec_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/smoke_e2e_pilot.json",
+      "sha256": "6159d67d474d3cea283fd422c6377ef91fad3d24f72ee7595292fce5592025bf",
+      "bytes": 2599
+    },
+    "common_credit_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/rl_common.yaml",
+      "sha256": "cc6da05773de7f809318f7e470e109840d3783d0c3e6754b3f7afab34b327ef1",
+      "bytes": 423
+    },
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "common_pool_hash": "d001096b0eaca28d280822ae6bdcb77b65f16b2089c8f22e0ffea2708ff9b191",
+    "fixed_holdout": {
+      "reference": {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+        "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+      },
+      "pilot_population_and_split_verified": true,
+      "selected_scenes": [
+        "FloorPlan15",
+        "FloorPlan204",
+        "FloorPlan301"
+      ],
+      "scope": "permanent T04 whole-scene holdout; no later population redraw"
+    },
+    "model_snapshot_reference": {
+      "source_result": {
+        "file": "results/smoke_e2e_eval_03.json",
+        "sha256": "d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9",
+        "metrics_sha256": "712403d3dfb331402a59b13406edb0df756eee16fe8db1c16ea736e1dfd4f9ca",
+        "exit_code": 0,
+        "git_commit": "340f031bc48e729909ac56676e82d522bf9cd44a",
+        "audit": {
+          "file": "results/smoke_e2e_eval_03.json",
+          "fail": [],
+          "warn": []
+        }
+      },
+      "directory": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "model_config_sha256": "7ed3eed5be6924cc800e8a5e53fc405c1aab1aaf36bad65c33403b36c56827f5",
+      "scope": "original model only; no source pool/cache or training authorization inherited"
+    },
+    "vllm_attention_backend": "XFORMERS",
+    "format_policy": "explicit_task_zero",
+    "credit_pipeline": "t05_section1b",
+    "optimizer_horizon_updates": 50,
+    "T2_scope": "first5updates_of_same_common_horizon"
+  },
+  "common_config_sha256": "e967e64bc2b181337634ae2eb78ae2fdea0825e031250eea21d522eabda0e82e",
+  "upstream_proof": {
+    "frozen_common_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/rl_common.yaml",
+      "sha256": "cc6da05773de7f809318f7e470e109840d3783d0c3e6754b3f7afab34b327ef1",
+      "bytes": 423
+    },
+    "base_yaml_sha256": "d486c2816cff4f37012bcb4b6fbc011e889b3aa3d3cc3f32e8f86ce3aed4f37c",
+    "explicit_overrides": {
+      "data.train_batch_size": 64,
+      "data.val_batch_size": 8,
+      "data.max_prompt_length": 1024,
+      "data.max_response_length": 256,
+      "data.max_trajectory_length": 5000,
+      "data.truncation": "error",
+      "algorithm.adv_estimator": "masked_gae",
+      "algorithm.high_level_gamma": 0.95,
+      "algorithm.kl_ctrl.kl_coef": 0.001,
+      "actor_rollout_ref.model.path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "actor_rollout_ref.model.use_remove_padding": true,
+      "actor_rollout_ref.model.enable_gradient_checkpointing": true,
+      "actor_rollout_ref.actor.optim.lr": 1e-06,
+      "actor_rollout_ref.actor.ppo_mini_batch_size": 32,
+      "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu": 1,
+      "actor_rollout_ref.actor.use_kl_loss": false,
+      "actor_rollout_ref.actor.kl_loss_coef": 0.001,
+      "actor_rollout_ref.actor.kl_loss_type": "mse",
+      "actor_rollout_ref.actor.fsdp_config.param_offload": true,
+      "actor_rollout_ref.actor.fsdp_config.optimizer_offload": true,
+      "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu": 1,
+      "actor_rollout_ref.rollout.tensor_model_parallel_size": 1,
+      "actor_rollout_ref.rollout.gpu_memory_utilization": 0.1,
+      "actor_rollout_ref.rollout.enable_chunked_prefill": false,
+      "actor_rollout_ref.rollout.enforce_eager": true,
+      "actor_rollout_ref.rollout.free_cache_engine": false,
+      "actor_rollout_ref.rollout.n": 1,
+      "actor_rollout_ref.rollout.temperature": 0.7,
+      "actor_rollout_ref.rollout.seed": 0,
+      "actor_rollout_ref.rollout.top_p": 0.95,
+      "actor_rollout_ref.rollout.max_num_seqs": 64,
+      "actor_rollout_ref.rollout.limit_mm_per_prompt": 5,
+      "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu": 1,
+      "actor_rollout_ref.ref.fsdp_config.param_offload": true,
+      "critic.optim.lr": 1e-05,
+      "critic.model.path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "critic.model.use_remove_padding": true,
+      "critic.model.enable_gradient_checkpointing": true,
+      "critic.ppo_micro_batch_size_per_gpu": 1,
+      "critic.model.fsdp_config.param_offload": false,
+      "critic.model.fsdp_config.optimizer_offload": false,
+      "trainer.critic_warmup": 0,
+      "trainer.logger": [
+        "console"
+      ],
+      "trainer.project_name": "cvpr2027_smoke_e2e",
+      "trainer.experiment_name": "direct_only_ppo",
+      "trainer.n_gpus_per_node": 1,
+      "trainer.nnodes": 1,
+      "trainer.total_training_steps": 5,
+      "trainer.resume_mode": "disable",
+      "trainer.save_freq": -1,
+      "trainer.test_freq": 20,
+      "trainer.val_before_train": false,
+      "trainer.default_local_dir": "/scratch/e1583364/cvpr2027/smoke_e2e_pilot/smoke_e2e_pilot_T4_s0_01_retry4/710037.hopper-m-02/checkpoint",
+      "rollout_manager.max_turns": 5,
+      "rollout_manager.window_size": 5,
+      "rollout_manager.use_multi_turn_reward": true,
+      "rollout_manager.use_loss_mask": true,
+      "rollout_manager.use_gae_mask": true,
+      "rollout_manager.n_trajectory": 1,
+      "rollout_manager.use_service": false
+    },
+    "explicit_pilot_overrides": {
+      "trainer.total_training_steps": 50,
+      "trainer.experiment_name": "e2e_step6_pilot",
+      "actor_rollout_ref.actor.optim.total_training_steps": 50,
+      "critic.optim.total_training_steps": 50,
+      "actor_rollout_ref.actor.seed": 0,
+      "critic.seed": 0
+    }
+  }
+}

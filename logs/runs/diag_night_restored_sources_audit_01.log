@@ -1,0 +1,48 @@
+# run_logged: python3 -m src.tools.record_command --name diag_night_restored_sources_audit_01 -- python3 -c import subprocess,json
+from pathlib import Path
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.append(str(p))
+assert names
+print('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T18:28:53
+SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified
+PASS  results/diag_current_test_selected_05.json
+WARN  results/diag_fig01_frames_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_fig01_frames_audit_01.json
+PASS  results/diag_s06_review710075_accounting_01.json
+PASS  results/diag_s06_review710075_final_audit_01.json
+PASS  results/diag_s06s07_selected05_final_audit_01.json
+PASS  results/diag_s07_review710091_accounting_01.json
+PASS  results/diag_s07_review710091_final_audit_01.json
+WARN  results/diag_scratch_quota_before_train_look_first_unit_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_submit_gen_test_s16_s07_review_01.json
+PASS  results/diag_submit_gen_train_look_first_unit_01.json
+PASS  results/diag_test_s16_s06_independent_summary_01.json
+PASS  results/diag_test_s16_s07_independent_summary_01.json
+PASS  results/g01_train_look_first_unit_final_accounting_02.json
+PASS  results/gen_test_s16_s07_review_01.json
+PASS  results/gen_test_s16_s07_review_01_gate.json
+WARN  results/gen_train_look_first_unit_01.json
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+WARN  results/gen_train_look_first_unit_01_j710105_hopper_m_02_gate.json
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/smoke_e2e_pilot_T0_s0_01_retry4.json
+PASS  results/smoke_e2e_pilot_T4_s0_01_retry4.json
+PASS  results/t01v2_checkpoint_test_s16_s07_01.json
+
+23 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 24.300566285965033}
+# exit_code: 0

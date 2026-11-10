@@ -1,0 +1,76 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_s16_s06_independent_summary_01 -- python3 -c from pathlib import Path
+from collections import Counter
+import hashlib,json
+from src.tools.t01_partition import audited_result
+root=Path.cwd().resolve()
+name='diag_test_s16_s06_independent_summary_01'
+path=root/'results/t01v2_checkpoint_test_s16_s06_01.json'
+checkpoint,reference=audited_result(path)
+m=checkpoint['metrics']
+assert checkpoint['_meta']['exit_code']==0 and m['errors']==[] and m['status']=='checkpoint_ready_for_human_review'
+kinds=['direct_flip','direct_stay','look_flip','look_stay']
+split={k:{'true':0,'false':0} for k in kinds}
+entries=[]
+for row in m['candidate_pairs']:
+ flag=row['independent_verification']['passes_original_physics_rule']
+ assert type(flag) is bool
+ split[row['kind']]['true' if flag else 'false']+=1
+ entries.append({k:row[k] for k in ['pair_id','scene','kind','pair_reference','source_file','proposal_identity','review_image']}|{'passes_original_physics_rule':flag})
+assert {k:sum(v.values()) for k,v in split.items()}==m['published_by_class']
+for image in m['review_files']:
+ for ref in [image,image['source_image']]:
+  b=(root/ref['file']).read_bytes()
+  assert hashlib.sha256(b).hexdigest()==ref['sha256']
+source_summaries=[]
+classified=Counter()
+unknown_look=0
+for source in checkpoint['sources']:
+ p=root/source['file'];b=p.read_bytes()
+ assert hashlib.sha256(b).hexdigest()==source['sha256']
+ d=json.loads(b);s=d['metrics']
+ journal=s['attempt_journal']
+ filename=journal['file'] if isinstance(journal,dict) else journal
+ p=root/filename;b=p.read_bytes()
+ expected=s.get('attempt_journal_sha256') or (journal.get('sha256') if isinstance(journal,dict) else None)
+ assert expected and hashlib.sha256(b).hexdigest()==expected
+ rows=[json.loads(line) for line in b.splitlines() if line.strip()]
+ reasons=Counter();classified_rows=0;unclassified=0
+ for row in rows:
+  if row.get('kind')=='look_stay' and row.get('status')!='passed':
+   classified_rows+=1
+   reasons.update(row.get('discard_reasons') or ['reason_not_recorded'])
+  if row.get('proposed_pool')=='look' and row.get('kind') is None:
+   unclassified+=1
+ classified.update(reasons);unknown_look+=unclassified
+ source_summaries.append({'source':source,'scene':d['config']['scene'],'status':s['status'],
+  'original_error':s.get('error'),'cleanup_errors':s['cleanup_errors'],
+  'classified_look_stay_rejected_attempts':classified_rows,
+  'classified_look_stay_rejection_counts':dict(reasons),
+  'unclassified_look_pool_attempts':unclassified,
+  'original_counted_by_proposed_pool_mode':s.get('g01_collection',{}).get('counted_by_proposed_pool_mode'),
+  'original_look_pool_summary':s.get('proposed_pool_attempts',{}).get('look'),
+  'original_all_mode_rejection_counts':s['discard_reason_counts'],
+  'attempt_journal':{'file':filename,'sha256':expected}})
+report={'scope':'Original independent construction checkpoint only; not T02/cache/training acceptance. No rule or source changed.',
+ 'checkpoint':reference,'independent_by_original_physics_rule':split,'pairs':entries,
+ 'review_files':m['review_files'],'source_summaries':source_summaries,
+ 'classified_look_stay_rejection_counts':dict(classified),
+ 'unclassified_look_pool_attempts':unknown_look,
+ 'rejection_scope':'Reasons are counted only for journal rows already classified look_stay. Earlier unclassified failures remain unknown for actual class. Original Look-pool aggregates include Flip and Stay; proposal-mode counts are preserved separately and are not used to invent class-specific reasons.',
+ 'original_errors':m['errors'],'original_duplicates':m['duplicate_pairs']}
+directory=root/'logs/review'/name;directory.mkdir(parents=True,exist_ok=False)
+with (directory/'report.json').open('x') as f:json.dump(report,f,indent=2,ensure_ascii=False);f.write('\n')
+lines=['# S06 independent construction check','',report['scope'],'',
+ '| Class | Original physics true | Original physics false |','|---|---:|---:|']
+lines += [f"| {k} | {split[k]['true']} | {split[k]['false']} |" for k in kinds]
+lines += ['',report['rejection_scope'],'','Classified LookStay rejection reasons: '+json.dumps(dict(classified),ensure_ascii=False),
+ 'Unclassified Look-pool attempts: '+str(unknown_look),'','Original review files:']
+lines += ['- '+x['file']+' ('+x['pair_id']+')' for x in m['review_files']]
+with (directory/'report.md').open('x') as f:f.write('\n'.join(lines)+'\n')
+r=directory/'report.json'
+print('S16_S06_INDEPENDENT_SUMMARY_JSON: '+json.dumps({'report':{'file':str(r.relative_to(root)),'sha256':hashlib.sha256(r.read_bytes()).hexdigest()},'independent_by_original_physics_rule':split,'classified_look_stay_rejection_counts':dict(classified),'unclassified_look_pool_attempts':unknown_look,'review_files':m['review_files']},ensure_ascii=False),flush=True)
+
+# start: 2026-11-10T17:05:34
+S16_S06_INDEPENDENT_SUMMARY_JSON: {"report": {"file": "logs/review/diag_test_s16_s06_independent_summary_01/report.json", "sha256": "9b0f2a90338e12973d11dad60ae23c36d07b8f3e9c1aea67915b4e8a9188295a"}, "independent_by_original_physics_rule": {"direct_flip": {"true": 0, "false": 0}, "direct_stay": {"true": 2, "false": 1}, "look_flip": {"true": 1, "false": 0}, "look_stay": {"true": 1, "false": 0}}, "classified_look_stay_rejection_counts": {"one_action_evidence_unavailable": 133, "terminal_interruption": 1}, "unclassified_look_pool_attempts": 494, "review_files": [{"file": "logs/review/t01v2_checkpoint_test_s16_s06_01/00000_look_stay.png", "sha256": "3435a53c16642d7329b35f35a7a4d922be78bb0f486204f3c8b87e18b230a67a", "pair_id": "floorplan229_00092", "scene": "FloorPlan229", "kind": "look_stay", "source_file": "results/gen_test_s16_round2_s06_c6_floorplan229.json", "source_image": {"file": "data/world_pairs/v2/gen_test_s16_round2_s06_c6_floorplan229/floorplan229_00092/review.png", "sha256": "3435a53c16642d7329b35f35a7a4d922be78bb0f486204f3c8b87e18b230a67a"}}, {"file": "logs/review/t01v2_checkpoint_test_s16_s06_01/00001_look_flip.png", "sha256": "ebeded5f4397202dadc8abc50688cc76f142d40ac9fe2d4d625a76e5ae087f25", "pair_id": "floorplan229_00163", "scene": "FloorPlan229", "kind": "look_flip", "source_file": "results/gen_test_s16_round2_s06_c6_floorplan229.json", "source_image": {"file": "data/world_pairs/v2/gen_test_s16_round2_s06_c6_floorplan229/floorplan229_00163/review.png", "sha256": "ebeded5f4397202dadc8abc50688cc76f142d40ac9fe2d4d625a76e5ae087f25"}}, {"file": "logs/review/t01v2_checkpoint_test_s16_s06_01/00002_direct_stay.png", "sha256": "7a7ed95483b7ac1cbe5b8aebbbe77e8463a2b372446cf9b24471f1df44f15f8d", "pair_id": "floorplan328_00001", "scene": "FloorPlan328", "kind": "direct_stay", "source_file": "results/gen_test_s16_round2_s06_c6_floorplan328.json", "source_image": {"file": "data/world_pairs/v2/gen_test_s16_round2_s06_c6_floorplan328/floorplan328_00001/review.png", "sha256": "7a7ed95483b7ac1cbe5b8aebbbe77e8463a2b372446cf9b24471f1df44f15f8d"}}, {"file": "logs/review/t01v2_checkpoint_test_s16_s06_01/00003_direct_stay.png", "sha256": "855ebecf91ccb59a6d790427bc0fc5bb11aa93766398a306124aaeb5f851527a", "pair_id": "floorplan329_00115", "scene": "FloorPlan329", "kind": "direct_stay", "source_file": "results/gen_test_s16_round2_s06_c6_floorplan329.json", "source_image": {"file": "data/world_pairs/v2/gen_test_s16_round2_s06_c6_floorplan329/floorplan329_00115/review.png", "sha256": "855ebecf91ccb59a6d790427bc0fc5bb11aa93766398a306124aaeb5f851527a"}}, {"file": "logs/review/t01v2_checkpoint_test_s16_s06_01/00004_direct_stay.png", "sha256": "b065ddf5547447ff56d8c94fe7e2fd21c6a71efb45a26cd1a8211f247924cc36", "pair_id": "floorplan429_00089", "scene": "FloorPlan429", "kind": "direct_stay", "source_file": "results/gen_test_s16_round2_s06_c6_floorplan429.json", "source_image": {"file": "data/world_pairs/v2/gen_test_s16_round2_s06_c6_floorplan429/floorplan429_00089/review.png", "sha256": "b065ddf5547447ff56d8c94fe7e2fd21c6a71efb45a26cd1a8211f247924cc36"}}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.9342145650298335}
+# exit_code: 0

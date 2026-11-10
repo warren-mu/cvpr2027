@@ -1,0 +1,30 @@
+# run_logged: python3 -m experiments.fig01_export --name diag_fig01_frames_01 --qualification-reference {"file":"results/smoke_e2e_pilot_pool_83_certificates_01.json","sha256":"0b704d1e8c1579b1f76a968084af6e919bb65ec009abcf7d91b96e02e63d91f0"} --holdout-reference {"file":"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json","sha256":"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"}
+# start: 2026-11-10T16:49:57
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/fig01_export.py", line 207, in main
+    tables, packages, proof = dataset.load_pilot_pool(manifest_ref)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_pilot_dataset.py", line 344, in load_pilot_pool
+    manifest, tables, packages, proof = build_pool(recorded['cache_sources'], recorded['split']['policy'],
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_pilot_dataset.py", line 282, in build_pool
+    batch, source_packages, proof = authenticate(ref)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_pilot_dataset.py", line 279, in <lambda>
+    authenticate = lambda ref: certificates.load_certificate_batch(ref, root=ROOT)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/smoke_e2e_pilot_certificates.py", line 231, in load_certificate_batch
+    table = load_table(table_ref['file'], expected_sha256=table_ref['sha256'])
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table_export.py", line 433, in load_table
+    captures = tuple(RenderedView(RGBFrame(read(c['rgb']), 255, 255),
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table_export.py", line 434, in <genexpr>
+    {name: read(mask) for name, mask in c['masks'].items()}, c['distances'], c['agent'],
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table_export.py", line 434, in <dictcomp>
+    {name: read(mask) for name, mask in c['masks'].items()}, c['distances'], c['agent'],
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/envs/pair_table_export.py", line 419, in read
+    data = target.read_bytes()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1126, in read_bytes
+    with self.open(mode='rb') as f:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/fig01_export.py", line 195, in expired
+    raise TimeoutError('FIG01 CPU bound 295 seconds; partial output retained')
+TimeoutError: FIG01 CPU bound 295 seconds; partial output retained
+FINAL_METRICS_JSON: {"complete": false, "elapsed_seconds": 296.17234420299064, "errors": ["TimeoutError: FIG01 CPU bound 295 seconds; partial output retained"], "kind": "fig01_original_cache_frame_export", "producer_exit_code": 1, "renderer_used": false, "research_population_changed": false}
+# exit_code: 1
