@@ -60,12 +60,20 @@ def logged(repo, reference):
     return data, path
 
 
-def same_retry_command(repo, old, new, old_name, new_name):
+def same_retry_command(repo, old, new, old_name, new_name, *, pilot_stoploss_reduction=0):
     """Only run identity and an otherwise identical immutable quota plan may change."""
     expected = list(old)
     require(expected.count('--name') == new.count('--name') == 1, 'Ambiguous retry name')
     require(expected[expected.index('--name') + 1] == old_name, 'Original command name differs')
     expected[expected.index('--name') + 1] = new_name
+    if pilot_stoploss_reduction:
+        require(pilot_command(old) and pilot_command(new)
+                and type(pilot_stoploss_reduction) is int and pilot_stoploss_reduction > 0,
+                'Only a native pilot retry may shorten its engineering stop bound')
+        old_seconds, new_seconds = pilot_timeout(old), pilot_timeout(new)
+        require(old_seconds - new_seconds == pilot_stoploss_reduction and new_seconds >= 300,
+                'Pilot PBS and driver stop bounds must decrease by the same amount')
+        expected[expected.index('--timeout-seconds') + 1] = new[new.index('--timeout-seconds') + 1]
     if '--quota-plan' in expected:
         require(expected.count('--quota-plan') == new.count('--quota-plan') == 1
                 and expected.count('--quota-plan-sha256') == new.count('--quota-plan-sha256') == 1,
@@ -84,6 +92,80 @@ def same_retry_command(repo, old, new, old_name, new_name):
         for flag in ('--quota-plan', '--quota-plan-sha256'):
             expected[expected.index(flag) + 1] = new[new.index(flag) + 1]
     require(expected == new, 'Black retry changed its original scientific/resource command')
+
+
+def pilot_command(command):
+    if not isinstance(command, list) or not command or not re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(command[0]).name):
+        return False
+    arguments = command[1:]
+    if arguments[:1] == ['-u']:
+        arguments = arguments[1:]
+    return arguments[:3] == ['-m', 'src.tools.smoke_e2e_pilot', 'run']
+
+
+def pilot_option(command, flag):
+    require(command.count(flag) == 1 and command.index(flag) + 1 < len(command), 'Missing or ambiguous pilot option: ' + flag)
+    return command[command.index(flag) + 1]
+
+
+def pilot_timeout(command):
+    value = pilot_option(command, '--timeout-seconds')
+    require(re.fullmatch(r'[0-9]+', value) is not None, 'Pilot stop bound must be explicit integer seconds')
+    return int(value)
+
+
+def pilot_opening_black(payload, parent, gate, proof):
+    """Original formal pilot gate only; no fabricated generic status or job fields."""
+    cfg, pm, command = parent['config'], parent['metrics'], payload['command']
+    identity, allocation = cfg.get('identity', {}), gate['config']['allocation']
+    require(pilot_command(command) and payload.get('budget_group') == 'E2Epilot'
+            and payload['name'].startswith('smoke_e2e_pilot_')
+            and cfg.get('version') == 'smoke_e2e_pilot_driver_v1'
+            and proof.get('native_kind') == pm.get('kind') == 'smoke_e2e_pilot_training'
+            and parent['_meta']['command'] == command and parent['_meta']['name'] == payload['name']
+            and parent['_meta']['exit_code'] == pm.get('producer_exit_code') == 86
+            and pm.get('pilot_completed') is False and pm.get('black_frame_detected') is True
+            and pm.get('errors') == pm.get('cleanup_errors') == []
+            and pm.get('training_logs') == [] and not pm.get('error')
+            and not any(key in pm for key in ('updates', 'holdout_evaluations', 'checkpoint_records',
+                'actual_completed_updates', 'checkpoint_saved', 'dataset_proof', 'source_authentication_seconds',
+                'model_initialization_seconds', 'engineering_smoke_version'))
+            and cfg.get('engineering_smoke') is None and 'runtime' not in cfg and 'model_snapshot_reference' not in cfg,
+            'Pilot did not stop at its original opening gate before source authentication or training')
+    arm = pilot_option(command, '--arm')
+    require(arm in ('T0', 'T4', 'T2') and cfg.get('arm') == arm
+            and cfg.get('updates') == {'T0': 50, 'T4': 50, 'T2': 5}[arm]
+            and cfg.get('gpus') == 1 and cfg.get('budget_group') == 'E2Epilot'
+            and cfg.get('episodes_per_update') == 64 and cfg.get('seed') == 0
+            and cfg.get('name') == pilot_option(command, '--name') == payload['name']
+            and cfg.get('timeout_seconds') == pilot_timeout(command)
+            and cfg.get('gate_timeout_seconds') == float(pilot_option(command, '--gate-timeout-seconds'))
+            and cfg.get('critic_offload') is ('--critic-offload' in command)
+            and '--engineering-smoke' not in command,
+            'Pilot original arm/method/resource arguments differ')
+    for flag, key in (('--manifest', 'manifest_reference'), ('--holdout-reference', 'holdout_reference')):
+        require(json.loads(pilot_option(command, flag)) == cfg.get(key), 'Pilot original immutable input differs: ' + flag)
+    require(cfg.get('model_source') == pilot_option(command, '--model-source')
+            and cfg.get('pilot_spec') == pilot_option(command, '--pilot-spec')
+            and identity.get('pbs_jobid') == proof['job_id'] == allocation['pbs_jobid']
+            and identity.get('cuda_visible_devices') == proof['gpu_uuid'] == allocation['cuda_visible_devices']
+            and identity.get('cpu_affinity') == allocation['cpu_affinity']
+            and identity.get('scratch') == payload.get('environment', {}).get('CVPR_SCRATCH'), 'Pilot original input/allocation identity differs')
+    source = pm.get('gate')
+    require(isinstance(source, dict) and source.get('exit_code') == 86
+            and source.get('file') == 'results/' + payload['name'] + '_gate.json'
+            and gate['_meta']['name'] == payload['name'] + '_gate'
+            and parent.get('sources') == [source], 'Pilot has business sources or an unrelated gate')
+    gate_command = gate['_meta']['command']
+    require(isinstance(gate_command, list) and len(gate_command) > 4
+            and re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(gate_command[0]).name) is not None
+            and gate_command[1:4] == ['-u', '-m', 'src.tools.render_gate']
+            and pilot_option(gate_command, '--name') == payload['name'] + '_gate'
+            and pilot_option(gate_command, '--gpus') == '1'
+            and pilot_option(gate_command, '--resolution') == '255' and '--segmentation' in gate_command
+            and float(pilot_option(gate_command, '--timeout-seconds')) == cfg['gate_timeout_seconds'],
+            'Pilot opening gate command differs')
+    return source
 
 
 def next_host(version, index, previous_host):
@@ -237,10 +319,20 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
             and payload_path.stat().st_mode & 0o222 == script_path.stat().st_mode & 0o222 == 0,
             'Original submission files are not the same immutable reservation')
     payload, receipt = json.loads(payload_bytes), json.loads(receipt_bytes)
+    pilot_retry = group == 'E2Epilot' and pilot_command(payload.get('command'))
+    original_wall = payload.get('requested_wall_seconds')
+    stoploss_reduction = 0
+    if pilot_retry:
+        require(type(original_wall) is int and type(wall_seconds) is int and 0 < wall_seconds <= original_wall,
+                'Pilot retry may only preserve or shorten its original PBS stop bound')
+        stoploss_reduction = original_wall - wall_seconds
+        require(original_wall - pilot_timeout(payload['command']) == 64
+                and wall_seconds - pilot_timeout(command) == 64,
+                'Pilot retry must preserve its original64-second recording/cleanup margin')
     require(payload.get('repo') == str(repo) and payload.get('dry_run') is False
             and payload.get('task_id') == task and payload.get('budget_group') == group
             and payload.get('queue') == 'autox' and payload.get('budget_batch') == 't00b_t01_20261108'
-            and payload.get('requested_gpu_count') == gpus and payload.get('requested_wall_seconds') == wall_seconds
+            and payload.get('requested_gpu_count') == gpus and (pilot_retry or payload.get('requested_wall_seconds') == wall_seconds)
             and proof.get('original_command_unchanged') == payload['command']
             and name != payload['name'] and receipt.get('returncode') == 0 and not receipt.get('stderr')
             and receipt.get('stdout', '').strip() == retry_of, 'Original allocation/receipt differs')
@@ -261,7 +353,8 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
         if json.loads(receipt_file.read_text()).get('returncode') == 0:
             require(_recorded_rotation_index is not None and prior.get('name') == name,
                     'This original black job already has a successful retry submission')
-    same_retry_command(repo, payload['command'], command, payload['name'], name)
+    same_retry_command(repo, payload['command'], command, payload['name'], name,
+                       pilot_stoploss_reduction=stoploss_reduction)
     account, account_path = logged(repo, proof['pbs_accounting'])
     phase_spec = importlib.util.spec_from_file_location('black_retry_original_phase', repo / 'scripts/pbs/submit_phase.py')
     phase = importlib.util.module_from_spec(phase_spec)
@@ -288,6 +381,8 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     if group == 'PACK':
         parent_gate = pack_opening_black(repo, payload, payload_path, receipt_path, parent, gate, proof,
                                          final[retry_of])
+    elif pilot_retry:
+        parent_gate = pilot_opening_black(payload, parent, gate, proof)
     else:
         require(parent['_meta']['command'] == payload['command'] and parent['_meta']['exit_code'] == 86
                 and parent['config']['pbs_jobid'] == retry_of and pm.get('status') == 'blocked_by_render_gate'
