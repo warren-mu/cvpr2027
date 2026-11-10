@@ -1967,3 +1967,7 @@ T02 first6 job710859 failed on FP323_00139: cached inter-world maximum3 vs fresh
 测试集原剩余 70 个成功导出来源按已推送计划继续独立缓存复核，b01 为 710875（hopper-18 开卡检查通过），b02 使用另一个空闲单卡名额。原 first6 的 FP323_00139 真实共享/分叉分类失败、另外 5 对未检查和全部原 95 候选账本均保留。没有修改阈值、训练配置或冻结数据池，没有提交主实验。
 
 b02: PBS 710881.hopper-m-02.
+
+
+### 2026-11-10 15:48 ET — DIAG02与测试缓存作业已提交
+T02 remaining b01 passed the unchanged live-cache check on 200/200 states for its six pairs. Job710875 queued33s, ran00:10:54 and charged0.181667 GPUh. This certificate applies only to these six. Job710892 has been submitted for fixed b03; b02 and DIAG02 32B remain separate.
