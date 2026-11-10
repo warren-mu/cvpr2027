@@ -1,0 +1,28 @@
+{
+  "name": "diag_mixed_relative_payload_repair_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_mixed_relative_payload_repair_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib, importlib.util, json, os, subprocess\nfrom pathlib import Path\nfrom src.tools.pbs_mixed_accounting import finalized_split\n\nNAME = 'diag_mixed_relative_payload_repair_01'\nassert os.environ.get('CVPR_RUN_NAME') == NAME\nroot = Path.cwd().resolve()\ntargets = [('gpu_pack_test_priority_full_single_01_retry2', '709674.hopper-m-02'),\n           ('gpu_pack_test_priority_full_single_02_retry1', '709656.hopper-m-02')]\ndestination = root/'logs/review'/NAME\ndestination.mkdir(parents=True, exist_ok=False)\ndef sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()\ndef write_new(p, value):\n    p.parent.mkdir(parents=True, exist_ok=True)\n    with p.open('x') as f: json.dump(value,f,indent=2,sort_keys=True)\ncopies, commands, originals = [], [], []\nfor parent, job in targets:\n    name = parent+'_mixed_accounting'\n    result_path=root/'results'/(name+'.json')\n    old=json.loads(result_path.read_text()); originals.append((parent,job,old))\n    command=old['_meta']['command']\n    assert command[:3] == ['python3','-m','src.tools.pbs_mixed_accounting']\n    assert old['_meta']['name'] == old['config']['name'] == name\n    absolute=old['config']['payload_reference']['file']\n    payload=(root/absolute).resolve(); relative=str(payload.relative_to(root))\n    assert absolute != relative and command[command.index('--payload')+1] == absolute\n    assert payload.stat().st_mode & 0o222 == 0 and sha(payload) == old['config']['payload_reference']['sha256']\n    revised=list(command); revised[revised.index('--payload')+1]=relative\n    assert sum(a!=b for a,b in zip(command,revised)) == 1\n    commands.append(revised)\n    for p in [result_path,root/'logs/runs'/(name+'.log'),root/'logs/runs'/(name+'.meta.json')]:\n        data=p.read_bytes(); digest=hashlib.sha256(data).hexdigest()\n        archive=destination/'original'/p.relative_to(root)\n        archive.parent.mkdir(parents=True,exist_ok=True)\n        with archive.open('xb') as f:f.write(data)\n        assert archive.read_bytes() == data and sha(p) == digest\n        copies.append({'original_path':str(p.relative_to(root)),'archive_reference':{'file':str(archive.relative_to(root)),\n            'sha256':digest,'bytes':len(data)}})\nwrite_new(destination/'archive_manifest.json',{'reason':'Original fixed-name mixed consumer requires payload reference string to equal the submitter repo-relative ledger path. Original scientific/canonical data are unchanged. Original run_logged archives the old result itself; original log/meta copied before rerun.',\n 'original_files':copies,'replacement_commands':commands})\nprint('MIXED_ORIGINAL_BYTES_ARCHIVED: '+json.dumps(copies,sort_keys=True),flush=True)\nfor command in commands:\n    name=command[command.index('--name')+1]\n    subprocess.run(['python3','scripts/run_logged.py','--name',name,'--seed','0','--',*command],check=True)\nspec=importlib.util.spec_from_file_location('original_phase_for_repair',root/'scripts/pbs/submit_phase.py')\nphase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\nverified=[]\nfor parent,job,old in originals:\n    p=root/'results'/(parent+'_mixed_accounting.json');new=json.loads(p.read_text())\n    account=(root/new['config']['account_reference']['file']).resolve()\n    canonical=phase._final_accounting(root,{job},paths=[account])\n    assert set(canonical)=={job}\n    row={'name':parent,'job_id':job,'payload':new['config']['payload_reference']['file']}\n    split=finalized_split(root,row,canonical[job])\n    assert split['charged_gpu_hours_by_group']==old['metrics']['charged_gpu_hours_by_group']\n    assert split['total_charged_gpu_hours']==old['metrics']['total_charged_gpu_hours']\n    old_hash=hashlib.sha256(json.dumps(old,sort_keys=True).encode()).hexdigest()\n    archived=[a for a in (root/'results/_archive').glob(parent+'_mixed_accounting.*.json')\n              if hashlib.sha256(json.dumps(json.loads(a.read_text()),sort_keys=True).encode()).hexdigest()==old_hash]\n    assert archived\n    verified.append({'job_id':job,'original_run_logged_result_archive':str(archived[-1].relative_to(root)),\n        'replacement_result':{'file':str(p.relative_to(root)),'sha256':sha(p)},'original_finalized_split_passed':True,\n        'canonical_reference':new['config']['account_reference'],'charged_gpu_hours_by_group':split['charged_gpu_hours_by_group']})\nwrite_new(destination/'verified.json',{'repairs':verified})\nprint('MIXED_RELATIVE_PAYLOAD_REPAIRED: '+json.dumps(verified,sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:09:30",
+  "log_path": "logs/runs/diag_mixed_relative_payload_repair_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5575393182c0c5b0b594349291f910eeb0555fe1",
+  "git_dirty": false,
+  "end": "2026-11-10T13:09:43",
+  "duration_sec": 8.5,
+  "exit_code": 0,
+  "metrics_sha256": "83404ca70ee8b8dcd55a4116f7f09f18ad41cd2b4896fc4125fb7fae575213cc"
+}

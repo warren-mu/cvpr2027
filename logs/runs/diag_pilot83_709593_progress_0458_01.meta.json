@@ -1,0 +1,28 @@
+{
+  "name": "diag_pilot83_709593_progress_0458_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pilot83_709593_progress_0458_01",
+    "--",
+    "python3",
+    "-c",
+    "import json, pathlib, subprocess, datetime\nprint(\"OBSERVED_UTC\",datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)\ntry:\n p=subprocess.run([\"qstat\",\"-fx\",\"709593.hopper-m-02\"],capture_output=True,text=True,timeout=30)\n print(\"QSTAT_ORIGINAL\",json.dumps({\"returncode\":p.returncode,\"stdout\":p.stdout,\"stderr\":p.stderr}),flush=True)\nexcept subprocess.TimeoutExpired as e:print(\"QSTAT_TIMEOUT_30_SECONDS\",repr(e),flush=True)\nfor name in [\"smoke_e2e_pilot_pool_build_83_01\",\"smoke_e2e_pilot_pool_83_01\"]:\n for suffix in [\".log\",\".meta.json\"]:\n  p=pathlib.Path(\"logs/runs\")/(name+suffix)\n  print(\"ORIGINAL_FILE\",str(p),\"exists\",p.exists(),flush=True)\n  if p.exists():\n   print(\"ORIGINAL_BYTES\",p.stat().st_size,\"MTIME\",p.stat().st_mtime,flush=True)\n   print(p.read_text()[-6000:],flush=True)\n p=pathlib.Path(\"results\")/(name+\".json\");print(\"RESULT_EXISTS\",str(p),p.exists(),flush=True)\n if p.exists():print(p.read_text()[-12000:],flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T12:56:20",
+  "log_path": "logs/runs/diag_pilot83_709593_progress_0458_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5575393182c0c5b0b594349291f910eeb0555fe1",
+  "git_dirty": false,
+  "end": "2026-11-10T12:56:51",
+  "duration_sec": 30.3,
+  "exit_code": 0,
+  "metrics_sha256": "5fbffc9555ac804683d1cb5bc844a98162ae656639291a5b9d33374279367cb6"
+}

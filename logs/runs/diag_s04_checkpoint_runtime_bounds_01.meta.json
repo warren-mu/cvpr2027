@@ -1,0 +1,28 @@
+{
+  "name": "diag_s04_checkpoint_runtime_bounds_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_s04_checkpoint_runtime_bounds_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,hashlib,math\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nrows=[]\nfor suffix in ('s01','s02','s03'):\n p=Path('results')/('t01v2_checkpoint_test_s16_'+suffix+'_01.json')\n d,r=audited_result(p); m=d['metrics']\n rows.append({'source':r,'duration_seconds':d['_meta'].get('duration_sec'),'exit_code':d['_meta'].get('exit_code'),'requested_sources':d['config'].get('requested_sources'),'source_count':len(d['config'].get('requested_sources',[])),'independently_verified_pair_count':m.get('independently_verified_pair_count'),'published_pair_count':m.get('published_pair_count'),'observed_attempts':m.get('observed_attempts'),'errors':m.get('errors')})\np=Path('results/gen_test_s16_round2_s04_retry1_gate.json')\ngate,gr=audited_result(p)\nsources=[]\nfor n in (325,425,26,226,326,426):\n p=Path('results')/('gen_test_s16_round2_s04_retry1_c6_floorplan'+str(n)+'.json')\n b=p.read_bytes();d=json.loads(b)\n sources.append({'file':str(p),'sha256':hashlib.sha256(b).hexdigest(),'end':d['_meta'].get('end'),'exit_code':d['_meta'].get('exit_code'),'attempts':d['metrics'].get('attempts'),'passed_by_class':d['metrics'].get('passed_by_class')})\nprint(json.dumps({'historical_checkpoints':rows,'actual_current_source_gate':{'source':gr,'duration_seconds':gate['_meta'].get('duration_sec'),'exit_code':gate['_meta'].get('exit_code'),'passed':gate['metrics'].get('passed')},'current_sources':sources,'scope':'Original recorded metadata only; no independent native recheck and no inferred PASS'},indent=2),flush=True)"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T12:51:32",
+  "log_path": "logs/runs/diag_s04_checkpoint_runtime_bounds_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e",
+  "git_dirty": false,
+  "end": "2026-11-10T12:51:39",
+  "duration_sec": 2.7,
+  "exit_code": 1,
+  "metrics_sha256": "93313c7e9fbe21d591876d4179005f80250458dd9b448c8e72fcacfa7bacee29"
+}

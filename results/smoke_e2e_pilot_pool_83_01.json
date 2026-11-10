@@ -1,0 +1,97 @@
+{
+  "config": {
+    "cache_source": [
+      {
+        "file": "results/t02_export_cache_first5_01_retry2.json",
+        "sha256": "0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"
+      },
+      {
+        "file": "results/t02_export_cache_remaining24_01.json",
+        "sha256": "a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"
+      },
+      {
+        "file": "results/t02_export_cache_six05_08_01_retry2.json",
+        "sha256": "24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"
+      },
+      {
+        "file": "results/t02_export_cache_six09_14_01_retry4.json",
+        "sha256": "f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"
+      }
+    ],
+    "cpu_affinity": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22
+    ],
+    "deadline_fallback_52": false,
+    "gpus": 0,
+    "name": "smoke_e2e_pilot_pool_83_01",
+    "out": "data/world_pairs/e2e_pilot_pool_83_01.json",
+    "pbs_jobid": "709593.hopper-m-02",
+    "split_policy": "room_stratified_scene_hash_seed0_ten_percent_v1",
+    "timeout_seconds": 5160.0,
+    "version": "smoke_e2e_pilot_formal_dataset_v2_keep_all"
+  },
+  "metrics": {
+    "errors": [
+      "TimeoutError: Pilot dataset authentication deadline reached"
+    ],
+    "formal_T04_acceptance": null,
+    "kind": "smoke_e2e_pilot_dataset_preflight",
+    "manifest": null,
+    "paper_result": false,
+    "passed": false,
+    "producer_exit_code": 1
+  },
+  "sources": [],
+  "_meta": {
+    "name": "smoke_e2e_pilot_pool_83_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.smoke_e2e_pilot_dataset",
+      "--name",
+      "smoke_e2e_pilot_pool_83_01",
+      "--cache-source",
+      "{\"file\":\"results/t02_export_cache_first5_01_retry2.json\",\"sha256\":\"0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187\"}",
+      "--cache-source",
+      "{\"file\":\"results/t02_export_cache_remaining24_01.json\",\"sha256\":\"a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70\"}",
+      "--cache-source",
+      "{\"file\":\"results/t02_export_cache_six05_08_01_retry2.json\",\"sha256\":\"24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14\"}",
+      "--cache-source",
+      "{\"file\":\"results/t02_export_cache_six09_14_01_retry4.json\",\"sha256\":\"f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b\"}",
+      "--split-policy",
+      "room_stratified_scene_hash_seed0_ten_percent_v1",
+      "--out",
+      "data/world_pairs/e2e_pilot_pool_83_01.json",
+      "--timeout-seconds",
+      "5160"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-15",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-10T11:38:40",
+    "log_path": "logs/runs/smoke_e2e_pilot_pool_83_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "b4521b7682c6770bd285dd03dc3acf617ab2b649",
+    "git_dirty": false,
+    "end": "2026-11-10T13:04:42",
+    "duration_sec": 5161.2,
+    "exit_code": 1,
+    "metrics_sha256": "8b04e0c19a1757ee754b58d97d6e352abe23b4570e6e5d82f31b47672c0452ae"
+  }
+}

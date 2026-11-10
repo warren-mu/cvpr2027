@@ -1,0 +1,79 @@
+# run_logged: python3 -m src.tools.record_command --name diag_557_deadline_and_completed_sources_audit_01 -- python3 -c import subprocess,json
+from pathlib import Path
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.append(str(p))
+assert names
+print('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T13:11:42
+SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified
+PASS  results/diag_full01_pin20_cancel_01.json
+PASS  results/diag_full01_pin20_cancel_accounting_01.json
+PASS  results/diag_full01_pin20_post_01.json
+PASS  results/diag_full01_pin20_pre_01.json
+PASS  results/diag_full_shared_709656_accounting_01.json
+PASS  results/diag_full_shared_709674_accounting_02.json
+PASS  results/diag_gen_test_s16_s04_retry1_accounting_01.json
+PASS  results/diag_gpu_pack_full_single01_retry2_black_guard_01.json
+PASS  results/diag_gpu_pack_full_single01_retry3_host_preflight_01.json
+PASS  results/diag_mixed_relative_payload_repair_01.json
+PASS  results/diag_mixed_repair_s05_pilot83_audit_01.json
+PASS  results/diag_pilot83_709593_progress_0458_01.json
+PASS  results/diag_pilot_pool_709593_accounting_01.json
+PASS  results/diag_raw10_and_pack709674_audit_01.json
+PASS  results/diag_raw10_smoke_709644_accounting_01.json
+WARN  results/diag_raw10_smoke_709644_engineering_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_raw10_smoke_709644_engineering_02.json
+WARN  results/diag_s04_checkpoint_runtime_bounds_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_s04_checkpoint_runtime_bounds_02.json
+WARN  results/diag_submit_gen_test_s16_s04_retry1_review_01.json
+      warn P7 run failed (exit_code 2); keep it, do not cite it
+PASS  results/diag_submit_gpu_pack_test_priority_full_single_01_retry2.json
+WARN  results/gen_test_s16_round2_s05.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gen_test_s16_round2_s05_c6_floorplan227.json
+WARN  results/gen_test_s16_round2_s05_c6_floorplan228.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s05_c6_floorplan27.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s05_c6_floorplan28.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s05_c6_floorplan327.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_round2_s05_c6_floorplan427.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gen_test_s16_round2_s05_j709656_hopper_m_02_gate.json
+WARN  results/gen_test_s16_smoke_raw10_03.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/gen_test_s16_smoke_raw10_03_c6_floorplan21.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gen_test_s16_smoke_raw10_03_j709644_hopper_m_02_gate.json
+WARN  results/gpu_pack_test_priority_full_single_01_retry2.json
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+WARN  results/gpu_pack_test_priority_full_single_01_retry2_gate_0.json
+      warn P7 run failed (exit_code 86); keep it, do not cite it
+PASS  results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json
+WARN  results/gpu_pack_test_priority_full_single_02_retry1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/gpu_pack_test_priority_full_single_02_retry1_gate_0.json
+PASS  results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/smoke_e2e_pilot_pool_83_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/smoke_e2e_pilot_pool_build_83_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+
+42 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 14.67230863001896}
+# exit_code: 0

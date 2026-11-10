@@ -1,0 +1,130 @@
+{
+  "config": {
+    "name": "gpu_pack_test_priority_full_single_01_retry2_mixed_accounting",
+    "version": "shared_gpu_units_budget_v1",
+    "payload_reference": {
+      "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/payload.json",
+      "sha256": "12227f933c2e12eda5ccc857f2d645caad6e53ff0d12e1caeee00f625e0d12f3"
+    },
+    "pack_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json",
+      "sha256": "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08"
+    },
+    "account_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json",
+      "sha256": "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33"
+    }
+  },
+  "metrics": {
+    "version": "shared_gpu_units_budget_v1",
+    "possible_groups": [
+      "G01",
+      "T02"
+    ],
+    "residual_group": "G01",
+    "zero_business": true,
+    "observed_unit_gpu_seconds_by_group": {
+      "G01": 0.0,
+      "T02": 0.0
+    },
+    "allocation_gpu_hours": 0.005833333333333334,
+    "queue_charge_rate": 1.0,
+    "total_charged_gpu_hours": 0.005833333333333334,
+    "charged_gpu_hours_by_group": {
+      "G01": 0.005833333333333334,
+      "T02": 0.0
+    },
+    "charged_gpu_hours_by_group_exact": {
+      "G01": {
+        "numerator": "2916666666666667",
+        "denominator": "500000000000000000"
+      },
+      "T02": {
+        "numerator": "0",
+        "denominator": "1"
+      }
+    },
+    "total_charged_gpu_hours_exact": {
+      "numerator": "2916666666666667",
+      "denominator": "500000000000000000"
+    },
+    "unassigned_allocation_gpu_hours": 0.005833333333333334,
+    "residual_charged_gpu_hours": 0.005833333333333334,
+    "scope": "Scheduler cost attribution only; gate, idle, cleanup and timing remainder follow the predeclared priority, not scientific success. Exact fractions conserve the original canonical total; floats are display/budget values.",
+    "job_id": "709674.hopper-m-02",
+    "pack_name": "gpu_pack_test_priority_full_single_01_retry2",
+    "unit_count": 0,
+    "sources": [
+      {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json",
+        "sha256": "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08",
+        "metrics_sha256": "b87ca890add53ff8849719c435d51b76ee24d3adb28470e2ffbd9aa2f4eef699"
+      },
+      {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json",
+        "sha256": "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33",
+        "metrics_sha256": "d4e698048bbf798b87be9beee7a7eb0f4984940d6b2224a2b049f35c3c760cd5"
+      }
+    ],
+    "artifact_references": [
+      {
+        "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/payload.json",
+        "sha256": "12227f933c2e12eda5ccc857f2d645caad6e53ff0d12e1caeee00f625e0d12f3"
+      },
+      {
+        "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/submission.json",
+        "sha256": "4a4913e27b151368acd1e223a8eb0ce427134bc8848bac280545d3581975fe47",
+        "bytes": 455
+      }
+    ],
+    "canonical_accounting_result": "results/diag_full_shared_709674_accounting_02.json"
+  },
+  "sources": [
+    {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json",
+      "sha256": "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08",
+      "metrics_sha256": "b87ca890add53ff8849719c435d51b76ee24d3adb28470e2ffbd9aa2f4eef699"
+    },
+    {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json",
+      "sha256": "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33",
+      "metrics_sha256": "d4e698048bbf798b87be9beee7a7eb0f4984940d6b2224a2b049f35c3c760cd5"
+    }
+  ],
+  "_meta": {
+    "name": "gpu_pack_test_priority_full_single_01_retry2_mixed_accounting",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.pbs_mixed_accounting",
+      "--name",
+      "gpu_pack_test_priority_full_single_01_retry2_mixed_accounting",
+      "--payload",
+      "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/payload.json",
+      "--payload-sha256",
+      "12227f933c2e12eda5ccc857f2d645caad6e53ff0d12e1caeee00f625e0d12f3",
+      "--pack-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json",
+      "--pack-sha256",
+      "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08",
+      "--accounting-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json",
+      "--accounting-sha256",
+      "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T13:09:35",
+    "log_path": "logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "5575393182c0c5b0b594349291f910eeb0555fe1",
+    "git_dirty": false,
+    "end": "2026-11-10T13:09:37",
+    "duration_sec": 2.5,
+    "exit_code": 0,
+    "metrics_sha256": "d6668e1a31533845545f4a03e53318bbfaf20915da45aa2b7191ce8d6350875a"
+  }
+}

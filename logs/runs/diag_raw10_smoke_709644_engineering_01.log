@@ -1,0 +1,88 @@
+# run_logged: python3 -m src.tools.record_command --name diag_raw10_smoke_709644_engineering_01 -- python3 -c import collections, hashlib, json, os, signal
+from pathlib import Path
+from src.tools import g01_physics_smoke as smoke
+from src.envs import pair_v2_raw_sampling as sampling
+
+name = 'diag_raw10_smoke_709644_engineering_01'
+assert os.environ.get('CVPR_RUN_NAME') == name
+def expired(*_): raise TimeoutError('12 second metadata-only verification bound')
+signal.signal(signal.SIGALRM, expired); signal.alarm(12)
+def load(path, sha=None):
+    p = Path(path); raw = p.read_bytes(); digest = hashlib.sha256(raw).hexdigest()
+    if sha is not None: assert digest == sha, path
+    return json.loads(raw), {'file': str(p), 'sha256': digest, 'bytes': len(raw)}
+parent, pref = load('results/gen_test_s16_smoke_raw10_03.json', 'f406ad5d1be5ab54141d4dc7b83ef195a42b40466d6388b239c6375dddc32051')
+child, cref = load('results/gen_test_s16_smoke_raw10_03_c6_floorplan21.json', '47fb87755041e080e3bfa2de5557f67e77cf79bb72b867ee152a2e1ee4f50278')
+account, aref = load('results/diag_raw10_smoke_709644_accounting_01.json', '74703a4a9ba92242b569cd76918d3bc83d93b474e5f01290e5e79601b89f581e')
+assert parent['_meta']['end'] and child['_meta']['end'] and account['_meta']['exit_code'] == 0
+assert parent['_meta']['exit_code'] == child['_meta']['exit_code'] == 1
+for ref in parent['sources']: load(ref['file'], ref['sha256'])
+observation = smoke.summarize_child(child)
+assert parent['metrics']['engineering_observations'] == [observation]
+m = parent['metrics']
+recomputed_parent_gate = bool(observation['engineering_gate_passed'] and m.get('cleanup_errors') == [] and not m.get('error') and not m.get('errors') and not m.get('stop_reasons') and not m.get('unfinished_run_names'))
+assert m['engineering_gate_passed'] is recomputed_parent_gate is True
+sampling.validate_fields(child['config']); sampling.validate_fields(child['metrics'])
+receipts = child['metrics']['evidence_retention']['attempts']
+counts = collections.Counter(); reasons = collections.Counter()
+by_ordinal = {}
+for ordinal, receipt in enumerate(receipts):
+    sampling.validate_fields(receipt)
+    assert receipt['raw_sample'] == sampling.draw('FloorPlan21', ordinal)
+    assert ordinal not in by_ordinal
+    by_ordinal[ordinal] = receipt
+    scientific = receipt['sampling_applied_to_rejection']
+    assert type(scientific) is bool
+    if scientific:
+        assert receipt['raw_sampling_exception_raised'] is False
+        assert receipt['rejection_reasons']
+        assert receipt['retention_requested'] is receipt['raw_sample']['selected']
+    else: assert receipt['retention_requested'] is True
+    assert receipt['disk_files_deleted'] == 0 and receipt['cap_hit'] is False
+    keep = receipt['retention_requested']
+    assert receipt['full_raw_retained'] is keep
+    assert receipt['evidence_complete_for_acceptance'] is keep
+    assert receipt['omitted_payloads_existed_only_in_memory'] is (not keep)
+    counts['all_build_receipts'] += 1
+    counts['scientific_rejection_receipts' if scientific else 'non_scientific_or_unclassified_receipts'] += 1
+    counts['full_raw_retained' if keep else 'omitted_in_memory'] += 1
+    counts['exception_receipts'] += int(receipt['raw_sampling_exception_raised'])
+    if scientific: counts['scientific_sample_selected' if keep else 'scientific_sample_not_selected'] += 1
+    for reason in receipt['rejection_reasons']: reasons[reason] += 1
+assert child['metrics']['evidence_retention']['disk_files_deleted'] == 0
+jp = Path(child['metrics']['attempt_journal']); jraw = jp.read_bytes()
+assert hashlib.sha256(jraw).hexdigest() == child['metrics']['attempt_journal_sha256']
+rows = [json.loads(line) for line in jraw.splitlines() if line]
+raw_refs = []
+for row in rows:
+    reference = row['raw_attempt']
+    raw, actual = load(reference['file'], reference['sha256'])
+    sampling.validate_decision(raw, raw_path=reference['file'])
+    retained = raw['evidence_retention']; ordinal = retained['raw_sample']['key']['attempt_ordinal']
+    assert retained == by_ordinal[ordinal]
+    assert row['pair_id'] == raw['pair_id'] and row['status'] == raw['status']
+    raw_refs.append(actual)
+assert len(rows) == child['metrics']['attempts'] == observation['physics_counts']['counted_attempts']
+report = {'scope': 'Metadata-only replay of original engineering predicate and retention receipts; no independent scientific/native payload acceptance',
+ 'sources': [pref, cref, aref], 'original_engineering_function': 'src.tools.g01_physics_smoke.summarize_child',
+ 'observation': observation, 'parent_engineering_gate_recomputed': recomputed_parent_gate,
+ 'parent_exit_code': parent['_meta']['exit_code'], 'child_exit_code': child['_meta']['exit_code'],
+ 'passed_by_class_source_reported': child['metrics']['passed_by_class'], 'retention_counts_all_build_denominator': dict(counts),
+ 'receipt_reasons_all_build_denominator': dict(reasons), 'counted_journal_rows': len(rows),
+ 'journal_reference': {'file': str(jp), 'sha256': hashlib.sha256(jraw).hexdigest(), 'bytes':len(jraw)},
+ 'counted_raw_metadata_references': raw_refs, 'retained_binary_bytes_reopened': False,
+ 'formal_collection_eligible': False, 'quota_occupancy_authorized': False,
+ 'native_exceptions_note': 'NativePlacementExhausted attempt receipts are preserved in full; engineering PASS does not assert every native call succeeded. No unexpected terminal native error is present.'}
+out = Path('logs/review') / name; out.mkdir(parents=True, exist_ok=False)
+destination = out/'report.json'
+with destination.open('x') as stream: json.dump(report,stream,indent=2,sort_keys=True,allow_nan=False)
+_, report_ref = load(destination)
+print('RAW10_ENGINEERING_REPLAY_JSON: '+json.dumps({'report':report_ref,'observation':observation,'retention_counts':dict(counts),'counted_journal_rows':len(rows),'original_exit_codes':[1,1]},sort_keys=True),flush=True)
+signal.alarm(0)
+
+# start: 2026-11-10T12:54:29
+Traceback (most recent call last):
+  File "<string>", line 62, in <module>
+AssertionError
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 1.2069543629768305}
+# exit_code: 1

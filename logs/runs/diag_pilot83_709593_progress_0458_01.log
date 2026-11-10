@@ -1,0 +1,35 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot83_709593_progress_0458_01 -- python3 -c import json, pathlib, subprocess, datetime
+print("OBSERVED_UTC",datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)
+try:
+ p=subprocess.run(["qstat","-fx","709593.hopper-m-02"],capture_output=True,text=True,timeout=30)
+ print("QSTAT_ORIGINAL",json.dumps({"returncode":p.returncode,"stdout":p.stdout,"stderr":p.stderr}),flush=True)
+except subprocess.TimeoutExpired as e:print("QSTAT_TIMEOUT_30_SECONDS",repr(e),flush=True)
+for name in ["smoke_e2e_pilot_pool_build_83_01","smoke_e2e_pilot_pool_83_01"]:
+ for suffix in [".log",".meta.json"]:
+  p=pathlib.Path("logs/runs")/(name+suffix)
+  print("ORIGINAL_FILE",str(p),"exists",p.exists(),flush=True)
+  if p.exists():
+   print("ORIGINAL_BYTES",p.stat().st_size,"MTIME",p.stat().st_mtime,flush=True)
+   print(p.read_text()[-6000:],flush=True)
+ p=pathlib.Path("results")/(name+".json");print("RESULT_EXISTS",str(p),p.exists(),flush=True)
+ if p.exists():print(p.read_text()[-12000:],flush=True)
+
+# start: 2026-11-10T12:56:20
+OBSERVED_UTC 2026-11-10T04:56:21.727386+00:00
+QSTAT_TIMEOUT_30_SECONDS TimeoutExpired(['qstat', '-fx', '709593.hopper-m-02'], 30)
+ORIGINAL_FILE logs/runs/smoke_e2e_pilot_pool_build_83_01.log exists True
+ORIGINAL_BYTES 1269 MTIME 1794281912.780348
+# run_logged: python3 -m src.tools.record_command --name smoke_e2e_pilot_pool_build_83_01 -- bash -c python3 -u scripts/run_logged.py --name smoke_e2e_pilot_pool_build_83_01_gate --seed 0 -- python3 -u -m src.tools.render_gate --name smoke_e2e_pilot_pool_build_83_01_gate --gpus 1 --resolution 255 --segmentation --timeout-seconds 180 && python3 -u scripts/run_logged.py --name smoke_e2e_pilot_pool_83_01 --seed 0 -- python3 -u -m src.tools.smoke_e2e_pilot_dataset --name smoke_e2e_pilot_pool_83_01 --cache-source '{"file":"results/t02_export_cache_first5_01_retry2.json","sha256":"0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"}' --cache-source '{"file":"results/t02_export_cache_remaining24_01.json","sha256":"a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"}' --cache-source '{"file":"results/t02_export_cache_six05_08_01_retry2.json","sha256":"24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"}' --cache-source '{"file":"results/t02_export_cache_six09_14_01_retry4.json","sha256":"f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"}' --split-policy room_stratified_scene_hash_seed0_ten_percent_v1 --out data/world_pairs/e2e_pilot_pool_83_01.json --timeout-seconds 5160
+# start: 2026-11-10T11:38:30
+
+ORIGINAL_FILE logs/runs/smoke_e2e_pilot_pool_build_83_01.meta.json exists False
+RESULT_EXISTS results/smoke_e2e_pilot_pool_build_83_01.json False
+ORIGINAL_FILE logs/runs/smoke_e2e_pilot_pool_83_01.log exists True
+ORIGINAL_BYTES 858 MTIME 1794281921.230135
+# run_logged: python3 -u -m src.tools.smoke_e2e_pilot_dataset --name smoke_e2e_pilot_pool_83_01 --cache-source {"file":"results/t02_export_cache_first5_01_retry2.json","sha256":"0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"} --cache-source {"file":"results/t02_export_cache_remaining24_01.json","sha256":"a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"} --cache-source {"file":"results/t02_export_cache_six05_08_01_retry2.json","sha256":"24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"} --cache-source {"file":"results/t02_export_cache_six09_14_01_retry4.json","sha256":"f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"} --split-policy room_stratified_scene_hash_seed0_ten_percent_v1 --out data/world_pairs/e2e_pilot_pool_83_01.json --timeout-seconds 5160
+# start: 2026-11-10T11:38:40
+
+ORIGINAL_FILE logs/runs/smoke_e2e_pilot_pool_83_01.meta.json exists False
+RESULT_EXISTS results/smoke_e2e_pilot_pool_83_01.json False
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 30.18116200104123}
+# exit_code: 0

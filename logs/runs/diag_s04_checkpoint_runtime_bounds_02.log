@@ -1,0 +1,260 @@
+# run_logged: python3 -m src.tools.record_command --name diag_s04_checkpoint_runtime_bounds_02 -- python3 -c import json,math
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+rows=[]
+for suffix in ('s01','s02','s03'):
+ p=Path('results')/('t01v2_checkpoint_test_s16_'+suffix+'_01.json')
+ d,r=audited_result(p);m=d['metrics']
+ rows.append({'source':r,'duration_seconds':d['_meta'].get('duration_sec'),'exit_code':d['_meta'].get('exit_code'),'source_count':len(d['config'].get('requested_sources',[])),'independently_verified_pair_count':m.get('independently_verified_pair_count'),'published_pair_count':m.get('published_pair_count'),'observed_attempts':m.get('observed_attempts'),'errors':m.get('errors')})
+parent,pr=audited_result(Path('results/gen_test_s16_round2_s04_retry1.json'))
+gate_ref=parent['metrics']['gate']['source']
+gate,gr=audited_result(Path(gate_ref['file']))
+assert gr['sha256']==gate_ref['sha256']
+current=[]
+for n in (325,425,26,226,326,426):
+ p=Path('results')/('gen_test_s16_round2_s04_retry1_c6_floorplan'+str(n)+'.json')
+ d,r=audited_result(p)
+ current.append({'source':r,'end':d['_meta'].get('end'),'exit_code':d['_meta'].get('exit_code'),'attempts':d['metrics'].get('attempts'),'passed_by_class':d['metrics'].get('passed_by_class')})
+matching=[r for r in rows if r['source_count']==6 and r['exit_code']==0 and r['errors']==[]]
+measured=max([r['duration_seconds'] for r in matching],default=None)
+print(json.dumps({'historical_checkpoints':rows,'actual_current_source_gate':{'source':gr,'duration_seconds':gate['_meta'].get('duration_sec'),'exit_code':gate['_meta'].get('exit_code'),'passed':gate['metrics'].get('passed')},'current_sources':current,'same_six_source_measured_max_seconds':measured,'same_six_source_plus30_percent_seconds':None if measured is None else math.ceil(measured*1.3),'scope':'Original completed metadata only; no native recheck or independent PASS claimed for S04'},indent=2),flush=True)
+# start: 2026-11-10T12:52:38
+{
+  "historical_checkpoints": [
+    {
+      "source": {
+        "file": "results/t01v2_checkpoint_test_s16_s01_01.json",
+        "sha256": "c8b2a178ea54e1ca9b9aaa23f4e1d9348e54eb9b2fbaa61b13eab665fa7febde",
+        "metrics_sha256": "504461edcd02c7854bfccc12421f08ba9e6c70256021cce72023b0be7b482939",
+        "exit_code": 0,
+        "git_commit": "334bdae9de584ccf476bc0e1cfe4d41df75b55c2",
+        "audit": {
+          "file": "results/t01v2_checkpoint_test_s16_s01_01.json",
+          "fail": [],
+          "warn": []
+        }
+      },
+      "duration_seconds": 271.7,
+      "exit_code": 0,
+      "source_count": 6,
+      "independently_verified_pair_count": 4,
+      "published_pair_count": 4,
+      "observed_attempts": 968,
+      "errors": []
+    },
+    {
+      "source": {
+        "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+        "sha256": "dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a",
+        "metrics_sha256": "2fa9df1358df0570ed1b46d4b5c8d53ef72c50c9e3f97d23cf2e98c8e0ee9117",
+        "exit_code": 0,
+        "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+        "audit": {
+          "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+          "fail": [],
+          "warn": []
+        }
+      },
+      "duration_seconds": 335.6,
+      "exit_code": 0,
+      "source_count": 6,
+      "independently_verified_pair_count": 12,
+      "published_pair_count": 12,
+      "observed_attempts": 843,
+      "errors": []
+    },
+    {
+      "source": {
+        "file": "results/t01v2_checkpoint_test_s16_s03_01.json",
+        "sha256": "18fcf0a4a09b14b864a2ed001716fd1ef467418736ddf3a85ebde0c5ef673e9d",
+        "metrics_sha256": "e5e9935d678d90c6a6cc1e626f68be5694b081723c336f55f0c0caa5673d5b41",
+        "exit_code": 0,
+        "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+        "audit": {
+          "file": "results/t01v2_checkpoint_test_s16_s03_01.json",
+          "fail": [],
+          "warn": []
+        }
+      },
+      "duration_seconds": 210.7,
+      "exit_code": 0,
+      "source_count": 6,
+      "independently_verified_pair_count": 5,
+      "published_pair_count": 5,
+      "observed_attempts": 746,
+      "errors": []
+    }
+  ],
+  "actual_current_source_gate": {
+    "source": {
+      "file": "results/gen_test_s16_round2_s04_retry1_j709626_hopper_m_02_gate.json",
+      "sha256": "b00b2690fdadbecfa189723b1261f29f6eb24cc3175479249782e0deb85fefaa",
+      "metrics_sha256": "d705f4a81b9502cbca00914801f4a1afb0be8d936c36418132c36ac8c26cdb93",
+      "exit_code": 0,
+      "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+      "audit": {
+        "file": "results/gen_test_s16_round2_s04_retry1_j709626_hopper_m_02_gate.json",
+        "fail": [],
+        "warn": []
+      }
+    },
+    "duration_seconds": 7.2,
+    "exit_code": 0,
+    "passed": true
+  },
+  "current_sources": [
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan325.json",
+        "sha256": "a956eeff4c5a3f70723498a3d6fc0e310f9e91c82fbe78d6fa3584925e573852",
+        "metrics_sha256": "6ba494775fcebeb85437fb16ec59d4975844e6b782ec15ce58a10dc11f8bec2f",
+        "exit_code": 0,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan325.json",
+          "fail": [],
+          "warn": []
+        }
+      },
+      "end": "2026-11-10T12:13:13",
+      "exit_code": 0,
+      "attempts": 0,
+      "passed_by_class": {
+        "direct_flip": 0,
+        "direct_stay": 0,
+        "look_flip": 0,
+        "look_stay": 0
+      }
+    },
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan425.json",
+        "sha256": "f0f00e9f8c0f1b1d9fc30fb9038a443be61a4243136cd8388e759f8900089f90",
+        "metrics_sha256": "d7208e965dffe18bc1906899a521c4ae4e87a16fe829c3f4267046dd0e4c86e9",
+        "exit_code": 1,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan425.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "end": "2026-11-10T12:32:26",
+      "exit_code": 1,
+      "attempts": 160,
+      "passed_by_class": {
+        "direct_flip": 0,
+        "direct_stay": 1,
+        "look_flip": 0,
+        "look_stay": 0
+      }
+    },
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan26.json",
+        "sha256": "52559053462e889c20c75be8318cf511d0bcf2699bd5f138e1a76673997fe207",
+        "metrics_sha256": "3de09f445ea6cca29e6b59349d2e5db91ff502d6366f0e08d7af22cfe450326b",
+        "exit_code": 1,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan26.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "end": "2026-11-10T12:13:28",
+      "exit_code": 1,
+      "attempts": 0,
+      "passed_by_class": {
+        "direct_flip": 0,
+        "direct_stay": 0,
+        "look_flip": 0,
+        "look_stay": 0
+      }
+    },
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan226.json",
+        "sha256": "bd8e4831cd3c9ef9a1763f8d2afc7dc4c2137204c7f6a0b5fb58a19975738df2",
+        "metrics_sha256": "c3ebab15ba52a40a6cffb2eed6c5d67236c9c9d18bfbcfc5c78cdf2b60d0320d",
+        "exit_code": 1,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan226.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "end": "2026-11-10T12:32:28",
+      "exit_code": 1,
+      "attempts": 225,
+      "passed_by_class": {
+        "direct_flip": 0,
+        "direct_stay": 0,
+        "look_flip": 0,
+        "look_stay": 0
+      }
+    },
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan326.json",
+        "sha256": "4b055cee47896d51796efac7f9d14c3b179acdcb21675663486e5c2847c2fc38",
+        "metrics_sha256": "e2b69386220278b130b939fb463c6dc75f8cc7f49b92ed63c620f10ee97d4264",
+        "exit_code": 1,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan326.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "end": "2026-11-10T12:32:28",
+      "exit_code": 1,
+      "attempts": 126,
+      "passed_by_class": {
+        "direct_flip": 0,
+        "direct_stay": 0,
+        "look_flip": 0,
+        "look_stay": 1
+      }
+    },
+    {
+      "source": {
+        "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan426.json",
+        "sha256": "415a20dd068b16274efaf259910a2fe700d12b3acfd67b53067b6369f141ef0e",
+        "metrics_sha256": "6b5168f1fe8a314f0523dc147337ee0a7c1685ebd2a461e7b81d9372f6401b61",
+        "exit_code": 1,
+        "git_commit": "629d4a03a1613714dd27d155e458e58f759e92a3",
+        "audit": {
+          "file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan426.json",
+          "fail": [],
+          "warn": [
+            "P7 run failed (exit_code 1); keep it, do not cite it"
+          ]
+        }
+      },
+      "end": "2026-11-10T12:32:28",
+      "exit_code": 1,
+      "attempts": 140,
+      "passed_by_class": {
+        "direct_flip": 1,
+        "direct_stay": 1,
+        "look_flip": 0,
+        "look_stay": 1
+      }
+    }
+  ],
+  "same_six_source_measured_max_seconds": 335.6,
+  "same_six_source_plus30_percent_seconds": 437,
+  "scope": "Original completed metadata only; no native recheck or independent PASS claimed for S04"
+}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.9032597210025415}
+# exit_code: 0

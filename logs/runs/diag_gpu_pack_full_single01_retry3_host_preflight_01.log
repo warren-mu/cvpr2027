@@ -1,0 +1,21 @@
+# run_logged: python3 -c import hashlib,json
+from pathlib import Path
+from src.tools import pbs_black_retry as b
+r=Path.cwd().resolve(); name='diag_gpu_pack_full_single01_retry3_host_preflight_01';guard_file='results/diag_gpu_pack_full_single01_retry2_black_guard_01.json'
+reference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}
+guard,_=b.logged(r,reference); proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)
+new_name='gpu_pack_test_priority_full_single_01_retry3';command=list(old['command']);command[command.index('--name')+1]=new_name
+index,previous=b.rotation(r);previous_host=None
+if previous:
+    _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']
+host=b.next_host(b.VERSION,index,previous_host)
+binding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='PACK',gpus=1,wall_seconds=1855)
+submit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:30:55','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]
+metrics={'validated':True,'host_authorization':binding,'submit_command':submit,'scope':'Preflight only; original submitter must repeat under its own reservation lock'}
+result={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256'])]}
+with (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T13:10:29
+FINAL_METRICS_JSON: {"host_authorization": {"available_hosts": ["hopper-28", "hopper-30"], "disabled_hosts": {"hopper-22": {"gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56", "job_id": "709293.hopper-m-02", "reason": "New pinned submissions excluded after authenticated opening black gate", "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"}}, "evidence": {"file": "results/diag_gpu_pack_full_single01_retry2_black_guard_01.json", "sha256": "4fc450e49ffd5e82da06652edf38b0e803ab5fd4abe37b12058f31ce3608edfb"}, "original_gpu_uuid": "GPU-03239cdc-e1bd-b09a-c550-604191d6d680", "original_node": "hopper-15", "previous_requested_host": null, "queue_fallback_after_seconds": 1200, "requested_host": "hopper-30", "retry_of": "709674.hopper-m-02", "rotation_index": 8, "rotation_previous": {"payload": {"file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/payload.json", "sha256": "e8d9778cf915524bfa285d76ec63e4bbf8bfdf8de9975543cedcd3c2895620a8"}, "receipt": {"file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/submission.json", "sha256": "2052e8ecdb8c8ab9a317a2652982a9d48e46a97eadf01ea9c276991e7a7d1c9f"}}, "scope": "opening black gate retry only; no scientific acceptance", "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"}, "scope": "Preflight only; original submitter must repeat under its own reservation lock", "submit_command": ["python3", "scripts/pbs/submit_phase.py", "--name", "gpu_pack_test_priority_full_single_01_retry3", "--task", "T01", "--budget-group", "PACK", "--gpus", "1", "--walltime", "00:30:55", "--host", "hopper-30", "--retry-of", "709674.hopper-m-02", "--black-retry-evidence", "results/diag_gpu_pack_full_single01_retry2_black_guard_01.json", "--black-retry-evidence-sha256", "4fc450e49ffd5e82da06652edf38b0e803ab5fd4abe37b12058f31ce3608edfb", "--", "python3", "-u", "-m", "src.tools.gpu_pack", "--name", "gpu_pack_test_priority_full_single_01_retry3", "--queue-plan", "configs/shared_test_priority_active_01.json", "--queue-plan-sha256", "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a", "--queue-root", "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01", "--gpus", "1", "--timeout-seconds", "1825", "--gate-timeout-seconds", "180"], "validated": true}
+# exit_code: 0

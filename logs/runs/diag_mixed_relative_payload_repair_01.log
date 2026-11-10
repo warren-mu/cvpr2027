@@ -1,0 +1,77 @@
+# run_logged: python3 -m src.tools.record_command --name diag_mixed_relative_payload_repair_01 -- python3 -c import hashlib, importlib.util, json, os, subprocess
+from pathlib import Path
+from src.tools.pbs_mixed_accounting import finalized_split
+
+NAME = 'diag_mixed_relative_payload_repair_01'
+assert os.environ.get('CVPR_RUN_NAME') == NAME
+root = Path.cwd().resolve()
+targets = [('gpu_pack_test_priority_full_single_01_retry2', '709674.hopper-m-02'),
+           ('gpu_pack_test_priority_full_single_02_retry1', '709656.hopper-m-02')]
+destination = root/'logs/review'/NAME
+destination.mkdir(parents=True, exist_ok=False)
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def write_new(p, value):
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open('x') as f: json.dump(value,f,indent=2,sort_keys=True)
+copies, commands, originals = [], [], []
+for parent, job in targets:
+    name = parent+'_mixed_accounting'
+    result_path=root/'results'/(name+'.json')
+    old=json.loads(result_path.read_text()); originals.append((parent,job,old))
+    command=old['_meta']['command']
+    assert command[:3] == ['python3','-m','src.tools.pbs_mixed_accounting']
+    assert old['_meta']['name'] == old['config']['name'] == name
+    absolute=old['config']['payload_reference']['file']
+    payload=(root/absolute).resolve(); relative=str(payload.relative_to(root))
+    assert absolute != relative and command[command.index('--payload')+1] == absolute
+    assert payload.stat().st_mode & 0o222 == 0 and sha(payload) == old['config']['payload_reference']['sha256']
+    revised=list(command); revised[revised.index('--payload')+1]=relative
+    assert sum(a!=b for a,b in zip(command,revised)) == 1
+    commands.append(revised)
+    for p in [result_path,root/'logs/runs'/(name+'.log'),root/'logs/runs'/(name+'.meta.json')]:
+        data=p.read_bytes(); digest=hashlib.sha256(data).hexdigest()
+        archive=destination/'original'/p.relative_to(root)
+        archive.parent.mkdir(parents=True,exist_ok=True)
+        with archive.open('xb') as f:f.write(data)
+        assert archive.read_bytes() == data and sha(p) == digest
+        copies.append({'original_path':str(p.relative_to(root)),'archive_reference':{'file':str(archive.relative_to(root)),
+            'sha256':digest,'bytes':len(data)}})
+write_new(destination/'archive_manifest.json',{'reason':'Original fixed-name mixed consumer requires payload reference string to equal the submitter repo-relative ledger path. Original scientific/canonical data are unchanged. Original run_logged archives the old result itself; original log/meta copied before rerun.',
+ 'original_files':copies,'replacement_commands':commands})
+print('MIXED_ORIGINAL_BYTES_ARCHIVED: '+json.dumps(copies,sort_keys=True),flush=True)
+for command in commands:
+    name=command[command.index('--name')+1]
+    subprocess.run(['python3','scripts/run_logged.py','--name',name,'--seed','0','--',*command],check=True)
+spec=importlib.util.spec_from_file_location('original_phase_for_repair',root/'scripts/pbs/submit_phase.py')
+phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+verified=[]
+for parent,job,old in originals:
+    p=root/'results'/(parent+'_mixed_accounting.json');new=json.loads(p.read_text())
+    account=(root/new['config']['account_reference']['file']).resolve()
+    canonical=phase._final_accounting(root,{job},paths=[account])
+    assert set(canonical)=={job}
+    row={'name':parent,'job_id':job,'payload':new['config']['payload_reference']['file']}
+    split=finalized_split(root,row,canonical[job])
+    assert split['charged_gpu_hours_by_group']==old['metrics']['charged_gpu_hours_by_group']
+    assert split['total_charged_gpu_hours']==old['metrics']['total_charged_gpu_hours']
+    old_hash=hashlib.sha256(json.dumps(old,sort_keys=True).encode()).hexdigest()
+    archived=[a for a in (root/'results/_archive').glob(parent+'_mixed_accounting.*.json')
+              if hashlib.sha256(json.dumps(json.loads(a.read_text()),sort_keys=True).encode()).hexdigest()==old_hash]
+    assert archived
+    verified.append({'job_id':job,'original_run_logged_result_archive':str(archived[-1].relative_to(root)),
+        'replacement_result':{'file':str(p.relative_to(root)),'sha256':sha(p)},'original_finalized_split_passed':True,
+        'canonical_reference':new['config']['account_reference'],'charged_gpu_hours_by_group':split['charged_gpu_hours_by_group']})
+write_new(destination/'verified.json',{'repairs':verified})
+print('MIXED_RELATIVE_PAYLOAD_REPAIRED: '+json.dumps(verified,sort_keys=True),flush=True)
+
+# start: 2026-11-10T13:09:30
+MIXED_ORIGINAL_BYTES_ARCHIVED: [{"archive_reference": {"bytes": 5633, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json", "sha256": "720311e1db4125f7f20f0861ab230a499f81fe3ce1aca171529b535b7e52de8f"}, "original_path": "results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json"}, {"archive_reference": {"bytes": 3001, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.log", "sha256": "2f12311a02b03d328b4bd55605ada745244ff69754d9b8b5a89e8a278f842a53"}, "original_path": "logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.log"}, {"archive_reference": {"bytes": 1475, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.meta.json", "sha256": "3b21e07abd0db9d2cc60b971c2f6678f107e62fdb200ebabc9cd2d7bef8c4abd"}, "original_path": "logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.meta.json"}, {"archive_reference": {"bytes": 7280, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json", "sha256": "1b3dc036df3ab0e11fd565474064377788574c2aeb7c1f101ca12e633202826f"}, "original_path": "results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json"}, {"archive_reference": {"bytes": 3923, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.log", "sha256": "181d67f3482171ae6cf53fc8c9f5af0c31e5f31763823102801fddea80c46f93"}, "original_path": "logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.log"}, {"archive_reference": {"bytes": 1475, "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.meta.json", "sha256": "4ff4da47b52877f493763f6d70a96bd93fda8af22494a47bb6711fcf0070a30b"}, "original_path": "logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.meta.json"}]
+[run_logged] archived previous results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json -> results/_archive/
+[run_logged] stamped results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json (exit_code=0)
+FINAL_METRICS_JSON: {"allocation_gpu_hours": 0.005833333333333334, "artifact_references": [{"file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/payload.json", "sha256": "12227f933c2e12eda5ccc857f2d645caad6e53ff0d12e1caeee00f625e0d12f3"}, {"bytes": 455, "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/submission.json", "sha256": "4a4913e27b151368acd1e223a8eb0ce427134bc8848bac280545d3581975fe47"}], "canonical_accounting_result": "results/diag_full_shared_709674_accounting_02.json", "charged_gpu_hours_by_group": {"G01": 0.005833333333333334, "T02": 0.0}, "charged_gpu_hours_by_group_exact": {"G01": {"denominator": "500000000000000000", "numerator": "2916666666666667"}, "T02": {"denominator": "1", "numerator": "0"}}, "job_id": "709674.hopper-m-02", "observed_unit_gpu_seconds_by_group": {"G01": 0.0, "T02": 0.0}, "pack_name": "gpu_pack_test_priority_full_single_01_retry2", "possible_groups": ["G01", "T02"], "queue_charge_rate": 1.0, "residual_charged_gpu_hours": 0.005833333333333334, "residual_group": "G01", "scope": "Scheduler cost attribution only; gate, idle, cleanup and timing remainder follow the predeclared priority, not scientific success. Exact fractions conserve the original canonical total; floats are display/budget values.", "sources": [{"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json", "metrics_sha256": "b87ca890add53ff8849719c435d51b76ee24d3adb28470e2ffbd9aa2f4eef699", "sha256": "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08"}, {"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json", "metrics_sha256": "d4e698048bbf798b87be9beee7a7eb0f4984940d6b2224a2b049f35c3c760cd5", "sha256": "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33"}], "total_charged_gpu_hours": 0.005833333333333334, "total_charged_gpu_hours_exact": {"denominator": "500000000000000000", "numerator": "2916666666666667"}, "unassigned_allocation_gpu_hours": 0.005833333333333334, "unit_count": 0, "version": "shared_gpu_units_budget_v1", "zero_business": true}
+[run_logged] archived previous results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json -> results/_archive/
+[run_logged] stamped results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json (exit_code=0)
+FINAL_METRICS_JSON: {"allocation_gpu_hours": 0.33805555555555555, "artifact_references": [{"file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/payload.json", "sha256": "e8d9778cf915524bfa285d76ec63e4bbf8bfdf8de9975543cedcd3c2895620a8"}, {"bytes": 455, "file": "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/submission.json", "sha256": "2052e8ecdb8c8ab9a317a2652982a9d48e46a97eadf01ea9c276991e7a7d1c9f"}, {"bytes": 6043, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01/claims/4b3fdb3fa0c18c1a3cf08ccca0e853d00100d2111c27c007ae5c7fc158e1e544.json", "sha256": "54df8c1f6806f2642aa354a673f204afa08d30890e478fec73b683ad2a89f0b3"}, {"bytes": 1181, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01/releases/4b3fdb3fa0c18c1a3cf08ccca0e853d00100d2111c27c007ae5c7fc158e1e544.json", "sha256": "09504116d3e0bae6f99388294cd42a02fa9011a223165f292cf3a9b38f209211"}], "canonical_accounting_result": "results/diag_full_shared_709656_accounting_01.json", "charged_gpu_hours_by_group": {"G01": 0.33805555555555555, "T02": 0.0}, "charged_gpu_hours_by_group_exact": {"G01": {"denominator": "20000000000000000", "numerator": "6761111111111111"}, "T02": {"denominator": "1", "numerator": "0"}}, "job_id": "709656.hopper-m-02", "observed_unit_gpu_seconds_by_group": {"G01": 1199.408093663, "T02": 0.0}, "pack_name": "gpu_pack_test_priority_full_single_02_retry1", "possible_groups": ["G01", "T02"], "queue_charge_rate": 1.0, "residual_charged_gpu_hours": 0.004886640649166661, "residual_group": "G01", "scope": "Scheduler cost attribution only; gate, idle, cleanup and timing remainder follow the predeclared priority, not scientific success. Exact fractions conserve the original canonical total; floats are display/budget values.", "sources": [{"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_02_retry1.json", "metrics_sha256": "e54fe791f21ee2972977ab6bbded93abeef4adf718ab2879f070f1a0860e8605", "sha256": "5fd98b957f974c5a28fbeb91fe49ece43b890ac63c03c38b8a2625815c6aaf7b"}, {"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709656_accounting_01.json", "metrics_sha256": "c8042cfd5824894f65648d44ce2dda6f4dc6f025d0847e5ea122db6e76b73284", "sha256": "fbd7dd90827dd3a988cd5d78ae09666cc45aaa92db0356480114f61b37861903"}, {"audit": {"fail": [], "file": "results/gen_test_s16_round2_s05.json", "warn": ["P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/gen_test_s16_round2_s05.json", "git_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e", "metrics_sha256": "081cffa55d247476173d3014c7a7bd9cf535f7a1169ef4f5a47c1e5284280cc3", "sha256": "f96e0fa13c6954f1c175638023d256e22ef19e9bdd13a5f7db994d3b7e9bbf74"}], "total_charged_gpu_hours": 0.33805555555555555, "total_charged_gpu_hours_exact": {"denominator": "20000000000000000", "numerator": "6761111111111111"}, "unassigned_allocation_gpu_hours": 0.004886640649166661, "unit_count": 1, "version": "shared_gpu_units_budget_v1", "zero_business": false}
+MIXED_RELATIVE_PAYLOAD_REPAIRED: [{"canonical_reference": {"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json", "sha256": "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33"}, "charged_gpu_hours_by_group": {"G01": 0.005833333333333334, "T02": 0.0}, "job_id": "709674.hopper-m-02", "original_finalized_split_passed": true, "original_run_logged_result_archive": "results/_archive/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.20261110-130935.json", "replacement_result": {"file": "results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json", "sha256": "770b37efcb72aa7f081f03d46ae48791f042bf5bccd510e2653cc4f4845a369b"}}, {"canonical_reference": {"file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709656_accounting_01.json", "sha256": "fbd7dd90827dd3a988cd5d78ae09666cc45aaa92db0356480114f61b37861903"}, "charged_gpu_hours_by_group": {"G01": 0.33805555555555555, "T02": 0.0}, "job_id": "709656.hopper-m-02", "original_finalized_split_passed": true, "original_run_logged_result_archive": "results/_archive/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.20261110-130938.json", "replacement_result": {"file": "results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json", "sha256": "392ff23fb5533bfbd4d9bdcd8dc50d3719336d0209c1fd3cc72fd27d57455488"}}]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 8.440730581991374}
+# exit_code: 0

@@ -1,0 +1,28 @@
+# run_logged: python3 -m src.tools.record_command --name diag_s04_checkpoint_runtime_bounds_01 -- python3 -c import json,hashlib,math
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+rows=[]
+for suffix in ('s01','s02','s03'):
+ p=Path('results')/('t01v2_checkpoint_test_s16_'+suffix+'_01.json')
+ d,r=audited_result(p); m=d['metrics']
+ rows.append({'source':r,'duration_seconds':d['_meta'].get('duration_sec'),'exit_code':d['_meta'].get('exit_code'),'requested_sources':d['config'].get('requested_sources'),'source_count':len(d['config'].get('requested_sources',[])),'independently_verified_pair_count':m.get('independently_verified_pair_count'),'published_pair_count':m.get('published_pair_count'),'observed_attempts':m.get('observed_attempts'),'errors':m.get('errors')})
+p=Path('results/gen_test_s16_round2_s04_retry1_gate.json')
+gate,gr=audited_result(p)
+sources=[]
+for n in (325,425,26,226,326,426):
+ p=Path('results')/('gen_test_s16_round2_s04_retry1_c6_floorplan'+str(n)+'.json')
+ b=p.read_bytes();d=json.loads(b)
+ sources.append({'file':str(p),'sha256':hashlib.sha256(b).hexdigest(),'end':d['_meta'].get('end'),'exit_code':d['_meta'].get('exit_code'),'attempts':d['metrics'].get('attempts'),'passed_by_class':d['metrics'].get('passed_by_class')})
+print(json.dumps({'historical_checkpoints':rows,'actual_current_source_gate':{'source':gr,'duration_seconds':gate['_meta'].get('duration_sec'),'exit_code':gate['_meta'].get('exit_code'),'passed':gate['metrics'].get('passed')},'current_sources':sources,'scope':'Original recorded metadata only; no independent native recheck and no inferred PASS'},indent=2),flush=True)
+# start: 2026-11-10T12:51:32
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t01_partition.py", line 74, in audited_result
+    raw = path.read_bytes()
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1126, in read_bytes
+    with self.open(mode='rb') as f:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileNotFoundError: [Errno 2] No such file or directory: '/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gen_test_s16_round2_s04_retry1_gate.json'
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 2.476607996970415}
+# exit_code: 1

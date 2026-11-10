@@ -1,0 +1,1072 @@
+{
+  "action_successes": [
+    true
+  ],
+  "actions": [
+    {
+      "distance_m": 1.0317900498920471,
+      "distance_method": "3D Euclidean agent metadata.position to object metadata.position",
+      "kind": "select",
+      "label": 2,
+      "mark_labels_by_name": {
+        "Book_c42bbc37": 2,
+        "Laptop_65b9a854": 1
+      },
+      "measurement_action_sent": false,
+      "metadata_distance": 1.031790018081665,
+      "realized_relation": {
+        "anchor_name": "AlarmClock_802e041f",
+        "candidate_names": [
+          "Book_c42bbc37",
+          "Laptop_65b9a854"
+        ],
+        "candidate_policy": "two_marked_pickupables_v1",
+        "candidate_types": [
+          "Book",
+          "Laptop"
+        ],
+        "distance_method": "3d_euclidean_ai2thor_metadata_position_centres",
+        "distances_m": {
+          "Book_c42bbc37": 0.17345446819676222,
+          "Laptop_65b9a854": 0.44912093471065256
+        },
+        "passed": true,
+        "reasons": [],
+        "same_class": false,
+        "target_name": "Book_c42bbc37"
+      },
+      "selected_object_id": "Book|+00.62|+00.58|-02.47",
+      "selected_object_name": "Book_c42bbc37",
+      "success": true,
+      "target_name": "Book_c42bbc37",
+      "visible_mask_pixels": 2117
+    }
+  ],
+  "actual_output_caps": {
+    "direct_flip": 1,
+    "direct_stay": 1,
+    "look_flip": 1,
+    "look_stay": 1
+  },
+  "allowed_kinds": [
+    "direct_flip",
+    "direct_stay",
+    "look_flip",
+    "look_stay"
+  ],
+  "bbox_proposal_rank_policy": {
+    "deadline": "optional original soft-deadline callback before each point; exceptions propagate before any returned ranked pool, without mutating the input",
+    "domain": "retain every original entry and native token, including unknown or low-ranked predictions; no eligibility filter or cap",
+    "geometry": "original anchor world-axis AABB size translated to the existing projected proposal centre; no new placement coordinates",
+    "one_step_area": "maximum clipped projected rectangle area among supplied existing one-action cameras; not mask/evidence pixels or action availability",
+    "ordering": "known start and one-step prediction first, predicted whole-box outside first, larger one-step rectangle area, larger signed starting margin, original input order",
+    "projection": "all eight box corners through the existing camera model; any nonpositive corner depth makes that camera prediction unknown",
+    "scope": "proposal prediction only; no acceptance result or measured visibility is produced",
+    "start_margin": "signed rectangle separation from the starting frame; positive means the entire predicted rectangle is outside",
+    "unchanged": "all actual physical, target, mask, RGB, evidence and witness checks; side/seed assignment, counters and schedules",
+    "version": "predicted_anchor_aabb_hidden_then_one_step_area_v1"
+  },
+  "bbox_proposal_rank_version": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+  "buffered_raw_complete": true,
+  "candidate_label_assignment": {
+    "Book_c42bbc37": 2,
+    "Laptop_65b9a854": 1
+  },
+  "captures": [
+    {
+      "action_index": 2,
+      "black": false,
+      "files": {
+        "masks": {
+          "bytes": 7436,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/frame_000003_masks.npz",
+          "sha256": "c4030a003b4e7d1bf94d50b1f49e47df2b6a229b04961ee195750bca3473988a"
+        },
+        "metadata": {
+          "bytes": 96878,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/frame_000003_metadata.json",
+          "sha256": "329cc348c0ea31e2172271582cb33d840ffc123c4ddd179350d531c3533d2204"
+        },
+        "rgb": {
+          "bytes": 85525,
+          "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/frame_000003_rgb.png",
+          "sha256": "69b1ce4162f32c9dba33845b7eec16f49da89f75effc0ad81a4213138ba11663"
+        }
+      },
+      "mask_pixels_by_name": {
+        "AlarmClock_802e041f": 1044,
+        "Book_c42bbc37": 2117,
+        "CellPhone_f15e56c3": 124,
+        "Chair_b38b9db1": 4198,
+        "CreditCard_68288275": 26,
+        "DeskLamp_3adf5740": 649,
+        "Desk_57956a23": 3236,
+        "Drawer_bf0fff8a": 1802,
+        "Drawer_c310574f": 1930,
+        "Floor_3138b7aa": 10000,
+        "Laptop_65b9a854": 4279,
+        "Shelf_428a386b": 36,
+        "SideTable_40a2d5aa": 1635,
+        "Window_726cd6c9": 6464,
+        "Window_a0c9a3af": 4149,
+        "Window_f4ded2fc": 11095
+      },
+      "rgb_sha256": "6b8e959825147d267021efd392d957f7184aad2183a69c161b139129ceb67b31",
+      "rgb_shape": [
+        255,
+        255,
+        3
+      ],
+      "sequence_id": null,
+      "source_action": "TeleportFull",
+      "stem": "action_2_TeleportFull",
+      "valid": true
+    }
+  ],
+  "cleanup_errors": [],
+  "construction_process_id": 512134,
+  "discovery_schedule_policy": {
+    "empty_active": "continue actual discovery until a proposal domain is available or discovery is exhausted",
+    "exhaustion": "StopIteration, seen proposal, native failure, and ten consecutive physical rejections consume a domain visit; other round domains still proceed",
+    "native_queries": "unchanged native discovery and original authenticated queries; no cached or inferred coordinates",
+    "round": "discover at most one new combination, then process each combination active at that round start once",
+    "scope": "search scheduling only; fewer discoveries per active round, no speedup or acceptance claim",
+    "unchanged": "all domain contents, seed0 assignment, global counted attempt IDs, seen set, safe native retries, native failure counting, physical10-skip, thresholds and cleanup",
+    "version": "one_discovery_then_full_active_round_v1",
+    "within_round": "unchanged preference for a stream containing the requested Look/Direct pool; then original active order"
+  },
+  "discovery_schedule_version": "one_discovery_then_full_active_round_v1",
+  "done": true,
+  "error": null,
+  "executed_actions": [
+    "select 2"
+  ],
+  "field_of_view": 60,
+  "fixed_label_pair_id": "floorplan327_00043",
+  "fixed_label_policy": {
+    "approved_task_commit": "5a50999",
+    "assignment": "existing T02 label_assignment(pair_id, stable candidate names)",
+    "legacy": "absent policy means the original spatial policy; no retrospective upgrades",
+    "public_identity": "numbers and mask-derived geometry only; stable object names remain private",
+    "scope": "one object keeps its number across both worlds and all views of one pair",
+    "version": "pair_stable_object_labels_v1",
+    "visible_subset": "draw only currently visible declared candidates; never renumber a subset"
+  },
+  "fixed_label_version": "pair_stable_object_labels_v1",
+  "flip_geometry_policy": {
+    "agent_range": "original Look proposal constraint: native selected surface point within3m of original agent position",
+    "anchor_center": "native selected_position + original anchor axisAlignedBoundingBox.size.y/2 in Y; explicit geometric prediction, not physical or settled measurement",
+    "approval": "T01v2 supplement15;5a0a138",
+    "candidate_roles": "A/B are unchanged stable candidate names and metadata.position distance roles; either role may lie on either screen side",
+    "combination": "two certified opposite-role points at distinct native positions; factorized checks followed by lazy Cartesian enumeration and full-tuple validation",
+    "distance": "full3D Euclidean distance from predicted anchor centre to candidate metadata.position; near<far and far>=1.5*near",
+    "fallback": "selected first then same certified role domain, maximum40; revalidate every actual native point against the fixed opposite point before placement",
+    "input_domain": "all original native query tokens before horizontal, screen-side, or native-surface-point distance-ratio pruning",
+    "one_step": "each world independently has a supplied existing one-action camera with a known bbox and strictly positive clipped rectangle area; actions may differ",
+    "prefix": "all8 projected original anchor AABB corners known in front of camera; whole predicted rectangle outside v0 by at least10 pixels",
+    "scope": "proposal geometry only; no measured mask pixels, physical validity or scientific acceptance claim",
+    "seed": "original seed0 canonical A/B assignment remains; actual w0/w1 source_sides may be A/B or B/A",
+    "stay": "original historical Stay domain, ordering, schedule, retry rules and scientific validation untouched",
+    "storage": "all prefilter input occurrences/reasons retained as compact native query references; complete coordinates stay in original native-query evidence",
+    "unknown": "unknown projection/geometry never counts as a passing prediction",
+    "version": "look_flip_complete_tuple_predicted_center_geometry_v1"
+  },
+  "flip_geometry_version": "look_flip_complete_tuple_predicted_center_geometry_v1",
+  "fov_contrast_group": "g01_selected60",
+  "fov_contrast_policy": {
+    "actual_class": "unchanged scientific classification; only actual classes with reserved tickets are exported",
+    "approval": "83828652 and 002d747c human approved",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": "explicit allowed_kinds in the immutable scene assignment",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_scope": "base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "evaluation only:21\u201330/221\u2013230/321\u2013330/421\u2013430",
+    "per_scene_class_cap": 6,
+    "physics": {
+      "anchor_position_error_limit_m": 0.02,
+      "approval": "38b15551 supplement16",
+      "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+      "distance_origin": "same settled common baseline object position in both worlds",
+      "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+      "nearby_radius_m": 0.5,
+      "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+      "nonanchor_position_limit_m": 0.01,
+      "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+      "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+      "version": "nearby_nonanchor_0_5m_v1"
+    },
+    "physics_approval": "38b15551 supplement16; explicit new production version",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "purpose": "frozen evaluation collection only; never training, tuning or generator pilots",
+    "quota": "g01_static_configuration_tickets_v2",
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_test_configuration_ticket_proposals_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_test_configuration_tickets_selected60_v2_nearby_v1"
+  },
+  "fov_contrast_version": "g01_test_configuration_tickets_selected60_v2_nearby_v1",
+  "g01_configuration_version": "test_configuration_canonical_start_seed0_v1",
+  "g01_partition": "test",
+  "g01_policy": {
+    "actual_class": "unchanged scientific classification; only actual classes with reserved tickets are exported",
+    "approval": "83828652 and 002d747c human approved",
+    "candidates": "approved natural two-marked-pickupables; cloning disabled",
+    "classes": "explicit allowed_kinds in the immutable scene assignment",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "cpu_cores_per_gpu": 12,
+    "discovery_schedule": "one_discovery_then_full_active_round_v1",
+    "discovery_schedule_scope": "base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only",
+    "field_of_view": 60,
+    "fixed_labels": "pair_stable_object_labels_v1",
+    "geometry_scope": "Look-pool Flip proposals only, regardless of final measured class; Direct-pool Flip and all Stay retain their previous domains",
+    "look_flip_geometry": "look_flip_complete_tuple_predicted_center_geometry_v1",
+    "look_proposal_ordering": "predicted_anchor_aabb_hidden_then_one_step_area_v1",
+    "minimum_eligible_attempts": null,
+    "native_token_storage": "native_token_shared_json_exact_sha256_v1",
+    "partition": "evaluation only:21\u201330/221\u2013230/321\u2013330/421\u2013430",
+    "per_scene_class_cap": 6,
+    "physics": {
+      "anchor_position_error_limit_m": 0.02,
+      "approval": "38b15551 supplement16",
+      "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+      "distance_origin": "same settled common baseline object position in both worlds",
+      "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+      "nearby_radius_m": 0.5,
+      "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+      "nonanchor_position_limit_m": 0.01,
+      "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+      "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+      "version": "nearby_nonanchor_0_5m_v1"
+    },
+    "physics_approval": "38b15551 supplement16; explicit new production version",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "purpose": "frozen evaluation collection only; never training, tuning or generator pilots",
+    "quota": "g01_static_configuration_tickets_v2",
+    "resource_scope": "one construction plus at most one sequential witness; aggregate multi-lane limit requires a separate parent policy",
+    "scene_timeout_seconds": 1200,
+    "scope": "new producer outputs only; no retrospective upgrade of historical label or search rules",
+    "search": "g01_test_configuration_ticket_proposals_v2",
+    "source_instances_max": 2,
+    "task": "G01",
+    "version": "g01_test_configuration_tickets_selected60_v2_nearby_v1"
+  },
+  "g01_quota_assignment": {
+    "actual_output_caps": {
+      "direct_flip": 1,
+      "direct_stay": 1,
+      "look_flip": 1,
+      "look_stay": 1
+    },
+    "allowed_kinds": [
+      "direct_flip",
+      "direct_stay",
+      "look_flip",
+      "look_stay"
+    ],
+    "child_run_name": "gen_test_s16_round2_s05_c6_floorplan327",
+    "parent_run_name": "gen_test_s16_round2_s05",
+    "partition": "test",
+    "plan_reference": {
+      "file": "configs/gen_test_s16_round2_s05_bank_quota.json",
+      "sha256": "7014d6a7849e3e760c562de71a71319f35de31a5af8d1d702ef1be01bdba849a"
+    },
+    "scene": "FloorPlan327",
+    "seen_configurations": [],
+    "version": "g01_static_configuration_tickets_v2"
+  },
+  "g01_quota_version": "g01_static_configuration_tickets_v2",
+  "g01_search_policy": {
+    "approval": "83828652 configuration dispersion; 002d747c human-approved test round2",
+    "balance_after_cap": "no forced Flip after its tickets are full; Stay-only is allowed by the new task",
+    "collection": "one exported actual class per canonical configuration across Controller restarts and authenticated historical inventory; static tickets unchanged",
+    "configuration": {
+      "approval": "83828652 human approved",
+      "key": "scene; original canonical agent setup command; stable anchor name; unordered two stable candidate names",
+      "scope": "test inventory and proposal capacity only; scientific acceptance unchanged",
+      "seed": 0,
+      "selection": "one per configuration and actual class; Random(SHA256(version,seed0,configuration_id)).choice over sorted unique proposal identities",
+      "start": "literal generator command; no native readback, rounding, or edited object poses",
+      "version": "test_configuration_canonical_start_seed0_v1"
+    },
+    "direct_flip": "unchanged G01 native-surface3D ratio roles and in-frame centre projection; no proximity or per-side cap",
+    "discovery_schedule_override": "preserve one new domain per finite round and at most one visit per active domain; replace only within-round domain preference with available class priority, stable ties",
+    "look_attempt_mix": "no Flip/Stay balance constraint in this explicit test configuration version; LookStay has first priority",
+    "look_flip": "supplement15 original complete native domain, predicted-centre3D roles, entire AABB outside10px and each world one-step positive bbox area; actual rendered/physical acceptance unchanged",
+    "pool_order": "stable class priority within each finite active-domain round and within each domain; only available unoccupied ticketed classes; no Look/Direct alternation",
+    "proposal_priority": [
+      "look_stay",
+      "look_flip",
+      "direct_flip",
+      "direct_stay"
+    ],
+    "quota_skip": "retain original validity verdict and record collection_quota_full; never recast this as physical failure",
+    "stay": "original horizontal native domain; original Look12/Direct40 cap and far-first actual-w0 retries",
+    "task": "G01; approved supplements13/14/15",
+    "unchanged": "seed0 role orientation, native token proof, all physical/target/prefix/evidence/solvability/witness thresholds",
+    "version": "g01_test_configuration_ticket_proposals_v2"
+  },
+  "g01_search_version": "g01_test_configuration_ticket_proposals_v2",
+  "g01_seen_configurations": [],
+  "g01_version": "g01_test_configuration_tickets_selected60_v2_nearby_v1",
+  "nearby_physics_policy": {
+    "anchor_position_error_limit_m": 0.02,
+    "approval": "38b15551 supplement16",
+    "distance_destination": "both actual successful native placement requested pivots in complete requested_poses; never original failed spawn points",
+    "distance_origin": "same settled common baseline object position in both worlds",
+    "far_objects": "record original before-to-after and common-baseline displacement; only their nonanchor 1cm rejection is removed",
+    "nearby_radius_m": 0.5,
+    "nearby_scope": "union of distance<=0.5m to either world request and both declared supporting receptacles",
+    "nonanchor_position_limit_m": 0.01,
+    "partial_world": "nonanchor gate deferred until both actual requests exist; never exported or independently accepted",
+    "unchanged": "native legal placement, parent membership, rest, inventories, agent, anchor 2cm, restore, all rendered and witness checks",
+    "version": "nearby_nonanchor_0_5m_v1"
+  },
+  "nearby_physics_version": "nearby_nonanchor_0_5m_v1",
+  "passed": true,
+  "planned_actions": [
+    "select 2"
+  ],
+  "process_id": 2658889,
+  "producer_module": "src.envs.pair_v2_g01_shard",
+  "raw_evidence": {
+    "bytes": 5115,
+    "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/evidence_index.json",
+    "sha256": "691ca1dab8087ede1d61c936f5d6d85c7454641e6e9f39a5eecb06539f31b413"
+  },
+  "restoration": {
+    "agent_pose_exact": true,
+    "agent_realized": {
+      "horizon": 30.00000762939453,
+      "position": {
+        "x": 0.75,
+        "y": 0.9009992480278015,
+        "z": -1.5
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 225.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "agent_requested": {
+      "horizon": 30.00000762939453,
+      "position": {
+        "x": 0.75,
+        "y": 0.9009992480278015,
+        "z": -1.5
+      },
+      "rotation": {
+        "x": -0.0,
+        "y": 225.0,
+        "z": 0.0
+      },
+      "standing": true
+    },
+    "executed_agent_setup_arguments": {
+      "forceAction": false,
+      "horizon": 30,
+      "position": {
+        "x": 0.75,
+        "y": 0.9009992480278015,
+        "z": -1.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 225,
+        "z": 0
+      },
+      "standing": true
+    },
+    "frozen_pose_readback": {
+      "all_pose_components_exact": false,
+      "max_position_delta_m": 0.0,
+      "max_rotation_component_abs_diff_degrees": 9.5367431640625e-07,
+      "max_rotation_shortest_component_diff_degrees": 9.5367431640625e-07,
+      "objects": {
+        "AlarmClock_802e041f": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 1.1920928955078125e-07
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 2.9802322387695312e-08,
+            "y": 0.0,
+            "z": 1.1920928955078125e-07
+          }
+        },
+        "BaseballBat_d2ba2cf9": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 9.5367431640625e-07,
+            "y": 9.5367431640625e-07,
+            "z": 4.470348358154297e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 9.5367431640625e-07,
+            "y": 9.5367431640625e-07,
+            "z": 4.470348358154297e-08
+          }
+        },
+        "BasketBall_42af16da": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Bed_7d8e78d7": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.1641532182693481e-10,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.1641532182693481e-10,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Book_c42bbc37": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          }
+        },
+        "Boots_31169312": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 5.960464477539063e-08,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 5.960464477539063e-08,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          }
+        },
+        "Bowl_559f4dc5": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CD_52fcb7ea": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CellPhone_f15e56c3": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Chair_b38b9db1": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "CreditCard_68288275": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          }
+        },
+        "DeskLamp_3adf5740": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Desk_57956a23": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 4.656612873077393e-10,
+            "z": 4.656612873077393e-10
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 4.656612873077393e-10,
+            "z": 4.656612873077393e-10
+          }
+        },
+        "GarbageCan_3e920720": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "KeyChain_dfcc3939": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "Laptop_65b9a854": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 4.656612873077393e-10
+          }
+        },
+        "Pen_3028f4f5": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.862645149230957e-09,
+            "y": 0.0,
+            "z": 1.4901161193847656e-08
+          }
+        },
+        "Pencil_ceba2852": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 2.9802322387695312e-08
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 2.9802322387695312e-08
+          }
+        },
+        "Pillow_a07f7b2e": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation_exact": true,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "SideTable_40a2d5aa": {
+          "position_delta_m": 0.0,
+          "position_exact": true,
+          "rotation_component_abs_diff_degrees": {
+            "x": 1.1641532182693481e-10,
+            "y": 0.0,
+            "z": 2.9103830456733704e-11
+          },
+          "rotation_exact": false,
+          "rotation_shortest_component_diff_degrees": {
+            "x": 1.1641532182693481e-10,
+            "y": 0.0,
+            "z": 2.9103830456733704e-11
+          }
+        }
+      },
+      "scope": "actual metadata versus requested pose values; diagnostic, not a new acceptance threshold"
+    },
+    "frozen_pose_readback_reference": {
+      "bytes": 6536,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/frozen_restore_readback_000003.json",
+      "sha256": "89663c7377cf547d5c22c64a197691d5dda24c18fa435ce01fdb316b987d863b"
+    },
+    "pose_measurements": {
+      "added": [],
+      "editable_inventory_exact": true,
+      "inventory_exact": true,
+      "missing": [],
+      "objects": {
+        "AlarmClock_802e041f": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.325965940952301,
+            "y": 359.8434143066406,
+            "z": 1.3953347206115723
+          },
+          "rotation_before": {
+            "x": 0.32596591114997864,
+            "y": 359.8434143066406,
+            "z": 1.3953346014022827
+          },
+          "rotation_exact": false
+        },
+        "BaseballBat_d2ba2cf9": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 8.245025634765625,
+            "y": 11.98169231414795,
+            "z": 0.1355021744966507
+          },
+          "rotation_before": {
+            "x": 8.245024681091309,
+            "y": 11.981693267822266,
+            "z": 0.13550212979316711
+          },
+          "rotation_exact": false
+        },
+        "BasketBall_42af16da": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0,
+            "y": 345.5574645996094,
+            "z": 0.0
+          },
+          "rotation_before": {
+            "x": 0.0,
+            "y": 345.5574645996094,
+            "z": 0.0
+          },
+          "rotation_exact": true
+        },
+        "Bed_7d8e78d7": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0009459457942284644,
+            "y": 0.0034249192103743553,
+            "z": 358.3768615722656
+          },
+          "rotation_before": {
+            "x": 0.0009459456778131425,
+            "y": 0.0034249192103743553,
+            "z": 358.3768615722656
+          },
+          "rotation_exact": false
+        },
+        "Book_c42bbc37": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.90789794921875,
+            "y": 170.9800567626953,
+            "z": 0.21824334561824799
+          },
+          "rotation_before": {
+            "x": 359.90789794921875,
+            "y": 170.9800567626953,
+            "z": 0.2182433307170868
+          },
+          "rotation_exact": false
+        },
+        "Boots_31169312": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.28859037160873413,
+            "y": 177.92845153808594,
+            "z": 0.005133780185133219
+          },
+          "rotation_before": {
+            "x": 0.28859031200408936,
+            "y": 177.92845153808594,
+            "z": 0.0051337797194719315
+          },
+          "rotation_exact": false
+        },
+        "Bowl_559f4dc5": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9903564453125,
+            "y": 359.9856872558594,
+            "z": 0.01012305449694395
+          },
+          "rotation_before": {
+            "x": 359.9903564453125,
+            "y": 359.9856872558594,
+            "z": 0.01012305449694395
+          },
+          "rotation_exact": true
+        },
+        "CD_52fcb7ea": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 8.044976880228205e-07,
+            "y": -0.0006966792861931026,
+            "z": 5.581396749221312e-07
+          },
+          "rotation_before": {
+            "x": 8.044976880228205e-07,
+            "y": -0.0006966792861931026,
+            "z": 5.581396749221312e-07
+          },
+          "rotation_exact": true
+        },
+        "CellPhone_f15e56c3": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.9734191894531,
+            "y": 180.00489807128906,
+            "z": 359.9942321777344
+          },
+          "rotation_before": {
+            "x": 359.9734191894531,
+            "y": 180.00489807128906,
+            "z": 359.9942321777344
+          },
+          "rotation_exact": true
+        },
+        "Chair_b38b9db1": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 1.5139913767114876e-09,
+            "y": 180.06773376464844,
+            "z": -2.561320343374973e-06
+          },
+          "rotation_before": {
+            "x": 1.5139913767114876e-09,
+            "y": 180.06773376464844,
+            "z": -2.561320343374973e-06
+          },
+          "rotation_exact": true
+        },
+        "CreditCard_68288275": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.015591098926961422,
+            "y": 340.6256103515625,
+            "z": 0.007795004174113274
+          },
+          "rotation_before": {
+            "x": 0.015591098926961422,
+            "y": 340.6256103515625,
+            "z": 0.007795003708451986
+          },
+          "rotation_exact": false
+        },
+        "DeskLamp_3adf5740": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.02357656881213188,
+            "y": 359.9803466796875,
+            "z": 359.9883117675781
+          },
+          "rotation_before": {
+            "x": 0.02357656881213188,
+            "y": 359.9803466796875,
+            "z": 359.9883117675781
+          },
+          "rotation_exact": true
+        },
+        "Desk_57956a23": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.02674114890396595,
+            "y": 0.005289617460221052,
+            "z": 0.00350762065500021
+          },
+          "rotation_before": {
+            "x": 0.0267411470413208,
+            "y": 0.005289616994559765,
+            "z": 0.0035076201893389225
+          },
+          "rotation_exact": false
+        },
+        "GarbageCan_3e920720": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": -0.0028969673439860344,
+            "y": 116.9029769897461,
+            "z": 0.06613942980766296
+          },
+          "rotation_before": {
+            "x": -0.0028969673439860344,
+            "y": 116.9029769897461,
+            "z": 0.06613942980766296
+          },
+          "rotation_exact": true
+        },
+        "KeyChain_dfcc3939": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 359.412353515625,
+            "y": 359.9513854980469,
+            "z": 359.619384765625
+          },
+          "rotation_before": {
+            "x": 359.412353515625,
+            "y": 359.9513854980469,
+            "z": 359.619384765625
+          },
+          "rotation_exact": true
+        },
+        "Laptop_65b9a854": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.027191000059247017,
+            "y": -0.0003091217949986458,
+            "z": 0.004051475320011377
+          },
+          "rotation_before": {
+            "x": 0.027190998196601868,
+            "y": -0.0003091217949986458,
+            "z": 0.00405147485435009
+          },
+          "rotation_exact": false
+        },
+        "Pen_3028f4f5": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.02129261940717697,
+            "y": 359.8303527832031,
+            "z": 0.21514415740966797
+          },
+          "rotation_before": {
+            "x": 0.02129262126982212,
+            "y": 359.8303527832031,
+            "z": 0.21514414250850677
+          },
+          "rotation_exact": false
+        },
+        "Pencil_ceba2852": {
+          "isMoving": false,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.020041748881340027,
+            "y": 359.82476806640625,
+            "z": 0.2130986601114273
+          },
+          "rotation_before": {
+            "x": 0.020041748881340027,
+            "y": 359.82476806640625,
+            "z": 0.2130986899137497
+          },
+          "rotation_exact": false
+        },
+        "Pillow_a07f7b2e": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.019356118515133858,
+            "y": 0.1350681334733963,
+            "z": 358.3800354003906
+          },
+          "rotation_before": {
+            "x": 0.019356118515133858,
+            "y": 0.1350681334733963,
+            "z": 358.3800354003906
+          },
+          "rotation_exact": true
+        },
+        "SideTable_40a2d5aa": {
+          "isMoving": true,
+          "position_delta_m": 0.0,
+          "rotation_after": {
+            "x": 0.0007243558648042381,
+            "y": 90.00019836425781,
+            "z": 9.627320832805708e-05
+          },
+          "rotation_before": {
+            "x": 0.0007243557483889163,
+            "y": 90.00019836425781,
+            "z": 9.627317922422662e-05
+          },
+          "rotation_exact": false
+        }
+      }
+    },
+    "restore_deterministic": true,
+    "restore_max_abs_diff": 2,
+    "restore_rgb_exact": false,
+    "restored_positions_within_1cm": true,
+    "restored_snapshot_reference": {
+      "bytes": 94191,
+      "file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan327/floorplan327_00043_trial000053/replay_w1/snapshot_000000.json",
+      "sha256": "14491acbf0d5c2ebd699b5efbbd3f971933b5a8e3330c564d208210455f17ff0"
+    },
+    "scope": "state restore: all movable/pickupable positions <=1cm and exact full agent pose; RGB separate"
+  },
+  "restore_deterministic": true,
+  "restore_max_abs_diff": 2,
+  "selected_distance_m": 1.0317900498920471,
+  "selected_mask_pixels": 2117,
+  "selected_name": "Book_c42bbc37",
+  "snapshot_restored": true,
+  "spawn_token_storage_policy": {
+    "coordinates": "one detached read-only JSON-equivalent coordinate tree per actual query; deepcopy shares only that tree",
+    "deadline": "original simulator soft deadline checked before query, during coordinate copy and before each point validation/registration",
+    "native_query": "same GetSpawnCoordinatesAboveReceptacle(objectId, anywhere=True), complete original actionReturn in original order",
+    "registration": "every original token is registered before return with exactly SHA256(engine.encoded(token)); hash common canonical prefix once then copy hash state per selected point",
+    "scope": "representation and CPU work only; no native domain, ordering, seed, physics, pixel, target or witness threshold changes",
+    "use_validation": "unchanged validate_spawn and fresh complete-token SHA256 registry membership at actual placement; no cached caller-token digest",
+    "version": "native_token_shared_json_exact_sha256_v1"
+  },
+  "spawn_token_storage_version": "native_token_shared_json_exact_sha256_v1",
+  "status": "completed",
+  "success": true,
+  "unity_pid": 2704912,
+  "worker_pid": 2658889
+}

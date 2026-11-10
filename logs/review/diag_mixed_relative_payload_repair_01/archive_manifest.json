@@ -1,0 +1,93 @@
+{
+  "original_files": [
+    {
+      "archive_reference": {
+        "bytes": 5633,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json",
+        "sha256": "720311e1db4125f7f20f0861ab230a499f81fe3ce1aca171529b535b7e52de8f"
+      },
+      "original_path": "results/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.json"
+    },
+    {
+      "archive_reference": {
+        "bytes": 3001,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.log",
+        "sha256": "2f12311a02b03d328b4bd55605ada745244ff69754d9b8b5a89e8a278f842a53"
+      },
+      "original_path": "logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.log"
+    },
+    {
+      "archive_reference": {
+        "bytes": 1475,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.meta.json",
+        "sha256": "3b21e07abd0db9d2cc60b971c2f6678f107e62fdb200ebabc9cd2d7bef8c4abd"
+      },
+      "original_path": "logs/runs/gpu_pack_test_priority_full_single_01_retry2_mixed_accounting.meta.json"
+    },
+    {
+      "archive_reference": {
+        "bytes": 7280,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json",
+        "sha256": "1b3dc036df3ab0e11fd565474064377788574c2aeb7c1f101ca12e633202826f"
+      },
+      "original_path": "results/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.json"
+    },
+    {
+      "archive_reference": {
+        "bytes": 3923,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.log",
+        "sha256": "181d67f3482171ae6cf53fc8c9f5af0c31e5f31763823102801fddea80c46f93"
+      },
+      "original_path": "logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.log"
+    },
+    {
+      "archive_reference": {
+        "bytes": 1475,
+        "file": "logs/review/diag_mixed_relative_payload_repair_01/original/logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.meta.json",
+        "sha256": "4ff4da47b52877f493763f6d70a96bd93fda8af22494a47bb6711fcf0070a30b"
+      },
+      "original_path": "logs/runs/gpu_pack_test_priority_full_single_02_retry1_mixed_accounting.meta.json"
+    }
+  ],
+  "reason": "Original fixed-name mixed consumer requires payload reference string to equal the submitter repo-relative ledger path. Original scientific/canonical data are unchanged. Original run_logged archives the old result itself; original log/meta copied before rerun.",
+  "replacement_commands": [
+    [
+      "python3",
+      "-m",
+      "src.tools.pbs_mixed_accounting",
+      "--name",
+      "gpu_pack_test_priority_full_single_01_retry2_mixed_accounting",
+      "--payload",
+      "logs/pbs/gpu_pack_test_priority_full_single_01_retry2-20261110T044612Z-91dde87b/payload.json",
+      "--payload-sha256",
+      "12227f933c2e12eda5ccc857f2d645caad6e53ff0d12e1caeee00f625e0d12f3",
+      "--pack-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_01_retry2.json",
+      "--pack-sha256",
+      "05cdcd275009dade4cf7b109a24a0324eca16d45919f62a6de6a1037bd927f08",
+      "--accounting-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709674_accounting_02.json",
+      "--accounting-sha256",
+      "17d1773ee8664e7d90035679f0b4188e8459a72f1508b95e96dfbb4f81369b33"
+    ],
+    [
+      "python3",
+      "-m",
+      "src.tools.pbs_mixed_accounting",
+      "--name",
+      "gpu_pack_test_priority_full_single_02_retry1_mixed_accounting",
+      "--payload",
+      "logs/pbs/gpu_pack_test_priority_full_single_02_retry1-20261110T042830Z-47b472bf/payload.json",
+      "--payload-sha256",
+      "e8d9778cf915524bfa285d76ec63e4bbf8bfdf8de9975543cedcd3c2895620a8",
+      "--pack-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/gpu_pack_test_priority_full_single_02_retry1.json",
+      "--pack-sha256",
+      "5fd98b957f974c5a28fbeb91fe49ece43b890ac63c03c38b8a2625815c6aaf7b",
+      "--accounting-result",
+      "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/results/diag_full_shared_709656_accounting_01.json",
+      "--accounting-sha256",
+      "fbd7dd90827dd3a988cd5d78ae09666cc45aaa92db0356480114f61b37861903"
+    ]
+  ]
+}
