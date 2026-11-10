@@ -83,8 +83,11 @@ def episode_observation(plan, traces, *, kind, final_info, selected_name, succes
     premature = bool(selections) and (seen is None or selections[0]['decision_index'] < seen)
     # E2E learning metric includes any parsed terminal select, even an invalid
     # mark. T4 independently requires a legal select for its auxiliary term.
+    # x_seen_step counts completed environment steps. Decision index k consumes
+    # the state after k steps and completes step k+1, so equality means the
+    # anchor was already in the input before the terminal select action.
     seen_reason = ('no_parseable_select' if not selections else 'anchor_never_seen' if seen is None
-                   else 'anchor_not_strictly_before_select' if seen >= selections[-1]['decision_index'] else None)
+                   else 'anchor_not_strictly_before_select' if seen > selections[-1]['decision_index'] else None)
     return {**plan, 'kind': kind, 'task_reward_sum': sum(row['reward'] for row in traces),
         'success': bool(success), 'tau': final_info['tau'], 'x_seen_step': seen,
         'selected_name': selected_name,
