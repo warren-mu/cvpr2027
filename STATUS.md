@@ -1863,3 +1863,8 @@ diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项C
 ### 2026-11-10 10:18 ET — DIAG01独立重算与测试导出首批
 D1新诊断的首轮失败仅在例图校验处误把累计图片历史当作单张当前图；原失败/部分例图保留，新版核完整有序输入历史，并原logged输出每次有效观察后实际ownX掩码0、1–249、>=250三格，未改旧指标或训练。D3的原CPU新8项与旧8项通过；首次提交准备在qsub前被旧run-name白名单拒绝，无GPU作业，正在做只允许该诊断driver/单卡/不超过1小时的最小入口适配。
 测试selected05保持95配置；精确复用709607已压缩导出的同一FP322_00111 DirectStay，未将同plain-id另一对混入。余94按原顺序冻结，仅首6对进入新的singleton共享队列；启用已上线无损压缩和raw10，仅导出仍不等于缓存通过。原准备审计11文件0FAIL，初始自检失败保留。最新scratch完整段598.1GiB/1TiB、3197895文件，原hpc home awk exit1保留，余量检查通过。首批提交前先推代码/config，D3保留一个单卡名额。
+
+
+### 2026-11-10 10:28 ET — DIAG01 D1真实mask确认漏计，D2/D4原诊断完成
+D1成功02逐实际mask字节重算全部50次训练更新及四次留出，原4文件审计无FAIL；没有用x_seen_step判可见，原首次可见步记录与独立重算均一致。T0训练Look 1614回合实际select前看到80，旧seen42（漏38）；晚期41–50为28/325而旧值0。185次有效观察后mask=0有157、1–249为0、>=250为28。T4晚期328个Look回合仍0，12次观察后均mask0。错误是pilot_contract.episode_observation第87行将完成环境步数与零基select.decision_index严格比较；未修改历史指标/训练配置，T4适用性及证据前信用未见同类错位。3例实际255标号与512模型输入完整有序history逐图SHA全等，路径logs/review/diag01/diag01_visibility_02/example_01..03。原01图像历史检查失败完整保留。
+D2/D4正式diag01_learning_pool_01与两文件原audit均完成无FAIL，详细四类窗口、逐pair选择和LS原筛选链见logs/review/diag01_learning_pool_01/report.json，结论并入DIAG01.report。两项均0 GPU。主实验和训练Look补数继续暂停，D3及测试T02仅按已推固定入口执行。

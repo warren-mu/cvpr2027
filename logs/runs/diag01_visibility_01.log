@@ -1,0 +1,17 @@
+# run_logged: nice -n 10 python3 -u -m experiments.diag01_visibility --name diag01_visibility_01 --timeout-seconds 300
+# start: 2026-11-10T23:10:54
+DIAG01_PHASE: original metadata and correct actions complete
+DIAG01_PHASE: T0 train journals complete
+DIAG01_PHASE: T0 holdout journals complete
+DIAG01_PHASE: T4 train journals complete
+DIAG01_PHASE: T4 holdout journals complete
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/diag01_visibility.py", line 372, in main
+    examples=export_examples(episodes,index,directory,process_image);reads.recheck()
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/diag01_visibility.py", line 292, in export_examples
+    need(row['actions'][s['observation_index']]['actual_input_images']==[image_proof],
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/diag01_visibility.py", line 36, in need
+    raise ValueError(message)
+ValueError: Original processed model input differs from saved actual policy input
+FINAL_METRICS_JSON: {"complete": false, "elapsed_seconds": 37.517640464997385, "errors": ["ValueError: Original processed model input differs from saved actual policy input"], "gpus": 0, "kind": "diag01_independent_mask_visibility_v1", "producer_exit_code": 1}
+# exit_code: 1
