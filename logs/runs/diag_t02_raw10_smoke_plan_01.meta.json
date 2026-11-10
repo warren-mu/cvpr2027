@@ -1,0 +1,22 @@
+{
+  "name": "diag_t02_raw10_smoke_plan_01",
+  "command": [
+    "python3",
+    "-c",
+    "import json,hashlib\nfrom pathlib import Path\nname='diag_t02_raw10_smoke_plan_01';run='t02_rejected_raw_smoke_01'\np=Path('results/t02_export_first6_01_retry2_u0000.json');r=json.loads(p.read_text())\nassert r['_meta']['exit_code']==0 and r['metrics']['pairs'][0]['status']=='exported'\ncfg=r['config']\ncommand=['python3','-u','-m','src.tools.t02_export','--name',run,'--source',cfg['source'],'--pair-id',cfg['pair_id'][0],'--pair-file',cfg['pair_file'],'--timeout-seconds','600','--pair-timeout-seconds','390','--gate-timeout-seconds','180','--sample-rejected-raw']\nout=Path('configs/t02_raw10_smoke_01.json');out.write_text(json.dumps({'command':command,'scope':'Engineering repeat of one original cached-qualified pair; not a new training-pool member','source_export':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'PBS_walltime':'00:10:30'},indent=2)+'\\n');out.chmod(0o444)\nmetrics={'command':command,'configuration':{'file':str(out),'sha256':hashlib.sha256(out.read_bytes()).hexdigest()},'validated_original_export_identity':True,'scientific_rejection_coverage_not_promised':True,'GPU_submitted':False}\nPath('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'name':name,'scope':'Single-pair future-retention engineering smoke'}},indent=2));print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:58:21",
+  "log_path": "logs/runs/diag_t02_raw10_smoke_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "8925817db42a590ae4f6113153a3f546e7c87e48",
+  "git_dirty": false,
+  "end": "2026-11-10T10:58:26",
+  "duration_sec": 0.1,
+  "exit_code": 0,
+  "metrics_sha256": "11676f50113c8c178dcefd2f1138e252e7c34fc6ce0d2bc64c911098cd6398b9"
+}

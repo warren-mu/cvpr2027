@@ -1,0 +1,86 @@
+# run_logged: python3 -m src.tools.record_command --name diag_future_test_t02_storage_01 -- python3 -c import signal
+def deadline(*args): raise TimeoutError('Metadata-only diagnostic exceeded 12 seconds')
+signal.signal(signal.SIGALRM, deadline)
+signal.alarm(12)
+"""One-off metadata-only capacity scenario; no scratch scan or policy changes."""
+import hashlib,json,math,os
+from pathlib import Path
+ROOT=Path.cwd().resolve()
+NAME='diag_future_test_t02_storage_01'
+refs=[]
+def read(path,sha=None):
+ p=(ROOT/path).resolve();p.relative_to(ROOT);body=p.read_bytes();digest=hashlib.sha256(body).hexdigest()
+ if sha is not None and digest!=sha:raise ValueError('Original bytes changed: '+path)
+ ref={'file':str(p.relative_to(ROOT)),'sha256':digest,'bytes':len(body)};refs.append(ref)
+ return json.loads(body),ref
+def main():
+ if os.environ.get('CVPR_RUN_NAME')!=NAME:raise ValueError('Require original logged identity')
+ m,mref=read('logs/review/diag_current_owned_storage_01/report.json','8673fb06d7ef85dd7028c02ba4aff7690dda6bda4da27446c3a88714c6359f0e')
+ old,oldref=read('logs/review/diag_current_storage_forecast_01/report.json','8dcbdabef141dc131030ffa27581107338d9a0567af1844dfc4a2a594870d816')
+ plan,pref=read('configs/gen_test_config_round2_40_01_retry2_quota.json','80e2fec4ad9a6e472fe9d8498aa93d0026c89260036f01d1ee2bce154819012b')
+ task=ROOT/'tasks/G01.md';body=task.read_bytes()
+ if hashlib.sha256(body).hexdigest()!='e93cea3b0e2ce0c2c48a4715b7ff87b53b20214ade99bedfb7109e7b3b578b6c':raise ValueError('Recheck changed task specification')
+ refs.append({'file':'tasks/G01.md','sha256':hashlib.sha256(body).hexdigest(),'bytes':len(body)})
+ kinds=('direct_flip','direct_stay','look_flip','look_stay')
+ if (plan['partition']!='test' or plan['version']!='g01_static_configuration_tickets_v2'
+     or set(plan['targets'])!=set(kinds) or any(type(plan['targets'][k]) is not int or plan['targets'][k]!=60 for k in kinds)):
+  raise ValueError('Original configuration targets differ')
+ rows=[];overheads=[]
+ for n in range(16,20):
+  name='t02_export_train_six_%02d'%n
+  g=next(x for x in m['groups'] if x['name']==name)
+  if g['exit_code']!=0:raise ValueError('Storage measurement incomplete')
+  bydir={x['directory']:x['allocated_bytes'] for x in g['directory_measurements']}
+  parent,_=read(g['source']['file'],g['source']['sha256'])
+  if not parent['_meta']['end']:raise ValueError('Original export parent is not ended')
+  overheads.append(bydir[parent['config']['scratch_directory']])
+  for child in g['covered_children']:
+   d,r=read(child['source']['file'],child['source']['sha256']);meta=d['_meta'];metrics=d['metrics']
+   if not meta['end'] or meta['exit_code']!=child['exit_code']:raise ValueError('Original child terminal changed')
+   if len(metrics['pairs'])!=1:raise ValueError('Expected original single-pair child')
+   pair=metrics['pairs'][0];status=pair['status']
+   complete=(meta['exit_code']==0 and metrics['export_checks_complete'] is True and metrics['errors']==[]
+       and metrics['cleanup_errors']==[] and pair['cleanup_errors']==[] and status=='exported'
+       and pair['table_complete'] is True and pair['native_evidence_verified'] is True and pair['pair_checks_passed'] is True)
+   rows.append({'source':r,'pair_id':pair['pair_id'],'kind':pair.get('kind'),'status':status,'export_complete':complete,
+       'cache_pass_not_implied':True,'allocated_bytes':bydir[child['directory']],
+       'rejection_reasons':pair.get('rejection_reasons'),'error':pair.get('error')})
+ complete=[r['allocated_bytes'] for r in rows if r['export_complete']]
+ if not complete:raise ValueError('No complete accepted-export storage basis')
+ groups={}
+ for r in rows:
+  key='complete_export' if r['export_complete'] else r['status']
+  item=groups.setdefault(key,{'attempts':0,'allocated_bytes':0})
+  item['attempts']+=1;item['allocated_bytes']+=r['allocated_bytes']
+ total=sum(plan['targets'].values());per_pair=max(complete);parent_bytes=max(overheads)
+ # Full target is a future scenario, never an assertion of generated/accepted count.
+ base=total*per_pair+math.ceil(total/6)*parent_bytes
+ scenario={'test_target_configurations_by_kind':plan['targets'],'maximum_target_configuration_class_pairs':total,
+  'basis':'maximum measured complete export child private allocation; parent overhead separately included',
+  'complete_export_child_max_bytes':per_pair,'complete_export_child_min_bytes':min(complete),
+  'complete_export_child_mean_bytes':sum(complete)/len(complete),'parallel_parent_max_bytes':parent_bytes,
+  'one_export_per_target_pair_scenario_bytes':base,'with_30_percent_planning_margin_bytes':base*1.3,
+  'hypothetical_total_with_unchanged_previous_planning_bytes':old['planning']['including_later_main_reserve_bytes']+base*1.3,
+  'hard_upper_bound_bytes':None,'future_test_actual_generated_count':None,
+  'not_included':['unbounded retries','future test fresh-cache checks','future scene/state-domain differences'],
+  'new_retention_savings_assumed_bytes':0}
+ report={'references':refs,'original_measurement':mref,'previous_planning_unchanged':oldref,'quota_plan':pref,
+  'observations':rows,'status_storage_groups':groups,'scenario':scenario,
+  'scope':'Original completed training-export retained bytes only; future test full-target scenario, not measured test results or a project hard bound. No deletion or new retention policy applied.'}
+ out=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False)
+ b=(json.dumps(report,indent=2,sort_keys=True)+'\n').encode();(out/'report.json').write_bytes(b)
+ lines=['未来测试 T02 容量情景（只读复用原测量；十进制 GB）','',
+  '原 G01 配置去重目标为四类各60，最多240个“配置×类别”对；这是未来目标情景，不是已生成或已通过T02的数量。',
+  '', '| 最近16–19批原状态 | 尝试数 | 当前独有留存 GB |','|---|---:|---:|']
+ for k,v in groups.items():lines.append('| %s | %d | %.3f |'%(k,v['attempts'],v['allocated_bytes']/1e9))
+ lines+=['', '完整导出子目录每对实测 %.3f–%.3f GB（均值 %.3f GB），仅导出完整，不等同正式cache通过。失败/未知目录已单独分拆，未混入单对估算。'%(min(complete)/1e9,per_pair/1e9,(sum(complete)/len(complete))/1e9),
+  '按最大完整导出每对×240，加40个六对parent最大开销，再加30%%规划余量，未来全目标测试导出情景为 %.3f GB。此训练场景样本外推未测测试场景的图规模，既非实测上界也非硬上界。'%(base*1.3/1e9),
+  '原242.533 GB规划保持原记录；若该测试全目标情景另行全部发生，两者假设相加为 %.3f GB。仍未含无限重试和测试集fresh-cache；不得当全项目容量保证。尚未对新拒绝10%%策略计任何节省，待新单元实测后再更新。'%(scenario['hypothetical_total_with_unchanged_previous_planning_bytes']/1e9)]
+ (out/'report.md').write_text('\n'.join(lines)+'\n')
+ print('FUTURE_TEST_T02_STORAGE_JSON: '+json.dumps({'report':{'file':str((out/'report.json').relative_to(ROOT)),'sha256':hashlib.sha256(b).hexdigest()},'groups':groups,'scenario':scenario},sort_keys=True),flush=True)
+if __name__=='__main__':main()
+
+# start: 2026-11-10T10:56:03
+FUTURE_TEST_T02_STORAGE_JSON: {"groups": {"complete_export": {"allocated_bytes": 23788265472, "attempts": 22}, "error": {"allocated_bytes": 291749888, "attempts": 2}}, "report": {"file": "logs/review/diag_future_test_t02_storage_01/report.json", "sha256": "c2933ec66180f04d6f03de2fb7eb39d5c82ad6d069d63c79826443ff508afce4"}, "scenario": {"basis": "maximum measured complete export child private allocation; parent overhead separately included", "complete_export_child_max_bytes": 1384611840, "complete_export_child_mean_bytes": 1081284794.1818182, "complete_export_child_min_bytes": 758435840, "future_test_actual_generated_count": null, "hard_upper_bound_bytes": null, "hypothetical_total_with_unchanged_previous_planning_bytes": 674535256785.2522, "maximum_target_configuration_class_pairs": 240, "new_retention_savings_assumed_bytes": 0, "not_included": ["unbounded retries", "future test fresh-cache checks", "future scene/state-domain differences"], "one_export_per_target_pair_scenario_bytes": 332309299200, "parallel_parent_max_bytes": 61440, "test_target_configurations_by_kind": {"direct_flip": 60, "direct_stay": 60, "look_flip": 60, "look_stay": 60}, "with_30_percent_planning_margin_bytes": 432002088960.0}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.17965528002241626}
+# exit_code: 0

@@ -1,0 +1,66 @@
+{
+  "metrics": {
+    "validated": true,
+    "new_quota_plan": {
+      "file": "configs/gen_test_s16_smoke_raw10_01_quota.json",
+      "sha256": "4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4"
+    },
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_physics_smoke",
+      "--name",
+      "gen_test_s16_smoke_raw10_01",
+      "--scene",
+      "FloorPlan21",
+      "--quota-plan",
+      "configs/gen_test_s16_smoke_raw10_01_quota.json",
+      "--quota-plan-sha256",
+      "4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4",
+      "--timeout-seconds",
+      "1000",
+      "--sample-rejected-raw"
+    ],
+    "scene_timeout_seconds": 600,
+    "parent_timeout_seconds": 1000,
+    "pbs_wall_seconds": 1030,
+    "formal_collection_eligible": false,
+    "scope": "one-unit engineering storage smoke; original scientific settings and confirmed configuration inventory preserved"
+  },
+  "config": {
+    "name": "diag_g01_raw10_smoke_plan_01"
+  },
+  "artifact_references": [
+    {
+      "file": "configs/gen_test_s16_smoke_01_quota.json",
+      "sha256": "e676887fb68a41392c998871fbccff8c6616ee34d05864230f4293d696e4d9b0"
+    },
+    {
+      "file": "configs/gen_test_s16_smoke_raw10_01_quota.json",
+      "sha256": "4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4"
+    }
+  ],
+  "_meta": {
+    "name": "diag_g01_raw10_smoke_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "import copy,hashlib,json\nfrom pathlib import Path\nfrom src.tools import g01_physics_smoke as smoke\nroot=Path.cwd().resolve();name='diag_g01_raw10_smoke_plan_01';run='gen_test_s16_smoke_raw10_01'\nold_path=root/'configs/gen_test_s16_smoke_01_quota.json'\nold_raw=old_path.read_bytes();sha=hashlib.sha256(old_raw).hexdigest()\nif sha!='e676887fb68a41392c998871fbccff8c6616ee34d05864230f4293d696e4d9b0':raise ValueError('Original approved smoke template changed')\nold=json.loads(old_raw);plan=copy.deepcopy(old);plan['parent_run_name']=run\nif {k:v for k,v in old.items() if k!='parent_run_name'}!={k:v for k,v in plan.items() if k!='parent_run_name'}:raise ValueError('Smoke tickets changed')\nsmoke.validate_quota(plan,run)\npath=root/'configs'/f'{run}_quota.json'\nwith path.open('x') as f:json.dump(plan,f,indent=2,sort_keys=True,allow_nan=False);f.write('\\n')\npath.chmod(0o444);new={'file':str(path.relative_to(root)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}\ncommand=['python3','-u','-m',smoke.MODULE,'--name',run,'--scene','FloorPlan21','--quota-plan',new['file'],'--quota-plan-sha256',new['sha256'],'--timeout-seconds','1000','--sample-rejected-raw']\nmetrics={'validated':True,'new_quota_plan':new,'command':command,'scene_timeout_seconds':600,'parent_timeout_seconds':1000,'pbs_wall_seconds':1030,'formal_collection_eligible':False,'scope':'one-unit engineering storage smoke; original scientific settings and confirmed configuration inventory preserved'}\nresult={'metrics':metrics,'config':{'name':name},'artifact_references':[{'file':str(old_path.relative_to(root)),'sha256':sha},new]}\nwith (root/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:54:55",
+    "log_path": "logs/runs/diag_g01_raw10_smoke_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8925817db42a590ae4f6113153a3f546e7c87e48",
+    "git_dirty": false,
+    "end": "2026-11-10T10:54:57",
+    "duration_sec": 0.6,
+    "exit_code": 0,
+    "metrics_sha256": "e079a6bd7c593d94c99f5b00596dc9706a6d41e7673b1112e8d41a71fe312743"
+  }
+}

@@ -1,0 +1,22 @@
+# run_logged: python3 -c import copy,hashlib,json
+from pathlib import Path
+from src.tools import g01_physics_smoke as smoke
+root=Path.cwd().resolve();name='diag_g01_raw10_smoke_plan_01';run='gen_test_s16_smoke_raw10_01'
+old_path=root/'configs/gen_test_s16_smoke_01_quota.json'
+old_raw=old_path.read_bytes();sha=hashlib.sha256(old_raw).hexdigest()
+if sha!='e676887fb68a41392c998871fbccff8c6616ee34d05864230f4293d696e4d9b0':raise ValueError('Original approved smoke template changed')
+old=json.loads(old_raw);plan=copy.deepcopy(old);plan['parent_run_name']=run
+if {k:v for k,v in old.items() if k!='parent_run_name'}!={k:v for k,v in plan.items() if k!='parent_run_name'}:raise ValueError('Smoke tickets changed')
+smoke.validate_quota(plan,run)
+path=root/'configs'/f'{run}_quota.json'
+with path.open('x') as f:json.dump(plan,f,indent=2,sort_keys=True,allow_nan=False);f.write('\n')
+path.chmod(0o444);new={'file':str(path.relative_to(root)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+command=['python3','-u','-m',smoke.MODULE,'--name',run,'--scene','FloorPlan21','--quota-plan',new['file'],'--quota-plan-sha256',new['sha256'],'--timeout-seconds','1000','--sample-rejected-raw']
+metrics={'validated':True,'new_quota_plan':new,'command':command,'scene_timeout_seconds':600,'parent_timeout_seconds':1000,'pbs_wall_seconds':1030,'formal_collection_eligible':False,'scope':'one-unit engineering storage smoke; original scientific settings and confirmed configuration inventory preserved'}
+result={'metrics':metrics,'config':{'name':name},'artifact_references':[{'file':str(old_path.relative_to(root)),'sha256':sha},new]}
+with (root/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T10:54:55
+FINAL_METRICS_JSON: {"command": ["python3", "-u", "-m", "src.tools.g01_physics_smoke", "--name", "gen_test_s16_smoke_raw10_01", "--scene", "FloorPlan21", "--quota-plan", "configs/gen_test_s16_smoke_raw10_01_quota.json", "--quota-plan-sha256", "4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4", "--timeout-seconds", "1000", "--sample-rejected-raw"], "formal_collection_eligible": false, "new_quota_plan": {"file": "configs/gen_test_s16_smoke_raw10_01_quota.json", "sha256": "4e9d8186eb770b248cb53ca0ae3f57e214f493d042d3b7e454d46b09766351f4"}, "parent_timeout_seconds": 1000, "pbs_wall_seconds": 1030, "scene_timeout_seconds": 600, "scope": "one-unit engineering storage smoke; original scientific settings and confirmed configuration inventory preserved", "validated": true}
+# exit_code: 0
