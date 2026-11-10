@@ -1,0 +1,544 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794313097.5443444,
+    "compress_test_tables": false,
+    "compression_smoke_dual": false,
+    "cpu_affinity": [
+      73,
+      75,
+      77,
+      79,
+      81,
+      83,
+      85,
+      87,
+      89,
+      91,
+      93,
+      95
+    ],
+    "cuda_visible_devices": "GPU-498d9ab2-aa77-5311-2764-a76269bd601a",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_export_train_six_20_u0004",
+    "node": "hopper-23",
+    "pair_file": "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan219/floorplan219_00049/pair.json",
+    "pair_id": [
+      "floorplan219_00049"
+    ],
+    "pair_timeout_seconds": 660.0,
+    "pbs_jobid": "710308.hopper-m-02",
+    "raw_retention_policy": {
+      "accepted_full_raw": true,
+      "eligible_status": "rejected",
+      "error_timeout_black_or_unknown_cleanup_full_raw": true,
+      "metadata_indices_logs_results_retained": true,
+      "seed": 0,
+      "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+      "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+    },
+    "resolution": 255,
+    "runtime": {
+      "ai2thor_version": "5.0.0",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        73,
+        75,
+        77,
+        79,
+        81,
+        83,
+        85,
+        87,
+        89,
+        91,
+        93,
+        95
+      ],
+      "cuda_visible_devices": "GPU-498d9ab2-aa77-5311-2764-a76269bd601a",
+      "gpu_index": 0,
+      "gpu_name": "NVIDIA H200",
+      "gpu_uuid": "GPU-498d9ab2-aa77-5311-2764-a76269bd601a",
+      "log_dir": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/unity_logs",
+      "logical_index": 0,
+      "mig_mode": "Disabled",
+      "pbs_jobid": "710308.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "vulkan_device_index": 0
+    },
+    "sample_rejected_raw": true,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02",
+    "shared_queue_claim": {
+      "budget_group": "T02",
+      "claim_reference": {
+        "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_raw10_train_smoke_01/claims/0e738e518398419fdeb4a46ac5053d656010068489dd28a7e45bd1ff92877d19.json",
+        "sha256": "067cf5ec30426511eb69b9027c835548ee9e306c79a3d9702e3b7a4595f38418"
+      },
+      "command": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.t02_export_parallel",
+        "--name",
+        "t02_export_train_six_20",
+        "--manifest",
+        "configs/t02_export_train_six_20.json",
+        "--manifest-sha256",
+        "00cefbd4111c7a625157842116301e08a6efecc3006bd9e3fb19f5e7b20572c8",
+        "--concurrency",
+        "6",
+        "--timeout-seconds",
+        "1200",
+        "--unit-timeout-seconds",
+        "900",
+        "--pair-timeout-seconds",
+        "660",
+        "--gate-timeout-seconds",
+        "180",
+        "--sample-rejected-raw"
+      ],
+      "cpu_affinity": [
+        73,
+        75,
+        77,
+        79,
+        81,
+        83,
+        85,
+        87,
+        89,
+        91,
+        93,
+        95
+      ],
+      "gpu_uuid": "GPU-498d9ab2-aa77-5311-2764-a76269bd601a",
+      "name": "t02_export_train_six_20",
+      "node": "hopper-23",
+      "owner_identity": {
+        "pgid": 1056621,
+        "pid": 1056945,
+        "sid": 1056621,
+        "start_ticks": 89999879
+      },
+      "parent_cuda_visible_devices": "GPU-498d9ab2-aa77-5311-2764-a76269bd601a",
+      "parent_payload_reference": {
+        "bytes": 1788,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry2-20261110T120146Z-ec1b40e0/payload.json",
+        "sha256": "eb1d63b292ab354d3d048492b5261abae3584fa6a73c57771e05fc2b53a3e67d"
+      },
+      "parent_receipt_reference": {
+        "bytes": 453,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry2-20261110T120146Z-ec1b40e0/submission.json",
+        "sha256": "8cf6417790202fe78e551f71674b8718b859ee882b54da7deae90673b241e777"
+      },
+      "pbs_jobid": "710308.hopper-m-02",
+      "plan_reference": {
+        "bytes": 103870,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_raw10_train_smoke_01.json",
+        "sha256": "f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0"
+      },
+      "queue_root": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_raw10_train_smoke_01",
+      "started_epoch": 1794312189.8530095,
+      "started_monotonic": 900008.160185983,
+      "t02_child_entry": {
+        "cache_or_training_authorized": false,
+        "cohort": "inventory05",
+        "dataset_key": "pair_e3122b1a3d9162cb11bf681c19d5df379e39dab9bae8b82eed61712c78e86012",
+        "field_of_view": 60,
+        "full_T02_acceptance": null,
+        "historical_table_diagnostic_classification": null,
+        "journal_index": 49,
+        "kind": "direct_flip",
+        "label_scope": "current fixed object labels; original scientific checks will run again in exporter",
+        "original_id": "floorplan219_00049",
+        "pair": {
+          "file": "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan219/floorplan219_00049/pair.json",
+          "sha256": "f255c9b86d0f5dbf2a5193a1676694830f3e4fa88b6ce9d26fd092e1ea19938e"
+        },
+        "pair_id": "floorplan219_00049",
+        "proposal_identity": "2e26c8daeb4fa2279e6e1658834af30a26b8d9f028521158a0047dc3c7189c29",
+        "scene": "FloorPlan219",
+        "source": {
+          "file": "results/t01v2_checkpoint_g01_next12_03.json",
+          "sha256": "7d734365bae3201400af7a9138477ecbb6b9478ccf127d60180addafe19c3972"
+        },
+        "source_file": "results/gen_train_next12_60_03_retry1_c6_floorplan219.json",
+        "target_w0": "Pillow_62ae86e0",
+        "target_w1": "Laptop_00902006"
+      },
+      "t02_child_index": 4,
+      "unit": {
+        "budget_group": "T02",
+        "claim_keys": [
+          "105d06b0fbed11574209fd1e30d7c4b781c58357dbf99a8a9c341afb3a76966a",
+          "1bdba223e4ba1895ead45de83b348da22b2ece6d32b9f6eae0f773f3fd111c77",
+          "7963691d95bfe17287a4cf2020db95d97ed072287fb5730bb42ca8b4a1e6de1b",
+          "81591ebf56e42ff9d6858533805fdf61ed63a8123875947243e6b4b7ff96c05b",
+          "ebea6c04a4941387650859027e83b20cb9e0131f4a2a36281a6dcd8b6262d669",
+          "f5b1347eb7e1c9b5c024617e0b0ae25a612ddb266303bfbc08d51a0f6d89d512"
+        ],
+        "command": [
+          "python3",
+          "-u",
+          "-m",
+          "src.tools.t02_export_parallel",
+          "--name",
+          "t02_export_train_six_20",
+          "--manifest",
+          "configs/t02_export_train_six_20.json",
+          "--manifest-sha256",
+          "00cefbd4111c7a625157842116301e08a6efecc3006bd9e3fb19f5e7b20572c8",
+          "--concurrency",
+          "6",
+          "--timeout-seconds",
+          "1200",
+          "--unit-timeout-seconds",
+          "900",
+          "--pair-timeout-seconds",
+          "660",
+          "--gate-timeout-seconds",
+          "180",
+          "--sample-rejected-raw"
+        ],
+        "cpu_cores": 12,
+        "gpus": 1,
+        "identity": {
+          "kind": "t02_export_batch",
+          "manifest": {
+            "file": "configs/t02_export_train_six_20.json",
+            "sha256": "00cefbd4111c7a625157842116301e08a6efecc3006bd9e3fb19f5e7b20572c8"
+          },
+          "original_pair_keys": [
+            "81591ebf56e42ff9d6858533805fdf61ed63a8123875947243e6b4b7ff96c05b",
+            "105d06b0fbed11574209fd1e30d7c4b781c58357dbf99a8a9c341afb3a76966a",
+            "ebea6c04a4941387650859027e83b20cb9e0131f4a2a36281a6dcd8b6262d669",
+            "1bdba223e4ba1895ead45de83b348da22b2ece6d32b9f6eae0f773f3fd111c77",
+            "f5b1347eb7e1c9b5c024617e0b0ae25a612ddb266303bfbc08d51a0f6d89d512",
+            "7963691d95bfe17287a4cf2020db95d97ed072287fb5730bb42ca8b4a1e6de1b"
+          ],
+          "parameters": {
+            "concurrency": "6",
+            "gate-timeout-seconds": "180",
+            "pair-timeout-seconds": "660",
+            "timeout-seconds": "1200",
+            "unit-timeout-seconds": "900"
+          },
+          "partition": "train",
+          "raw_retention_policy": {
+            "accepted_full_raw": true,
+            "eligible_status": "rejected",
+            "error_timeout_black_or_unknown_cleanup_full_raw": true,
+            "metadata_indices_logs_results_retained": true,
+            "seed": 0,
+            "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+            "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+          }
+        },
+        "name": "t02_export_train_six_20",
+        "priority": 200,
+        "producer_module": "src.tools.t02_export_parallel",
+        "references": {
+          "manifest": {
+            "bytes": 7819,
+            "file": "configs/t02_export_train_six_20.json",
+            "sha256": "00cefbd4111c7a625157842116301e08a6efecc3006bd9e3fb19f5e7b20572c8"
+          }
+        },
+        "timeout_seconds": 1200,
+        "unit_id": "0e738e518398419fdeb4a46ac5053d656010068489dd28a7e45bd1ff92877d19"
+      },
+      "unit_id": "0e738e518398419fdeb4a46ac5053d656010068489dd28a7e45bd1ff92877d19",
+      "version": "shared_gpu_claim_v1"
+    },
+    "source": "results/t01v2_checkpoint_g01_next12_03.json",
+    "test_selection": null,
+    "timeout_seconds": 900.0,
+    "version": "t02_single_gpu_export_shadow_v2"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": true,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_train_six_20_u0004_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_train_six_20_u0004_gate.json",
+      "git_commit": "70d95eb191c677db3b00912b3bce4dc96809b9bc",
+      "metrics_sha256": "2872d9bce90364b4ebc53d58afaaa8fd3e8c807b81636a84889fc22be4f3afa0",
+      "sha256": "5a44aebe311c7b3b2fdc7ead1f734767b8f9045cbf957d92e27fb1f79d4d1fe0"
+    },
+    "kind": "t02_table_export",
+    "pairs": [
+      {
+        "actual_action_records": 2796,
+        "actual_frame_records": 2797,
+        "black_frame_reference": null,
+        "cache_matches_live": null,
+        "cleanup_errors": [],
+        "detail": {
+          "bytes": 920313,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/checks.json",
+          "sha256": "196b0b92b1a2b2c4481f7b758010c86f7614af252522e5d0e7a65e5ff6e60a2f"
+        },
+        "downstream_allowed": false,
+        "error": null,
+        "export_measurements": {
+          "elapsed_seconds": 269.40126284898724,
+          "frozen_pose_readbacks": {
+            "actual_w0_vs_w1_nonanchor": {
+              "max_position_delta_m": 0.0,
+              "max_raw_rotation_component_delta_degrees": 0.0,
+              "positions_all_exact": true,
+              "readbacks": 118,
+              "rotations_all_exact": true,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            },
+            "requested_vs_actual": {
+              "max_position_delta_m": 5.127731851101665e-06,
+              "max_raw_rotation_component_delta_degrees": 1.9073486328125e-06,
+              "positions_all_exact": false,
+              "readbacks": 590,
+              "rotations_all_exact": false,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            }
+          },
+          "in_clean_subset": false,
+          "includes": "native graph queries and paired capture construction; excludes caller startup and serialization",
+          "non_anchor_divergent_states": 0,
+          "shadow_divergent_states": 0,
+          "state_count": 118,
+          "synthetic_only": false
+        },
+        "in_clean_subset": false,
+        "kind": "direct_flip",
+        "native_evidence_verified": true,
+        "non_anchor_divergent_states": 0,
+        "pair_checks_passed": true,
+        "pair_id": "floorplan219_00049",
+        "raw_incremental_index": {
+          "bytes": 2654184,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/raw/evidence_index.jsonl",
+          "sha256": "7ed5209cf24d9188014a1c7c0c13fa95e2949beea0495d5de018dd35d328db59"
+        },
+        "raw_index": {
+          "bytes": 2665601,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/raw/evidence_index.json",
+          "sha256": "125b620d18681658071888a4d4ecef30c3380f22216aa4467ec181cc07f2ae4e"
+        },
+        "raw_retention": {
+          "binary_payloads_retained": true,
+          "cleanup_confirmed": true,
+          "draw": {
+            "seed": 0,
+            "selected": false,
+            "sha256": "70588fd7b037960d812621226959dc2dd5e93914a547f55936548ceca98edc2e"
+          },
+          "eligible_scientific_rejection": false,
+          "omitted_payload_bytes": 0,
+          "omitted_payload_count": 0,
+          "owner_reference": {
+            "bytes": 1102,
+            "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/raw_retention_owner.json",
+            "sha256": "ffd997ac4f5ce9d1b773418a3b65a1c03d2ab91ea54737ce8a965858cd2a2e6e"
+          },
+          "policy": {
+            "accepted_full_raw": true,
+            "eligible_status": "rejected",
+            "error_timeout_black_or_unknown_cleanup_full_raw": true,
+            "metadata_indices_logs_results_retained": true,
+            "seed": 0,
+            "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+            "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+          },
+          "scientific_status_unchanged": "exported"
+        },
+        "rejection_reasons": [],
+        "report_reference": {
+          "bytes": 2755,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/pair_report.json",
+          "sha256": "912485b378a7d10f3598a79b508aa0658f46fa1dcf90f33c2607b77091685500"
+        },
+        "scene": "FloorPlan219",
+        "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000",
+        "shadow_divergent_states": 0,
+        "source_package": {
+          "bytes": 1759122,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/authenticated_source.json",
+          "sha256": "60638fc4d4da2359899a50a7797928030c8f78d77168f3f654b10b21aa6a90e4"
+        },
+        "status": "exported",
+        "table_complete": true,
+        "table_manifest": {
+          "bytes": 5693095,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_20_u0004/710308.hopper-m-02/pair_0000/table/table.json",
+          "payload_bytes": 59432850,
+          "sha256": "4e26ac3de022251155615271b272493504444d85511dc845f12f48348921ea62"
+        },
+        "task_acceptance": null,
+        "unity_identity": {
+          "pgid": 1065293,
+          "pid": 1066180,
+          "sid": 1065293,
+          "start_ticks": 90004051
+        },
+        "worker_elapsed_seconds": 313.81174336001277,
+        "worker_identity": {
+          "pgid": 1059848,
+          "pid": 1065293,
+          "sid": 1059848,
+          "start_ticks": 90003985
+        }
+      }
+    ],
+    "producer_exit_code": 0,
+    "raw_retention_counts": {
+      "attempts": 1,
+      "error_type_counts": {},
+      "omitted_rejected_attempts": 0,
+      "policy": {
+        "accepted_full_raw": true,
+        "eligible_status": "rejected",
+        "error_timeout_black_or_unknown_cleanup_full_raw": true,
+        "metadata_indices_logs_results_retained": true,
+        "seed": 0,
+        "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+        "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+      },
+      "rejection_reason_counts": {},
+      "sampled_rejected_attempts": 0,
+      "scope": "Storage decisions only; original scientific results and all attempt denominators unchanged",
+      "status_counts": {
+        "exported": 1
+      }
+    },
+    "status": "export_checks_completed_cache_pending",
+    "task_acceptance": null,
+    "unstarted_pair_ids": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_train_six_20_u0004_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_train_six_20_u0004_gate.json",
+      "git_commit": "70d95eb191c677db3b00912b3bce4dc96809b9bc",
+      "metrics_sha256": "2872d9bce90364b4ebc53d58afaaa8fd3e8c807b81636a84889fc22be4f3afa0",
+      "sha256": "5a44aebe311c7b3b2fdc7ead1f734767b8f9045cbf957d92e27fb1f79d4d1fe0"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_g01_next12_03.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t01v2_checkpoint_g01_next12_03.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_g01_next12_03.json",
+      "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+      "metrics_sha256": "107cc7becafa963d542817db54bfbc46ca0e77b77c4cb1b13b49fdb27af6dc6c",
+      "sha256": "7d734365bae3201400af7a9138477ecbb6b9478ccf127d60180addafe19c3972"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_train_next12_60_03_retry1_c6_floorplan219.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/gen_train_next12_60_03_retry1_c6_floorplan219.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.json",
+          "warn": [
+            "P5 run used uncommitted changes; see logs/runs/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.diff"
+          ]
+        },
+        "exit_code": 0,
+        "file": "results/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.json",
+        "git_commit": "5ab3a72dc69827ab9e34edb5165b24dec68cd75a",
+        "metrics_sha256": "6b288a7289b96a77124c9d1a4b979e7b3b96efc961d78b7e16f90e0323eb28da",
+        "sha256": "f15d1fbb8d06431fda392a24b2963b4ee486d2ce5d21b831c595f41efbf0c9c5"
+      },
+      "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+      "log_file": "logs/runs/gen_train_next12_60_03_retry1_c6_floorplan219.log",
+      "log_sha256": "9cc0fa6c9cfabb48511f046efacdbd3dd62205c990d75dbfb286c695b79b4b18",
+      "meta_file": "logs/runs/gen_train_next12_60_03_retry1_c6_floorplan219.meta.json",
+      "meta_sha256": "ce0a9040f7347c1a3534712903cb71317ed7e986538b97adf7b3e15400166948",
+      "metrics_sha256": "212c82079aa4be3d403c6a6c1a30766e2775ee0a4d84fa729ae223d7e12884d1",
+      "metrics_specification": {
+        "actual_document_sha256": "345149801ebba3a5e6948caf381e46bf9ef8bb9fd1714c961b9f98a3ac1565a3",
+        "compatible_references": [
+          "4e010a3"
+        ],
+        "historical_spec": true,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "d2ebef109956b020ab2e597db6c8d966aa386416"
+      },
+      "sha256": "cd76fe42a70541667b4b3cf1940e7cc0334e28cbc4594f58a150560d341abb30",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan219/shard_config.json",
+      "shard_config_sha256": "0e5839278c5170c69460f70089427e9cebde8c5c1c00c7f1fc9e16b92b036093"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_train_six_20_u0004",
+    "command": [
+      "/scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_export_train_six_20_u0004",
+      "--source",
+      "results/t01v2_checkpoint_g01_next12_03.json",
+      "--pair-id",
+      "floorplan219_00049",
+      "--pair-file",
+      "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan219/floorplan219_00049/pair.json",
+      "--timeout-seconds",
+      "900.0",
+      "--pair-timeout-seconds",
+      "660.0",
+      "--gate-timeout-seconds",
+      "180.0",
+      "--sample-rejected-raw"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-23",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-10T20:03:16",
+    "log_path": "logs/runs/t02_export_train_six_20_u0004.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "70d95eb191c677db3b00912b3bce4dc96809b9bc",
+    "git_dirty": false,
+    "end": "2026-11-10T20:08:57",
+    "duration_sec": 340.6,
+    "exit_code": 0,
+    "metrics_sha256": "f273bee6b135a89fa4ca7044610328554bf654f5d32d896e1867d8478ffeec78"
+  }
+}

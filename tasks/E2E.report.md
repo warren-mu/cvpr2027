@@ -129,7 +129,7 @@ S01–S07 的原 40 场景来源均已终态，独立 checkpoint 与日志覆盖
 
 预算来源为[原预算快照](../logs/review/diag_train_look_first_unit_retry1_review_plan_01/budget_state.json)，最终两臂费用见[原 canonical](../results/diag_pilot710029_710037_accounting_01.json)。本次[原审计](../results/diag_e2e_final_report_audit_01.json)覆盖20个新封口或报告引用结果、0 FAIL，保留 P5/P7 警告；本次新封口结果及报告引用范围的原审计无 FAIL；旧未封口配额记录和 `accounting01` 缺结果日志的失败记录继续保留，不声称全仓历史问题已清零。
 
-最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。本报告首推时 FIG01 保持暂停；此后已完成五对原帧导出并复制到 Mac，见[FIG01 原结果](../results/diag_fig01_firststep_frames_01.json)与 STATUS 的后续记录。这不改变本节试跑结果。trainLook 补数当前新提交 **710213（hopper30，同参数 FP315）**，仍遵循指定节点 20 分钟未启动才取消回退的规则；它不是本试跑通过记录，也未据此增加正式训练库存。
+最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。本报告首推时 FIG01 保持暂停；此后已完成五对原帧导出并复制到 Mac，见[FIG01 原结果](../results/diag_fig01_firststep_frames_01.json)与 STATUS 的后续记录。这不改变本节试跑结果。本报告首推时 trainLook 补数已提交 **710213（hopper30，同参数 FP315）**；此后按实际 qtime 与 fresh Q/noallocation 证据作零用量取消，并同参数无 host 重提为 **710298**，后续数据作业状态以 STATUS 为准。这条数据线不是本试跑通过记录，也未据此增加正式训练库存。
 
 ---
 

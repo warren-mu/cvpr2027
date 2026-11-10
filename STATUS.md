@@ -1837,3 +1837,9 @@ diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项C
 ### 2026-11-10 06:58 ET — 训练补数已开始；导出同批无host预检完成
 710213→710298 无host同参数重提成功（gen_train_look_first_unit_01_retry2，27:10），原开头gate已于11:55:02–11:55:10 UTC在hopper-24通过、无黑帧，parent仍运行/未封口，尚未增加任何正式合格数量。该节点本日有其他黑帧GPU，不因此重新加入指定节点名单。
 710282满20分钟后的原fresh Q快照/身份/noalloc验证通过，1232秒时执行取消；原canonical证明F且0GPU小时，未取消任何R作业。无host gpu_pack_train_raw10_smoke_single_01_retry2原same_retry_command/mixed/fresh预算preflight已通过，仍只含six20、1825秒parent/PBS1855秒，同科学参数；尚未qsub。新旧映射待receipt记录。FIG01完整5对已推ec3c263d并在Mac核SHA复制完成。
+
+
+### 2026-11-10 07:17 ET — six20单卡导出完成，正式cache尚待复核
+710282→710308的无host同参数重提已完成；原提交receipt位于logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry2-20261110T120146Z-ec1b40e0。710308开头gate在hopper-23/GPU-498d9ab2-aa77-5311-2764-a76269bd601a通过，仅领取原six20一个单元，PACK和所有children正常exit0、errors/cleanup为空，claim/release闭环后队列为空立即退出。原canonical diag_raw10_shared710308_accounting_01记录排队11秒、实际0.10055555555555555 GPU小时；原mixed账本全部归T02，无重复计费。
+原工程汇总diag_t02_train_six20_raw10_completion_01：6 attempts/6 exported，均DirectFlip，原native evidence/pair checks/table完整；accepted raw全部保留、omitted为0，无scientific rejected，未声称实际覆盖拒绝抽样分支。cache_matches_live仍null、downstream_allowed=false，这6对尚未增加正式训练池。其余六批尚未迁移到新不可变队列，也未重复向旧队列提交consumer。
+710298的12:05:19UTC原live01仅为运行快照：69次尝试、source-reported合格数0，一动作证据不可用30、起点锚点可见但直接证据失败17、w1物理13、w0物理6、目标唯一性/距离比3；当时parent/child尚未封口，未将这些源报告数字作独立验收。后续终态另记。

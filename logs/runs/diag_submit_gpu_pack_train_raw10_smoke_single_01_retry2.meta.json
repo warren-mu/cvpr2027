@@ -1,0 +1,28 @@
+{
+  "name": "diag_submit_gpu_pack_train_raw10_smoke_single_01_retry2",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_submit_gpu_pack_train_raw10_smoke_single_01_retry2",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json,subprocess\nfrom pathlib import Path\np=Path('results/diag_raw10pack710282_nohost_retry2_preflight_01.json');b=p.read_bytes()\nassert hashlib.sha256(b).hexdigest()=='cdd2c5fcbc04868cd16bc17ace173b558e05049f543517f7ac86387c5ff769df'\nd=json.loads(b);assert d['_meta']['exit_code']==0\ncmd=d['metrics']['submit_command']\nassert cmd[:2]==['python3','scripts/pbs/submit_phase.py'] and '--host' not in cmd\nassert cmd[cmd.index('--name')+1]=='gpu_pack_train_raw10_smoke_single_01_retry2'\nassert cmd[cmd.index('--retry-of')+1]=='710282.hopper-m-02'\nraise SystemExit(subprocess.call(cmd))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T20:00:11",
+  "log_path": "logs/runs/diag_submit_gpu_pack_train_raw10_smoke_single_01_retry2.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "70d95eb191c677db3b00912b3bce4dc96809b9bc",
+  "git_dirty": false,
+  "end": "2026-11-10T20:02:46",
+  "duration_sec": 150.0,
+  "exit_code": 0,
+  "metrics_sha256": "dac7dedfcf78e3847e08cbfc91878ec33d4cd5dc471e704b322405ee273e758b"
+}

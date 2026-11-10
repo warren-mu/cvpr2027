@@ -1,0 +1,58 @@
+# run_logged: python3 -c """One fixed live prefix snapshot; original helper counts, no scientific acceptance."""
+import datetime as dt
+import hashlib
+import json
+from pathlib import Path
+import shlex
+import traceback
+from src.tools.t01v2_live_progress import read_prefix, archive, observed_counts
+from src.tools.t01_partition import audited_result
+r=Path.cwd().resolve();name='diag_train_look710298_live_01'
+parent='gen_train_look_first_unit_01_retry2';child=parent+'_c6_floorplan315';job='710298.hopper-m-02';scene='FloorPlan315'
+sources={};metrics={'scope':'Source-reported archived complete prefix only; not independent acceptance','snapshot_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'errors':[],'counts':None,'parent_terminal':None,'child_terminal':None}
+config={'name':name,'gpus':0,'parent_name':parent,'child_name':child,'pbs_jobid':job,'scene':scene,'native_evidence_read':False,'source_mutations':False}
+code=0
+try:
+    directory=r/'logs/review'/name;directory.mkdir(parents=True,exist_ok=False)
+    gate,ref=audited_result(r/'results'/(parent+'_j710298_hopper_m_02_gate.json'));sources[ref['file']]=ref
+    assert gate['_meta']['exit_code']==0 and gate['metrics']['passed'] is True and gate['metrics']['cleanup_errors']==[]
+    assert gate['config']['pbs_jobid']==job
+    metrics['gate']={'source':ref,'node':gate['config']['node'],'gpu_uuid':gate['config']['allocation']['cuda_visible_devices'],'passed':True}
+    log=r/'logs/runs'/(child+'.log');raw,extent=read_prefix(log)
+    metrics['child_log_prefix']={**extent,'snapshot':archive(raw,directory,'child_log.prefix')}
+    lines=raw.decode('utf-8').splitlines();assert lines[0].startswith('# run_logged: ')
+    command=shlex.split(lines[0][len('# run_logged: '):]);args=command[command.index('-m')+1:]
+    shard_path=Path('/scratch/e1583364/cvpr2027/g01_parallel/'+parent+'/710298_hopper_m_02/c6/FloorPlan315/shard_config.json')
+    assert args==['src.envs.pair_v2_g01_shard','--name',child,'--scene',scene,'--shard-config',str(shard_path),'--timeout-seconds','1200']
+    assert not shard_path.stat().st_mode & 0o222
+    shard_raw=shard_path.read_bytes();shard=json.loads(shard_raw)
+    assert shard['name']==child and shard['scene']==scene and shard['pbs_jobid']==job
+    assert shard['g01_admission']['child_run_name']==child and shard['g01_admission']['parent_run_name']==parent and shard['g01_admission']['scene']==scene
+    metrics['immutable_shard']={'original_file':str(shard_path),'original_sha256':hashlib.sha256(shard_raw).hexdigest(),'snapshot':archive(shard_raw,directory,'shard_config.json')}
+    journal=r/'data/world_pairs/v2'/(child+'_attempts.jsonl')
+    if journal.exists():
+        data,jextent=read_prefix(journal)
+        metrics['journal_prefix']={**jextent,'snapshot':archive(data,directory,'journal.prefix')}
+        metrics['counts']=observed_counts(data,scene)
+        metrics['count_source']='Original complete journal prefix'
+    else:
+        counts=observed_counts(raw,scene,log=True)
+        metrics['counts']=counts if counts['observed_complete_attempts'] else None
+        metrics['count_source']='Original complete log attempt lines; unavailable remains unknown'
+    metrics['observed_error_line_excerpts']=[line for line in lines if line.startswith(('Traceback','TimeoutError:','KeyError:','RuntimeError:','ERROR'))][-20:]
+    for label,n in [('parent',parent),('child',child)]:
+        path=r/'results'/(n+'.json')
+        if path.exists():
+            result,ref=audited_result(path);sources[ref['file']]=ref
+            metrics[label+'_terminal']={'source':ref,'end':result['_meta']['end'],'exit_code':result['_meta']['exit_code'],
+                'reported':{k:result['metrics'].get(k) for k in ['status','attempts','passed_by_class','worker_failed','error','errors','cleanup_errors','black_frame_detected']}}
+except Exception as exc:
+    code=1;metrics['errors'].append({'type':type(exc).__name__,'message':str(exc)});traceback.print_exc()
+metrics['producer_exit_code']=code
+with (r/'results'/(name+'.json')).open('x') as f:json.dump({'metrics':metrics,'config':config,'sources':list(sources.values())},f,indent=2,allow_nan=False);f.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+raise SystemExit(code)
+
+# start: 2026-11-10T20:05:11
+FINAL_METRICS_JSON: {"child_log_prefix": {"append_only_contract": "producer appends; snapshot is not a final-file hash", "read_cap_reached": false, "size_at_open_bytes": 376, "snapshot": {"file": "logs/review/diag_train_look710298_live_01/child_log.prefix", "sha256": "4064af7453758747055d05558e4b7891b121358f10394670be7c63c9b744c6ea"}, "snapshot_bytes": 376, "source_file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/gen_train_look_first_unit_01_retry2_c6_floorplan315.log", "trailing_incomplete_bytes_not_counted": 0}, "child_terminal": null, "count_source": "Original complete journal prefix", "counts": {"discard_reason_counts": {"anchor_visible_at_v0_but_direct_evidence_failed": 17, "one_action_evidence_unavailable": 30, "target_uniqueness_or_ratio": 3, "w0_physical": 6, "w1_physical": 13}, "observed_complete_attempts": 69, "observed_reported_passed_by_class": {"direct_flip": 0, "direct_stay": 0, "look_flip": 0, "look_stay": 0}, "w0_by_anchor": {"AlarmClock": {"measured_attempts": 9, "measurement_unavailable": 0, "passed": 9, "rejected": 0}, "Book": {"measured_attempts": 13, "measurement_unavailable": 0, "passed": 13, "rejected": 0}, "CD": {"measured_attempts": 12, "measurement_unavailable": 0, "passed": 12, "rejected": 0}, "CellPhone": {"measured_attempts": 9, "measurement_unavailable": 0, "passed": 9, "rejected": 0}, "CreditCard": {"measured_attempts": 8, "measurement_unavailable": 0, "passed": 8, "rejected": 0}, "KeyChain": {"measured_attempts": 7, "measurement_unavailable": 0, "passed": 3, "rejected": 4}, "Mug": {"measured_attempts": 6, "measurement_unavailable": 0, "passed": 6, "rejected": 0}, "Pillow": {"measured_attempts": 3, "measurement_unavailable": 0, "passed": 3, "rejected": 0}, "TeddyBear": {"measured_attempts": 2, "measurement_unavailable": 0, "passed": 0, "rejected": 2}}}, "errors": [], "gate": {"gpu_uuid": "GPU-aa661efc-e7f7-2895-937b-ee86c11ad41d", "node": "hopper-24", "passed": true, "source": {"audit": {"fail": [], "file": "results/gen_train_look_first_unit_01_retry2_j710298_hopper_m_02_gate.json", "warn": []}, "exit_code": 0, "file": "results/gen_train_look_first_unit_01_retry2_j710298_hopper_m_02_gate.json", "git_commit": "ec3c263d2c446261f2c95c08ef2b77342633c7cc", "metrics_sha256": "cb9beb66ccd35ce0edc2ffa1841afe82d207ff5645f2d5684320422ee87223b5", "sha256": "9f95385ac720aed33edecd2ba9ce5cabb6f6f0c8351e41fd4f2c9d0d5663f5df"}}, "immutable_shard": {"original_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_look_first_unit_01_retry2/710298_hopper_m_02/c6/FloorPlan315/shard_config.json", "original_sha256": "1d07fb0d7796323a825604fcbdaa6dd1f51a9a3eb66a39439f18ff125d7b4d61", "snapshot": {"file": "logs/review/diag_train_look710298_live_01/shard_config.json", "sha256": "1d07fb0d7796323a825604fcbdaa6dd1f51a9a3eb66a39439f18ff125d7b4d61"}}, "journal_prefix": {"append_only_contract": "producer appends; snapshot is not a final-file hash", "read_cap_reached": false, "size_at_open_bytes": 66823, "snapshot": {"file": "logs/review/diag_train_look710298_live_01/journal.prefix", "sha256": "3fb0835f848baad5590db24481d73370ad1585060b72f529afae1e828bfe730e"}, "snapshot_bytes": 66823, "source_file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/v2/gen_train_look_first_unit_01_retry2_c6_floorplan315_attempts.jsonl", "trailing_incomplete_bytes_not_counted": 0}, "observed_error_line_excerpts": [], "parent_terminal": null, "producer_exit_code": 0, "scope": "Source-reported archived complete prefix only; not independent acceptance", "snapshot_utc": "2026-11-10T12:05:19.677528+00:00"}
+# exit_code: 0
