@@ -1616,3 +1616,5 @@ S04 完整保留重跑配置已由 diag_test_s16_s04_full_retry_plan_01 生成�
 709610与709615再次在hopper22/GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56开头黑帧，零领取，分别0.0061111111 GPU·小时；原canonical/mixed/audit保留。01重提原严格guard和preflight已通过，轮换目标hopper30，仍遵守20分钟Q回退规则。
 
 黑帧重提映射：709610 → 709638（共享 full single01 retry1，hopper30，原同参数，20分钟Q回退）；709595 → 709644（raw10 smoke03，原FP21/seed0/600s，未改变原科学配置）。FULL02 原严格guard/preflight也已完成，后续提交由原submitter再次检查全局轮换。83资格尚未封口时不生成正式holdout文件、不开始训练更新。
+
+629d4a03 留出冻结与试跑断言代码已独立审阅：只有原83资格真实PASS才能独占生成 train_holdout_scenes.json；记录完整dataset_key总体与SHA、房型与逐类split counts，缺房型如实报告，未来扩大不重选。训练入口要求同一原logged冻结ref、逐场景及population/split相同；T0/T4/T2与单更新工程短测均绑定同ref。此提交只发布实现，真实freeze尚未执行；随后原logged CPU与完整更新GPU短测验证，不跳过资格。

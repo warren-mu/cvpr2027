@@ -19,7 +19,7 @@ from src.tools.smoke_e2e_pilot_contract import execution_schedule
 
 
 def pilot_train_worker(config, connection):
-    from src.tools.smoke_e2e_pilot_dataset import load_pilot_pool
+    from src.tools.smoke_e2e_pilot_dataset import load_pilot_pool, authenticate_pilot_holdout
     from src.tools.smoke_e2e_pilot import load_spec, model_reference
     os.sched_setaffinity(0, config['identity']['cpu_affinity'])
     os.environ['VLLM_ATTENTION_BACKEND'] = 'XFORMERS'
@@ -34,6 +34,8 @@ def pilot_train_worker(config, connection):
         raise ValueError('Common credit/KL configuration changed after submission')
     started_sources = time.monotonic()
     tables, packages, proof = load_pilot_pool(config['manifest_reference'])
+    proof['fixed_holdout'] = authenticate_pilot_holdout(
+        config['manifest_reference'], proof, config['holdout_reference'])
     source_seconds = time.monotonic() - started_sources
     if proof['split_policy'] != spec['split_policy']:
         raise ValueError('Pilot holdout differs from the approved scene split')
@@ -62,6 +64,7 @@ def pilot_train_worker(config, connection):
     common = {'upstream': {key: value['commit'] for key, value in roots.items()}, 'config': stable,
         'pilot_spec_reference': spec_ref, 'common_credit_reference': config['common_config_reference'],
         'manifest_reference': config['manifest_reference'], 'common_pool_hash': proof['common_pool_hash'],
+        'fixed_holdout': proof['fixed_holdout'],
         'model_snapshot_reference': model_ref, 'vllm_attention_backend': 'XFORMERS',
         'format_policy': 'explicit_task_zero', 'credit_pipeline': FROZEN_PIPELINE,
         'optimizer_horizon_updates': 50, 'T2_scope': 'first5updates_of_same_common_horizon'}

@@ -128,6 +128,10 @@ def completed_worker(result, config):
         and isinstance(result.get('common_config_sha256'), str) and len(result['common_config_sha256']) == 64,
         'Pilot runtime has no complete formal dataset/common-configuration proof')
     require(result['dataset_proof'].get('common_pool_hash') == result['common_pool_hash'], 'Runtime dataset identity differs')
+    fixed = result['dataset_proof'].get('fixed_holdout', {})
+    require(fixed.get('reference') == config.get('holdout_reference')
+        and fixed.get('pilot_population_and_split_verified') is True,
+        'Runtime has not bound its exact pilot population to the permanent T04 holdout')
 
 
 def run(args):
@@ -145,11 +149,12 @@ def run(args):
     require(not output.exists(), 'Preserve previous pilot runs')
     spec, spec_ref = load_spec(args.pilot_spec)
     manifest_ref = ref_identity(json.loads(args.manifest))
+    holdout_ref = ref_identity(json.loads(args.holdout_reference))
     common_path = ROOT / 'configs/rl_common.yaml'
     config = {**vars(args), 'version': ENGINEERING_VERSION if mode else VERSION, 'gpus': 1, 'budget_group': 'E2Epilot',
         'model': MODEL, 'updates': updates, 'episodes_per_update': 64, 'seed': 0,
         'format_policy': spec['format_policy'], 'credit_pipeline': spec['credit_pipeline'],
-        'node': socket.gethostname(), 'manifest_reference': manifest_ref,
+        'node': socket.gethostname(), 'manifest_reference': manifest_ref, 'holdout_reference': holdout_ref,
         'pilot_spec_reference': spec_ref, 'common_config_reference': file_ref(common_path, ROOT / 'configs')}
     metrics = {'kind': 'smoke_e2e_pilot_training', 'pilot_completed': False,
         'errors': [], 'cleanup_errors': [], 'black_frame_detected': False,
@@ -263,7 +268,7 @@ def learning_comparison(results):
         reward = abs(late['task_reward_mean'] - early['task_reward_mean'])
         arm_values[arm] = {'early': early, 'late': late, 'absolute_seen_rate_change': seen,
             'absolute_task_reward_change': reward, 'both_below_thresholds': seen < .05 and reward < .05}
-    for key in ('manifest_reference', 'pilot_spec_reference', 'common_config_reference', 'critic_offload', 'model_snapshot_reference'):
+    for key in ('manifest_reference', 'pilot_spec_reference', 'common_config_reference', 'critic_offload', 'model_snapshot_reference', 'holdout_reference'):
         require(results['T0']['config'].get(key) == results['T4']['config'].get(key), 'Compared arms have different common inputs: ' + key)
     for key in ('common_pool_hash', 'common_config_sha256'):
         require(results['T0']['metrics'].get(key) == results['T4']['metrics'].get(key), 'Compared arms have different common execution: ' + key)
@@ -293,6 +298,8 @@ def summarize(args):
                 and result.get('cleanup_errors') == [] and result.get('kind') == 'smoke_e2e_pilot_training'
                 and argv[:1] == ['run'] and argv_values(argv, '--arm') == [arm]
                 and argv_values(argv, '--engineering-smoke') == []
+                and [ref_identity(json.loads(v)) for v in argv_values(argv, '--holdout-reference')]
+                    == [config.get('holdout_reference')]
                 and argv_values(argv, '--name') == [meta['name']] and config.get('version') == VERSION,
                 'Require successful audited original pilot T0 and T4 runs')
             values[arm] = data; sources.append(ref)
@@ -313,6 +320,7 @@ def main():
     execute.add_argument('--name', required=True)
     execute.add_argument('--arm', choices=tuple(ARM_UPDATES), required=True)
     execute.add_argument('--manifest', required=True, help='JSON {file,sha256} formal pilot pool reference')
+    execute.add_argument('--holdout-reference', required=True, help='JSON {file,sha256} permanent T04 holdout freeze')
     execute.add_argument('--model-source', required=True, help='JSON {file,sha256} original model step3 result')
     execute.add_argument('--pilot-spec', default='configs/smoke_e2e_pilot.json')
     execute.add_argument('--critic-offload', action='store_true')

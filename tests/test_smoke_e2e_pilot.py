@@ -21,13 +21,15 @@ def complete_result(arm='T0', *, late_seen=0, late_reward=0.):
             for kind in pilot.KINDS}})
     return {'actual_completed_updates': pilot.ARM_UPDATES[arm], 'updates': updates,
         'holdout_evaluations': [{'update': index, 'greedy': True, 'complete': True} for index in pilot.EVAL_UPDATES[arm]],
-        'cache_authorized': True, 'dataset_proof': {'cache_authorized': True, 'common_pool_hash': 'a' * 64},
+        'cache_authorized': True, 'dataset_proof': {'cache_authorized': True, 'common_pool_hash': 'a' * 64,
+            'fixed_holdout': {'reference': {'file': 'data/world_pairs/train_holdout_scenes.json', 'sha256': 'd' * 64},
+                'pilot_population_and_split_verified': True}},
         'common_pool_hash': 'a' * 64, 'common_config_sha256': 'b' * 64, 'pilot_completed': True,
         'errors': [], 'cleanup_errors': [], 'sources': []}
 
 
 def compared(arm, **kwargs):
-    return {'config': {'arm': arm, 'updates': 50, 'critic_offload': True, 'runtime': {'gpu_name': 'fixture-H200'},
+    return {'config': {'holdout_reference': {'file': 'data/world_pairs/train_holdout_scenes.json', 'sha256': 'd' * 64}, 'arm': arm, 'updates': 50, 'critic_offload': True, 'runtime': {'gpu_name': 'fixture-H200'},
         'manifest_reference': {'fixture': 'same'}, 'pilot_spec_reference': {'fixture': 'spec'},
         'common_config_reference': {'fixture': 'common'}, 'model_snapshot_reference': {'fixture': 'base'}},
         'metrics': complete_result(arm, **kwargs)}
@@ -78,10 +80,10 @@ class PilotDecisionTests(unittest.TestCase):
             self.assertFalse(pilot.learning_comparison(values)['stop_and_report'])
 
     def test_pools_and_public_hyperparameters_must_match(self):
-        for field in ('manifest_reference', 'pilot_spec_reference', 'common_config_reference', 'critic_offload', 'model_snapshot_reference'):
+        for field in ('manifest_reference', 'pilot_spec_reference', 'common_config_reference', 'critic_offload', 'model_snapshot_reference', 'holdout_reference'):
             values = {arm: compared(arm) for arm in ('T0', 'T4')}
             values['T4']['config'][field] = 'different'
-            with self.assertRaisesRegex(ValueError, 'different common inputs'):
+            with self.assertRaisesRegex(ValueError, 'different common inputs|permanent T04 holdout'):
                 pilot.learning_comparison(values)
         values = {arm: compared(arm) for arm in ('T0', 'T4')}
         values['T4']['metrics']['common_config_sha256'] = 'c' * 64
@@ -135,6 +137,7 @@ class PilotLifecycleTests(unittest.TestCase):
                     'cpu_affinity': list(range(12)), 'cuda_visible_devices': 'GPU-fixture'}
         spec = {'format_policy': 'explicit_task_zero', 'credit_pipeline': 't05_section1b', 'split_policy': pilot.SCENE_SPLIT}
         args = argparse.Namespace(operation='run', name=name, arm=arm, engineering_smoke=engineering_smoke,
+            holdout_reference=json.dumps({'file': 'data/world_pairs/train_holdout_scenes.json', 'sha256': 'd' * 64}),
             manifest=json.dumps({'file': 'data/pool.json', 'sha256': 'a' * 64}),
             model_source=json.dumps({'file': 'results/base.json', 'sha256': 'b' * 64}),
             pilot_spec='configs/spec.json', critic_offload=True, timeout_seconds=600., gate_timeout_seconds=30.)

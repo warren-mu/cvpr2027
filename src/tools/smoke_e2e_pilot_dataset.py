@@ -333,6 +333,31 @@ def load_pilot_pool(manifest_reference):
     return tables, packages, proof
 
 
+def authenticate_pilot_holdout(manifest_reference, dataset_proof, holdout_reference):
+    """Bind the fully reauthenticated pilot population to the permanent T04 split.
+
+    Qualification remains executable before freezing this file. Every training
+    worker must call this after load_pilot_pool and before importing Ray/model
+    code; no new scene draw and no extra native revalidation are introduced.
+    """
+    from src.tools.train_holdout_freeze import load_frozen_holdout, assert_pilot_split
+    expected = ref_identity(holdout_reference)
+    frozen, actual = load_frozen_holdout(expected, root=ROOT)
+    require(ref_identity(actual) == expected, 'Frozen holdout file identity changed')
+    manifest = read_repo_ref(manifest_reference)
+    require(dataset_proof.get('cache_authorized') is True
+        and dataset_proof.get('manifest_reference') == ref_identity(manifest_reference)
+        and dataset_proof.get('common_pool_hash') == manifest.get('common_pool_hash')
+        and dataset_proof.get('split') == manifest.get('split')
+        and dataset_proof.get('train_keys') == manifest['split']['train_keys']
+        and dataset_proof.get('eval_keys') == manifest['split']['eval_keys'],
+        'Frozen holdout requires the exact fully reauthenticated pilot manifest')
+    assert_pilot_split(manifest['entries'], manifest['split'], frozen)
+    return {'reference': expected, 'pilot_population_and_split_verified': True,
+        'selected_scenes': list(manifest['split']['selected_scenes']),
+        'scope': 'permanent T04 whole-scene holdout; no later population redraw'}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--name', required=True)
