@@ -1,0 +1,15 @@
+# run_logged: python3 -m src.tools.record_command --name t04_pilot_overnight_budget_cpu_01 -- python3 -c import unittest,sys
+l=unittest.TestLoader()
+s=unittest.TestSuite()
+for p in ['test_e2e_budget.py', 'test_smoke_e2e_pilot.py', 'test_external_final_budget.py', 'test_mixed_phase_budget.py', 'test_gpu_pack_budget_integration.py', 'test_pbs_black_retry.py', 'test_pilot_black_retry.py', 'test_pbs_pack_black_retry.py']: s.addTests(l.discover("tests", pattern=p))
+r=unittest.TextTestRunner(verbosity=1).run(s)
+raise SystemExit(0 if r.wasSuccessful() and not r.skipped else 1)
+
+# start: 2026-11-10T15:26:30
+.........................................................................................
+----------------------------------------------------------------------
+Ran 89 tests in 21.844s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 22.941265835019294}
+# exit_code: 0

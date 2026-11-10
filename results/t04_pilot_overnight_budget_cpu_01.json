@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 22.941265835019294
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest,sys\nl=unittest.TestLoader()\ns=unittest.TestSuite()\nfor p in ['test_e2e_budget.py', 'test_smoke_e2e_pilot.py', 'test_external_final_budget.py', 'test_mixed_phase_budget.py', 'test_gpu_pack_budget_integration.py', 'test_pbs_black_retry.py', 'test_pilot_black_retry.py', 'test_pbs_pack_black_retry.py']: s.addTests(l.discover(\"tests\", pattern=p))\nr=unittest.TextTestRunner(verbosity=1).run(s)\nraise SystemExit(0 if r.wasSuccessful() and not r.skipped else 1)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "t04_pilot_overnight_budget_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "t04_pilot_overnight_budget_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest,sys\nl=unittest.TestLoader()\ns=unittest.TestSuite()\nfor p in ['test_e2e_budget.py', 'test_smoke_e2e_pilot.py', 'test_external_final_budget.py', 'test_mixed_phase_budget.py', 'test_gpu_pack_budget_integration.py', 'test_pbs_black_retry.py', 'test_pilot_black_retry.py', 'test_pbs_pack_black_retry.py']: s.addTests(l.discover(\"tests\", pattern=p))\nr=unittest.TextTestRunner(verbosity=1).run(s)\nraise SystemExit(0 if r.wasSuccessful() and not r.skipped else 1)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T15:26:30",
+    "log_path": "logs/runs/t04_pilot_overnight_budget_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "0bb3d323caf590c2e0d810d27b3e9c3be78905b2",
+    "git_dirty": false,
+    "end": "2026-11-10T15:26:54",
+    "duration_sec": 23.0,
+    "exit_code": 0,
+    "metrics_sha256": "f0627bc2aee62713525f392efe396a4677e3c87d95303239ac74958eba9bcfb8"
+  }
+}

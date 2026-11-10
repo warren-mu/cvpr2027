@@ -1,0 +1,161 @@
+{
+  "arms": [
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01_retry1_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T0_s0_01_retry1",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01_retry1.json",
+        "log_exists": false
+      },
+      "submission_directories": [
+        {
+          "directory": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry1-20261110T071227Z-ad4ede89",
+          "payload.json": {
+            "original": {
+              "black_retry_host_authorization": {
+                "available_hosts": [
+                  "hopper-28",
+                  "hopper-30"
+                ],
+                "disabled_hosts": {
+                  "hopper-22": {
+                    "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+                    "job_id": "709293.hopper-m-02",
+                    "reason": "New pinned submissions excluded after authenticated opening black gate",
+                    "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+                  }
+                },
+                "evidence": {
+                  "file": "results/diag_pilot_T0_first_black_guard_01.json",
+                  "sha256": "ad906cae476d5dd2c23d5fdd4ebb68161899ebee3416b98712bd700268b3e2a4"
+                },
+                "original_gpu_uuid": "GPU-d1e1ee0d-3db1-a1f2-e57e-929a37cd0e67",
+                "original_node": "hopper-25",
+                "previous_requested_host": null,
+                "queue_fallback_after_seconds": 1200,
+                "requested_host": "hopper-28",
+                "retry_of": "709866.hopper-m-02",
+                "rotation_index": 9,
+                "rotation_previous": {
+                  "payload": {
+                    "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry3-20261110T051522Z-2d8c95f5/payload.json",
+                    "sha256": "637aba8b935d32efe7bc4eca67f99b134b39075eeccb19de29b2ae9a9154aa29"
+                  },
+                  "receipt": {
+                    "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry3-20261110T051522Z-2d8c95f5/submission.json",
+                    "sha256": "a430737a254fafe175f01b0371ca3c29bc6fd8407d160f6f40ca353819d2581b"
+                  }
+                },
+                "scope": "opening black gate retry only; no scientific acceptance",
+                "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"
+              },
+              "budget_batch": "t00b_t01_20261108",
+              "budget_group": "E2Epilot",
+              "budget_revision": "20261110_human7babc169_measured709803_premium_120_t01v2_16_e2e_4_e2epilot_9_g01_40_t02_40_shared_gpu_units_v1",
+              "command": [
+                "python3",
+                "-u",
+                "-m",
+                "src.tools.smoke_e2e_pilot",
+                "run",
+                "--name",
+                "smoke_e2e_pilot_T0_s0_01_retry1",
+                "--arm",
+                "T0",
+                "--manifest",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+                "--holdout-reference",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+                "--model-source",
+                "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+                "--pilot-spec",
+                "configs/smoke_e2e_pilot.json",
+                "--timeout-seconds",
+                "13100",
+                "--gate-timeout-seconds",
+                "180"
+              ],
+              "dry_run": false,
+              "environment": {
+                "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+              },
+              "name": "smoke_e2e_pilot_T0_s0_01_retry1",
+              "queue": "autox",
+              "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+              "requested_gpu_count": 1,
+              "requested_host": "hopper-28",
+              "requested_queue_charge_rate": 1.0,
+              "requested_wall_seconds": 13164,
+              "retry_of": "709866.hopper-m-02",
+              "task_id": "T01"
+            },
+            "reference": {
+              "bytes": 3048,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry1-20261110T071227Z-ad4ede89/payload.json",
+              "sha256": "e416bdc1f61779b091a08f0940a16f7b1a6edb446364c899e13615fad2b05d55"
+            }
+          },
+          "payload.json_exists": true,
+          "pbs_out_exists": false,
+          "submission.json": {
+            "original": {
+              "command": [
+                "qsub",
+                "-N",
+                "cvpr27_ad4ede89",
+                "-l",
+                "walltime=03:39:24",
+                "-o",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry1-20261110T071227Z-ad4ede89/pbs.out",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry1-20261110T071227Z-ad4ede89/job.pbs"
+              ],
+              "returncode": 0,
+              "stderr": "",
+              "stdout": "709908.hopper-m-02\n"
+            },
+            "reference": {
+              "bytes": 429,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry1-20261110T071227Z-ad4ede89/submission.json",
+              "sha256": "05c06ba78cdf4a5542ace824e67fc5432067187454929bd0a7cde43d1599c4d8"
+            }
+          },
+          "submission.json_exists": true
+        }
+      ]
+    },
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01_retry1_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T4_s0_01_retry1",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01_retry1.json",
+        "log_exists": false
+      },
+      "submission_directories": []
+    }
+  ],
+  "observed_at_utc": "2026-11-10T07:14:14.500005+00:00",
+  "query": {
+    "command": [
+      "/cm/shared/apps/pbspro/current/bin/qstat",
+      "-f",
+      "-F",
+      "json",
+      "709908.hopper-m-02"
+    ],
+    "status": "unknown",
+    "stderr": null,
+    "stdout": null,
+    "timed_out": true
+  },
+  "unchanged_checkpoint_sources": []
+}
