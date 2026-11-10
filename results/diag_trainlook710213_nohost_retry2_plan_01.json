@@ -1,0 +1,164 @@
+{
+  "metrics": {
+    "review_plan_ready": true,
+    "submitted": false,
+    "errors": [],
+    "new_quota": {
+      "file": "configs/gen_train_look_first_unit_01_retry2_quota.json",
+      "sha256": "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d"
+    },
+    "scientific_parameters_unchanged": true,
+    "all_other_plan_values_equal": true,
+    "only_plan_value_changed": "parent_run_name",
+    "original_quota": {
+      "file": "configs/gen_train_look_first_unit_01_retry1_quota.json",
+      "sha256": "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905"
+    },
+    "original_payload": {
+      "file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/payload.json",
+      "sha256": "7e994fcc3d103058b98d8407408a48c0df1b1046f3f3d1a48cf5c55ea1e4b207"
+    },
+    "original_receipt": {
+      "file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/submission.json",
+      "sha256": "1bd5545713424eb40aa43cdcb4fc30a814141b9cdf090d8abfb5511b45a1be2a"
+    },
+    "verified_cancellation": {
+      "file": "results/diag_trainlook710213_pin20_accounting_01.json",
+      "sha256": "c238d5351c3901b2e10549c83717c92ac6163d137d4e65bada25ca9cd24b9a70",
+      "metrics_sha256": "cab26b7ef1c97b705db59e9f11b36f36f71cdd4f3245cca8c90ce00211d236b2"
+    },
+    "retry_of": "710213.hopper-m-02",
+    "requested_host": null,
+    "requested_wall_seconds": 1630,
+    "producer_command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_train_look_first_unit_01_retry2",
+      "--scenes",
+      "FloorPlan315",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "train",
+      "--quota-plan",
+      "configs/gen_train_look_first_unit_01_retry2_quota.json",
+      "--quota-plan-sha256",
+      "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d",
+      "--nearby-physics",
+      "--sample-rejected-raw"
+    ],
+    "submit_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--name",
+      "gen_train_look_first_unit_01_retry2",
+      "--task",
+      "T01",
+      "--budget-group",
+      "G01",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:27:10",
+      "--retry-of",
+      "710213.hopper-m-02",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_train_look_first_unit_01_retry2",
+      "--scenes",
+      "FloorPlan315",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "train",
+      "--quota-plan",
+      "configs/gen_train_look_first_unit_01_retry2_quota.json",
+      "--quota-plan-sha256",
+      "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d",
+      "--nearby-physics",
+      "--sample-rejected-raw"
+    ],
+    "budget_request_validated": true,
+    "budget_snapshot": {
+      "file": "logs/review/diag_trainlook710213_nohost_retry2_plan_01/budget_state.json",
+      "sha256": "5bf824163413df2d9ea588f984ab1dd2c080eed27b81997bd89eed5aeb4fd4e1"
+    },
+    "accounted_or_reserved_by_subbudget": {
+      "T01v2": 12.983055555555556,
+      "E2E": 1.4341666666666666,
+      "E2Epilot": 5.416388888888889,
+      "E2EpilotT2": 0.29194444444444445,
+      "G01": 8.985277777777778,
+      "T02": 7.379444444444444
+    },
+    "accounted_or_reserved_total": 48.17361111111109,
+    "scope": "Original metadata/zero-allocation canonical and budget validated; fresh submitter must repeat budget; no submission",
+    "producer_exit_code": 0
+  },
+  "config": {
+    "name": "diag_trainlook710213_nohost_retry2_plan_01",
+    "gpus": 0,
+    "retry_of": "710213.hopper-m-02",
+    "new_run_name": "gen_train_look_first_unit_01_retry2",
+    "scope": "Metadata-only original queued-never-started cancellation fallback; no native validation or submission"
+  },
+  "sources": [
+    {
+      "file": "results/diag_trainlook710213_pin20_accounting_01.json",
+      "sha256": "c238d5351c3901b2e10549c83717c92ac6163d137d4e65bada25ca9cd24b9a70",
+      "metrics_sha256": "cab26b7ef1c97b705db59e9f11b36f36f71cdd4f3245cca8c90ce00211d236b2"
+    },
+    {
+      "file": "results/diag_trainlook710213_pin20_pre_01.json",
+      "sha256": "bc8e817206d704fe2017e40cd3d5954bf3ff88b2d571660a5532d968d9952178",
+      "metrics_sha256": "5417fe261430b617cf5da35d64050ce7dc1045c18c58b4da151b8d269c731df4"
+    },
+    {
+      "file": "results/diag_trainlook710213_pin20_cancel_01.json",
+      "sha256": "8c84cff03f2444396d4253c4f1a73ef6b11bd0c34e056d8ab26052f5cc648141",
+      "metrics_sha256": "9c214555b745f3c1123619d0b1cead3c3cf8ef6a4cc05c634f75255812f3920b"
+    },
+    {
+      "file": "results/diag_trainlook710213_pin20_post_01.json",
+      "sha256": "223f7a563f18ba156721e7978bf4c60c10fa0be981e666e887ad65e492b8682f",
+      "metrics_sha256": "47b9459eabdfd6fc55abc735d3fb0d4a035c5f28a5810303e477551816a75fce"
+    }
+  ],
+  "_meta": {
+    "name": "diag_trainlook710213_nohost_retry2_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"One-off original G01 queued-cancellation fallback plan; no submission.\"\"\"\nimport hashlib\nimport importlib.util\nimport json\nfrom pathlib import Path\nimport signal\nimport traceback\nfrom src.tools import pbs_black_retry as b\n\nr = Path.cwd().resolve()\nname = 'diag_trainlook710213_nohost_retry2_plan_01'\nnew_name = 'gen_train_look_first_unit_01_retry2'\nold_name = 'gen_train_look_first_unit_01_retry1'\njob = '710213.hopper-m-02'\nfolder = r / 'logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5'\nsources = {}\nmetrics = {'review_plan_ready': False, 'submitted': False, 'errors': []}\nconfig = {'name': name, 'gpus': 0, 'retry_of': job, 'new_run_name': new_name,\n          'scope': 'Metadata-only original queued-never-started cancellation fallback; no native validation or submission'}\n\ndef file_ref(path):\n    p = Path(path).resolve()\n    return {'file': str(p.relative_to(r)), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}\n\ndef logged(file, expected=None):\n    ref = file_ref(r / file)\n    if expected is not None:\n        b.require(ref['sha256'] == expected, 'Original sealed result bytes changed')\n    data, _ = b.logged(r, ref)\n    ref = dict(ref, metrics_sha256=data['_meta']['metrics_sha256'])\n    sources[ref['file']] = ref\n    return data, ref\n\ndef expired(*_):\n    raise TimeoutError('Original metadata and budget preflight exceeded180 seconds')\n\ndef main():\n    b.require(not (r/'results'/(name+'.json')).exists(), 'Diagnostic result already exists')\n    b.require(not (r/'results'/(new_name+'.json')).exists()\n        and not any((r/'logs/runs').glob(new_name+'*'))\n        and not any((r/'logs/pbs').glob(new_name+'-*')), 'New fallback name already used')\n    for suffix, expected in [('payload.json','7e994fcc3d103058b98d8407408a48c0df1b1046f3f3d1a48cf5c55ea1e4b207'),\n                             ('submission.json','1bd5545713424eb40aa43cdcb4fc30a814141b9cdf090d8abfb5511b45a1be2a')]:\n        b.require(file_ref(folder/suffix)['sha256'] == expected, 'Original payload/receipt changed')\n    old = json.loads((folder/'payload.json').read_bytes())\n    receipt = json.loads((folder/'submission.json').read_bytes())\n    b.require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'], 'Original receipt differs')\n    b.require(old['name'] == old_name and old['repo'] == str(r) and old['task_id'] == 'T01'\n        and old['budget_group'] == 'G01' and old['requested_gpu_count'] == 1\n        and old['requested_wall_seconds'] == 1630 and old['requested_host'] == 'hopper-30'\n        and old['dry_run'] is False, 'Original payload resources or route changed')\n    old_quota = {'file':'configs/gen_train_look_first_unit_01_retry1_quota.json',\n                 'sha256':'13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905'}\n    expected = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',old_name,\n        '--scenes','FloorPlan315','--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json',\n        '--timeout-seconds','1600','--partition','train','--quota-plan',old_quota['file'],\n        '--quota-plan-sha256',old_quota['sha256'],'--nearby-physics','--sample-rejected-raw']\n    b.require(old['command'] == expected, 'Original scientific command differs')\n    account_file = 'results/diag_trainlook710213_pin20_accounting_01.json'\n    account, account_ref = logged(account_file, 'c238d5351c3901b2e10549c83717c92ac6163d137d4e65bada25ca9cd24b9a70')\n    cancellation_files = ['results/diag_trainlook710213_pin20_'+stage+'_01.json' for stage in ('pre','cancel','post')]\n    b.require(account['_meta']['command'] == ['python3','src/tools/pbs_usage.py','--name',\n        'diag_trainlook710213_pin20_accounting_01','--cancelled-evidence',*cancellation_files,job]\n        and account['_meta']['exit_code'] == 0\n        and account['metrics']['verified_never_started_cancelled_jobs'] == [job], 'Original cancellation accounting differs')\n    for file in cancellation_files:\n        logged(file)\n    spec = importlib.util.spec_from_file_location('original_g01_nohost_budget', r/'scripts/pbs/submit_phase.py')\n    phase = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(phase)\n    final = phase._final_accounting(r, {job}, paths=[r/account_file])\n    b.require(job in final and final[job]['gpu_hours'] == 0, 'No verified original zero-allocation cancellation')\n    b.require(not (r/'results'/(old_name+'.json')).exists(), 'Cancelled original producer unexpectedly has a result')\n    old_path = r/old_quota['file']\n    b.require(file_ref(old_path) == old_quota and not old_path.stat().st_mode & 0o222, 'Original quota changed or mutable')\n    plan = json.loads(old_path.read_bytes())\n    b.require(plan['parent_run_name'] == old_name, 'Original quota identity differs')\n    new_plan = dict(plan, parent_run_name=new_name)\n    b.require({k:v for k,v in plan.items() if k != 'parent_run_name'} ==\n              {k:v for k,v in new_plan.items() if k != 'parent_run_name'}, 'Nonidentity quota values changed')\n    new_path = r/'configs'/(new_name+'_quota.json')\n    with new_path.open('x') as stream:\n        json.dump(new_plan,stream,ensure_ascii=False,indent=2,allow_nan=False)\n        stream.write('\\n')\n    new_path.chmod(0o444)\n    new_quota = file_ref(new_path)\n    metrics['new_quota'] = new_quota\n    command = list(expected)\n    for flag,value in [('--name',new_name),('--quota-plan',new_quota['file']),('--quota-plan-sha256',new_quota['sha256'])]:\n        command[command.index(flag)+1] = value\n    b.same_retry_command(r, expected, command, old_name, new_name)\n    state = phase.budget_state(r)\n    phase.validate_request('T01',1,1630,new_name,state,'G01',command=command)\n    b.require(any(row['job_id'] == job and row['basis'] == 'final_accounting' and\n        row['accounted_or_reserved_gpu_hours'] == 0 for row in state['submissions']), 'Fresh budget did not consume original cancellation')\n    out = r/'logs/review'/name\n    out.mkdir(parents=True,exist_ok=False)\n    snapshot = out/'budget_state.json'\n    with snapshot.open('x') as stream:\n        json.dump(state,stream,indent=2,allow_nan=False);stream.write('\\n')\n    submit = ['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','G01',\n        '--gpus','1','--walltime','00:27:10','--retry-of',job,'--',*command]\n    metrics.update({'review_plan_ready':True,'scientific_parameters_unchanged':True,\n        'all_other_plan_values_equal':True,'only_plan_value_changed':'parent_run_name',\n        'original_quota':old_quota,'original_payload':file_ref(folder/'payload.json'),\n        'original_receipt':file_ref(folder/'submission.json'),'verified_cancellation':account_ref,\n        'retry_of':job,'requested_host':None,'requested_wall_seconds':1630,\n        'producer_command':command,'submit_command':submit,'budget_request_validated':True,\n        'budget_snapshot':file_ref(snapshot),'accounted_or_reserved_by_subbudget':state['accounted_or_reserved_by_subbudget'],\n        'accounted_or_reserved_total':state['accounted_or_reserved_total'],\n        'scope':'Original metadata/zero-allocation canonical and budget validated; fresh submitter must repeat budget; no submission'})\n\nsignal.signal(signal.SIGALRM, expired)\nsignal.alarm(180)\nexit_code = 0\ntry:\n    main()\nexcept Exception as exc:\n    exit_code = 1\n    metrics['errors'].append({'type':type(exc).__name__,'message':str(exc)})\n    traceback.print_exc()\nfinally:\n    signal.alarm(0)\n    metrics['producer_exit_code'] = exit_code\n    path = r/'results'/(name+'.json')\n    with path.open('x') as stream:\n        json.dump({'metrics':metrics,'config':config,'sources':list(sources.values())},stream,indent=2,allow_nan=False)\n        stream.write('\\n')\n    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\nraise SystemExit(exit_code)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T19:44:32",
+    "log_path": "logs/runs/diag_trainlook710213_nohost_retry2_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "70b8fe492a7496fbdc49ea3883bd3447738a9c1c",
+    "git_dirty": false,
+    "end": "2026-11-10T19:46:27",
+    "duration_sec": 108.9,
+    "exit_code": 0,
+    "metrics_sha256": "0cc133f3be7e33e237ab053704809303ef245834515fe21dbf00c9592cb2d1e9"
+  }
+}

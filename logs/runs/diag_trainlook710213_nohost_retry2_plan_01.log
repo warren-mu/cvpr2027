@@ -1,0 +1,134 @@
+# run_logged: python3 -c """One-off original G01 queued-cancellation fallback plan; no submission."""
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import signal
+import traceback
+from src.tools import pbs_black_retry as b
+
+r = Path.cwd().resolve()
+name = 'diag_trainlook710213_nohost_retry2_plan_01'
+new_name = 'gen_train_look_first_unit_01_retry2'
+old_name = 'gen_train_look_first_unit_01_retry1'
+job = '710213.hopper-m-02'
+folder = r / 'logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5'
+sources = {}
+metrics = {'review_plan_ready': False, 'submitted': False, 'errors': []}
+config = {'name': name, 'gpus': 0, 'retry_of': job, 'new_run_name': new_name,
+          'scope': 'Metadata-only original queued-never-started cancellation fallback; no native validation or submission'}
+
+def file_ref(path):
+    p = Path(path).resolve()
+    return {'file': str(p.relative_to(r)), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
+
+def logged(file, expected=None):
+    ref = file_ref(r / file)
+    if expected is not None:
+        b.require(ref['sha256'] == expected, 'Original sealed result bytes changed')
+    data, _ = b.logged(r, ref)
+    ref = dict(ref, metrics_sha256=data['_meta']['metrics_sha256'])
+    sources[ref['file']] = ref
+    return data, ref
+
+def expired(*_):
+    raise TimeoutError('Original metadata and budget preflight exceeded180 seconds')
+
+def main():
+    b.require(not (r/'results'/(name+'.json')).exists(), 'Diagnostic result already exists')
+    b.require(not (r/'results'/(new_name+'.json')).exists()
+        and not any((r/'logs/runs').glob(new_name+'*'))
+        and not any((r/'logs/pbs').glob(new_name+'-*')), 'New fallback name already used')
+    for suffix, expected in [('payload.json','7e994fcc3d103058b98d8407408a48c0df1b1046f3f3d1a48cf5c55ea1e4b207'),
+                             ('submission.json','1bd5545713424eb40aa43cdcb4fc30a814141b9cdf090d8abfb5511b45a1be2a')]:
+        b.require(file_ref(folder/suffix)['sha256'] == expected, 'Original payload/receipt changed')
+    old = json.loads((folder/'payload.json').read_bytes())
+    receipt = json.loads((folder/'submission.json').read_bytes())
+    b.require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'], 'Original receipt differs')
+    b.require(old['name'] == old_name and old['repo'] == str(r) and old['task_id'] == 'T01'
+        and old['budget_group'] == 'G01' and old['requested_gpu_count'] == 1
+        and old['requested_wall_seconds'] == 1630 and old['requested_host'] == 'hopper-30'
+        and old['dry_run'] is False, 'Original payload resources or route changed')
+    old_quota = {'file':'configs/gen_train_look_first_unit_01_retry1_quota.json',
+                 'sha256':'13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905'}
+    expected = ['python3','-u','-m','src.tools.g01_collect_parallel','--name',old_name,
+        '--scenes','FloorPlan315','--concurrency','6','--benchmark-source','results/gen_train_concurrency_s15_02.json',
+        '--timeout-seconds','1600','--partition','train','--quota-plan',old_quota['file'],
+        '--quota-plan-sha256',old_quota['sha256'],'--nearby-physics','--sample-rejected-raw']
+    b.require(old['command'] == expected, 'Original scientific command differs')
+    account_file = 'results/diag_trainlook710213_pin20_accounting_01.json'
+    account, account_ref = logged(account_file, 'c238d5351c3901b2e10549c83717c92ac6163d137d4e65bada25ca9cd24b9a70')
+    cancellation_files = ['results/diag_trainlook710213_pin20_'+stage+'_01.json' for stage in ('pre','cancel','post')]
+    b.require(account['_meta']['command'] == ['python3','src/tools/pbs_usage.py','--name',
+        'diag_trainlook710213_pin20_accounting_01','--cancelled-evidence',*cancellation_files,job]
+        and account['_meta']['exit_code'] == 0
+        and account['metrics']['verified_never_started_cancelled_jobs'] == [job], 'Original cancellation accounting differs')
+    for file in cancellation_files:
+        logged(file)
+    spec = importlib.util.spec_from_file_location('original_g01_nohost_budget', r/'scripts/pbs/submit_phase.py')
+    phase = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(phase)
+    final = phase._final_accounting(r, {job}, paths=[r/account_file])
+    b.require(job in final and final[job]['gpu_hours'] == 0, 'No verified original zero-allocation cancellation')
+    b.require(not (r/'results'/(old_name+'.json')).exists(), 'Cancelled original producer unexpectedly has a result')
+    old_path = r/old_quota['file']
+    b.require(file_ref(old_path) == old_quota and not old_path.stat().st_mode & 0o222, 'Original quota changed or mutable')
+    plan = json.loads(old_path.read_bytes())
+    b.require(plan['parent_run_name'] == old_name, 'Original quota identity differs')
+    new_plan = dict(plan, parent_run_name=new_name)
+    b.require({k:v for k,v in plan.items() if k != 'parent_run_name'} ==
+              {k:v for k,v in new_plan.items() if k != 'parent_run_name'}, 'Nonidentity quota values changed')
+    new_path = r/'configs'/(new_name+'_quota.json')
+    with new_path.open('x') as stream:
+        json.dump(new_plan,stream,ensure_ascii=False,indent=2,allow_nan=False)
+        stream.write('\n')
+    new_path.chmod(0o444)
+    new_quota = file_ref(new_path)
+    metrics['new_quota'] = new_quota
+    command = list(expected)
+    for flag,value in [('--name',new_name),('--quota-plan',new_quota['file']),('--quota-plan-sha256',new_quota['sha256'])]:
+        command[command.index(flag)+1] = value
+    b.same_retry_command(r, expected, command, old_name, new_name)
+    state = phase.budget_state(r)
+    phase.validate_request('T01',1,1630,new_name,state,'G01',command=command)
+    b.require(any(row['job_id'] == job and row['basis'] == 'final_accounting' and
+        row['accounted_or_reserved_gpu_hours'] == 0 for row in state['submissions']), 'Fresh budget did not consume original cancellation')
+    out = r/'logs/review'/name
+    out.mkdir(parents=True,exist_ok=False)
+    snapshot = out/'budget_state.json'
+    with snapshot.open('x') as stream:
+        json.dump(state,stream,indent=2,allow_nan=False);stream.write('\n')
+    submit = ['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','G01',
+        '--gpus','1','--walltime','00:27:10','--retry-of',job,'--',*command]
+    metrics.update({'review_plan_ready':True,'scientific_parameters_unchanged':True,
+        'all_other_plan_values_equal':True,'only_plan_value_changed':'parent_run_name',
+        'original_quota':old_quota,'original_payload':file_ref(folder/'payload.json'),
+        'original_receipt':file_ref(folder/'submission.json'),'verified_cancellation':account_ref,
+        'retry_of':job,'requested_host':None,'requested_wall_seconds':1630,
+        'producer_command':command,'submit_command':submit,'budget_request_validated':True,
+        'budget_snapshot':file_ref(snapshot),'accounted_or_reserved_by_subbudget':state['accounted_or_reserved_by_subbudget'],
+        'accounted_or_reserved_total':state['accounted_or_reserved_total'],
+        'scope':'Original metadata/zero-allocation canonical and budget validated; fresh submitter must repeat budget; no submission'})
+
+signal.signal(signal.SIGALRM, expired)
+signal.alarm(180)
+exit_code = 0
+try:
+    main()
+except Exception as exc:
+    exit_code = 1
+    metrics['errors'].append({'type':type(exc).__name__,'message':str(exc)})
+    traceback.print_exc()
+finally:
+    signal.alarm(0)
+    metrics['producer_exit_code'] = exit_code
+    path = r/'results'/(name+'.json')
+    with path.open('x') as stream:
+        json.dump({'metrics':metrics,'config':config,'sources':list(sources.values())},stream,indent=2,allow_nan=False)
+        stream.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+raise SystemExit(exit_code)
+
+# start: 2026-11-10T19:44:32
+FINAL_METRICS_JSON: {"accounted_or_reserved_by_subbudget": {"E2E": 1.4341666666666666, "E2Epilot": 5.416388888888889, "E2EpilotT2": 0.29194444444444445, "G01": 8.985277777777778, "T01v2": 12.983055555555556, "T02": 7.379444444444444}, "accounted_or_reserved_total": 48.17361111111109, "all_other_plan_values_equal": true, "budget_request_validated": true, "budget_snapshot": {"file": "logs/review/diag_trainlook710213_nohost_retry2_plan_01/budget_state.json", "sha256": "5bf824163413df2d9ea588f984ab1dd2c080eed27b81997bd89eed5aeb4fd4e1"}, "errors": [], "new_quota": {"file": "configs/gen_train_look_first_unit_01_retry2_quota.json", "sha256": "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d"}, "only_plan_value_changed": "parent_run_name", "original_payload": {"file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/payload.json", "sha256": "7e994fcc3d103058b98d8407408a48c0df1b1046f3f3d1a48cf5c55ea1e4b207"}, "original_quota": {"file": "configs/gen_train_look_first_unit_01_retry1_quota.json", "sha256": "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905"}, "original_receipt": {"file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/submission.json", "sha256": "1bd5545713424eb40aa43cdcb4fc30a814141b9cdf090d8abfb5511b45a1be2a"}, "producer_command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_look_first_unit_01_retry2", "--scenes", "FloorPlan315", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "train", "--quota-plan", "configs/gen_train_look_first_unit_01_retry2_quota.json", "--quota-plan-sha256", "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d", "--nearby-physics", "--sample-rejected-raw"], "producer_exit_code": 0, "requested_host": null, "requested_wall_seconds": 1630, "retry_of": "710213.hopper-m-02", "review_plan_ready": true, "scientific_parameters_unchanged": true, "scope": "Original metadata/zero-allocation canonical and budget validated; fresh submitter must repeat budget; no submission", "submit_command": ["python3", "scripts/pbs/submit_phase.py", "--name", "gen_train_look_first_unit_01_retry2", "--task", "T01", "--budget-group", "G01", "--gpus", "1", "--walltime", "00:27:10", "--retry-of", "710213.hopper-m-02", "--", "python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_look_first_unit_01_retry2", "--scenes", "FloorPlan315", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "train", "--quota-plan", "configs/gen_train_look_first_unit_01_retry2_quota.json", "--quota-plan-sha256", "f54043eac32805e95ee77859c48b2dd411d8b6f700f0ac7018fa6db2d982b06d", "--nearby-physics", "--sample-rejected-raw"], "submitted": false, "verified_cancellation": {"file": "results/diag_trainlook710213_pin20_accounting_01.json", "metrics_sha256": "cab26b7ef1c97b705db59e9f11b36f36f71cdd4f3245cca8c90ce00211d236b2", "sha256": "c238d5351c3901b2e10549c83717c92ac6163d137d4e65bada25ca9cd24b9a70"}}
+# exit_code: 0

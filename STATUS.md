@@ -1822,3 +1822,13 @@ b3527166只修正figure-only的额外限制：每world取原first_step_visible_a
 ### 2026-11-10 06:41 ET — FIG01真实单对通过；710213零用量回退
 FIG01 firststep v3原真实CPU冒烟diag_fig01_firststep_smoke_01 exit0，29.674252249998972秒；选中floorplan203_00062，图用w0/w1一步X掩码4793/4563像素，实际环境tau/tau_seen均1。完整83总体metadata、所选完整表和所有原校验通过，22个LookFlip可排序。正式paper尚未导出；单对结果只在logs/review/diag_fig01_firststep_smoke_01/cpu_smoke，manifest SHA25ac39dc8f72a538159de6b7ec1ca0da7d7552c73f2624ab0d7b113527a0ab2f。现可按同一预定排名导出5对，仍不用GPU、295秒止损、无重渲染/缩放/改色。
 710213完整原链已证明Q/无分配→qdel0→F/无分配，原canonical diag_trainlook710213_pin20_accounting_01记0 GPU小时；原pre snapshot显示已等3229秒，stime缺失故原queue-to-start字段仍null，不补值。未动任何运行作业；下一步准备同参数无host retry2，保留此次排队/取消证据。
+
+
+### 2026-11-10 06:50 ET — FIG01正式5对已导出并复制到Mac
+diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项CPU测试、真实单对冒烟、5对完整表与PNG字节检查通过。按已记录固定排名5对均来自训练场景FloorPlan203（living，LookFlip），不重渲染/缩放/改色。Mac已逐PNG及manifest SHA核对复制到 /Users/warren/Documents/cvpr2027_fig_frames；另有用户下载包 /Users/warren/Documents/Codex/2026-11-07/l/outputs/cvpr2027_fig01_frames.zip。原所有失败记录保留。
+- floorplan203_00062 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4793, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00062/manifest.json | manifest SHA 9535c5bad907d08a0ae25e3c3fba08b20aba92a03b547e091e2b25f9c313632d
+- floorplan203_00034 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 5962, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00034/manifest.json | manifest SHA 77dd44ec00c6968144a32cfcd78999f5caf0f820ec3ed9f0746c440d7ccd63d7
+- floorplan203_00010 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4793, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00010/manifest.json | manifest SHA c825d7f58b543a17c47a305e7c6d5b2571e50d6f3a2280452ec98234bb41587d
+- floorplan203_00002 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4562, "w1": 5962} | paper/fig_src/lookflip_frames/floorplan203_00002/manifest.json | manifest SHA 187f49c450e2cdc189cfd777fc5af87ae3d28c2c4b0b4fa18f321194d13221e9
+- floorplan203_00004 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4230, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00004/manifest.json | manifest SHA 39588df9dc51c59b5be1b56fb260be2ddf5b6aae6e9203af1dca58d3a0d87d3c
+710213已按原Q/noalloc→qdel→F/noalloc链取消（0 GPUh）。无host retry2仅父run identity变，quota/同参数验证/原预算preflight已通过，配置 gen_train_look_first_unit_01_retry2_quota.json；此处尚未提交新作业。
