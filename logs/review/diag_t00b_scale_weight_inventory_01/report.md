@@ -1,0 +1,31 @@
+# t00b_scale weight candidates
+
+Read-only t00b_scale checkpoint weight candidate list; no deletion, no permission change, no model loading. Original results/logs/metrics and exact referenced files excluded. Ancestor directory mentions remain explicit for root review; not treated as a per-weight file citation.
+
+| File | Kind | GB | Candidate only | Exact references |
+|---|---|---:|---|---:|
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/data.pt | actor_or_model | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_1.pt | critic | 3.755 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_1.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/extra_state_world_size_4_rank_3.pt | critic | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_3.pt | critic | 3.755 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_3.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/extra_state_world_size_4_rank_1.pt | critic | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_0.pt | critic | 3.755 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_0.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/extra_state_world_size_4_rank_2.pt | critic | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_2.pt | critic | 3.755 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_2.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/extra_state_world_size_4_rank_0.pt | critic | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_1.pt | actor_or_model | 4.066 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_1.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/extra_state_world_size_4_rank_3.pt | actor_or_model | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_3.pt | actor_or_model | 4.066 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_3.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/extra_state_world_size_4_rank_1.pt | actor_or_model | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_0.pt | actor_or_model | 4.066 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_0.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/extra_state_world_size_4_rank_2.pt | actor_or_model | 0.000 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_2.pt | actor_or_model | 4.066 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_2.pt | optimizer | 7.509 | True | 0 |
+| /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/extra_state_world_size_4_rank_0.pt | actor_or_model | 0.000 | True | 0 |

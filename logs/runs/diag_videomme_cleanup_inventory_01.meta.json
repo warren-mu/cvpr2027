@@ -1,0 +1,22 @@
+{
+  "name": "diag_videomme_cleanup_inventory_01",
+  "command": [
+    "python3",
+    "-c",
+    "import os,stat,json,hashlib,collections\nfrom pathlib import Path\nroot=Path('/scratch/e1583364/Video-MME'); base=Path('/scratch/e1583364')\nassert root.parent==base and root.resolve()==root and not root.is_symlink()\nuid=os.getuid();assert base.stat().st_uid==uid and root.stat().st_uid==uid\nrows=[];bad=[];ext=collections.Counter();samples={}\nfor parent,dirs,files in os.walk(root,followlinks=False):\n for name in dirs+files:\n  p=Path(parent)/name;s=p.lstat()\n  if s.st_uid!=uid or stat.S_ISLNK(s.st_mode) or not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)):\n   bad.append({'path':str(p),'uid':s.st_uid,'mode':s.st_mode})\n  if stat.S_ISREG(s.st_mode):\n   rows.append({'path':str(p),'relative':str(p.relative_to(root)),'bytes':s.st_size,'allocated_bytes':s.st_blocks*512,'uid':s.st_uid,'inode':s.st_ino,'mtime_ns':s.st_mtime_ns,'device':s.st_dev,'nlink':s.st_nlink})\n   ext[p.suffix.lower()]+=1\n   if p.suffix.lower() in ('.md','.txt','.json','.yaml','.gitattributes') and s.st_size<200000 and len(samples)<20:\n    samples[str(p.relative_to(root))]=p.read_text(errors='replace')[:12000]\nd={'root':str(root),'own_uid':uid,'root_uid':root.stat().st_uid,'realpath':str(root.resolve()),'files':rows,'violations':bad,'extensions':dict(ext),'samples':samples}\nout=Path('logs/review/diag_videomme_cleanup_inventory_01');out.mkdir(parents=True,exist_ok=False)\nout.joinpath('manifest.json').write_text(json.dumps(d,indent=2))\nmetrics={'file_count':len(rows),'logical_bytes':sum(r['bytes'] for r in rows),'allocated_bytes':sum(r['allocated_bytes'] for r in rows),'violations':bad,'extensions':dict(ext),'content_public_dataset_verified':False,'deletion_performed':False}\nn=os.environ['CVPR_RUN_NAME'];Path('results',n+'.json').write_text(json.dumps({'metrics':metrics,'config':{'scope':'read-only inventory; content verification still required before deletion','root':str(root),'manifest':'logs/review/diag_videomme_cleanup_inventory_01/manifest.json'}},indent=2))\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:30:56",
+  "log_path": "logs/runs/diag_videomme_cleanup_inventory_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+  "git_dirty": false,
+  "end": "2026-11-10T10:30:57",
+  "duration_sec": 0.2,
+  "exit_code": 1,
+  "results_missing": true
+}

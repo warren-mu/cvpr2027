@@ -1,0 +1,30 @@
+# run_logged: python3 -c import os,stat,json,hashlib,collections
+from pathlib import Path
+root=Path('/scratch/e1583364/Video-MME'); base=Path('/scratch/e1583364')
+assert root.parent==base and root.resolve()==root and not root.is_symlink()
+uid=os.getuid();assert base.stat().st_uid==uid and root.stat().st_uid==uid
+rows=[];bad=[];ext=collections.Counter();samples={}
+for parent,dirs,files in os.walk(root,followlinks=False):
+ for name in dirs+files:
+  p=Path(parent)/name;s=p.lstat()
+  if s.st_uid!=uid or stat.S_ISLNK(s.st_mode) or not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)):
+   bad.append({'path':str(p),'uid':s.st_uid,'mode':s.st_mode})
+  if stat.S_ISREG(s.st_mode):
+   rows.append({'path':str(p),'relative':str(p.relative_to(root)),'bytes':s.st_size,'allocated_bytes':s.st_blocks*512,'uid':s.st_uid,'inode':s.st_ino,'mtime_ns':s.st_mtime_ns,'device':s.st_dev,'nlink':s.st_nlink})
+   ext[p.suffix.lower()]+=1
+   if p.suffix.lower() in ('.md','.txt','.json','.yaml','.gitattributes') and s.st_size<200000 and len(samples)<20:
+    samples[str(p.relative_to(root))]=p.read_text(errors='replace')[:12000]
+d={'root':str(root),'own_uid':uid,'root_uid':root.stat().st_uid,'realpath':str(root.resolve()),'files':rows,'violations':bad,'extensions':dict(ext),'samples':samples}
+out=Path('logs/review/diag_videomme_cleanup_inventory_01');out.mkdir(parents=True,exist_ok=False)
+out.joinpath('manifest.json').write_text(json.dumps(d,indent=2))
+metrics={'file_count':len(rows),'logical_bytes':sum(r['bytes'] for r in rows),'allocated_bytes':sum(r['allocated_bytes'] for r in rows),'violations':bad,'extensions':dict(ext),'content_public_dataset_verified':False,'deletion_performed':False}
+n=os.environ['CVPR_RUN_NAME'];Path('results',n+'.json').write_text(json.dumps({'metrics':metrics,'config':{'scope':'read-only inventory; content verification still required before deletion','root':str(root),'manifest':'logs/review/diag_videomme_cleanup_inventory_01/manifest.json'}},indent=2))
+print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)
+
+# start: 2026-11-10T10:30:56
+Traceback (most recent call last):
+  File "<string>", line 21, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'CVPR_RUN_NAME'
+# exit_code: 1

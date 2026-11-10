@@ -1,0 +1,28 @@
+{
+  "name": "diag_submit_cache31_after_pin20_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_submit_cache31_after_pin20_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,subprocess\nfrom pathlib import Path\nold=json.loads(Path('logs/pbs/t02_export_cache_six09_14_01_retry3-20261110T020749Z-67e00468/payload.json').read_text())\na=json.loads(Path('results/diag_cache31_pin20_cancel_accounting_01.json').read_text())\nassert a['_meta']['exit_code']==0 and a['metrics']['verified_never_started_cancelled_jobs']==['709510.hopper-m-02'] and a['metrics']['total_allocation_gpu_hours']==0\nname='t02_export_cache_six09_14_01_retry4'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\ncommand=[name if x==old['name'] else x for x in old['command']]\ncmd=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','T02','--name',name,'--gpus','1','--walltime','01:59:29','--',*command]\nprint('UNPINNED_RETRY_OF_VERIFIED_Q_ONLY_709510: '+json.dumps(cmd),flush=True)\nraise SystemExit(subprocess.call(cmd))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:32:23",
+  "log_path": "logs/runs/diag_submit_cache31_after_pin20_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+  "git_dirty": false,
+  "end": "2026-11-10T10:34:21",
+  "duration_sec": 116.1,
+  "exit_code": 0,
+  "metrics_sha256": "a0241797cd65a75e7c2157346c948e67e86bf40d47cd912d9e098f7343c7f899"
+}

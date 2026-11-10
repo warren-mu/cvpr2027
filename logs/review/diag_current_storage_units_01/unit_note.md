@@ -1,0 +1,1 @@
+单位补充：原 hpc quota 的 scratch.hw.hopper 第46行将用量除以1024³、配额除以1024⁴，虽然标作GB/TB，实际是GiB/TiB。本次du表和新增242.533GB规划均为十进制GB；不得直接与CLI的879.8相加。du为当前allocated blocks，quota backend口径也未证明完全相同，因此不是精确峰值预测。原测量和forecast不修改。

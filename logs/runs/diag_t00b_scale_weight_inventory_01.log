@@ -1,0 +1,95 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t00b_scale_weight_inventory_01 -- python3 -c """One-off authorized read-only candidate inventory, never deletes or opens weights."""
+from pathlib import Path
+import hashlib,json,os,re,signal,stat,time
+ROOT=Path.cwd().resolve();BASE=Path('/scratch/e1583364/cvpr2027/t00b_scale')
+NAME='diag_t00b_scale_weight_inventory_01'
+def main():
+ if os.environ.get('CVPR_RUN_NAME')!=NAME:raise ValueError('Logged run identity required')
+ def expired(*_):raise TimeoutError('Read-only metadata inventory exceeded60s; no deletion authorization')
+ signal.signal(signal.SIGALRM,expired);signal.alarm(60)
+ output=ROOT/'logs/review'/NAME;output.mkdir(parents=True,exist_ok=False)
+ records=[];roots=[];metadata_refs=[];candidates=[];refs={};directory_mentions={};scan_errors=[]
+ for directory in sorted(BASE.iterdir()):
+  if not directory.is_dir() or directory.is_symlink():continue
+  match=re.fullmatch(r'(.+)-(\d+\.hopper-m-\d+)',directory.name)
+  if not match:raise ValueError('Unknown original workdir identity')
+  name,job=match.groups();path=ROOT/'results'/(name+'.json')
+  if not path.exists():
+   roots.append({'directory':str(directory),'status':'missing_original_result','candidate_authorization':False});continue
+  raw=path.read_bytes();value=json.loads(raw);meta=value.get('_meta',{})
+  terminal=isinstance(meta.get('end'),str) and bool(meta['end'])
+  roots.append({'directory':str(directory),'job_id':job,'original_result':{'file':str(path.relative_to(ROOT)),'sha256':hashlib.sha256(raw).hexdigest()},'end':meta.get('end'),'exit_code':meta.get('exit_code'),'terminal':terminal})
+  if not terminal:continue
+  for current,dirs,files in os.walk(directory,followlinks=False):
+   dirs[:]=[n for n in dirs if not (Path(current)/n).is_symlink()]
+   for filename in files:
+    p=Path(current)/filename
+    if p.suffix.lower() not in ('.pt','.pth','.bin','.safetensors'):continue
+    info=p.lstat()
+    parts=p.relative_to(directory).parts
+    checkpoint=any('checkpoint' in part.lower() or re.fullmatch(r'global_step_\d+',part) for part in parts[:-1])
+    if not checkpoint:continue
+    kind='optimizer' if re.search('optim',filename,re.I) else ('critic' if any('critic' in s.lower() for s in parts) else 'actor_or_model')
+    candidates.append({'path':str(p),'workdir':str(directory),'kind':kind,'bytes':info.st_size,
+      'allocated_bytes':info.st_blocks*512,'inode':info.st_ino,'device':info.st_dev,'mtime_ns':info.st_mtime_ns,
+      'uid':info.st_uid,'nlink':info.st_nlink,'is_regular':stat.S_ISREG(info.st_mode),'is_symlink':stat.S_ISLNK(info.st_mode),
+      'weight_bytes_read':False,'deletion_authorized_by_this_report':False})
+ exact={c['path']:c for c in candidates}
+ def walk(value,location,path):
+  if isinstance(value,dict):
+   for k,v in value.items():walk(v,location,path+[str(k)])
+  elif isinstance(value,list):
+   for i,v in enumerate(value):walk(v,location,path+[str(i)])
+  elif isinstance(value,str):
+   if value in exact:refs.setdefault(value,[]).append({'metadata':location,'json_path':path})
+   if value.startswith(str(BASE)):
+    text=value.rstrip('/')
+    for target in exact:
+     if target.startswith(text+'/'):
+      directory_mentions.setdefault(target,[]).append({'metadata':location,'json_path':path,'mentioned_directory':value})
+ def scan(path):
+  try:
+   raw=path.read_bytes()
+   if b't00b_scale' not in raw and not any(n.encode() in raw for n in ['model_world_size','optim_world_size']):return
+   value=json.loads(raw)
+   ref={'file':str(path.relative_to(ROOT)),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)}
+   metadata_refs.append(ref);walk(value,ref,[])
+  except (OSError,ValueError) as error:scan_errors.append({'file':str(path),'error':str(error)})
+ # Every original result, including archives, is searched for exact references.
+ for path in sorted((ROOT/'results').rglob('*.json')):scan(path)
+ # Small original run metadata/evidence indexes can be referenced by a result.
+ # Do not read weight bytes, arbitrary source tables, or any credential file.
+ for path in sorted((ROOT/'logs/runs').glob('t00b*')):
+  if path.is_dir():
+   for child in sorted(path.rglob('*.json')):scan(child)
+  elif path.suffix=='.json':scan(path)
+ for c in candidates:
+  c['exact_metadata_references']=refs.get(c['path'],[])
+  c['ancestor_directory_mentions']=directory_mentions.get(c['path'],[])
+  c['candidate_only']=bool(c['is_regular'] and not c['is_symlink'] and c['nlink']==1 and not c['exact_metadata_references'] and not scan_errors)
+  c['excluded_reason']=('actual_metadata_file_reference' if c['exact_metadata_references'] else
+     'symlink_or_not_regular_or_hardlinked' if not c['is_regular'] or c['is_symlink'] or c['nlink']!=1 else
+     'incomplete_reference_scan' if scan_errors else None)
+  now=Path(c['path']).lstat()
+  if (now.st_ino,now.st_dev,now.st_size,now.st_mtime_ns)!=(c['inode'],c['device'],c['bytes'],c['mtime_ns']):
+   raise ValueError('Candidate changed during inventory')
+ eligible=[c for c in candidates if c['candidate_only']]
+ report={'scope':'Read-only t00b_scale checkpoint weight candidate list; no deletion, no permission change, no model loading. Original results/logs/metrics and exact referenced files excluded. Ancestor directory mentions remain explicit for root review; not treated as a per-weight file citation.',
+  'roots':roots,'files':candidates,'reference_scan_errors':scan_errors,'matching_metadata_references':metadata_refs,
+  'scan_scope':'All repository results/**/*.json plus original logs/runs/t00b* JSON metadata/evidence indexes; paths are compared exactly; no broad external filesystem scan',
+  'candidate_file_count':len(eligible),'candidate_bytes':sum(c['bytes'] for c in eligible),
+  'candidate_allocated_bytes':sum(c['allocated_bytes'] for c in eligible),
+  'protected_result_log_metric_files_in_candidates':False,'deleted_files':0,'weight_content_hashes_computed':False}
+ body=(json.dumps(report,indent=2,sort_keys=True)+'\n').encode();(output/'report.json').write_bytes(body)
+ (output/'candidate_paths.txt').write_text(''.join(c['path']+'\n' for c in eligible))
+ lines=['# t00b_scale weight candidates','',report['scope'],'','| File | Kind | GB | Candidate only | Exact references |','|---|---|---:|---|---:|']
+ for c in candidates:lines.append('| %s | %s | %.3f | %s | %d |'%(c['path'],c['kind'],c['bytes']/1e9,c['candidate_only'],len(c['exact_metadata_references'])))
+ (output/'report.md').write_text('\n'.join(lines)+'\n')
+ signal.alarm(0)
+ print('T00B_WEIGHT_INVENTORY_JSON: '+json.dumps({'report':{'file':str((output/'report.json').relative_to(ROOT)),'sha256':hashlib.sha256(body).hexdigest()},'candidate_file_count':report['candidate_file_count'],'candidate_bytes':report['candidate_bytes'],'candidate_allocated_bytes':report['candidate_allocated_bytes'],'reference_scan_errors':scan_errors,'roots':roots}),flush=True)
+if __name__=='__main__':main()
+
+# start: 2026-11-10T10:32:17
+T00B_WEIGHT_INVENTORY_JSON: {"report": {"file": "logs/review/diag_t00b_scale_weight_inventory_01/report.json", "sha256": "efc52fd46a4fb139f44ef1178d7f0ec3aa53c9a9bc532ba98877bfce78aee950"}, "candidate_file_count": 25, "candidate_bytes": 91359859156, "candidate_allocated_bytes": 91359916032, "reference_scan_errors": [], "roots": [{"directory": "/scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_baseline-706436.hopper-m-02", "job_id": "706436.hopper-m-02", "original_result": {"file": "results/t00b_scale4_baseline.json", "sha256": "2eae2f5056d479cb307fb34e9ce23ca33cdc016d4748b7a5f61713a327ef9107"}, "end": "2026-11-08T18:33:33", "exit_code": 1, "terminal": true}, {"directory": "/scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_cache_retry_baseline-706732.hopper-m-02", "job_id": "706732.hopper-m-02", "original_result": {"file": "results/t00b_scale4_cache_retry_baseline.json", "sha256": "50193d9fbc480f75f0066861d895b8db7b936fd48074ae6f693113b68fe65676"}, "end": "2026-11-08T23:20:49", "exit_code": 1, "terminal": true}, {"directory": "/scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02", "job_id": "707054.hopper-m-02", "original_result": {"file": "results/t00b_scale4_worker_cache_retry_baseline.json", "sha256": "7889720d1bfab84ff97761d5df774edb75f10e32266b8ff51f5323b71f0547e4"}, "end": "2026-11-09T01:53:22", "exit_code": 0, "terminal": true}, {"directory": "/scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_vllm04-707054.hopper-m-02", "job_id": "707054.hopper-m-02", "original_result": {"file": "results/t00b_scale4_worker_cache_retry_vllm04.json", "sha256": "595c9cbcfa934cf1861ceced11876fafdd4d6ddcac5d4543878a4590ae04f3cf"}, "end": "2026-11-09T02:29:03", "exit_code": 124, "terminal": true}, {"directory": "/scratch/e1583364/cvpr2027/t00b_scale/t00b_scale8_baseline-706439.hopper-m-02", "job_id": "706439.hopper-m-02", "original_result": {"file": "results/t00b_scale8_baseline.json", "sha256": "a5f7be3640b4b81377a9caa4eef89f983242cb74e73a22bd096b0be94b6e9903"}, "end": "2026-11-08T17:58:04", "exit_code": 1, "terminal": true}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 21.49878365796758}
+# exit_code: 0

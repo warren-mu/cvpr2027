@@ -1,0 +1,29 @@
+{
+  "name": "diag_expanded_cleanup_preflight_audit_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_expanded_cleanup_preflight_audit_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:39:34",
+  "log_path": "logs/runs/diag_expanded_cleanup_preflight_audit_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_expanded_cleanup_preflight_audit_01.diff",
+  "end": "2026-11-10T10:39:49",
+  "duration_sec": 14.1,
+  "exit_code": 0,
+  "metrics_sha256": "ff5279f97a6bcb430a678243845547f93e6d5821df30072d10e8e620d4dcb321"
+}

@@ -1505,3 +1505,55 @@ CLI quota 的 GB/TB 与下列十进制 GB 尚未确认同一换算，故不把�
 
 未来试跑/主实验按已批准规则只存最终 bf16 actor；这一项已经实现。仅压缩未来被拒证据是否足够覆盖导出与 actor 占用仍须实测；若依旧超限，继续报告，由人类决定增加空间或其他存储安排。
 - **2026-11-09 21:30**（人类：「不用了吧，全部专注于我们目前的论文内容」）：scratch 879.8 GB / 1 TB，剩余工作预计约需 250 GB。批准删除 Video-MME（约 101 GB，无关的公开数据集）、hf_ckpts 中未被本项目使用或引用的模型、t00b_scale 中的权重和优化器状态；世界对原始记录、视角表、结果与日志保留。今后新运行的被拒尝试只留计数、原因和约 10% 抽样原始记录（方案经 CPU 测试与单元冒烟后启用）。范围写进 AGENTS.md。
+
+
+## 2026-11-09 21:36 ET — a0076849 扩展清理：删前清单
+
+人类新授权已合并；替代此前最多3个拒绝样本的待决定方案，新运行按固定种子约10%原始拒绝证据，CPU与单单元冒烟后才上线。原世界对/视角表/结果/日志完全保留。
+
+本次只删下面两个已核实组。逐文件路径、大小、所有者、inode/mtime 清单：logs/review/diag_authorized_storage_cleanup_plan_02/manifest.json；SHA256 da8172fbeed772ccb4f7d4ec55146468ab1e7bfcd9aaa1c52d345af543d6e0ab。Video-MME 当前目录属于本账号，公开metadata字节匹配、2700条标注/900视频ID与MP4头核对通过。t00b只选model/optim rank文件；额外state和data.pt保留。hf_ckpts另行列清单，尚未删除。
+
+|类别/路径|文件数|allocated GB（十进制）|
+|---|---:|---:|
+|human_authorized_public_Video_MME|905|101.400662|
+|human_authorized_t00b_actor_critic_optimizer|16|91.359781|
+
+Video-MME: /scratch/e1583364/Video-MME；t00b: /scratch/e1583364/cvpr2027/t00b_scale。
+
+权重逐文件：
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_1.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_1.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_3.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_3.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_0.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_0.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/model_world_size_4_rank_2.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/critic/optim_world_size_4_rank_2.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_1.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_1.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_3.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_3.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_0.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_0.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/model_world_size_4_rank_2.pt
+- /scratch/e1583364/cvpr2027/t00b_scale/t00b_scale4_worker_cache_retry_baseline-707054.hopper-m-02/checkpoints/vagen_new/examples-vagen_base-navigation/global_step_21/actor/optim_world_size_4_rank_2.pt
+
+
+## 2026-11-09 21:39 ET — hf_ckpts 删前模型清单
+
+完整2245个 configs/results（含archive/gzip）引用扫描通过；以下7个模型均无引用、归本账号，无symlink。Qwen2.5-VL-3B-Instruct基座在另一个受保护缓存路径中，本次不碰；_download_test/_lock_test未判定为模型，保留。全部逐文件stat清单：logs/review/diag_authorized_hf_cleanup_plan_01/manifest.json；SHA256 55357dc4c14aa3412992ce5b7265d74e09f95c8ecd9e1e0864f4531b882446e6。只删除这些模型目录内清单上的文件。
+
+|模型路径|文件数|allocated GB（十进制）|
+|---|---:|---:|
+|/scratch/e1583364/hf_ckpts/Llama-3.1-70B-Instruct|41|141.116822|
+|/scratch/e1583364/hf_ckpts/Qwen2.5-1.5B-Instruct|21|3.099042|
+|/scratch/e1583364/hf_ckpts/Qwen2.5-7B-Instruct|29|15.242895|
+|/scratch/e1583364/hf_ckpts/Qwen3-4B-Instruct-2507|27|8.061002|
+|/scratch/e1583364/hf_ckpts/Qwen3-8B|31|16.397566|
+|/scratch/e1583364/hf_ckpts/clip-vit-large-patch14-336|9|1.715614|
+|/scratch/e1583364/hf_ckpts/llava-v1.6-vicuna-7b|14|14.127247|
+
+单位补充：原 hpc quota 的 scratch.hw.hopper 第46行将用量除以1024³、配额除以1024⁴，虽然标作GB/TB，实际是GiB/TiB。本次du表和新增242.533GB规划均为十进制GB；不得直接与CLI的879.8相加。du为当前allocated blocks，quota backend口径也未证明完全相同，因此不是精确峰值预测。原测量和forecast不修改。
+
+
+709510 指定hopper-28超过20分钟且仍为从未启动Q，已通过原logged Q→qdel→F链确认取消，原canonical实际GPU用量0。原31对/seed0/200状态去掉host后重提709534，已在hopper-16通过出图检查并开始完整认证；没有宣称缓存通过。22:30备用52对路径仍照常。

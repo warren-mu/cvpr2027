@@ -1,0 +1,103 @@
+# run_logged: python3 -m src.tools.record_command --name diag_hf_ckpts_inventory_01 -- python3 -c """Authorized read-only inventory. No model contents are read, changed or deleted."""
+import concurrent.futures, datetime, gzip, hashlib, json, os, pwd, stat, subprocess, time
+from pathlib import Path
+NAME='diag_hf_ckpts_inventory_01'
+ROOT=Path.cwd(); BASE=Path('/scratch/e1583364/hf_ckpts'); OUT=ROOT/'logs/review'/NAME
+START=time.monotonic(); DEADLINE=START+240
+OUT.mkdir(parents=True,exist_ok=False)
+def utc(): return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def ref(p):
+ p=Path(p); h=hashlib.sha256()
+ with p.open('rb') as f:
+  for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+ return {'file':str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p),'sha256':h.hexdigest(),'bytes':p.stat().st_size}
+def fp(st):return [st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns]
+def owner(st):
+ try:return pwd.getpwuid(st.st_uid).pw_name
+ except KeyError:return str(st.st_uid)
+def tick():
+ if time.monotonic()>DEADLINE:raise TimeoutError('240 second inventory bound exceeded')
+assert BASE.is_dir() and not BASE.is_symlink()
+entries=[]
+for p in sorted(BASE.iterdir()):
+ s=p.lstat(); entries.append({'path':str(p),'name':p.name,'owner':owner(s),'uid':s.st_uid,'gid':s.st_gid,'identity':fp(s),'kind':'directory' if stat.S_ISDIR(s.st_mode) else 'symlink' if stat.S_ISLNK(s.st_mode) else 'file'})
+needles={r['name']:r['name'].casefold().encode() for r in entries}
+errors=[]; refs_by_model={k:[] for k in needles}; inventory={}; skipped=[]
+def enumerate_reference_files():
+ found={}; skipped=[]
+ for root in (ROOT/'configs',ROOT/'results'):
+  if not root.is_dir() or root.is_symlink():raise ValueError('Invalid reference root '+str(root))
+  for folder,dirs,files in os.walk(root,followlinks=False):
+   tick()
+   for d in list(dirs):
+    p=Path(folder)/d
+    if p.is_symlink(): skipped.append(str(p.relative_to(ROOT)));dirs.remove(d)
+   for f in files:
+    p=Path(folder)/f;s=p.lstat()
+    if not stat.S_ISREG(s.st_mode):skipped.append(str(p.relative_to(ROOT)));continue
+    found[str(p.relative_to(ROOT))]=fp(s)
+ return found,skipped
+reference_started=utc()
+try:
+ inventory,skipped=enumerate_reference_files()
+ for rel,identity in inventory.items():
+  tick(); p=ROOT/rel; matches=set(); total=0; tail=b''
+  opener=gzip.open if p.suffix=='.gz' else open
+  with opener(p,'rb') as f:
+   while True:
+    tick(); block=f.read(1024*1024)
+    if not block:break
+    data=(tail+block).lower(); total+=len(block)
+    for name,needle in needles.items():
+     if needle in data:matches.add(name)
+    tail=data[-256:]
+  if fp(p.lstat())!=identity:raise ValueError('Reference changed while reading '+rel)
+  if matches:
+   reference=ref(p)
+   for name in sorted(matches):refs_by_model[name].append(reference)
+ final,final_skipped=enumerate_reference_files()
+ changed=[k for k in set(inventory)|set(final) if inventory.get(k)!=final.get(k)]
+ if changed:errors.append({'reference_snapshot_changed':changed})
+ if skipped or final_skipped:errors.append({'reference_paths_not_followed':sorted(set(skipped+final_skipped))})
+except Exception as exc:errors.append({'reference_scan_error':repr(exc)})
+reference_ended=utc()
+def measure(row):
+ r=dict(row);begin=time.monotonic();r['reference_evidence']=refs_by_model[r['name']]
+ if r['kind']!='directory':return dict(r,status='protected_non_directory')
+ try:
+  tick(); foreign=[];symlinks=[];items=0
+  for folder,dirs,files in os.walk(r['path'],followlinks=False):
+   tick()
+   for name in ['.']+dirs+files:
+    p=Path(folder) if name=='.' else Path(folder)/name;s=p.lstat();items+=1
+    if s.st_uid!=os.getuid():foreign.append({'path':str(p),'owner':owner(s),'uid':s.st_uid})
+    if stat.S_ISLNK(s.st_mode):symlinks.append({'path':str(p),'target':os.readlink(p)})
+  cmd=['nice','-n','15','du','--summarize','--one-file-system','--count-links','--no-dereference','--block-size=1','--',r['path']]
+  proc=subprocess.run(cmd,text=True,capture_output=True,timeout=max(1,min(120,DEADLINE-time.monotonic())),env={**os.environ,'LC_ALL':'C'})
+  r.update(du_command=cmd,du_exit_code=proc.returncode,du_stdout=proc.stdout,du_stderr=proc.stderr,foreign_owned_entries=foreign,symlinks_not_followed=symlinks,metadata_entries_checked=items)
+  if proc.returncode or len(proc.stdout.splitlines())!=1:raise ValueError('Incomplete du')
+  n,path=proc.stdout.strip().split('\t',1)
+  if path!=r['path'] or not n.isdigit():raise ValueError('Invalid du identity')
+  if fp(Path(r['path']).lstat())!=r['identity']:raise ValueError('Model root changed')
+  r['allocated_path_bytes']=int(n)
+  reasons=[]
+  if 'qwen2.5-vl-3b-instruct' in r['name'].casefold():reasons.append('Explicitly protected base model')
+  if r['reference_evidence']:reasons.append('Referenced in original configs/results; historical references retained')
+  if errors:reasons.append('Reference scan incomplete or changed; fail closed')
+  if foreign:reasons.append('Contains entries not owned by current account')
+  if symlinks:reasons.append('Contains symlinks; targets not followed or authorized')
+  if r['name'].startswith('_'):reasons.append('Not identified as a model directory; no D-category deletion conclusion')
+  r.update(status='protected' if reasons else 'eligible_candidate_after_root_review',protection_reasons=reasons)
+ except Exception as exc:r.update(status='unknown_protected',error=repr(exc))
+ r['measurement_seconds']=time.monotonic()-begin
+ return r
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:rows=list(pool.map(measure,entries))
+report={'name':NAME,'scope':'Read-only pre-deletion inventory; no deletion performed; no model weights opened','rules_reference':ref(ROOT/'AGENTS.md'),'model_root':str(BASE),'reference_roots':['configs','results'],'reference_scope':'All regular files recursively including archives, gzip decompressed for string matching; case-insensitive exact directory basename substring; any match protects','reference_scan_started_utc':reference_started,'reference_scan_ended_utc':reference_ended,'reference_file_count':len(inventory),'reference_inventory_sha256':hashlib.sha256(json.dumps(inventory,sort_keys=True).encode()).hexdigest(),'reference_scan_errors':errors,'size_method':'GNU du -l -x -B1 allocated bytes; hardlinked directory entries count per path, not quota-unique blocks; symlinks not followed','rows':rows,'base_qwen3b_present_in_this_root':any('qwen2.5-vl-3b-instruct' in r['name'].casefold() for r in rows),'retention_note':'Protected Qwen2.5-VL-3B-Instruct remains protected wherever its actual HF cache resides. No other directory is in scope. Verify no new references before any deletion.','elapsed_seconds':time.monotonic()-START,'finished_at_utc':utc()}
+p=OUT/'report.json';p.write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+print('HF_CKPTS_INVENTORY_JSON: '+json.dumps({'report':ref(p),'reference_scan_errors':errors,'reference_file_count':len(inventory),'rows':[{'name':r['name'],'owner':r['owner'],'allocated_path_bytes':r.get('allocated_path_bytes'),'status':r['status'],'reference_count':len(r['reference_evidence']),'protection_reasons':r.get('protection_reasons'),'first_references':r['reference_evidence'][:3]} for r in rows]},sort_keys=True,allow_nan=False),flush=True)
+raise SystemExit(1 if errors or any(r['status']=='unknown_protected' for r in rows) else 0)
+
+# start: 2026-11-10T10:34:27
+HF_CKPTS_INVENTORY_JSON: {"reference_file_count": 2242, "reference_scan_errors": [{"reference_snapshot_changed": ["results/t02_export_cache_six09_14_01_retry4_gate.json"]}], "report": {"bytes": 11767, "file": "logs/review/diag_hf_ckpts_inventory_01/report.json", "sha256": "d45e82394a23dc95f39e19a55166a5bcfee925225fbe1f47fd6ce011b3b5737e"}, "rows": [{"allocated_path_bytes": 141116833792, "first_references": [], "name": "Llama-3.1-70B-Instruct", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 3099058176, "first_references": [], "name": "Qwen2.5-1.5B-Instruct", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 15242911744, "first_references": [], "name": "Qwen2.5-7B-Instruct", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 8061018112, "first_references": [], "name": "Qwen3-4B-Instruct-2507", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 16397582336, "first_references": [], "name": "Qwen3-8B", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 16384, "first_references": [], "name": "_download_test", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed", "Not identified as a model directory; no D-category deletion conclusion"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 4096, "first_references": [], "name": "_lock_test", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed", "Not identified as a model directory; no D-category deletion conclusion"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 1715625984, "first_references": [], "name": "clip-vit-large-patch14-336", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}, {"allocated_path_bytes": 14127251456, "first_references": [], "name": "llava-v1.6-vicuna-7b", "owner": "e1583364", "protection_reasons": ["Reference scan incomplete or changed; fail closed"], "reference_count": 0, "status": "protected"}]}
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 13.145898986957036}
+# exit_code: 1

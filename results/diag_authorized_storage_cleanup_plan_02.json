@@ -1,0 +1,46 @@
+{
+  "metrics": {
+    "groups": {
+      "human_authorized_public_Video_MME": {
+        "files": 905,
+        "allocated_bytes": 101400662016
+      },
+      "human_authorized_t00b_actor_critic_optimizer": {
+        "files": 16,
+        "allocated_bytes": 91359780864
+      }
+    },
+    "manifest": {
+      "file": "logs/review/diag_authorized_storage_cleanup_plan_02/manifest.json",
+      "sha256": "da8172fbeed772ccb4f7d4ec55146468ab1e7bfcd9aaa1c52d345af543d6e0ab"
+    },
+    "deletion_performed": false,
+    "all_files_verified_owned_and_unchanged": true
+  },
+  "config": {
+    "authorization": "a0076849",
+    "scope": "pre-deletion explicit inventory only"
+  },
+  "_meta": {
+    "name": "diag_authorized_storage_cleanup_plan_02",
+    "command": [
+      "python3",
+      "-c",
+      "import json,hashlib,os,re,stat\nfrom pathlib import Path\nname='diag_authorized_storage_cleanup_plan_02'\nvpath=Path('logs/review/diag_videomme_cleanup_inventory_02/manifest.json')\nv=json.loads(vpath.read_text())\nverified=json.loads(Path('results/diag_videomme_public_content_01.json').read_text())\nassert verified['_meta']['exit_code']==0 and verified['metrics']['content_verified_public_dataset']\ntpath=Path('logs/review/diag_t00b_scale_weight_inventory_01/report.json')\nt=json.loads(tpath.read_text());assert not t['reference_scan_errors'] and not t['protected_result_log_metric_files_in_candidates']\nrows=[]\nfor r in v['files']:rows.append(dict(r,category='human_authorized_public_Video_MME'))\nfor r in t['files']:\n if not re.fullmatch(r'(model|optim)_world_size_4_rank_[0-3]\\.pt',Path(r['path']).name):continue\n assert not r['exact_metadata_references'] and not r['excluded_reason'] and r['nlink']==1\n rows.append({k:r[k] for k in ['path','bytes','allocated_bytes','uid','inode','mtime_ns','device','nlink']}|{'category':'human_authorized_t00b_actor_critic_optimizer'})\nfor r in rows:\n p=Path(r['path']);s=p.lstat()\n assert p.resolve()==p and str(p).startswith('/scratch/e1583364/') and s.st_uid==os.getuid()==r['uid'] and stat.S_ISREG(s.st_mode) and s.st_nlink==1\n assert (s.st_ino,s.st_mtime_ns,s.st_size,s.st_dev,s.st_blocks*512)==(r['inode'],r['mtime_ns'],r['bytes'],r['device'],r['allocated_bytes'])\ngroups={}\nfor r in rows:\n g=groups.setdefault(r['category'],{'files':0,'allocated_bytes':0});g['files']+=1;g['allocated_bytes']+=r['allocated_bytes']\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)\ndoc={'authorization':'human a0076849','files':rows,'groups':groups,'source_manifests':[{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in [vpath,tpath]],'preserved_t00b_non_model_states':[r['path'] for r in t['files'] if not re.fullmatch(r'(model|optim)_world_size_4_rank_[0-3]\\.pt',Path(r['path']).name)]}\nmp=out/'manifest.json';mp.write_text(json.dumps(doc,indent=2));sha=hashlib.sha256(mp.read_bytes()).hexdigest()\nlines=['\\n\\n## 2026-11-09 21:36 ET — a0076849 扩展清理：删前清单\\n','人类新授权已合并；替代此前最多3个拒绝样本的待决定方案，新运行按固定种子约10%原始拒绝证据，CPU与单单元冒烟后才上线。原世界对/视角表/结果/日志完全保留。\\n','本次只删下面两个已核实组。逐文件路径、大小、所有者、inode/mtime 清单：'+str(mp)+'；SHA256 '+sha+'。Video-MME 当前目录属于本账号，公开metadata字节匹配、2700条标注/900视频ID与MP4头核对通过。t00b只选model/optim rank文件；额外state和data.pt保留。hf_ckpts另行列清单，尚未删除。\\n','|类别/路径|文件数|allocated GB（十进制）|','|---|---:|---:|']\nfor k,g in groups.items():lines.append('|'+k+'|'+str(g['files'])+'|'+format(g['allocated_bytes']/1e9,'.6f')+'|')\nlines += ['\\nVideo-MME: /scratch/e1583364/Video-MME；t00b: /scratch/e1583364/cvpr2027/t00b_scale。','\\n权重逐文件：']\nlines += ['- '+r['path'] for r in rows if r['category'].endswith('optimizer')]\nwith Path('STATUS.md').open('a') as f:f.write('\\n'.join(lines)+'\\n')\nmetrics={'groups':groups,'manifest':{'file':str(mp),'sha256':sha},'deletion_performed':False,'all_files_verified_owned_and_unchanged':True}\nPath('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'authorization':'a0076849','scope':'pre-deletion explicit inventory only'}},indent=2));print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:37:03",
+    "log_path": "logs/runs/diag_authorized_storage_cleanup_plan_02.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+    "git_dirty": false,
+    "end": "2026-11-10T10:37:07",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "e4965117c4b845f5ac5058b77fb0f7c0f1938d38ea2e60db405316d472395688"
+  }
+}

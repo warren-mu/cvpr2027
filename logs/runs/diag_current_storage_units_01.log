@@ -1,0 +1,21 @@
+# run_logged: python3 -m src.tools.record_command --name diag_current_storage_units_01 -- python3 -c from pathlib import Path
+import hashlib,json
+path=Path('/nfs/home/svu/ccepbs/nushpc/scratch.hw.hopper')
+raw=path.read_bytes();lines=raw.decode().splitlines()
+evidence=[{'line':i+1,'text':s} for i,s in enumerate(lines) if 'printf' in s and '$2/1024/1024/1024' in s and '$3/1024/1024/1024/1024' in s]
+assert evidence
+report={'quota_script':{'file':str(path),'sha256':hashlib.sha256(raw).hexdigest()},'unit_evidence':evidence,
+ 'usage_display_label':'GB','usage_actual_unit':'GiB = 1024**3 bytes',
+ 'quota_display_label':'TB','quota_actual_unit':'TiB = 1024**4 bytes',
+ 'du_reports_actual_unit':'decimal GB = 10**9 bytes',
+ 'numeric_forecast':'logs/review/diag_current_storage_forecast_01/report.json',
+ 'scope':'Read-only original CLI implementation; no quota scan or modification; allocated du and quota backend may also use different accounting bases; no exact summed peak is claimed.'}
+out=Path('logs/review/diag_current_storage_units_01');out.mkdir(parents=True,exist_ok=False)
+body=(json.dumps(report,indent=2)+'\n').encode();(out/'report.json').write_bytes(body)
+(out/'unit_note.md').write_text('单位补充：原 hpc quota 的 scratch.hw.hopper 第46行将用量除以1024³、配额除以1024⁴，虽然标作GB/TB，实际是GiB/TiB。本次du表和新增242.533GB规划均为十进制GB；不得直接与CLI的879.8相加。du为当前allocated blocks，quota backend口径也未证明完全相同，因此不是精确峰值预测。原测量和forecast不修改。\n')
+print('STORAGE_UNITS_JSON: '+json.dumps({'report':{'file':str(out/'report.json'),'sha256':hashlib.sha256(body).hexdigest()},**report}))
+
+# start: 2026-11-10T10:29:26
+STORAGE_UNITS_JSON: {"report": {"file": "logs/review/diag_current_storage_units_01/report.json", "sha256": "3552b516637f848f0a145aac63972c99014ee5c1de12e155b8c919db56fe90de"}, "quota_script": {"file": "/nfs/home/svu/ccepbs/nushpc/scratch.hw.hopper", "sha256": "c45fc58422d7c051eeb266ce4a3b3a150becce34284a4c443807fca3ad478c4d"}, "unit_evidence": [{"line": 46, "text": "\t\t   awk '{printf(\"%18s  || %8.1fGB | %6.1fTB   || %8d  | unlimited \\n\",$1,$2/1024/1024/1024,$3/1024/1024/1024/1024,$4)}'"}, {"line": 107, "text": "\t\t   awk '{printf(\"%18s  || %8.1fGB | %6.1fTB   || %8d  | unlimited \\n\",$1,$2/1024/1024/1024,$3/1024/1024/1024/1024,$4)}'"}, {"line": 157, "text": "                         awk '{printf(\"%18s  || %8.1fGB | %6.1fTB   || %8d  | unlimited \\n\",$1,$2/1024/1024/1024,$3/1024/1024/1024/1024,$4)}'"}], "usage_display_label": "GB", "usage_actual_unit": "GiB = 1024**3 bytes", "quota_display_label": "TB", "quota_actual_unit": "TiB = 1024**4 bytes", "du_reports_actual_unit": "decimal GB = 10**9 bytes", "numeric_forecast": "logs/review/diag_current_storage_forecast_01/report.json", "scope": "Read-only original CLI implementation; no quota scan or modification; allocated du and quota backend may also use different accounting bases; no exact summed peak is claimed."}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.03692456497810781}
+# exit_code: 0

@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.03692456497810781
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\npath=Path('/nfs/home/svu/ccepbs/nushpc/scratch.hw.hopper')\nraw=path.read_bytes();lines=raw.decode().splitlines()\nevidence=[{'line':i+1,'text':s} for i,s in enumerate(lines) if 'printf' in s and '$2/1024/1024/1024' in s and '$3/1024/1024/1024/1024' in s]\nassert evidence\nreport={'quota_script':{'file':str(path),'sha256':hashlib.sha256(raw).hexdigest()},'unit_evidence':evidence,\n 'usage_display_label':'GB','usage_actual_unit':'GiB = 1024**3 bytes',\n 'quota_display_label':'TB','quota_actual_unit':'TiB = 1024**4 bytes',\n 'du_reports_actual_unit':'decimal GB = 10**9 bytes',\n 'numeric_forecast':'logs/review/diag_current_storage_forecast_01/report.json',\n 'scope':'Read-only original CLI implementation; no quota scan or modification; allocated du and quota backend may also use different accounting bases; no exact summed peak is claimed.'}\nout=Path('logs/review/diag_current_storage_units_01');out.mkdir(parents=True,exist_ok=False)\nbody=(json.dumps(report,indent=2)+'\\n').encode();(out/'report.json').write_bytes(body)\n(out/'unit_note.md').write_text('单位补充：原 hpc quota 的 scratch.hw.hopper 第46行将用量除以1024³、配额除以1024⁴，虽然标作GB/TB，实际是GiB/TiB。本次du表和新增242.533GB规划均为十进制GB；不得直接与CLI的879.8相加。du为当前allocated blocks，quota backend口径也未证明完全相同，因此不是精确峰值预测。原测量和forecast不修改。\\n')\nprint('STORAGE_UNITS_JSON: '+json.dumps({'report':{'file':str(out/'report.json'),'sha256':hashlib.sha256(body).hexdigest()},**report}))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_current_storage_units_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_current_storage_units_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\npath=Path('/nfs/home/svu/ccepbs/nushpc/scratch.hw.hopper')\nraw=path.read_bytes();lines=raw.decode().splitlines()\nevidence=[{'line':i+1,'text':s} for i,s in enumerate(lines) if 'printf' in s and '$2/1024/1024/1024' in s and '$3/1024/1024/1024/1024' in s]\nassert evidence\nreport={'quota_script':{'file':str(path),'sha256':hashlib.sha256(raw).hexdigest()},'unit_evidence':evidence,\n 'usage_display_label':'GB','usage_actual_unit':'GiB = 1024**3 bytes',\n 'quota_display_label':'TB','quota_actual_unit':'TiB = 1024**4 bytes',\n 'du_reports_actual_unit':'decimal GB = 10**9 bytes',\n 'numeric_forecast':'logs/review/diag_current_storage_forecast_01/report.json',\n 'scope':'Read-only original CLI implementation; no quota scan or modification; allocated du and quota backend may also use different accounting bases; no exact summed peak is claimed.'}\nout=Path('logs/review/diag_current_storage_units_01');out.mkdir(parents=True,exist_ok=False)\nbody=(json.dumps(report,indent=2)+'\\n').encode();(out/'report.json').write_bytes(body)\n(out/'unit_note.md').write_text('单位补充：原 hpc quota 的 scratch.hw.hopper 第46行将用量除以1024³、配额除以1024⁴，虽然标作GB/TB，实际是GiB/TiB。本次du表和新增242.533GB规划均为十进制GB；不得直接与CLI的879.8相加。du为当前allocated blocks，quota backend口径也未证明完全相同，因此不是精确峰值预测。原测量和forecast不修改。\\n')\nprint('STORAGE_UNITS_JSON: '+json.dumps({'report':{'file':str(out/'report.json'),'sha256':hashlib.sha256(body).hexdigest()},**report}))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T10:29:26",
+    "log_path": "logs/runs/diag_current_storage_units_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "1aff9b9ef5d97015f74dad7d98c065b70bcfc66c",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_current_storage_units_01.diff",
+    "end": "2026-11-10T10:29:27",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "b74c1f258acb5abdd2ed0a6a92ed4073ae77ad944e44f367a9fb51716290a2b2"
+  }
+}

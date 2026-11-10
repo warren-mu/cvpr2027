@@ -1,0 +1,22 @@
+{
+  "name": "diag_gpu_pack_single01_host_preflight_01",
+  "command": [
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve(); name='diag_gpu_pack_single01_host_preflight_01';guard_file='results/diag_gpu_pack_single01_black_guard_01.json'\nreference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}\nguard,_=b.logged(r,reference); proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)\nnew_name='gpu_pack_test_priority_single_01_retry1';command=list(old['command']);command[command.index('--name')+1]=new_name\nindex,previous=b.rotation(r);previous_host=None\nif previous:\n    _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']\nhost=b.next_host(b.VERSION,index,previous_host)\nbinding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='PACK',gpus=1,wall_seconds=1855)\nsubmit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:30:55','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]\nmetrics={'validated':True,'host_authorization':binding,'submit_command':submit,'scope':'Preflight only; original submitter must repeat under its own reservation lock'}\nresult={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256'])]}\nwith (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:30:09",
+  "log_path": "logs/runs/diag_gpu_pack_single01_host_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+  "git_dirty": false,
+  "end": "2026-11-10T10:30:12",
+  "duration_sec": 2.7,
+  "exit_code": 0,
+  "metrics_sha256": "61ce8c571a16fcd8127c5b98d3e13866ee06244ca5f1e0d83af3d30adf06e41f"
+}

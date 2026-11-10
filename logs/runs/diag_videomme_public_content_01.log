@@ -1,0 +1,38 @@
+# run_logged: python3 -c import ast,csv,hashlib,io,json,os,urllib.request
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import pyarrow.parquet as pq
+name='diag_videomme_public_content_01'
+root=Path('/scratch/e1583364/Video-MME'); inv=Path('logs/review/diag_videomme_cleanup_inventory_02/manifest.json')
+d=json.loads(inv.read_text());assert not d['violations'] and len(d['files'])==905
+out=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)
+base='https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/'
+def fetch(rel):
+ url=base+rel
+ with urllib.request.urlopen(url,timeout=30) as r: body=r.read(2*1024*1024)
+ assert len(body)<2*1024*1024
+ assert body==(root/rel).read_bytes(),rel+' public bytes differ'
+ dest=out/Path(rel).name;dest.write_bytes(body)
+ return {'url':url,'local':str(root/rel),'sha256':hashlib.sha256(body).hexdigest(),'bytes':len(body),'local_matches_public_bytes':True}
+refs=list(ThreadPoolExecutor(max_workers=3).map(fetch,['.gitattributes','README.md','videomme/test-00000-of-00001.parquet']))
+table=pq.read_table(root/'videomme/test-00000-of-00001.parquet').to_pylist()
+with (root/'VideoMME.csv').open() as f: rows=list(csv.DictReader(f))
+assert len(table)==len(rows)==2700
+for a,b in zip(table,rows):
+ for key,value in a.items():
+  assert (ast.literal_eval(b[key]) if key=='options' else b[key])==value,(key,b[key],value)
+videos=[r for r in d['files'] if r['relative'].endswith('.mp4')]
+assert len(videos)==900 and {Path(r['relative']).stem for r in videos}=={r['videoID'] for r in table}
+for r in videos:
+ p=Path(r['path'])
+ with p.open('rb') as f:header=f.read(32)
+ assert header[4:8]==b'ftyp',r['relative']
+assert set(r['relative'] for r in d['files'] if not r['relative'].endswith('.mp4'))=={'.gitattributes','README.md','videomme/test-00000-of-00001.parquet','VideoMME.csv','.cache/huggingface/.gitignore.lock'}
+assert (root/'.cache/huggingface/.gitignore.lock').stat().st_size==0
+metrics={'path_and_ownership_inventory_passed':True,'public_metadata_byte_matches':refs,'public_annotation_rows':len(table),'csv_matches_public_annotations':True,'video_files':len(videos),'video_ids_match_public_dataset':True,'all_video_containers_mp4':True,'other_files_accounted':True,'content_verified_public_dataset':True,'deletion_performed':False}
+Path('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'inventory_file':str(inv),'inventory_sha256':hashlib.sha256(inv.read_bytes()).hexdigest(),'scope':'Public metadata bytes and exact IDs/MP4 headers; video payloads are not re-downloaded or fully rehashed'}},indent=2))
+print('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)
+
+# start: 2026-11-10T10:34:26
+FINAL_METRICS_JSON: {"path_and_ownership_inventory_passed": true, "public_metadata_byte_matches": [{"url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/.gitattributes", "local": "/scratch/e1583364/Video-MME/.gitattributes", "sha256": "f4e703ea6e44bbebe53aceed2a89c11e40b88b7ae130c480c89860ab805ffc8f", "bytes": 2307, "local_matches_public_bytes": true}, {"url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/README.md", "local": "/scratch/e1583364/Video-MME/README.md", "sha256": "02064f953193262356856fa9345f0260d13dfbc94f16f13039bc23098b16e15b", "bytes": 677, "local_matches_public_bytes": true}, {"url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/videomme/test-00000-of-00001.parquet", "local": "/scratch/e1583364/Video-MME/videomme/test-00000-of-00001.parquet", "sha256": "7fffab8ed38ecc2f9f0eca4c44d8a11636f0ee96116ede83580c8b9ae0faf986", "bytes": 405167, "local_matches_public_bytes": true}], "public_annotation_rows": 2700, "csv_matches_public_annotations": true, "video_files": 900, "video_ids_match_public_dataset": true, "all_video_containers_mp4": true, "other_files_accounted": true, "content_verified_public_dataset": true, "deletion_performed": false}
+# exit_code: 0

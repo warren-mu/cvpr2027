@@ -1,0 +1,63 @@
+{
+  "metrics": {
+    "path_and_ownership_inventory_passed": true,
+    "public_metadata_byte_matches": [
+      {
+        "url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/.gitattributes",
+        "local": "/scratch/e1583364/Video-MME/.gitattributes",
+        "sha256": "f4e703ea6e44bbebe53aceed2a89c11e40b88b7ae130c480c89860ab805ffc8f",
+        "bytes": 2307,
+        "local_matches_public_bytes": true
+      },
+      {
+        "url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/README.md",
+        "local": "/scratch/e1583364/Video-MME/README.md",
+        "sha256": "02064f953193262356856fa9345f0260d13dfbc94f16f13039bc23098b16e15b",
+        "bytes": 677,
+        "local_matches_public_bytes": true
+      },
+      {
+        "url": "https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/videomme/test-00000-of-00001.parquet",
+        "local": "/scratch/e1583364/Video-MME/videomme/test-00000-of-00001.parquet",
+        "sha256": "7fffab8ed38ecc2f9f0eca4c44d8a11636f0ee96116ede83580c8b9ae0faf986",
+        "bytes": 405167,
+        "local_matches_public_bytes": true
+      }
+    ],
+    "public_annotation_rows": 2700,
+    "csv_matches_public_annotations": true,
+    "video_files": 900,
+    "video_ids_match_public_dataset": true,
+    "all_video_containers_mp4": true,
+    "other_files_accounted": true,
+    "content_verified_public_dataset": true,
+    "deletion_performed": false
+  },
+  "config": {
+    "inventory_file": "logs/review/diag_videomme_cleanup_inventory_02/manifest.json",
+    "inventory_sha256": "4c146bb619fdb5a3bed1f62b9a2e1c127127e4da9f8add98589a272d7b3447a5",
+    "scope": "Public metadata bytes and exact IDs/MP4 headers; video payloads are not re-downloaded or fully rehashed"
+  },
+  "_meta": {
+    "name": "diag_videomme_public_content_01",
+    "command": [
+      "python3",
+      "-c",
+      "import ast,csv,hashlib,io,json,os,urllib.request\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nimport pyarrow.parquet as pq\nname='diag_videomme_public_content_01'\nroot=Path('/scratch/e1583364/Video-MME'); inv=Path('logs/review/diag_videomme_cleanup_inventory_02/manifest.json')\nd=json.loads(inv.read_text());assert not d['violations'] and len(d['files'])==905\nout=Path('logs/review')/name;out.mkdir(parents=True,exist_ok=False)\nbase='https://huggingface.co/datasets/lmms-eval/Video-MME/resolve/main/'\ndef fetch(rel):\n url=base+rel\n with urllib.request.urlopen(url,timeout=30) as r: body=r.read(2*1024*1024)\n assert len(body)<2*1024*1024\n assert body==(root/rel).read_bytes(),rel+' public bytes differ'\n dest=out/Path(rel).name;dest.write_bytes(body)\n return {'url':url,'local':str(root/rel),'sha256':hashlib.sha256(body).hexdigest(),'bytes':len(body),'local_matches_public_bytes':True}\nrefs=list(ThreadPoolExecutor(max_workers=3).map(fetch,['.gitattributes','README.md','videomme/test-00000-of-00001.parquet']))\ntable=pq.read_table(root/'videomme/test-00000-of-00001.parquet').to_pylist()\nwith (root/'VideoMME.csv').open() as f: rows=list(csv.DictReader(f))\nassert len(table)==len(rows)==2700\nfor a,b in zip(table,rows):\n for key,value in a.items():\n  assert (ast.literal_eval(b[key]) if key=='options' else b[key])==value,(key,b[key],value)\nvideos=[r for r in d['files'] if r['relative'].endswith('.mp4')]\nassert len(videos)==900 and {Path(r['relative']).stem for r in videos}=={r['videoID'] for r in table}\nfor r in videos:\n p=Path(r['path'])\n with p.open('rb') as f:header=f.read(32)\n assert header[4:8]==b'ftyp',r['relative']\nassert set(r['relative'] for r in d['files'] if not r['relative'].endswith('.mp4'))=={'.gitattributes','README.md','videomme/test-00000-of-00001.parquet','VideoMME.csv','.cache/huggingface/.gitignore.lock'}\nassert (root/'.cache/huggingface/.gitignore.lock').stat().st_size==0\nmetrics={'path_and_ownership_inventory_passed':True,'public_metadata_byte_matches':refs,'public_annotation_rows':len(table),'csv_matches_public_annotations':True,'video_files':len(videos),'video_ids_match_public_dataset':True,'all_video_containers_mp4':True,'other_files_accounted':True,'content_verified_public_dataset':True,'deletion_performed':False}\nPath('results',name+'.json').write_text(json.dumps({'metrics':metrics,'config':{'inventory_file':str(inv),'inventory_sha256':hashlib.sha256(inv.read_bytes()).hexdigest(),'scope':'Public metadata bytes and exact IDs/MP4 headers; video payloads are not re-downloaded or fully rehashed'}},indent=2))\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:34:26",
+    "log_path": "logs/runs/diag_videomme_public_content_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+    "git_dirty": false,
+    "end": "2026-11-10T10:34:46",
+    "duration_sec": 17.7,
+    "exit_code": 0,
+    "metrics_sha256": "f3a731a631935c7f372d7606ef9a0d0f0a0628213d9b41c5296b109e4bef2d64"
+  }
+}
