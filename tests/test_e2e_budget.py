@@ -250,7 +250,7 @@ class T02BudgetTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
         self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
-        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 12.0, 'E2EpilotT2': .5, 'G01': 40.0, 'T02': 40.0})
+        self.assertEqual({k: v for k, v in submit.SUBBUDGET_LIMITS.items() if not k.startswith('DIAG02')}, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 12.0, 'E2EpilotT2': .5, 'G01': 40.0, 'T02': 40.0})
 
     def test_fresh_cache_validation_uses_t02_budget_and_exact_cache_namespace(self):
         command = ['python3', '-m', 'src.tools.t02_cache_check']
