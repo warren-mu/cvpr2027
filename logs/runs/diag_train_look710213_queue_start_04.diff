@@ -1,0 +1,12 @@
+diff --git a/STATUS.md b/STATUS.md
+index 0abc03f9..3e749466 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1792,3 +1792,7 @@ T0 710029 / T4 710037 全部完成50步，T2 710007 完成5步，原训练与评
+ 原预算快照（710213提交前）主试跑实际5.416388888888889/12、T2实际0.29194444444444445/0.5，共享已记账或预约47.65055555555554/120。该共享占用加12run更新本体超过现总额，报告供人类决定预算，不擅自缩减步数或运行数。
+ 测试S01–S07完整40场景记录已汇总，第二轮单独去重DF/DS/LF/LS=5/19/4/16，共44；加首轮A/B累计18/41/16/20，共95，尚非T02完整通过或最终冻结。各类原拒绝计数、通过/失败/未知及非互斥说明见 logs/review/diag_test_round2_final_candidates_funnel_01/，没有将未知补成通过。
+ 训练Look同参数黑帧重提710213已入队（hopper30、00:27:10）；实际qtime/当前状态暂因两次30秒PBS查询超时未知，不以提交目录时间替代qtime，不取消未经fresh Q证明未启动的作业。scratch最新已核588.3GiB/1TiB、3116252文件。T02旧队列剩余未领取批次需转为新运行raw10保留规则，未提交旧全保留consumer；709559已通过T02 raw10工程冒烟，正式cache验收仍单列。FIG01继续暂停直到本报告推送。新封口结果原审计范围无FAIL，历史未封口配额及accounting01缺结果失败记录保留，不宣称全历史清零。
++
++
++## 2026-11-10 06:10 ET — raw10训练导出先迁移一个六对单元
++E2E报告已由Hopper Git提交ce9f26bf并推送确认。旧shared test_priority_01全部consumer原canonical/mixed账本、claims/releases和state快照已核对终态，旧队列任何字节不改，今后不再向旧队列投consumer。新不可变shared_test_priority_raw10_train_smoke_01仅含原six20（原6对/6并发/1200-900-660-180时限与科学claim_keys保持），只加--sample-rejected-raw；六个后续批次仍未迁移、未提交。先跑这一单元，原字段、清理与领取闭环验证之后才扩大，queue为空即退出。新plan SHA f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0；不是新科学验收。新配额原CLI仍因home awk错误exit1，但scratch查询完整显示588.3GB/1.0TB、3116255文件，保留原失败状态，不伪装整命令成功；scratch剩余满足150GB提交门槛。

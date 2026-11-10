@@ -1,0 +1,12 @@
+diff --git a/STATUS.md b/STATUS.md
+index 3e749466..aa7a795d 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1796,3 +1796,7 @@ T0 710029 / T4 710037 全部完成50步，T2 710007 完成5步，原训练与评
+ 
+ ## 2026-11-10 06:10 ET — raw10训练导出先迁移一个六对单元
+ E2E报告已由Hopper Git提交ce9f26bf并推送确认。旧shared test_priority_01全部consumer原canonical/mixed账本、claims/releases和state快照已核对终态，旧队列任何字节不改，今后不再向旧队列投consumer。新不可变shared_test_priority_raw10_train_smoke_01仅含原six20（原6对/6并发/1200-900-660-180时限与科学claim_keys保持），只加--sample-rejected-raw；六个后续批次仍未迁移、未提交。先跑这一单元，原字段、清理与领取闭环验证之后才扩大，queue为空即退出。新plan SHA f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0；不是新科学验收。新配额原CLI仍因home awk错误exit1，但scratch查询完整显示588.3GB/1.0TB、3116255文件，保留原失败状态，不伪装整命令成功；scratch剩余满足150GB提交门槛。
++
++
++### 2026-11-10 06:14 ET — 首个raw10六对导出已提交
++原submit_phase已提交710255.hopper-m-02（gpu_pack_train_raw10_smoke_single_01，单卡，无host，walltime00:30:55，PACK中的T02单组），原提交结果exit0。原预算与payload见logs/pbs/gpu_pack_train_raw10_smoke_single_01-20261110T111245Z-008d9dcb；仅six20可领取，队列完成立即退出，后六批未提交。710213的四次查询均30秒超时（完整PBS路径/完整jobid，另一次-user查询），无fresh Q/R/qtime，未擅自取消；正在观察原gate/parent文件。

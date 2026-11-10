@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 1,
+    "elapsed_seconds": 30.1248427759856
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess\nfrom zoneinfo import ZoneInfo\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-f','710213.hopper-m-02'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='');p.check_returncode()\nfields={}\nfor key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',p.stdout,re.M)\n fields[key]=m.group(1) if m else None\nif fields['qtime']:\n t=datetime.datetime.strptime(fields['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n fields['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n fields['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\nfields['scope']='Fourth specifically authorized bounded read; no job mutation'\nprint('QUEUE_TIMING_JSON: '+json.dumps(fields,sort_keys=True),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_train_look710213_queue_start_04",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_train_look710213_queue_start_04",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess\nfrom zoneinfo import ZoneInfo\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-f','710213.hopper-m-02'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='');p.check_returncode()\nfields={}\nfor key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',p.stdout,re.M)\n fields[key]=m.group(1) if m else None\nif fields['qtime']:\n t=datetime.datetime.strptime(fields['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n fields['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n fields['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\nfields['scope']='Fourth specifically authorized bounded read; no job mutation'\nprint('QUEUE_TIMING_JSON: '+json.dumps(fields,sort_keys=True),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T19:10:11",
+    "log_path": "logs/runs/diag_train_look710213_queue_start_04.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "ce9f26bf9b5e7d719009c0fc986ee78c09e02e8f",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_train_look710213_queue_start_04.diff",
+    "end": "2026-11-10T19:10:44",
+    "duration_sec": 30.3,
+    "exit_code": 1,
+    "metrics_sha256": "6b2b7081dd0ed9fd853a895f0bac360805f9bb735ee7f71dc011cfcef9c3f9cd"
+  }
+}

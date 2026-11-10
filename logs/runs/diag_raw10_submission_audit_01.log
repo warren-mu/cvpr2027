@@ -1,0 +1,27 @@
+# run_logged: python3 -m src.tools.record_command --name diag_raw10_submission_audit_01 -- python3 -c import subprocess,json
+from pathlib import Path
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.append(str(p))
+assert names
+print('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T19:14:42
+SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified
+PASS  results/diag_submit_gpu_pack_train_raw10_smoke_single_01.json
+WARN  results/diag_train_look710213_queue_start_04.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_train_look710213_queue_start_04.diff
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+
+4 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 12.37575399497291}
+# exit_code: 0
