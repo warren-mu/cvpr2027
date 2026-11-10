@@ -1759,3 +1759,11 @@ T2 710007 的 fresh pin20 查询实际为 R（stime08:19:38UTC），因此取消
 T0 710029 与 T4 710037 都进入真实训练回合。两臂首个完整更新的原日志摘录分别为 diag_pilot_T0_retry4_first_update_01（180.10326373705175秒）和 diag_pilot_T4_retry4_first_update_01（165.8056512910407秒），均确认原optimizer2/2；两份原审计无FAIL。这里报告的是包含generation/scoring/critic/actor的total_seconds，不把update_seconds当作全步，也不将首步充当稳态。正式50步学习判定仍待全部窗口与评测完成。
 
 T4的native gate为 hopper-24 / GPU-4403df4d-fc59-7585-7f6c-4c0c695a9707。FIG01的双臂实际训练触发条件已满足，正在准备仅CPU读取原视角表的导出；仍限单次300秒、原环境标号、不渲染。GPU名额在T2终态后继续S06独立检查，不动T0/T4。
+
+## 2026-11-10 03:46 ET — T2完整通过，FIG01发布
+
+确认原终态：T2 710007 实际于08:36:46UTC完成（上一条为最后一次读取到的4/5进度）。原parent exit0、pilot_completed=true、完整5更新，各optimizer2/2；只保存global_step5的最终bf16 actor，不保存critic/optimizer/中间checkpoint，errors/cleanup_errors为空。原PBS canonical为F/exit0，1028秒、1GPU、queue_charge_rate1，分配0.28555555555555556 GPU·小时，排队930秒；此前709941黑帧23秒另有原canonical保留。原T2范围无留出评测，不补写。parent/gate/canonical的原审计3文件无FAIL。
+
+空出的单卡名额已提交S06原全六源独立检查710075（无host、PBS00:11:00），native gate在hopper-23通过，checker仍待终态；T0/T4继续，不受影响。
+
+FIG01最小两文件已提交，并在Hopper完成6项CPU测试、0skip、原审计无FAIL。真实导出只调用原83对证书池的缓存授权、原查表环境和标号函数；不渲染、不手设验证标志。展示候选使用原已验收见证轨迹中各世界首次X掩码>=250的状态，以两原像素数的较小值排序，非留出优先、dataset_key/state_id打平；这个展示排序口径不改变研究总体或验收。单次CPU入口295秒主动封口、外层300秒上限，超时停止本线并报告，不提交GPU或重跑。

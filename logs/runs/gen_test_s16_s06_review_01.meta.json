@@ -1,0 +1,30 @@
+{
+  "name": "gen_test_s16_s06_review_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "gen_test_s16_s06_review_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json,os,re,subprocess,sys,time\nfrom pathlib import Path\nfrom src.tools.t01_parallel_approved import stop_logged\nroot=Path.cwd().resolve()\nassert re.fullmatch(r'\\d+\\.hopper-m-\\d+',os.environ.get('PBS_JOBID',''))\nassert re.fullmatch(r'GPU-[0-9a-fA-F-]{36}',os.environ.get('CUDA_VISIBLE_DEVICES',''))\nassert len(os.sched_getaffinity(0))==12\n\ndef run_logged_bounded(command,seconds):\n    process=subprocess.Popen(command,cwd=root,start_new_session=True)\n    try:\n        return process.wait(timeout=seconds)\n    except subprocess.TimeoutExpired:\n        print('Original logged stage exceeded its explicit engineering bound; no independent PASS inferred.',flush=True)\n        errors=stop_logged(process,grace_deadline=time.monotonic()+20,hard_deadline=time.monotonic()+30)\n        print('Original scoped cleanup errors: '+json.dumps(errors),flush=True)\n        raise SystemExit(124 if not errors else 1)\n\ngate_command=['python3', '-u', 'scripts/run_logged.py', '--name', 'gen_test_s16_s06_review_01_gate', '--seed', '0', '--', 'python3', '-u', '-m', 'src.tools.render_gate', '--name', 'gen_test_s16_s06_review_01_gate', '--gpus', '1', '--resolution', '255', '--segmentation', '--timeout-seconds', '120']\ncode=run_logged_bounded(gate_command,180)\nif code!=0: raise SystemExit(code)\nexpected_sources=[{'file': 'results/gen_test_s16_round2_s06_c6_floorplan328.json', 'sha256': '3600f5f0b57cf5872ad5b1d81af1a80a8b066c5cdcd7bb67d384ea5912edf12a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan428.json', 'sha256': '0091cb243e70e04739da16e35a0bb70a1a881d2f710bfd8ee79db1bb4b26523a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan29.json', 'sha256': '3cc35b2290c1ba5741107706e6eeebcb8b17d28710214969e82441a1c1ceb2d1'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan229.json', 'sha256': '3ec0b27a150b037f3edff6ea2753ea81c21d56c11c53fbaf96e0681144a4b707'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan329.json', 'sha256': 'ce5b19d36c9d8e94c88a7f7a31c6b5e1f19bf6dcf17f4e8070f02338d941b35a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan429.json', 'sha256': '460be458fbb14d176e4b53557dc94a88e3225f00e5e3b82f7d653e5a80c4e5de'}]\nfor reference in expected_sources:\n    path=root/reference['file'];body=path.read_bytes()\n    assert hashlib.sha256(body).hexdigest()==reference['sha256'],'Original completed source changed'\n    data=json.loads(body)\n    assert data['_meta'].get('end') and type(data['_meta'].get('exit_code')) is int,'Do not pass a live source'\n    assert data['config']['g01_partition']=='test'\n    assert data['config']['nearby_physics_version']=='nearby_nonanchor_0_5m_v1'\n    assert data['config'].get('raw_sampling_version') is None,'Keep original full-retention source policy'\ncheckpoint_command=['python3', '-u', 'scripts/run_logged.py', '--name', 't01v2_checkpoint_test_s16_s06_01', '--seed', '0', '--', 'python3', '-m', 'src.tools.t01v2_g01_review_checkpoint', '--name', 't01v2_checkpoint_test_s16_s06_01', '--source', 'results/gen_test_s16_round2_s06_c6_floorplan328.json', 'results/gen_test_s16_round2_s06_c6_floorplan428.json', 'results/gen_test_s16_round2_s06_c6_floorplan29.json', 'results/gen_test_s16_round2_s06_c6_floorplan229.json', 'results/gen_test_s16_round2_s06_c6_floorplan329.json', 'results/gen_test_s16_round2_s06_c6_floorplan429.json']\nraise SystemExit(run_logged_bounded(checkpoint_command,437))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-23",
+  "gpus": [
+    "NVIDIA H200, 143771 MiB"
+  ],
+  "seed": null,
+  "start": "2026-11-10T16:43:19",
+  "log_path": "logs/runs/gen_test_s16_s06_review_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "13129be25978d6b3805f6571ed5942f7b8cd0130",
+  "git_dirty": false,
+  "end": "2026-11-10T16:46:00",
+  "duration_sec": 158.7,
+  "exit_code": 0,
+  "metrics_sha256": "6ea2fb420d72089073b974a3284ee8caf32855f29e09c1140ac4f40f53e1e357"
+}
