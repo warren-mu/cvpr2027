@@ -28,6 +28,12 @@
 % ---- Draft helpers (all must be gone before submission; visible red text only, never hidden text) ----
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 \newcommand{\tbd}{\textcolor{red}{\textbf{[??]}}}   % a number that will come from \res{...}
+% \hyp{...}: a sentence written ASSUMING the main experiments succeed (human request 2026-11-10).
+% Shown in blue so co-authors can see it is not yet supported. Before submission, every \hyp must be
+% either verified against aggregated results (and the wrapper removed) or deleted/rewritten.
+% Setting \finalsubmissiontrue makes any remaining \hyp a hard compile error.
+\newif\iffinalsubmission \finalsubmissionfalse
+\newcommand{\hyp}[1]{\iffinalsubmission\PackageError{hyp}{Unverified hypothesized sentence left in the paper}{Verify it against results or delete it}\fi\textcolor{blue}{#1}}
 
 % ---- Notation ----
 \newcommand{\Look}{\textsc{Look}}

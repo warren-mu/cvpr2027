@@ -6,7 +6,11 @@ All experiments use one simulator, discrete viewpoints, a single relocated objec
 Constructing pairs requires a simulator that can restore and edit states deterministically and expose instance masks.
 Pre-rendering limits the agent to states within a fixed observation budget of the start.
 The variance argument for paired sampling holds for a balanced change rate with one rollout per world; for other rates the benefit must be established empirically.
-\todo{Add every limitation revealed by the experiments, including methods or rates where our approach does not help.}
+Our training set is small, so outcome-only training can memorise scene answers; paired credit removes the reward for guessing on pairs whose answer depends on the hidden world, but not on pairs whose answer does not, and larger and more varied training sets remain important.
+What any credit assignment can gain is bounded by the policy's ability to relate evidence seen in one view to candidates seen in another.
+\todo{Add every further limitation revealed by the experiments, including methods or rates where our approach does not help.}
 
 \paragraph{Conclusion.}
-\todo{Two or three sentences, written only from verified, aggregated results.}
+\hyp{Outcome-only rewards cannot tell an informed decision from a lucky guess, and with a finite set of training scenes this lets embodied agents collect reward without learning when to look.
+Pairing worlds that the agent cannot yet distinguish turns that ambiguity into a training signal: in unseen rooms, it led our agent to look when its view was insufficient and to change its answer only when the evidence called for it.
+We hope counterfactual world pairs will also serve as a test of whether an agent's decisions are grounded in what it has seen.}
