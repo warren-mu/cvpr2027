@@ -1946,3 +1946,8 @@ T02 selected05 的原 95 个去重候选均已有导出结局：76 对导出完�
 
 DIAG02 原3B提交wrapper因现有两个PACK mixed_accounting的Python可执行路径与原校验器要求不符而exit2，尚未生成payload/调用qsub，无GPU用量。保留原失败，使用原run_logged按原字面python3入口重跑mixed记账并归档旧结果，不修改校验器。
 新策略CPU回归21项通过，原4文件提交前补审计0FAIL（P7失败保留）。下载7B、32B后的原hpc quota片段报告scratch735.8GB/1.0TB、3,814,575文件/无限，home18.97G/40G；hpc命令整体exit1，raw输出有效但不标全命令PASS。没有删除新数据或改变存储格式。
+
+
+### 2026-11-10 15:08 ET — DIAG02与测试缓存作业已提交
+DIAG02 3B已提交710854，1卡、25分钟、首对工程检查后才继续82对，首张开卡检查通过。T02首六对原200-state/seed0缓存复核提交710859，1卡20分30秒；与DIAG02独立记账。两提交wrapper原审计0FAIL。
+原两PACK计费使用字面python3重跑后原finalized_split双PASS，数值不变。原logger只自动归档JSON、覆盖同名log/meta，旧archive独立审计P4失败保留；不补造旧日志，不作为有效数值源。当前计费证据由未改的PBS/单位journal重算且原审计0FAIL。
