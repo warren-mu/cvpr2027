@@ -1,0 +1,299 @@
+# run_logged: python3 -u -m src.tools.record_command --name diag_t02_test_compression_storage_02 -- python3 -c """One-off metadata-only report of original worker byte comparison and storage planning.
+No RGB/mask payload reads, scratch scans, renderer, data rewriting, or cache authorization.
+"""
+import argparse
+from collections import Counter
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import signal
+import time
+import traceback
+
+from src.envs.thor_common import ROOT
+from src.envs.pair_table_cache import CACHE_POLICY, CACHE_VERSION
+from src.tools.t01_partition import audited_result
+from src.tools import t02_test_compression as compression
+from src.tools.t02_export import VERSION as EXPORT_VERSION
+
+SELECTION = {'file': 'logs/review/diag_current_test_selected_02/report.json',
+ 'sha256': '3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427',
+ 'logged_result': {'file': 'results/diag_current_test_selected_02.json',
+ 'sha256': 'c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745'}}
+PAIR_ID = 'floorplan322_00111'
+COUNTS = {'direct_flip': 14, 'direct_stay': 32, 'look_flip': 13, 'look_stay': 13}
+
+
+def require(value, message):
+    if not value:
+        raise ValueError(message)
+
+
+def read(ref, *, within=None):
+    path = (ROOT / ref['file']).resolve()
+    if within is not None:
+        require(path.is_relative_to(within), 'Evidence reference escapes this original smoke pair')
+    require(path.suffix == '.json' and path.stat().st_size <= 48*1024*1024, 'Only bounded JSON metadata may be read')
+    body = path.read_bytes()
+    require(hashlib.sha256(body).hexdigest() == ref['sha256']
+            and ('bytes' not in ref or len(body) == ref['bytes']), 'Original evidence reference changed')
+    return json.loads(body), body
+
+
+def file_ref(path):
+    path = Path(path)
+    body = path.read_bytes()
+    return {'file': str(path.relative_to(ROOT)), 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)}
+
+
+FORECAST = {'file':'logs/review/diag_current_storage_forecast_01/report.json',
+ 'sha256':'8dcbdabef141dc131030ffa27581107338d9a0567af1844dfc4a2a594870d816'}
+FORECAST_RESULT = {'file':'results/diag_current_storage_forecast_01.json',
+ 'sha256':'515802c247b7bd11424fb7bb88fcf79e4cbf62d5828edc8a825dd3c7f40e0d30'}
+QUOTA_RESULT = {'file':'results/diag_scratch_quota_compression_01.json',
+ 'sha256':'482837c0418800d718e75284f3a168b441ab93a0909f289ad6373f13970138ff'}
+QUOTA_LOG = {'file':'logs/runs/diag_scratch_quota_compression_01.log',
+ 'sha256':'537ee6df16d9df762d4efed14c20c384c5a033db08429f5653bc6fc11a627584'}
+UNITS = {'file':'logs/review/diag_current_storage_units_01/report.json',
+ 'sha256':'3552b516637f848f0a145aac63972c99014ee5c1de12e155b8c919db56fe90de'}
+UNITS_RESULT = {'file':'results/diag_current_storage_units_01.json',
+ 'sha256':'d64023a3b394a9730c3cfbe53941e3573aa5ae5bddd44ebba7f890933a51e5be'}
+
+
+def audited(reference, expected_exit):
+    data, actual = audited_result(reference['file'])
+    require(compression.reference_equal(actual, reference) and data['_meta'].get('end')
+            and data['_meta'].get('exit_code') == expected_exit, 'Original logged metadata identity differs')
+    return data, actual
+
+
+def capacity_scenario(new_test_known_bytes, extra_smoke_plain_bytes):
+    forecast, _ = read(FORECAST)
+    original, original_ref = audited(FORECAST_RESULT, 0)
+    units, _ = read(UNITS)
+    _, units_ref = audited(UNITS_RESULT, 0)
+    require(units['usage_actual_unit'] == 'GiB = 1024**3 bytes'
+            and units['quota_actual_unit'] == 'TiB = 1024**4 bytes', 'Original quota unit evidence differs')
+    quota, quota_ref = audited(QUOTA_RESULT, 1)  # Preserve original exit1; the complete scratch section is usable.
+    require(quota['metrics']['command_exit_code'] == 1
+            and quota['config']['command'] == ['hpc','quota'], 'Quota run failure/source changed')
+    log_path = ROOT / QUOTA_LOG['file']; body = log_path.read_bytes()
+    require(len(body) < 1024*1024 and hashlib.sha256(body).hexdigest() == QUOTA_LOG['sha256'], 'Original quota transcript changed')
+    log = body.decode()
+    segment = re.search(r'Disk space for Hopper /scratch/e1583364 \[Report at:\s*(.*?)\](.*?)(?:=+)', log, re.S)
+    require(segment is not None, 'Complete original scratch quota segment absent')
+    match = re.search(r'e1583364\s*\|\|\s*([0-9.]+)GB\s*\|\s*([0-9.]+)TB\s*\|\|\s*(\d+)\s*\|\s*unlimited', segment.group(2))
+    require(match is not None and match.groups() == ('517.8','1.0','2928738'), 'Original scratch segment differs')
+    from decimal import Decimal
+    baseline = Decimal(match[1]) * (2**30)
+    planning = forecast['planning']; reserve = planning['including_later_main_reserve_bytes']
+    require(forecast['counts']['unclaimed_export_attempts_at_snapshot'] == 41
+            and round(reserve/1e9,3) == 242.533, 'Original forecast snapshot changed')
+    # Metadata receipt only. No source/native or fresh-cache revalidation here.
+    cache, cache_ref = audited_result('results/t02_export_cache_six09_14_01_retry4.json')
+    require(cache['_meta'].get('end') and cache['_meta'].get('exit_code') == 0
+            and cache['metrics'].get('cache_matches_live') is True
+            and cache['metrics'].get('sample_complete') is True
+            and cache['metrics'].get('cleanup_errors') == [] and cache['metrics'].get('errors') == [],
+            'Later original fixed31 cache success not present')
+    total = baseline + Decimal(str(reserve)) + new_test_known_bytes + extra_smoke_plain_bytes
+    return {'baseline':{'quota_result':quota_ref,'quota_log':QUOTA_LOG,'outer_exit_code':1,
+        'scratch_segment_complete':True,'home_segment_readable':True,'original_overall_exit1_cause_not_inferred':True,'full_quota_command_passed':False,
+        'original_scratch_report_time_local':segment[1],'timestamp_scope':'original Hopper-local report time, not labelled UTC',
+        'used_display_GiB':match[1],'used_bytes_from_rounded_display':str(baseline),
+        'quota_TiB':match[2],'quota_bytes':2**40,'chunk_files':int(match[3]),
+        'unit_report':UNITS,'unit_logged_result':units_ref},
+      'historical_forecast':{'report':FORECAST,'logged_result':original_ref,'original_meta_end':original['_meta']['end'],
+        'planning':planning,'counts':forecast['counts'],
+        'full_historical_reserve_retained_bytes':reserve,
+        'same31_cache_now_completed_reference':cache_ref,
+        'completed31_historical_reserve_still_in_conservative_sum_bytes':planning['same31_cache_reserve_bytes'],
+        'new_remaining_actual_bytes':None,'deductions_applied_bytes':0,
+        'reason':'Original forecast is a historical planning reserve. Fixed31 has since passed. Other work may already be included in the later quota baseline; no exact completion/occupancy deduction is invented.'},
+      'new_selected_test_known_component_scenario_bytes':new_test_known_bytes,
+      'extra_plain_copy_from_one_dual_smoke_bytes':extra_smoke_plain_bytes,
+      'additional_41_training_exports_added_bytes':0,
+      'formula':'517.8 GiB converted to bytes + original 242.533... decimalGB reserve once + 72 times one compressed-test known-component proxy + one extra plaintext smoke table',
+      'unadjusted_conservative_planning_sum_bytes':str(total),
+      'unadjusted_conservative_planning_sum_decimal_GB':str(total/Decimal(10**9)),
+      'unadjusted_conservative_planning_sum_GiB':str(total/Decimal(2**30)),
+      'hard_upper_bound':False,'current_measured_total':False,
+      'limits':'This preserves the full historical reserve and can double-count completed work already in the baseline. It is the conservative unadjusted scenario, not remaining measured work or a storage guarantee. One DS cannot bound other classes. Future test cache, unindexed logs/gate/metadata, source bundles, filesystem allocation overhead and unbounded retries are not measured.'}
+
+
+def inspect(smoke_ref):
+    data, actual = audited_result(smoke_ref['file'])
+    require(compression.reference_equal(actual, smoke_ref), 'Smoke result SHA changed')
+    cfg, metrics, meta = data['config'], data['metrics'], data['_meta']
+    command = meta['command']
+    require(meta.get('end') and meta.get('exit_code') == 0
+            and cfg.get('version') == EXPORT_VERSION and metrics.get('kind') == 't02_table_export'
+            and metrics.get('export_checks_complete') is True
+            and metrics.get('producer_exit_code') == 0 and metrics.get('cleanup_errors') == []
+            and metrics.get('errors') == [] and metrics.get('unstarted_pair_ids') == []
+            and metrics.get('black_frame_detected') is False
+            and cfg.get('compress_test_tables') is True and cfg.get('compression_smoke_dual') is True
+            and cfg.get('sample_rejected_raw') is False and cfg.get('pair_id') == [PAIR_ID]
+            and cfg.get('test_compression_policy') == compression.codec.POLICY,
+            'Need a successful complete original one-pair dual-format smoke; failures remain failed')
+    require('-m' in command and command[command.index('-m') + 1] == 'src.tools.t02_export'
+            and '--compression-smoke-dual' in command and '--compress-test-tables' in command
+            and '--sample-rejected-raw' not in command
+            and compression.selection_reference(command[command.index('--test-selection') + 1]) == SELECTION
+            and compression.selection_reference(cfg['test_selection']) == SELECTION,
+            'Original command/config does not bind the approved selected-test storage branch')
+    selection = compression.load_selection(SELECTION)
+    counts = dict(Counter(row['kind'] for row in selection['selected']))
+    require(counts == COUNTS and len(selection['selected']) == 72, 'Frozen actual selected inventory changed')
+    rows = metrics['pairs']
+    require(len(rows) == 1, 'Expected one real original export')
+    row = rows[0]
+    require(row.get('pair_id') == PAIR_ID and row.get('scene') == 'FloorPlan322'
+            and row.get('kind') == 'direct_stay' and row.get('status') == 'exported'
+            and row.get('table_complete') is True and row.get('native_evidence_verified') is True
+            and row.get('pair_checks_passed') is True and row.get('cleanup_errors') == []
+            and row.get('error') is None and not row.get('raw_index_error')
+            and not row.get('black_frame_reference'), 'Original pair was incomplete/rejected/error, not an eligible smoke')
+    pair_root = Path(row['scratch_directory']).resolve()
+    require(pair_root == Path(cfg['scratch_directory']).resolve() / 'pair_0000', 'Original pair directory differs')
+    package, _ = read(row['source_package'], within=pair_root)
+    proof = compression.validate_package(selection, package)
+    require(package.get('test_compression_proof') == proof, 'Saved authenticated package selection differs')
+    require(compression.reference_equal(package['source_provenance']['container'],
+            {'file':cfg['source'], 'sha256':proof['selected_entry']['checkpoint_reference']['sha256']})
+            and (ROOT / cfg['pair_file']).resolve() == (ROOT / proof['selected_entry']['pair_reference']['file']).resolve(),
+            'Original source command and selected pair differ')
+    detail, _ = read(row['detail'], within=pair_root)
+    test = detail['test_compression']
+    require(test == row.get('test_compression') and test['selection'] == proof
+            and test['policy'] == compression.codec.POLICY and detail['native_checks']['passed'] is True
+            and detail['pair_checks']['passed'] is True, 'Original worker and detailed proof differ')
+    saved = test['dual_format_comparison']
+    plain_ref, encoded_ref = saved['plain_manifest'], saved['compressed_manifest']
+    require(encoded_ref == row['table_manifest'] == detail['table_manifest'], 'Compressed result reference mismatch')
+    require(Path(plain_ref['file']).resolve() == pair_root / 'table_plain/table.json'
+            and Path(encoded_ref['file']).resolve() == pair_root / 'table/table.json', 'Dual formats are not this same renderer output')
+    plain_manifest, plain_body = read(plain_ref, within=pair_root)
+    compressed_manifest, compressed_body = read(encoded_ref, within=pair_root)
+    require('storage_encoding' not in plain_manifest
+            and compressed_manifest.get('storage_encoding') == compression.codec.POLICY,
+            'Original/encoded storage declarations differ')
+    required = ('passed','rgb_bytes_equal','mask_bytes_equal','labels_equal','tau_and_tau_seen_equal')
+    require(all(saved.get(key) is True for key in required)
+            and saved.get('cache_matches_live') is None
+            and saved.get('states') == len(plain_manifest['states']) == len(compressed_manifest['states'])
+            and saved.get('world_views') == 2 * saved['states'],
+            'Original worker did not report complete real byte and temporal equality')
+    comparison = {key:saved[key] for key in (*required,'states','world_views','temporal_proof','scope','cache_matches_live')}
+    by_name = {item['file']: item for item in plain_manifest['files']}
+    require(len(by_name) == len(plain_manifest['files']), 'Ambiguous original plaintext inventory')
+    files, used = [], set()
+    for item in compressed_manifest['files']:
+        require(item['file'].endswith('.npz'), 'Unexpected encoded payload suffix')
+        name = item['file'][:-4]
+        require(name in by_name and name not in used, 'Compressed/original file domains differ')
+        original = by_name[name]
+        require(item['raw_sha256'] == original['sha256'] and item['raw_bytes'] == original['bytes'],
+                'Original raw bytes/SHA are not the compressed encoder input')
+        # Original successful worker performed both load_table + compare_tables.
+        # This report checks references/declared lengths only; it never reads payloads.
+        used.add(name)
+        files.append({'original':original, 'compressed':item})
+    require(used == set(by_name), 'Compression omitted an original RGB/mask file')
+    plain_bytes = sum(ref['bytes'] for ref in plain_manifest['files'])
+    compressed_bytes = sum(ref['bytes'] for ref in compressed_manifest['files'])
+    require(plain_bytes == plain_ref['payload_bytes'] == saved['plain_payload_bytes']
+            and compressed_bytes == encoded_ref['payload_bytes'] == saved['compressed_payload_bytes']
+            and saved['compressed_to_plain_ratio'] == compressed_bytes / plain_bytes,
+            'Original measured storage totals differ')
+    raw_index, raw_index_body = read(row['raw_index'], within=pair_root / 'raw')
+    require(raw_index.get('raw_files_not_deleted') is True, 'Original native evidence retention is not complete')
+    indexed_paths, native_by_suffix = set(), Counter()
+    for item in raw_index['files']:
+        path = Path(item['file']).resolve()
+        require(path.parent == pair_root / 'raw' and path not in indexed_paths
+                and type(item.get('bytes')) is int and item['bytes'] >= 0, 'Original indexed native metadata path/length invalid')
+        indexed_paths.add(path); native_by_suffix[path.suffix] += item['bytes']
+    native_bytes = sum(native_by_suffix.values())
+    require(native_bytes == raw_index['raw_bytes'], 'Original raw index size total differs')
+    table_plain = plain_bytes + len(plain_body)
+    table_compressed = compressed_bytes + len(compressed_body)
+    native_with_index = native_bytes + len(raw_index_body)
+    one_plain = table_plain + native_with_index
+    one_compressed = table_compressed + native_with_index
+    return {'status':'original_worker_equality_and_metadata_reported', 'smoke_result':actual,
+        'selection_reference':SELECTION, 'selected_current_candidate_count':72, 'selected_by_kind':counts,
+        'same_renderer_pair':{'pair_id':plain_manifest['pair_id'], 'scene':plain_manifest['scene'], 'kind':plain_manifest['kind'],
+                             'source_package':row['source_package'], 'worker_detail':row['detail']},
+        'comparison':comparison, 'original_dual_comparison':saved, 'per_file_bindings':files,
+        'payloads_reread_here':False, 'new_byte_comparison_performed_here':False,
+        'measured_storage':{'scope':'logical bytes, not filesystem/quota blocks; source bundles/Unity logs/result/package JSON and incremental index excluded',
+            'plain_payload_bytes':plain_bytes,'compressed_payload_bytes':compressed_bytes,
+            'plain_manifest_bytes':len(plain_body),'compressed_manifest_bytes':len(compressed_body),
+            'payload_compressed_to_plain_ratio':compressed_bytes/plain_bytes,
+            'table_with_manifest_compressed_to_plain_ratio':table_compressed/table_plain,
+            'native_index_reference':row['raw_index'], 'native_indexed_bytes_by_suffix':dict(native_by_suffix),
+            'native_index_bytes':len(raw_index_body), 'native_bytes_scope':'original successful worker index lengths only; no payload stat/hash/reread or new native verification',
+            'native_plus_plain_table_bytes':one_plain,'native_plus_compressed_table_bytes':one_compressed,
+            'dual_smoke_extra_plain_table_bytes':table_plain,
+            'dual_smoke_known_indexed_bytes':native_with_index+table_plain+table_compressed,
+            'unindexed_gate_unity_logs_incremental_index_source_package_result_metadata_bytes':None,
+            'full_actual_run_bytes':None},
+        'planning_projection':{'is_measured_inventory_storage':False, 'sample_pairs':1,
+            'sample_kind':'direct_stay','unmeasured_kinds':['direct_flip','look_flip','look_stay'],
+            'direct_stay_subset_32_same_size_proxy_bytes':counts['direct_stay']*one_compressed,
+            'all_72_same_smoke_size_scenario_plain_bytes':72*one_plain,
+            'all_72_same_smoke_size_scenario_compressed_bytes':72*one_compressed,
+            'assumption':'Every selected pair has exactly this DirectStay table/state count and native evidence size. This is a planning scenario, not a measured total or cross-class estimate; other class sizes remain unknown.',
+            'scope':'Current selected pre-T02 candidates, not final accepted/frozen test set; no 240-pair extrapolation'},
+        'capacity_scenario':capacity_scenario(72*one_compressed, table_plain),
+        'cache':{'cache_matches_live':None, 'downstream_allowed':False,
+            'reason':'Dual formats share one actual renderer, not fresh-process cache evidence. No fresh renders or formal cache authorization occurred here.',
+            'original_policy':CACHE_POLICY,'version':CACHE_VERSION,
+            'unchanged_standard_implementation':file_ref(ROOT/'src/envs/pair_table_cache.py'),
+            'original_native_checker_implementation':file_ref(ROOT/'src/envs/pair_table_checks.py'),
+            'compression_source':file_ref(ROOT/'src/envs/pair_table_codec.py')}}
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--name',required=True)
+    parser.add_argument('--smoke-result-json',required=True)
+    parser.add_argument('--timeout-seconds',type=int,default=12)
+    args=parser.parse_args()
+    require(re.fullmatch(r'diag_t02_test_compression_storage_[A-Za-z0-9_]+',args.name), 'Use a unique diagnostic name')
+    # Original run_logged + record_command records this explicit CLI name; it does not set CVPR_RUN_NAME.
+    require(1 <= args.timeout_seconds <= 12, 'Metadata-only login diagnostic has a hard twelve-second maximum')
+    directory=ROOT/'logs/review'/args.name
+    directory.mkdir(parents=True,exist_ok=False)
+    report={'status':'failed','errors':[], 'cache_matches_live':None,'downstream_allowed':False,
+            'pbs_jobid':os.environ.get('PBS_JOBID'),'timeout_seconds':args.timeout_seconds}
+    code=1;started=time.perf_counter()
+    previous=signal.getsignal(signal.SIGALRM)
+    def timeout(*unused): raise TimeoutError('Metadata-only storage report exceeded its twelve-second limit; preserve failure')
+    try:
+        signal.signal(signal.SIGALRM,timeout);signal.alarm(args.timeout_seconds)
+        report.update(inspect(json.loads(args.smoke_result_json)));code=0
+    except BaseException as error:
+        traceback.print_exc();report['errors'].append({'type':type(error).__name__,'message':str(error)})
+    finally:
+        signal.alarm(0);signal.signal(signal.SIGALRM,previous)
+        report['elapsed_seconds']=time.perf_counter()-started
+        body=(json.dumps(report,sort_keys=True,indent=2,allow_nan=False)+'\n').encode()
+        path=directory/'report.json'
+        with path.open('xb') as stream:stream.write(body)
+        print('TEST_COMPRESSION_STORAGE_JSON: '+json.dumps({'report':{'file':str(path.relative_to(ROOT)),
+            'sha256':hashlib.sha256(body).hexdigest(),'bytes':len(body)},'status':report['status'],
+            'errors':report['errors'],'cache_matches_live':None},sort_keys=True),flush=True)
+    return code
+
+
+if __name__=='__main__':
+    raise SystemExit(main())
+ --name diag_t02_test_compression_storage_02 --smoke-result-json {"file": "results/t02_export_test_compression_smoke_01.json", "sha256": "3fdc9132df35d676a2f33db4f0356747198066f93dcd6956175ef686c96d889e"} --timeout-seconds 12
+# start: 2026-11-10T12:11:49
+TEST_COMPRESSION_STORAGE_JSON: {"cache_matches_live": null, "errors": [], "report": {"bytes": 284065, "file": "logs/review/diag_t02_test_compression_storage_02/report.json", "sha256": "160902eaefc2606e5bdf4a657bdaa608bf4fd773322fc0d8a41177ef9fe6e48d"}, "status": "original_worker_equality_and_metadata_reported"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 5.959215865004808}
+# exit_code: 0

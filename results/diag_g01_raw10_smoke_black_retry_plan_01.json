@@ -1,0 +1,205 @@
+{
+  "metrics": {
+    "strict_black_gate_proof": {
+      "eligible_proven_black_gate_retry": true,
+      "job_id": "709595.hopper-m-02",
+      "native_kind": "g01_s16_engineering_smoke",
+      "original_payload": {
+        "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/payload.json",
+        "sha256": "3c5ac4b39509e3ddb9ddd2071c9e55b8ec9886b11acb48724469d1d692fbc18f"
+      },
+      "original_job_script": {
+        "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/job.pbs",
+        "sha256": "afbac3414bc71a1627b9fbfd2e52e4d356f969e3c2ea67921565790887b0158f"
+      },
+      "original_receipt": {
+        "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/submission.json",
+        "sha256": "0c9adc14b329d017850e134223311f5593f4d61d63abdbc78bfd88aa3b92d9f7"
+      },
+      "original_command_unchanged": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.g01_physics_smoke",
+        "--name",
+        "gen_test_s16_smoke_raw10_02",
+        "--scene",
+        "FloorPlan21",
+        "--quota-plan",
+        "configs/gen_test_s16_smoke_raw10_02_quota.json",
+        "--quota-plan-sha256",
+        "40c6b9cf298bd330bdbd026894d17399606d01015dbe48a9e8ba0e03a7ab9c32",
+        "--timeout-seconds",
+        "1000",
+        "--sample-rejected-raw"
+      ],
+      "pbs_accounting": {
+        "file": "results/diag_raw10_smoke_709595_accounting_01.json",
+        "sha256": "681de2d9b245de451491e43512559af409adf0fc37b6de19a88a3c7d8b77448b",
+        "metrics_sha256": "09c60c37e7a0fc8256ea2be2bdfa7d8fdc187a609744e2fd26ac040f85694478"
+      },
+      "source_results": [
+        {
+          "file": "results/gen_test_s16_smoke_raw10_02.json",
+          "sha256": "1834b24880c148cd92b72df6534c260a414948bb2523e9b96214a17de9b28183",
+          "metrics_sha256": "4d64a46e773b18a995d92d574201a71778d516e540307d30e4ba794aa19f970c"
+        },
+        {
+          "file": "results/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate.json",
+          "sha256": "bb13e737b8f712246ea9a5e345a9df425e0eec08c183598c97059ae10d1fccf6",
+          "metrics_sha256": "d217e8d7f41088876842faef4a57d619475b7377d1a15bea14aa306a01aa016a"
+        }
+      ],
+      "node": "hopper-25",
+      "gpu_uuid": "GPU-2c0239b0-dff3-bf6f-0cc1-3097d771dcc8",
+      "captures": [
+        {
+          "file": "logs/runs/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        },
+        {
+          "file": "logs/runs/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        }
+      ],
+      "cleanup": "original parent, gate and native cleanup complete",
+      "next_action_scope": "Same-parameter nohost retry only; current smoke entry has no pinned-host support"
+    },
+    "new_quota_plan": {
+      "file": "configs/gen_test_s16_smoke_raw10_03_quota.json",
+      "sha256": "9ad47a121f3aef8bed709a4ac0305c7f6b86760d3c1544d4de148f01faeb674f"
+    },
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_physics_smoke",
+      "--name",
+      "gen_test_s16_smoke_raw10_03",
+      "--scene",
+      "FloorPlan21",
+      "--quota-plan",
+      "configs/gen_test_s16_smoke_raw10_03_quota.json",
+      "--quota-plan-sha256",
+      "9ad47a121f3aef8bed709a4ac0305c7f6b86760d3c1544d4de148f01faeb674f",
+      "--timeout-seconds",
+      "1000",
+      "--sample-rejected-raw"
+    ],
+    "submission_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--task",
+      "T01",
+      "--budget-group",
+      "G01",
+      "--name",
+      "gen_test_s16_smoke_raw10_03",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:17:10",
+      "--retry-of",
+      "709595.hopper-m-02",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_physics_smoke",
+      "--name",
+      "gen_test_s16_smoke_raw10_03",
+      "--scene",
+      "FloorPlan21",
+      "--quota-plan",
+      "configs/gen_test_s16_smoke_raw10_03_quota.json",
+      "--quota-plan-sha256",
+      "9ad47a121f3aef8bed709a4ac0305c7f6b86760d3c1544d4de148f01faeb674f",
+      "--timeout-seconds",
+      "1000",
+      "--sample-rejected-raw"
+    ],
+    "requested_host": null,
+    "original_job_id": "709595.hopper-m-02",
+    "only_quota_field_changed": "parent_run_name",
+    "scene_timeout_seconds": 600,
+    "parent_timeout_seconds": 1000,
+    "pbs_wall_seconds": 1030,
+    "formal_collection_eligible": false,
+    "gpu_submission_performed": false,
+    "scope": "Same scientific FP21/seed0/raw10 smoke after original zero-business black gate; all failed evidence preserved"
+  },
+  "config": {
+    "name": "diag_g01_raw10_smoke_black_retry_plan_01",
+    "original_name": "gen_test_s16_smoke_raw10_02",
+    "new_name": "gen_test_s16_smoke_raw10_03"
+  },
+  "sources": [
+    {
+      "file": "results/gen_test_s16_smoke_raw10_02.json",
+      "sha256": "1834b24880c148cd92b72df6534c260a414948bb2523e9b96214a17de9b28183",
+      "metrics_sha256": "4d64a46e773b18a995d92d574201a71778d516e540307d30e4ba794aa19f970c"
+    },
+    {
+      "file": "results/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate.json",
+      "sha256": "bb13e737b8f712246ea9a5e345a9df425e0eec08c183598c97059ae10d1fccf6",
+      "metrics_sha256": "d217e8d7f41088876842faef4a57d619475b7377d1a15bea14aa306a01aa016a"
+    },
+    {
+      "file": "results/diag_raw10_smoke_709595_accounting_01.json",
+      "sha256": "681de2d9b245de451491e43512559af409adf0fc37b6de19a88a3c7d8b77448b",
+      "metrics_sha256": "09c60c37e7a0fc8256ea2be2bdfa7d8fdc187a609744e2fd26ac040f85694478"
+    }
+  ],
+  "artifact_references": [
+    {
+      "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/payload.json",
+      "sha256": "3c5ac4b39509e3ddb9ddd2071c9e55b8ec9886b11acb48724469d1d692fbc18f"
+    },
+    {
+      "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/job.pbs",
+      "sha256": "afbac3414bc71a1627b9fbfd2e52e4d356f969e3c2ea67921565790887b0158f"
+    },
+    {
+      "file": "logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3/submission.json",
+      "sha256": "0c9adc14b329d017850e134223311f5593f4d61d63abdbc78bfd88aa3b92d9f7"
+    },
+    {
+      "file": "configs/gen_test_s16_smoke_raw10_02_quota.json",
+      "sha256": "40c6b9cf298bd330bdbd026894d17399606d01015dbe48a9e8ba0e03a7ab9c32"
+    },
+    {
+      "file": "configs/gen_test_s16_smoke_raw10_03_quota.json",
+      "sha256": "9ad47a121f3aef8bed709a4ac0305c7f6b86760d3c1544d4de148f01faeb674f"
+    },
+    {
+      "file": "logs/runs/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png",
+      "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+    },
+    {
+      "file": "logs/runs/gen_test_s16_smoke_raw10_02_j709595_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png",
+      "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+    }
+  ],
+  "_meta": {
+    "name": "diag_g01_raw10_smoke_black_retry_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"Exact 709595 opening-black proof and new nohost smoke config, not a submitter.\n\nRun this argv directly through the original run_logged producer wrapper. It\nwrites one result and one immutable config; never edits old evidence or qsubs.\n\"\"\"\nimport copy\nimport hashlib\nimport importlib.util\nimport io\nimport json\nimport os\nfrom pathlib import Path\nimport shlex\nimport subprocess\nfrom PIL import Image\nfrom src.tools import g01_physics_smoke as smoke\nfrom src.tools import pbs_black_retry as black\n\nroot = Path.cwd().resolve()\nrequire = black.require\nname = 'diag_g01_raw10_smoke_black_retry_plan_01'\njob = '709595.hopper-m-02'\nold_name = 'gen_test_s16_smoke_raw10_02'\nnew_name = 'gen_test_s16_smoke_raw10_03'\nfolder = root / 'logs/pbs/gen_test_s16_smoke_raw10_02-20261110T033750Z-99c638b3'\npayload_path, script_path, receipt_path = (folder / x for x in ('payload.json', 'job.pbs', 'submission.json'))\n\n\ndef reference(path):\n    path = path.resolve()\n    return {'file': str(path.relative_to(root)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}\n\n\ndef load(filename, digest):\n    ref = reference(root / filename)\n    require(ref['sha256'] == digest, 'Original pinned evidence bytes changed: ' + filename)\n    data, _ = black.logged(root, ref)\n    return data, {**ref, 'metrics_sha256': data['_meta']['metrics_sha256']}\n\n\nparent, parent_ref = load('results/' + old_name + '.json',\n    '1834b24880c148cd92b72df6534c260a414948bb2523e9b96214a17de9b28183')\ngate_name = old_name + '_j709595_hopper_m_02_gate'\ngate, gate_ref = load('results/' + gate_name + '.json',\n    'bb13e737b8f712246ea9a5e345a9df425e0eec08c183598c97059ae10d1fccf6')\naccount, account_ref = load('results/diag_raw10_smoke_709595_accounting_01.json',\n    '681de2d9b245de451491e43512559af409adf0fc37b6de19a88a3c7d8b77448b')\nrequire(reference(payload_path)['sha256'] == '3c5ac4b39509e3ddb9ddd2071c9e55b8ec9886b11acb48724469d1d692fbc18f'\n    and reference(receipt_path)['sha256'] == '0c9adc14b329d017850e134223311f5593f4d61d63abdbc78bfd88aa3b92d9f7',\n    'Original payload/receipt changed')\npayload, receipt = json.loads(payload_path.read_bytes()), json.loads(receipt_path.read_bytes())\nold_quota_ref = {'file': 'configs/gen_test_s16_smoke_raw10_02_quota.json',\n                 'sha256': '40c6b9cf298bd330bdbd026894d17399606d01015dbe48a9e8ba0e03a7ab9c32'}\nexpected = ['python3', '-u', '-m', smoke.MODULE, '--name', old_name, '--scene', 'FloorPlan21',\n    '--quota-plan', old_quota_ref['file'], '--quota-plan-sha256', old_quota_ref['sha256'],\n    '--timeout-seconds', '1000', '--sample-rejected-raw']\nrequire(payload['repo'] == str(root) and payload['name'] == old_name and payload['command'] == expected\n    and payload['task_id'] == 'T01' and payload['budget_group'] == 'G01'\n    and payload['budget_batch'] == 't00b_t01_20261108' and payload['queue'] == 'autox'\n    and payload['dry_run'] is False and payload['requested_host'] is None\n    and payload['requested_gpu_count'] == 1 and payload['requested_wall_seconds'] == 1030,\n    'Original exact nohost G01 smoke allocation differs')\nrequire(payload_path.stat().st_mode & 0o222 == script_path.stat().st_mode & 0o222 == 0\n    and receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],\n    'Original immutable job files/successful receipt differ')\nidentity = smoke.submission_identity(root, old_name, job, 1000, old_quota_ref, sampled=True)\nrequire(identity['file'] == str(payload_path.relative_to(root)) and identity['sha256'] == reference(payload_path)['sha256'],\n    'Original smoke submission identity differs')\nspec = importlib.util.spec_from_file_location('original_smoke_retry_phase', root / 'scripts/pbs/submit_phase.py')\nphase = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(phase)\ntemplate = subprocess.check_output(['git', 'show', parent['_meta']['git_commit'] + ':scripts/pbs/job_1gpu.pbs'], text=True)\nrequire(script_path.read_text() == phase.render_job_script(template, 1, payload_path, None),\n    'Original PBS script differs from its committed one-GPU template')\nfinal = phase._final_accounting(root, {job}, paths=[root / account_ref['file']])\nrequire(job in final and account['_meta']['exit_code'] == 0 and account['metrics']['complete_allocation_accounting'] is True,\n    'Original canonical final accounting is incomplete')\nrows = [row for row in account['config']['jobs'] if row['job_id'] == job]\nrequire(len(rows) == 1 and rows[0]['qstat_exit'] == 0, 'Original canonical PBS job is ambiguous')\nfields = rows[0]['fields']\nrequire(fields.get('job_state') == 'F' and fields.get('Exit_status') == '86' and fields.get('run_count') == '1'\n    and fields.get('project') == 'CFP04-SF-125' and fields.get('Job_Owner', '').split('@')[0] == 'e1583364'\n    and fields.get('Resource_List.ngpus') == '1' and fields.get('Resource_List.ncpus') == '12'\n    and fields.get('Resource_List.walltime') == '00:17:10' and fields.get('queue') == 'smallx'\n    and 'PBS_O_QUEUE=autox' in fields.get('Variable_List', '')\n    and float(fields['Resource_List.queue_charge_rate']) == payload['requested_queue_charge_rate']\n    and shlex.split(fields['Submit_arguments']) == receipt['command'][1:]\n    and fields['Output_Path'].split(':', 1)[1] == str(folder / 'pbs.out'),\n    'Original PBS allocation, rate, terminal exit or submit binding differs')\nconfig, metrics = parent['config'], parent['metrics']\nrequire(parent['_meta']['name'] == old_name and parent['_meta']['command'] == expected\n    and parent['_meta']['exit_code'] == metrics['exit_code'] == 86\n    and config['pbs_jobid'] == job and config['name'] == old_name\n    and config['smoke_version'] == smoke.VERSION and config['engineering_smoke'] is True\n    and config['formal_collection_eligible'] is False and config['quota_occupancy_authorized'] is False\n    and config['quota_plan_reference'] == old_quota_ref and config['scenes'] == ['FloorPlan21']\n    and config['scene_timeout_seconds'] == 600 and config['timeout_seconds'] == 1000\n    and config['seed'] == 0 and config['field_of_view'] == 60 and config['resolution'] == 255\n    and config['gpus'] == 1 and config['stage_plans'] == [] and config['quota_authentication'] is None\n    and metrics['kind'] == 'g01_s16_engineering_smoke' and metrics['status'] == 'blocked_by_render_gate'\n    and metrics['black_frame_detected'] is True and metrics['cleanup_errors'] == []\n    and not metrics.get('error') and not metrics.get('errors')\n    and metrics['acceptance_passed'] is False and metrics['engineering_gate_passed'] is False,\n    'Parent did not cleanly stop at its original opening black gate')\nfor key in ('scene_runs', 'started_shards', 'stages', 'admission_final', 'unfinished_run_names',\n            'stop_reasons', 'engineering_observations'):\n    require(metrics.get(key) == [], 'Original black smoke started business work: ' + key)\nrequire(metrics['gate']['run_name'] == gate_name and metrics['gate']['exit_code'] == 86\n    and metrics['gate']['result_path'] == gate_ref['file']\n    and metrics['gate']['source']['sha256'] == gate_ref['sha256']\n    and metrics['gate']['source']['metrics_sha256'] == gate_ref['metrics_sha256']\n    and not metrics['gate'].get('provenance_error'), 'Parent does not bind its original native gate')\ngc, gm = gate['config'], gate['metrics']\na = gc['allocation']; gpu = a['cuda_visible_devices']; node = gc['node']\nrequire({part.split('/')[0] for part in fields['exec_host'].split('+')} == {node}\n    and parent['_meta']['host'] == gate['_meta']['host'] == config['node'] == node\n    and gc['pbs_jobid'] == a['pbs_jobid'] == job and gc['name'] == a['name'] == gate_name\n    and config['parent_cuda_visible_devices'] == gpu and a['cuda_driver_uuids'] == [gpu]\n    and a['cpu_affinity'] == config['cpu_affinity'] and len(a['cpu_affinity']) == len(set(a['cpu_affinity'])) == 12\n    and a['scratch'] == payload['environment']['CVPR_SCRATCH']\n    and gc['resolution'] == 255 and gc['segmentation'] is True and gc['timeout_seconds'] == 120\n    and gate['_meta']['exit_code'] == gm['exit_code'] == 86 and gm['passed'] is False\n    and gm['black_frame_detected'] is True and gm['errors'] == gm['cleanup_errors'] == []\n    and gm['expected_gpu_count'] == gm['completed_gpu_count'] == 1 and len(gm['devices']) == len(a['devices']) == 1,\n    'Original native gate identities, completion or cleanup differ')\ngate_command = gate['_meta']['command']\nrequire(Path(gate_command[0]).name == 'python3' and gate_command[1:-1] == [\n    '-u', '-m', 'src.tools.render_gate', '--name', gate_name, '--gpus', '1', '--resolution', '255',\n    '--segmentation', '--timeout-seconds'] and gate_command[-1] in ('120', '120.0'), 'Original gate command differs')\nobservation = gm['devices'][0]['observation']\nrequire(gm['devices'][0]['worker_error'] is None and not observation.get('error') and not observation.get('cleanup_error')\n    and observation['gpu_identity'] == a['devices'][0] and observation['gpu_identity']['gpu_uuid'] == gpu\n    and observation['node'] == node and [c['stage'] for c in observation['captures']] == ['after_constructor', 'after_Pass'],\n    'Original successful native black captures or cleanup are incomplete')\nfor stage in ('constructor', 'Pass'):\n    require(any(packet['stage'] == stage and packet['fresh_main_rgb_payloads'] > 0\n                and packet['cached_metadata'] is False for packet in observation['wire_packets']),\n            'Missing original fresh native RGB packet: ' + stage)\ncaptures = []\nfor capture in observation['captures']:\n    path = Path(capture['png']['path']).resolve()\n    require(path.parent == root / 'logs/runs' / gate_name / 'render_gate', 'Unexpected native PNG directory')\n    ref = reference(path)\n    require(ref['sha256'] == capture['png']['sha256'] and capture['valid_shape'] is True\n        and capture['shape'] == [255, 255, 3] and capture['dtype'] == 'uint8'\n        and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True\n        and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0,\n        'Original capture is not successful-action all-zero RGB')\n    with Image.open(io.BytesIO(path.read_bytes())) as image:\n        require(image.mode == 'RGB' and image.size == (255, 255) and image.getextrema() == ((0, 0),) * 3,\n                'Original decoded PNG is not black')\n    captures.append(ref)\nproof = {'eligible_proven_black_gate_retry': True, 'job_id': job, 'native_kind': metrics['kind'],\n    'original_payload': reference(payload_path), 'original_job_script': reference(script_path),\n    'original_receipt': reference(receipt_path), 'original_command_unchanged': expected,\n    'pbs_accounting': account_ref, 'source_results': [parent_ref, gate_ref], 'node': node,\n    'gpu_uuid': gpu, 'captures': captures, 'cleanup': 'original parent, gate and native cleanup complete',\n    'next_action_scope': 'Same-parameter nohost retry only; current smoke entry has no pinned-host support'}\n\n# All original facts passed before the new immutable plan is written.\nold_quota_path, old_bytes = black.file_ref(root, old_quota_ref, 'configs')\nold = json.loads(old_bytes)\nsmoke.validate_quota(old, old_name)\nplan = copy.deepcopy(old); plan['parent_run_name'] = new_name\nrequire({k: v for k, v in plan.items() if k != 'parent_run_name'} == {\n    k: v for k, v in old.items() if k != 'parent_run_name'}, 'Scientific smoke configuration changed')\nsmoke.validate_quota(plan, new_name)\nfor folder_name in ('results', 'logs/runs'):\n    require(not list((root / folder_name).glob(new_name + '*')), 'New smoke name has existing evidence')\nrequire(not list((root / 'logs/pbs').glob(new_name + '-*'))\n    and not (Path(payload['environment']['CVPR_SCRATCH']) / 'g01_parallel' / new_name).exists(),\n    'New smoke name has an existing submission/raw directory')\nfor candidate in (root / 'logs/pbs').glob('*/payload.json'):\n    require(json.loads(candidate.read_text()).get('retry_of') != job,\n            'A retry payload already exists for this original black allocation')\nnew_path = root / 'configs' / (new_name + '_quota.json')\nwith new_path.open('xb') as stream:\n    stream.write((json.dumps(plan, indent=2, sort_keys=True, allow_nan=False) + '\\n').encode())\n    stream.flush(); os.fsync(stream.fileno())\nnew_path.chmod(0o444)\nnew_ref = reference(new_path)\ncommand = list(expected)\nfor flag, value in (('--name', new_name), ('--quota-plan', new_ref['file']), ('--quota-plan-sha256', new_ref['sha256'])):\n    command[command.index(flag) + 1] = value\nblack.same_retry_command(root, expected, command, old_name, new_name)\nsubmission = ['python3', 'scripts/pbs/submit_phase.py', '--task', 'T01', '--budget-group', 'G01',\n    '--name', new_name, '--gpus', '1', '--walltime', '00:17:10', '--retry-of', job, '--', *command]\noutput_metrics = {'strict_black_gate_proof': proof, 'new_quota_plan': new_ref,\n    'command': command, 'submission_command': submission, 'requested_host': None,\n    'original_job_id': job, 'only_quota_field_changed': 'parent_run_name',\n    'scene_timeout_seconds': 600, 'parent_timeout_seconds': 1000, 'pbs_wall_seconds': 1030,\n    'formal_collection_eligible': False, 'gpu_submission_performed': False,\n    'scope': 'Same scientific FP21/seed0/raw10 smoke after original zero-business black gate; all failed evidence preserved'}\nresult = {'metrics': output_metrics, 'config': {'name': name, 'original_name': old_name, 'new_name': new_name},\n    'sources': [parent_ref, gate_ref, account_ref], 'artifact_references': [\n        reference(payload_path), reference(script_path), reference(receipt_path), old_quota_ref, new_ref, *captures]}\nwith (root / 'results' / (name + '.json')).open('x') as stream:\n    json.dump(result, stream, indent=2, allow_nan=False); stream.write('\\n')\nrequire(old_quota_path.read_bytes() == old_bytes, 'Original quota changed during preparation')\nprint('FINAL_METRICS_JSON: ' + json.dumps(output_metrics, sort_keys=True, allow_nan=False), flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T12:04:53",
+    "log_path": "logs/runs/diag_g01_raw10_smoke_black_retry_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8669cac662b112e6f5970214602f8d08df449f00",
+    "git_dirty": false,
+    "end": "2026-11-10T12:04:55",
+    "duration_sec": 0.9,
+    "exit_code": 0,
+    "metrics_sha256": "aab574878dcb67b5f535adf72b1a4d394502f9090faa4f4f85a0de274cbe1c71"
+  }
+}

@@ -1,0 +1,446 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794283821.2144465,
+    "compress_test_tables": true,
+    "compression_smoke_dual": true,
+    "cpu_affinity": [
+      72,
+      74,
+      76,
+      78,
+      80,
+      82,
+      84,
+      86,
+      88,
+      90,
+      92,
+      94
+    ],
+    "cuda_visible_devices": "GPU-a54f9bb5-01ed-88e8-a104-341ccd509bb9",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_export_test_compression_smoke_01",
+    "node": "hopper-20",
+    "pair_file": "data/world_pairs/v2/gen_test_s16_round2_s02_c6_floorplan322/floorplan322_00111/pair.json",
+    "pair_id": [
+      "floorplan322_00111"
+    ],
+    "pair_timeout_seconds": 390.0,
+    "pbs_jobid": "709607.hopper-m-02",
+    "resolution": 255,
+    "runtime": {
+      "ai2thor_version": "5.0.0",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        72,
+        74,
+        76,
+        78,
+        80,
+        82,
+        84,
+        86,
+        88,
+        90,
+        92,
+        94
+      ],
+      "cuda_visible_devices": "GPU-a54f9bb5-01ed-88e8-a104-341ccd509bb9",
+      "gpu_index": 0,
+      "gpu_name": "NVIDIA H200",
+      "gpu_uuid": "GPU-a54f9bb5-01ed-88e8-a104-341ccd509bb9",
+      "log_dir": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/unity_logs",
+      "logical_index": 0,
+      "mig_mode": "Disabled",
+      "pbs_jobid": "709607.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "vulkan_device_index": 0
+    },
+    "sample_rejected_raw": false,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02",
+    "source": "results/t01v2_checkpoint_test_s16_s02_01.json",
+    "test_compression_policy": {
+      "array_name": "payload.npy",
+      "array_order": "C",
+      "compression_level": 6,
+      "dtype": "uint8",
+      "encoder": "numpy_npy_zip_deflate",
+      "lossless": true,
+      "partition": "test",
+      "scope": "new selected test table arrays only; original native PNG evidence unchanged",
+      "version": "test_table_uint8_npz_deflate6_v1"
+    },
+    "test_selection": "{\"file\":\"logs/review/diag_current_test_selected_02/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_02.json\",\"sha256\":\"c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745\"},\"sha256\":\"3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427\"}",
+    "timeout_seconds": 600.0,
+    "version": "t02_single_gpu_export_shadow_v2"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": true,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_test_compression_smoke_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_test_compression_smoke_01_gate.json",
+      "git_commit": "69a4458741bbcaee727938049e808f2ee4e91aef",
+      "metrics_sha256": "2f8f03f8704bdc5be6576168e91a280d02d73f685c34e350696a005bf73c4462",
+      "sha256": "55a4847ca2fc3a72602839482db5cf90635a473e8168d6b4e2798f4e8ffa144a"
+    },
+    "kind": "t02_table_export",
+    "pairs": [
+      {
+        "actual_action_records": 1918,
+        "actual_frame_records": 1919,
+        "black_frame_reference": null,
+        "cache_matches_live": null,
+        "cleanup_errors": [],
+        "detail": {
+          "bytes": 390402,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/checks.json",
+          "sha256": "98a138e4710d627519c9810aa94332a4933e0a2ad5ec504e30b7c22c182d09d7"
+        },
+        "downstream_allowed": false,
+        "error": null,
+        "export_measurements": {
+          "elapsed_seconds": 198.02823459298816,
+          "frozen_pose_readbacks": {
+            "actual_w0_vs_w1_nonanchor": {
+              "max_position_delta_m": 0.0,
+              "max_raw_rotation_component_delta_degrees": 0.0,
+              "positions_all_exact": true,
+              "readbacks": 83,
+              "rotations_all_exact": true,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            },
+            "requested_vs_actual": {
+              "max_position_delta_m": 0.0,
+              "max_raw_rotation_component_delta_degrees": 7.62939453125e-06,
+              "positions_all_exact": true,
+              "readbacks": 415,
+              "rotations_all_exact": false,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            }
+          },
+          "in_clean_subset": false,
+          "includes": "native graph queries and paired capture construction; excludes caller startup and serialization",
+          "non_anchor_divergent_states": 0,
+          "shadow_divergent_states": 0,
+          "state_count": 83,
+          "synthetic_only": false
+        },
+        "in_clean_subset": false,
+        "kind": "direct_stay",
+        "native_evidence_verified": true,
+        "non_anchor_divergent_states": 0,
+        "pair_checks_passed": true,
+        "pair_id": "floorplan322_00111",
+        "raw_incremental_index": {
+          "bytes": 1877721,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/raw/evidence_index.jsonl",
+          "sha256": "f6ed5eecb8e869d133e0ccb87271109f8fdecc7508dc960dbd8f420b8fdec6c0"
+        },
+        "raw_index": {
+          "bytes": 1885513,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/raw/evidence_index.json",
+          "sha256": "4f513d079678f05036cefecf18e856775e125b531064ce4b54e1773c4c79f085"
+        },
+        "rejection_reasons": [],
+        "report_reference": {
+          "bytes": 7549,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/pair_report.json",
+          "sha256": "628ffd5ff2a2ff4c082272f080a2762827f96d6f8484f024a7c6dfb38b404006"
+        },
+        "scene": "FloorPlan322",
+        "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000",
+        "shadow_divergent_states": 0,
+        "source_package": {
+          "bytes": 2039421,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/authenticated_source.json",
+          "sha256": "a6bb90b85ebc2903100561aa62a527d1cf0a484701f63f7aed74e119ea091ce2"
+        },
+        "status": "exported",
+        "table_complete": true,
+        "table_manifest": {
+          "bytes": 3565904,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/table/table.json",
+          "payload_bytes": 7597942,
+          "sha256": "b3fdf3e9a2b61a5889ff6c092d250d70e3f581c9cb9397193b0d9c24ea0c1694"
+        },
+        "task_acceptance": null,
+        "test_compression": {
+          "dual_format_comparison": {
+            "cache_matches_live": null,
+            "compressed_manifest": {
+              "bytes": 3565904,
+              "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/table/table.json",
+              "payload_bytes": 7597942,
+              "sha256": "b3fdf3e9a2b61a5889ff6c092d250d70e3f581c9cb9397193b0d9c24ea0c1694"
+            },
+            "compressed_payload_bytes": 7597942,
+            "compressed_to_plain_ratio": 0.25291444682448144,
+            "labels_equal": true,
+            "mask_bytes_equal": true,
+            "passed": true,
+            "plain_manifest": {
+              "bytes": 3082455,
+              "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_compression_smoke_01/709607.hopper-m-02/pair_0000/table_plain/table.json",
+              "payload_bytes": 30041550,
+              "sha256": "4ec27fd77946edd703a5633e598493c83ea5c65a5c71d2c499bb467b4fdbfe35"
+            },
+            "plain_payload_bytes": 30041550,
+            "rgb_bytes_equal": true,
+            "scope": "serialization equality only; full fresh cache remains required",
+            "states": 83,
+            "tau_and_tau_seen_equal": true,
+            "temporal_proof": "identical initial state, all graph edges, shared flags and anchor pixels; original temporal predicates unchanged",
+            "world_views": 166
+          },
+          "policy": {
+            "array_name": "payload.npy",
+            "array_order": "C",
+            "compression_level": 6,
+            "dtype": "uint8",
+            "encoder": "numpy_npy_zip_deflate",
+            "lossless": true,
+            "partition": "test",
+            "scope": "new selected test table arrays only; original native PNG evidence unchanged",
+            "version": "test_table_uint8_npz_deflate6_v1"
+          },
+          "selection": {
+            "scope": "current incremental selected test candidates; not a final test freeze or T02 pass",
+            "selected_entry": {
+              "checkpoint_reference": {
+                "audit": {
+                  "fail": [],
+                  "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+                  "warn": []
+                },
+                "exit_code": 0,
+                "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+                "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+                "metrics_sha256": "2fa9df1358df0570ed1b46d4b5c8d53ef72c50c9e3f97d23cf2e98c8e0ee9117",
+                "sha256": "dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a"
+              },
+              "configuration": {
+                "configuration_id": "0a50533bcae7725efb34502453987f3d1e35dab9b5d8ae685dfad2f06bdc27f6",
+                "key": {
+                  "anchor_name": "AlarmClock_0920a0f3",
+                  "candidate_names": [
+                    "CellPhone_7aad0a06",
+                    "Laptop_877c459b"
+                  ],
+                  "scene": "FloorPlan322",
+                  "start_state": {
+                    "forceAction": false,
+                    "horizon": 30.0,
+                    "position": {
+                      "x": 2.25,
+                      "y": 0.9017602801322937,
+                      "z": 0.5
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    },
+                    "standing": true
+                  }
+                },
+                "version": "test_configuration_canonical_start_seed0_v1"
+              },
+              "kind": "direct_stay",
+              "pair_reference": {
+                "file": "data/world_pairs/v2/gen_test_s16_round2_s02_c6_floorplan322/floorplan322_00111/pair.json",
+                "sha256": "4de0c311189da315f44977988d7a95e34f5a7d168e99673f6b468a48d30b8e12"
+              },
+              "proposal_identity": "3b7df086ea94566802dede6163bf775526f2f92e9bee94966ab3e1f1b619f10d",
+              "scene": "FloorPlan322",
+              "source_reference": {
+                "audit": {
+                  "fail": [],
+                  "file": "results/gen_test_s16_round2_s02_c6_floorplan322.json",
+                  "warn": [
+                    "P7 run failed (exit_code 1); keep it, do not cite it"
+                  ]
+                },
+                "exit_code": 1,
+                "file": "results/gen_test_s16_round2_s02_c6_floorplan322.json",
+                "git_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f",
+                "metrics_sha256": "a0fbe841eff56f20b95a9789275fb0f7748e626e3fce32b7270bf478fbf476c1",
+                "sha256": "1d4d05a75caaca7cf501a52eea229a31bbe075baae33f5b6202befd4a138b1ce"
+              },
+              "target_names": [
+                "CellPhone_7aad0a06",
+                "CellPhone_7aad0a06"
+              ]
+            },
+            "selection_reference": {
+              "file": "logs/review/diag_current_test_selected_02/report.json",
+              "logged_result": {
+                "file": "results/diag_current_test_selected_02.json",
+                "sha256": "c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745"
+              },
+              "sha256": "3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427"
+            },
+            "version": "test_table_uint8_npz_deflate6_v1"
+          }
+        },
+        "unity_identity": {
+          "pgid": 4062490,
+          "pid": 4062608,
+          "sid": 4062490,
+          "start_ticks": 87126754
+        },
+        "worker_elapsed_seconds": 228.39060436096042,
+        "worker_identity": {
+          "pgid": 4054193,
+          "pid": 4062490,
+          "sid": 4054193,
+          "start_ticks": 87126675
+        }
+      }
+    ],
+    "producer_exit_code": 0,
+    "status": "export_checks_completed_cache_pending",
+    "task_acceptance": null,
+    "unstarted_pair_ids": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_test_compression_smoke_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_test_compression_smoke_01_gate.json",
+      "git_commit": "69a4458741bbcaee727938049e808f2ee4e91aef",
+      "metrics_sha256": "2f8f03f8704bdc5be6576168e91a280d02d73f685c34e350696a005bf73c4462",
+      "sha256": "55a4847ca2fc3a72602839482db5cf90635a473e8168d6b4e2798f4e8ffa144a"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_current_test_selected_02.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_current_test_selected_02.json",
+      "git_commit": "6eeab702c39b14cf45989399ebb64b1ad3b7f7c0",
+      "metrics_sha256": "e280204bd29edd84c07d49676b845ce410f3d40e813956829655c62dde3ca9ec",
+      "sha256": "c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_test_s16_s02_01.json",
+      "git_commit": "14f9e5128f7f8c274048514b5f64f40d6014ed78",
+      "metrics_sha256": "2fa9df1358df0570ed1b46d4b5c8d53ef72c50c9e3f97d23cf2e98c8e0ee9117",
+      "sha256": "dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_test_s16_round2_s02_c6_floorplan322.json",
+        "warn": [
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/gen_test_s16_round2_s02_c6_floorplan322.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_test_s16_round2_s02_j709440_hopper_m_02_gate.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/gen_test_s16_round2_s02_j709440_hopper_m_02_gate.json",
+        "git_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f",
+        "metrics_sha256": "41b12d6975858047780be97ded3cf656a0959fd45d79039038d1ef71847650d4",
+        "sha256": "e745b20d133bc02984faa6899342c4f0e173a364efc7a8f8cd4e7caa93c99ed3"
+      },
+      "git_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f",
+      "log_file": "logs/runs/gen_test_s16_round2_s02_c6_floorplan322.log",
+      "log_sha256": "8c68152a871694f013ca970c8e4b76146a03de3aa1b3c3ef75f77406e276adde",
+      "meta_file": "logs/runs/gen_test_s16_round2_s02_c6_floorplan322.meta.json",
+      "meta_sha256": "db22233447c17911a5105702527fb8e77fedc76899f57450925721f5670276ec",
+      "metrics_sha256": "a0fbe841eff56f20b95a9789275fb0f7748e626e3fce32b7270bf478fbf476c1",
+      "metrics_specification": {
+        "actual_document_sha256": "a8b3e4f45fb5fbccd850e0b759d4c62b2026fb373a5dcbb81f35c13a22ad8bac",
+        "compatible_references": [
+          "38b15551"
+        ],
+        "historical_spec": false,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "69c5eeee8b702e44b56c1096f66c0cfc946fa36f"
+      },
+      "sha256": "1d4d05a75caaca7cf501a52eea229a31bbe075baae33f5b6202befd4a138b1ce",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s02/709440_hopper_m_02/c6/FloorPlan322/shard_config.json",
+      "shard_config_sha256": "46bd9a89d8b2bc83a1dc2b33f4aacfdd872d86ff7d35f021d7364ed9b4be2db7"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_test_compression_smoke_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_export_test_compression_smoke_01",
+      "--source",
+      "results/t01v2_checkpoint_test_s16_s02_01.json",
+      "--pair-id",
+      "floorplan322_00111",
+      "--pair-file",
+      "data/world_pairs/v2/gen_test_s16_round2_s02_c6_floorplan322/floorplan322_00111/pair.json",
+      "--timeout-seconds",
+      "600",
+      "--pair-timeout-seconds",
+      "390",
+      "--gate-timeout-seconds",
+      "180",
+      "--compress-test-tables",
+      "--test-selection",
+      "{\"file\":\"logs/review/diag_current_test_selected_02/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_02.json\",\"sha256\":\"c7e01a6baea4d2baca751d45e305e14e5fde8321fcf214c260284ed5e9960745\"},\"sha256\":\"3abf987545fb711273779303663b43c4b771fa8bbaa0921a3e98bb89ae8b7427\"}",
+      "--compression-smoke-dual"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-20",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-10T12:00:16",
+    "log_path": "logs/runs/t02_export_test_compression_smoke_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "69a4458741bbcaee727938049e808f2ee4e91aef",
+    "git_dirty": false,
+    "end": "2026-11-10T12:04:48",
+    "duration_sec": 267.6,
+    "exit_code": 0,
+    "metrics_sha256": "264f882f9ee7b5956e4bdceebdad320d04e73b1740c1160bcb5605fddffe9734"
+  }
+}
