@@ -45,6 +45,9 @@ def submission_binding(name, plan_ref, gpus, environment, actual_arguments, time
     p, r, payload = matches[0]
     from src.tools.pbs_mixed_accounting import validate_payload
     binding = validate_payload(ROOT, payload)
+    if payload.get('requested_host') is not None:
+        from src.tools.pbs_black_retry import validate_payload_host
+        validate_payload_host(ROOT, payload)
     command = payload['command']
     require(command[command.index('-m') + 2:] == actual_arguments
             and timeout_seconds <= payload['requested_wall_seconds'] - 30,

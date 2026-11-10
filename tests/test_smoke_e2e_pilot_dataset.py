@@ -1,6 +1,7 @@
 """Synthetic CPU boundaries only; no native/cache certification is manufactured."""
 from contextlib import ExitStack
 import copy
+import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -157,6 +158,130 @@ class PilotPoolTests(unittest.TestCase):
                 path.write_text(json.dumps(legacy)); oldref = {**ref, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
                 with self.assertRaisesRegex(ValueError, 'Unknown pilot dataset schema'):
                     dataset.load_pilot_pool(oldref)
+
+
+class DeadlineFallback52Tests(unittest.TestCase):
+    """Policy/namespace tests; native/cache science remains an explicit mock boundary."""
+    def setUp(self):
+        self.policy_bytes=(dataset.ROOT/dataset.FALLBACK52_POLICY['file']).read_bytes()
+        self.refs=copy.deepcopy(json.loads(self.policy_bytes)['cache_sources'])
+        self.all_tables,self.all_packages,self.normalized=pool_fixture()
+        self.selected=dict(list(self.all_tables.items())[:52])
+        self.deadline=datetime.datetime(2026,11,10,3,30,tzinfo=datetime.timezone.utc)
+
+    def boundaries(self, *, selected=None, now=None):
+        selected=self.selected if selected is None else selected
+        keys=list(selected)
+        groups=(keys[:5],keys[5:29],keys[29:])
+        batches={ref['file']:group for ref,group in zip(self.refs,groups)}
+        def authenticate(ref):
+            group=batches[ref['file']]
+            return ({key:selected[key] for key in group},
+                {key:self.all_packages[key] for key in group},{'source':copy.deepcopy(ref)})
+        stack=ExitStack()
+        stack.enter_context(patch.object(dataset,'utc_now',return_value=self.deadline if now is None else now))
+        authenticated=stack.enter_context(patch.object(dataset,'authenticate_cache_batch',side_effect=authenticate))
+        stack.enter_context(patch.object(balance,'normalize_table',side_effect=lambda table:self.normalized[table.dataset_key]))
+        return stack,authenticated
+
+    def test_early_selection_rejected_before_any_native_authentication(self):
+        stack,authenticated=self.boundaries(now=self.deadline-datetime.timedelta(microseconds=1))
+        with stack,self.assertRaisesRegex(ValueError,'before 2026-11-10'):
+            dataset.build_pool(self.refs,dataset.SCENE_SPLIT,deadline_fallback52=True)
+        authenticated.assert_not_called()
+
+    def test_exact52_all_retained_with_original_flip_and_scene_split(self):
+        stack,authenticated=self.boundaries()
+        with stack:
+            manifest,tables,packages,proof=dataset.build_pool(self.refs,dataset.SCENE_SPLIT,deadline_fallback52=True)
+        self.assertEqual(authenticated.call_args_list,[unittest.mock.call(ref) for ref in self.refs])
+        self.assertEqual(set(tables),set(self.selected));self.assertEqual(set(packages),set(self.selected))
+        self.assertEqual(len(manifest['entries']),52)
+        self.assertTrue(all(manifest['counts_by_kind'].values()))
+        self.assertEqual(manifest['balance']['dropped'],[])
+        self.assertEqual(proof['qualification'],manifest['qualification'])
+        self.assertEqual(manifest['qualification']['mode'],dataset.FALLBACK52)
+        self.assertEqual(manifest['qualification']['policy_reference'],dataset.FALLBACK52_POLICY)
+        expected=dataset.keep_all_with_flip_order([self.normalized[key] for key in tables])
+        self.assertEqual(manifest['balance'],expected)
+        held=set(manifest['split']['selected_scenes'])
+        self.assertTrue(all(tables[key].scene in held for key in proof['eval_keys']))
+        self.assertTrue(all(tables[key].scene not in held for key in proof['train_keys']))
+        unhashed=copy.deepcopy(manifest);unhashed.pop('common_pool_hash')
+        self.assertEqual(manifest['common_pool_hash'],dataset.canonical_hash(unhashed))
+
+    def test_51_and_missing_class_rejected_after_complete_authentication(self):
+        populations=[dict(list(self.selected.items())[:51]),
+                     dict([(key,value) for key,value in self.all_tables.items() if value.kind!='look_stay'][:52])]
+        for selected in populations:
+            stack,authenticated=self.boundaries(selected=selected)
+            with self.subTest(count=len(selected)),stack,self.assertRaisesRegex(ValueError,'exactly52.*all four'):
+                dataset.build_pool(self.refs,dataset.SCENE_SPLIT,deadline_fallback52=True)
+            self.assertEqual(authenticated.call_count,3)
+
+    def test_source_replacement_or_later_cache_addition_rejected_before_authentication(self):
+        changed=copy.deepcopy(self.refs);changed[2]['sha256']='f'*64
+        added=[*self.refs,{'file':'results/later31.json','sha256':'f'*64}]
+        for refs in (changed,added,self.refs[:2],list(reversed(self.refs))):
+            stack,authenticated=self.boundaries()
+            with self.subTest(refs=refs),stack,self.assertRaisesRegex(ValueError,'exact original three cache sources'):
+                dataset.build_pool(refs,dataset.SCENE_SPLIT,deadline_fallback52=True)
+            authenticated.assert_not_called()
+
+    def test_default80_gate_has_no_exception_and_no_qualification_fields(self):
+        stack,authenticated=self.boundaries()
+        with stack,self.assertRaisesRegex(ValueError,'at least 80'):
+            dataset.build_pool(self.refs,dataset.SCENE_SPLIT)
+        self.assertEqual(authenticated.call_count,3)
+        selected=dict(list(self.all_tables.items())[:80])
+        stack,_=self.boundaries(selected=selected,now=self.deadline-datetime.timedelta(days=1))
+        with stack:
+            manifest,_,_,proof=dataset.build_pool(self.refs,dataset.SCENE_SPLIT)
+        self.assertNotIn('qualification',manifest);self.assertNotIn('qualification',proof)
+        self.assertEqual(len(manifest['entries']),80)
+
+    def test_frozen_fallback_reload_reauthenticates_exact_sources_and_policy(self):
+        stack,_=self.boundaries()
+        with stack:
+            manifest=dataset.build_pool(self.refs,dataset.SCENE_SPLIT,deadline_fallback52=True)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);policy_path=root/dataset.FALLBACK52_POLICY['file']
+            policy_path.parent.mkdir(parents=True);policy_path.write_bytes(self.policy_bytes)
+            path=root/'pool.json'
+            def write(value):
+                path.write_text(json.dumps(value));return {'file':'pool.json','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+            ref=write(manifest)
+            stack,authenticated=self.boundaries(now=self.deadline+datetime.timedelta(days=2))
+            with stack,patch.object(dataset,'ROOT',root):
+                tables,_,proof=dataset.load_pilot_pool(ref)
+            self.assertEqual(len(tables),52)
+            self.assertEqual(authenticated.call_args_list,[unittest.mock.call(ref) for ref in self.refs])
+            self.assertEqual(proof['qualification'],manifest['qualification'])
+            self.assertEqual(proof['common_pool_hash'],manifest['common_pool_hash'])
+            for mutation in ('qualification','source','remove_qualification'):
+                changed=copy.deepcopy(manifest)
+                if mutation=='qualification':changed['qualification']['policy_reference']['sha256']='0'*64
+                elif mutation=='source':changed['cache_sources'][0]['sha256']='0'*64
+                else:changed.pop('qualification')
+                bad=write(changed);stack,_=self.boundaries()
+                with self.subTest(mutation=mutation),stack,patch.object(dataset,'ROOT',root),self.assertRaises(ValueError):
+                    dataset.load_pilot_pool(bad)
+            ref=write(manifest);policy_path.write_bytes(self.policy_bytes+b' ')
+            stack,authenticated=self.boundaries()
+            with stack,patch.object(dataset,'ROOT',root),self.assertRaisesRegex(ValueError,'artifact changed'):
+                dataset.load_pilot_pool(ref)
+            authenticated.assert_not_called()
+
+    def test_reload_before_deadline_still_rejected(self):
+        stack,_=self.boundaries()
+        with stack:manifest=dataset.build_pool(self.refs,dataset.SCENE_SPLIT,deadline_fallback52=True)[0]
+        original_reader=dataset.read_repo_ref
+        def reader(ref):
+            return manifest if ref.get('file')=='fixture_frozen_manifest' else original_reader(ref)
+        stack,authenticated=self.boundaries(now=self.deadline-datetime.timedelta(seconds=1))
+        with stack,patch.object(dataset,'read_repo_ref',side_effect=reader),self.assertRaisesRegex(ValueError,'before 2026-11-10'):
+            dataset.load_pilot_pool({'file':'fixture_frozen_manifest','sha256':'a'*64})
+        authenticated.assert_not_called()
 
 
 class FormalBatchTests(unittest.TestCase):

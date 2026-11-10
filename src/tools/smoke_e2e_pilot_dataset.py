@@ -6,6 +6,7 @@ be substantial CPU work and belongs in an explicitly bounded compute job.
 import argparse
 from collections import Counter, defaultdict
 import copy
+import datetime
 import hashlib
 import json
 import math
@@ -24,6 +25,11 @@ from src.tools.t02_export import save_json
 VERSION = 'smoke_e2e_pilot_formal_dataset_v2_keep_all'
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 SCENE_SPLIT = 'room_stratified_scene_hash_seed0_ten_percent_v1'
+FALLBACK52 = 'deadline_fallback52_v1'
+FALLBACK52_POLICY = {
+    'file': 'configs/smoke_e2e_pilot_fallback52.json',
+    'sha256': 'fd421a477f7c821581379bfb0bdced1e94696578fe9f384654337c0163e90823',
+}
 
 
 def require(condition, message):
@@ -44,6 +50,35 @@ def read_repo_ref(ref):
     raw = path.read_bytes()
     require(hashlib.sha256(raw).hexdigest() == ref['sha256'], 'Pinned repository artifact changed')
     return json.loads(raw)
+
+
+def utc_now():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def fallback52_qualification(cache_sources):
+    """A fixed, explicit deadline exception, never a tunable size threshold.
+
+    The operator chooses this mode only after checking the unpassed31 run.
+    Later results never alter its frozen three-source population. Every call,
+    including training reload, still authenticates all original native/cache
+    evidence in build_pool below; the inventory report is not a substitute.
+    """
+    policy = read_repo_ref(FALLBACK52_POLICY)
+    require(policy.get('version') == FALLBACK52 and policy.get('approved_task_revision') == '11e0e0db'
+            and policy.get('exact_cached_pairs') == 52 and policy.get('required_classes') == list(KINDS)
+            and policy.get('not_before_utc') == '2026-11-10T03:30:00+00:00',
+            'Unknown fixed52 deadline authorization')
+    deadline = datetime.datetime.fromisoformat(policy['not_before_utc'])
+    now = utc_now()
+    require(now.tzinfo is not None and now >= deadline,
+            'The fixed52 fallback cannot be selected before 2026-11-10T03:30:00UTC')
+    require([ref_identity(ref) for ref in cache_sources] == policy['cache_sources'],
+            'The fixed52 fallback requires the exact original three cache sources in frozen order')
+    return {'mode': FALLBACK52, 'policy_reference': copy.deepcopy(FALLBACK52_POLICY),
+        'not_before_utc': policy['not_before_utc'], 'exact_cached_pairs': 52,
+        'explicit_root_selection': True, 'retain_every_authenticated_input_pair': True,
+        'scope': 'E2E6 deadline exception only; later cache results never change this pool or any arm'}
 
 
 def argv_values(argv, flag):
@@ -227,9 +262,11 @@ def keep_all_with_flip_order(rows):
         'full_T02_acceptance': None}
 
 
-def build_pool(cache_sources, split_policy):
+def build_pool(cache_sources, split_policy, *, deadline_fallback52=False):
     from src.envs.pair_table_balance import normalize_table
     require(isinstance(cache_sources, list) and cache_sources, 'Explicit original cache certificate sources required')
+    require(type(deadline_fallback52) is bool, 'Fixed52 mode must be an explicit boolean opt-in')
+    qualification = fallback52_qualification(cache_sources) if deadline_fallback52 else None
     tables, packages, cache_proofs, seen_proposals = {}, {}, [], {}
     for ref in cache_sources:
         batch, source_packages, proof = authenticate_cache_batch(ref)
@@ -246,7 +283,11 @@ def build_pool(cache_sources, split_policy):
     balance = keep_all_with_flip_order([normalize_table(table) for table in tables.values()])
     selected = {row['dataset_key']: row for row in balance['selected']}
     counts = {kind: sum(tables[key].kind == kind for key in selected) for kind in KINDS}
-    require(len(selected) >= 80 and all(counts.values()), 'Pilot needs at least 80 unique cache-verified pairs and all four classes')
+    if deadline_fallback52:
+        require(len(selected) == 52 and set(selected) == set(tables) and all(counts.values()),
+                'Fixed52 fallback needs exactly52 unique cache-verified pairs, all retained, and all four classes')
+    else:
+        require(len(selected) >= 80 and all(counts.values()), 'Pilot needs at least 80 unique cache-verified pairs and all four classes')
     entries = []
     for key in sorted(selected):
         table, package = tables[key], packages[key]
@@ -262,6 +303,8 @@ def build_pool(cache_sources, split_policy):
         'counts_by_kind': counts, 'balance': balance, 'split': split,
         'paper_result': False, 'main_T04_pool_frozen': False,
         'throughput_20x_model': None, 'formal_full_T02_acceptance': None}
+    if qualification is not None:
+        manifest['qualification'] = copy.deepcopy(qualification)
     manifest['common_pool_hash'] = canonical_hash(manifest)
     proof = {'version': VERSION, 'common_pool_hash': manifest['common_pool_hash'],
         'train_keys': split['train_keys'], 'eval_keys': split['eval_keys'], 'split_policy': split_policy,
@@ -270,13 +313,21 @@ def build_pool(cache_sources, split_policy):
         'counts_by_kind': counts, 'cache_authorized': True, 'formal_cache_batches': cache_proofs,
         'sources': [proof['source'] for proof in cache_proofs], 'paper_result': False,
         'main_T04_pool_frozen': False, 'formal_full_T02_acceptance': None}
+    if qualification is not None:
+        proof['qualification'] = copy.deepcopy(qualification)
     return manifest, {key: tables[key] for key in selected}, {key: packages[key] for key in selected}, proof
 
 
 def load_pilot_pool(manifest_reference):
     recorded = read_repo_ref(manifest_reference)
     require(recorded.get('version') == VERSION and recorded.get('partition') == 'train', 'Unknown pilot dataset schema')
-    manifest, tables, packages, proof = build_pool(recorded['cache_sources'], recorded['split']['policy'])
+    if 'qualification' in recorded:
+        require(recorded['qualification'] == fallback52_qualification(recorded['cache_sources']),
+                'Frozen fixed52 qualification differs from the exact approved deadline policy')
+        manifest, tables, packages, proof = build_pool(recorded['cache_sources'], recorded['split']['policy'],
+                                                     deadline_fallback52=True)
+    else:
+        manifest, tables, packages, proof = build_pool(recorded['cache_sources'], recorded['split']['policy'])
     require(manifest == recorded, 'Pilot pool/split differs from its fully authenticated frozen manifest')
     proof['manifest_reference'] = ref_identity(manifest_reference)
     return tables, packages, proof
@@ -289,6 +340,8 @@ def main():
     parser.add_argument('--split-policy', choices=(SCENE_SPLIT,), default=SCENE_SPLIT)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--timeout-seconds', type=float, required=True)
+    parser.add_argument('--deadline-fallback-52', action='store_true',
+                        help='Explicit root choice after03:30UTC: only the exact approved52 sources; no adjustable minimum')
     args = parser.parse_args()
     require(re.fullmatch(r'smoke_e2e_pilot_[A-Za-z0-9_]+', args.name)
             and math.isfinite(args.timeout_seconds) and args.timeout_seconds > 0, 'Unique bounded pilot preflight required')
@@ -310,7 +363,10 @@ def main():
         config['pbs_jobid'] = os.environ['PBS_JOBID']
         config['cpu_affinity'] = sorted(os.sched_getaffinity(0))
         signal.setitimer(signal.ITIMER_REAL, args.timeout_seconds)
-        manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy)
+        if args.deadline_fallback_52:
+            manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy, deadline_fallback52=True)
+        else:
+            manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy)
         destination.parent.mkdir(parents=True, exist_ok=True)
         reference = save_json(destination, manifest)
         metrics.update(passed=True, manifest=reference, dataset_proof=proof)

@@ -145,6 +145,69 @@ def rotation(repo, recorded_index=None):
     return index, previous
 
 
+def pack_opening_black(repo, payload, payload_path, receipt_path, parent, gate, proof, canonical):
+    """One-GPU PACK only: independently replay original zero-business accounting."""
+    from src.tools import pbs_mixed_accounting as mixed
+    pm, cfg = parent['metrics'], parent['config']
+    require(proof.get('native_kind') == pm.get('kind') == 'gpu_shared_pack'
+            and parent['_meta']['command'] == payload['command']
+            and parent['_meta']['exit_code'] == pm.get('producer_exit_code') == 86
+            and cfg.get('pbs_jobid') == proof['job_id'] and cfg.get('gpus') == 1
+            and payload['requested_gpu_count'] == 1 and cfg.get('version') == 'shared_gpu_pack_v1'
+            and pm.get('unit_claims') == pm.get('unit_runs') == []
+            and pm.get('all_owned_units_ended') is True
+            and pm.get('cleanup_errors') == pm.get('errors') == [] and not pm.get('error')
+            and pm.get('downstream_allowed') is False,
+            'PACK retry requires an ended single-GPU opening black gate with no business claims')
+    require((pm.get('status'), pm.get('stopping_reasons')) in (
+                ('stopped_with_original_work_preserved', ['insufficient_remaining_time_for_full_original_unit']),
+                ('queue_finished_or_claimed_elsewhere', [])),
+            'PACK did not stop solely after retiring its opening black GPU')
+    gpu = proof['gpu_uuid']
+    require(cfg.get('allocated_gpu_uuids') == [gpu] and cfg.get('parent_cuda_visible_devices') == gpu
+            and pm.get('retired_gpu_uuids') == [gpu]
+            and cfg.get('cpu_affinity') == gate['config']['allocation']['cpu_affinity'],
+            'PACK original allocation or retired GPU differs')
+    gates = pm.get('gates')
+    require(isinstance(gates, list) and len(gates) == 1, 'PACK requires exactly one opening gate')
+    row = gates[0]
+    require(row.get('status') == 'black' and row.get('exit_code') == 86 and not row.get('error')
+            and row.get('gpu_uuid') == gpu and row.get('cpu_affinity') == cfg['cpu_affinity'],
+            'PACK gate was not an authenticated clean black-card retirement')
+    gate_name = payload['name'] + '_gate_0'
+    require(gate['_meta']['name'] == gate_name and gate['_meta']['command'] == [
+                'python3', '-u', '-m', 'src.tools.render_gate', '--name', gate_name, '--gpus', '1',
+                '--resolution', '255', '--segmentation', '--timeout-seconds', str(cfg['gate_timeout_seconds'])],
+            'PACK original gate command/name changed')
+    for reference, expected in ((cfg.get('parent_payload_reference'), payload_path),
+                                (cfg.get('parent_receipt_reference'), receipt_path)):
+        path, _ = file_ref(repo, reference, 'logs/pbs')
+        require(path == expected, 'PACK source is not bound to its original reservation')
+    binding = mixed.validate_payload(repo, payload)
+    require(cfg.get('plan_reference') == binding['plan_reference']
+            and cfg.get('queue_plan') == mixed.option(payload['command'], '--queue-plan')
+            and cfg.get('queue_plan_sha256') == mixed.option(payload['command'], '--queue-plan-sha256')
+            and cfg.get('queue_root') == mixed.option(payload['command'], '--queue-root')
+            and mixed.option(payload['command'], '--gpus') == '1'
+            and cfg.get('timeout_seconds') == float(mixed.option(payload['command'], '--timeout-seconds'))
+            and cfg.get('gate_timeout_seconds') == float(mixed.option(payload['command'], '--gate-timeout-seconds')),
+            'PACK source changed its exact immutable queue/resource command')
+    mixed_reference = proof.get('mixed_accounting')
+    cost, cost_path = logged(repo, mixed_reference)
+    require(cost_path == repo / 'results' / (payload['name'] + '_mixed_accounting.json')
+            and cost['_meta']['exit_code'] == 0,
+            'PACK retry lacks its successful original mixed-accounting result')
+    original = {'name': payload['name'], 'payload': str(payload_path.relative_to(repo)),
+                'job_id': proof['job_id']}
+    actual = mixed.finalized_split(repo, original, canonical)
+    require(actual is not None and actual == cost['metrics'] and actual.get('unit_count') == 0
+            and actual.get('zero_business') is True,
+            'PACK original mixed accounting does not prove zero owned business')
+    # finalized_split reconstructs the complete immutable claim ownership set;
+    # an unreported claim belonging to this PBS allocation must fail there.
+    return row['source']
+
+
 def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha256,
                           name, command, task, group, gpus, wall_seconds, _recorded_rotation_index=None,
                           _recorded_version=None):
@@ -156,8 +219,9 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     require(version in (LEGACY_VERSION, VERSION) and
             (_recorded_version is None or _recorded_rotation_index is not None), 'Policy version override requires recorded runtime index')
     allowed_hosts = HOSTS if version == LEGACY_VERSION else AVAILABLE_HOSTS
+    require(group != 'PACK' or version == VERSION, 'PACK opening-black retries require the current two-host policy')
     require(host in allowed_hosts and gpus == 1 and type(gpus) is int and task == 'T01'
-            and group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot'), 'Only approved one-GPU black-retry hosts are allowed')
+            and group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot', 'PACK'), 'Only approved one-GPU black-retry hosts are allowed')
     require(isinstance(retry_of, str) and re.fullmatch(r'\d+\.hopper-m-\d+', retry_of)
             and isinstance(evidence_path, str) and re.fullmatch(r'[0-9a-f]{64}', evidence_sha256 or ''),
             'Pinned first submissions or retries without exact black evidence are forbidden')
@@ -221,16 +285,20 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     require(len(originals) == len(gates) == 1, 'Original parent/gate chain is missing or ambiguous')
     parent, gate = originals[0], gates[0]
     pm, gc, gm = parent['metrics'], gate['config'], gate['metrics']
-    require(parent['_meta']['command'] == payload['command'] and parent['_meta']['exit_code'] == 86
-            and parent['config']['pbs_jobid'] == retry_of and pm.get('status') == 'blocked_by_render_gate'
-            and pm.get('black_frame_detected') is True and pm.get('cleanup_errors') == []
-            and not pm.get('error') and not pm.get('errors'), 'Parent did not stop cleanly at its opening black gate')
-    business_fields = {'g01_parallel_collection': ('scene_runs', 'started_shards', 'stages', 'admission_final', 'unfinished_run_names', 'stop_reasons'),
-                       't02_parallel_export': ('units',), 't02_table_export': ('pairs',),
-                       't02_formal_cache_check': ('worker_runs', 'population_ledger')}
-    require(proof.get('native_kind') == pm.get('kind') and pm.get('kind') in business_fields, 'Unsupported opening-black parent kind')
-    require(all(pm.get(key) == [] for key in business_fields[pm['kind']]), 'Original black job started business work')
-    parent_gate = pm['gate'].get('source', pm['gate'])
+    if group == 'PACK':
+        parent_gate = pack_opening_black(repo, payload, payload_path, receipt_path, parent, gate, proof,
+                                         final[retry_of])
+    else:
+        require(parent['_meta']['command'] == payload['command'] and parent['_meta']['exit_code'] == 86
+                and parent['config']['pbs_jobid'] == retry_of and pm.get('status') == 'blocked_by_render_gate'
+                and pm.get('black_frame_detected') is True and pm.get('cleanup_errors') == []
+                and not pm.get('error') and not pm.get('errors'), 'Parent did not stop cleanly at its opening black gate')
+        business_fields = {'g01_parallel_collection': ('scene_runs', 'started_shards', 'stages', 'admission_final', 'unfinished_run_names', 'stop_reasons'),
+                           't02_parallel_export': ('units',), 't02_table_export': ('pairs',),
+                           't02_formal_cache_check': ('worker_runs', 'population_ledger')}
+        require(proof.get('native_kind') == pm.get('kind') and pm.get('kind') in business_fields, 'Unsupported opening-black parent kind')
+        require(all(pm.get(key) == [] for key in business_fields[pm['kind']]), 'Original black job started business work')
+        parent_gate = pm['gate'].get('source', pm['gate'])
     gate_source = next(ref for ref in proof['source_results'] if ref.get('path', ref.get('file')) == 'results/' + gate['_meta']['name'] + '.json')
     require(parent_gate.get('sha256') == gate_source['sha256'], 'Parent does not bind the original gate bytes')
     a = gc['allocation']
