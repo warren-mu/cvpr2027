@@ -1,0 +1,208 @@
+# run_logged: nice -n 10 python3 -c """One bounded post-run journal integrity check; official D3 metrics remain unchanged."""
+import copy, hashlib, json, re, signal, traceback
+from collections import defaultdict
+from pathlib import Path
+from types import SimpleNamespace
+from src.tools.t01_partition import audited_result
+from src.tools import diag01_baselines as d3
+from src.envs.paired_env import parse_action
+
+ROOT = Path.cwd().resolve()
+NAME = 'diag01_d3_journal_review_01'
+SOURCE = 'results/diag_diag01_baselines_s0_01_retry1.json'
+SOURCE_SHA = '20bb119d047a580591f46c9613cdacf06d946a0c63e842503bba9477f4732313'
+sources = []
+metrics = {'completed':False, 'errors':[], 'paper_result':False,
+    'scope':'Sealed original D3 journals and official summary integrity; no new GPU, native authentication, binary mask reread, paper confidence interval, or changed metric.'}
+
+def need(value, message):
+    if not value: raise ValueError(message)
+
+def read(ref):
+    path = (ROOT/ref['file']).resolve(); body = path.read_bytes()
+    need(hashlib.sha256(body).hexdigest() == ref['sha256'], 'Original reference SHA changed: '+str(path))
+    if 'bytes' in ref: need(len(body) == ref['bytes'], 'Original reference length changed')
+    return body
+
+def reference(path):
+    body=path.read_bytes()
+    return {'file':str(path.relative_to(ROOT)), 'sha256':hashlib.sha256(body).hexdigest(), 'bytes':len(body)}
+
+def expired(*_): raise TimeoutError('D3 journal integrity exceeded 90 seconds')
+
+code=0; signal.signal(signal.SIGALRM,expired); signal.alarm(90)
+try:
+    parent, pref = audited_result(ROOT/SOURCE); sources.append(pref)
+    need(pref['sha256']==SOURCE_SHA and parent['_meta']['exit_code']==0 and parent['_meta']['end'], 'Exact completed D3 source required')
+    cfg, pm=parent['config'],parent['metrics']
+    need(pm['completed'] is True and pm['errors']==pm['cleanup_errors']==[] and pm['producer_exit_code']==0
+         and pm['training_performed'] is False and pm['formal_test_set_evaluation'] is False
+         and pm['paper_result'] is False, 'D3 source is incomplete or has another scope')
+    need(cfg['identity']['pbs_jobid']=='710558.hopper-m-02' and cfg['strategies']==list(d3.STRATEGIES)
+         and cfg['model']=='Qwen/Qwen2.5-VL-3B-Instruct', 'D3 identity or model differs')
+    manifest=json.loads(read(cfg['manifest_reference'])); read(cfg['holdout_reference'])
+    need(cfg['manifest_reference']['sha256']=='3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952'
+         and cfg['holdout_reference']['sha256']=='6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa'
+         and manifest['common_pool_hash']==pm['common_pool_hash']
+         and pm['fixed_holdout']['reference']==cfg['holdout_reference']
+         and pm['fixed_holdout']['pilot_population_and_split_verified'] is True, 'Original fixed83 or frozen scene split differs')
+    entries={e['dataset_key']:e for e in manifest['entries']}
+    need(len(entries)==len(manifest['entries'])==83 and manifest['partition']=='train', 'Fixed83 population differs')
+    need(set(entries)==set(manifest['split']['train_keys'])|set(manifest['split']['eval_keys'])
+         and not set(manifest['split']['train_keys'])&set(manifest['split']['eval_keys']), 'Original scene split domain differs')
+    expected={(key,w) for key in entries for w in ('w0','w1')}
+    journal_refs={Path(ref['file']).name:ref for ref in pm['journals']}
+    need(len(journal_refs)==len(pm['journals'])==5 and set(journal_refs)=={s+'.jsonl' for s in d3.STRATEGIES}|{'progress.jsonl'}, 'Original journal set differs')
+    for ref in journal_refs.values():
+        need((ROOT/ref['file']).resolve().parent==Path(cfg['episode_directory']).resolve(), 'Journal escaped original producer directory')
+    summaries, episodes_by_strategy, decisions_by_strategy = {}, {}, {}
+    seen_inputs, sample_ids = {}, set()
+    for strategy in d3.STRATEGIES:
+        records=[json.loads(line) for line in read(journal_refs[strategy+'.jsonl']).decode().splitlines()]
+        pending=defaultdict(list); finished=set(); episodes=[]; by_pair={}
+        for record in records:
+            need(record['strategy']==strategy, 'Another strategy appears in original journal')
+            eid=record['episode_id']; need(eid not in finished, 'Decision after terminal episode or duplicate episode')
+            if record['record_kind']=='decision':
+                pending[eid].append(record); continue
+            need(record['record_kind']=='episode' and eid in pending, 'Unknown/missing original episode decisions')
+            row=record; ds=pending.pop(eid); finished.add(eid)
+            key=(row['dataset_key'],row['world_id']); entry=entries[key[0]]
+            need(key in expected and key not in by_pair and row['pair_id']==entry['original_pair_id']
+                 and row['pair_kind']==entry['kind'] and row['world_order']==entry['world_order']
+                 and row['original_world_id']=='w'+str(entry['world_order'][int(key[1][1])]), 'Original pair/world coverage or permutation differs')
+            need(1<=len(ds)<=5 and [d['decision_index'] for d in ds]==list(range(len(ds)))
+                 and all((d['dataset_key'],d['world_id'])==key for d in ds)
+                 and all(d['done'] is False for d in ds[:-1]) and ds[-1]['done'] is True, 'Original decision/terminal sequence differs')
+            states=[ds[0]['before_state']]+[d['after_state'] for d in ds]
+            need(states==row['states'] and [s['step'] for s in states]==list(range(len(states)))
+                 and all(d['before_state']==states[i] and d['after_state']==states[i+1] for i,d in enumerate(ds)), 'Original state trajectory differs')
+            for state in states:
+                need(state['original_world_id']==row['original_world_id'] and type(state['anchor_pixels']) is int
+                     and 0<=state['anchor_pixels']<=255*255 and re.fullmatch('[0-9a-f]{64}',state['anchor_mask_sha256']), 'Original mask record is malformed')
+                identity=(key[0],row['original_world_id'],state['state_id'])
+                value=(state['anchor_pixels'],state['anchor_mask_sha256'],state['shared'])
+                need(identity not in seen_inputs or seen_inputs[identity]==value, 'Same original state has contradictory mask records across strategies')
+                seen_inputs[identity]=value
+            first=next((s['step'] for s in states if s['anchor_pixels']>=250),None)
+            positive=any(s['anchor_pixels']>0 for s in states)
+            parsed=[]; model_outputs=syntax=obs_count=obs_attempts=0; obs_cost=task_reward=0.
+            for i,d in enumerate(ds):
+                sample=d['sample']
+                prior_seen=next((s['step'] for s in states[:i+1] if s['anchor_pixels']>=250),None)
+                forced=d3.forced_action(strategy,{'env':SimpleNamespace(steps=i),'first_seen':prior_seen})
+                need(sample['forced_observation'] is (forced is not None), 'Original forced/model policy schedule differs')
+                if forced is not None:
+                    need(sample['action']==sample['response']==forced and sample['sample_id'] is None
+                         and sample['response_token_count']==0 and sample['response_token_ids']==[], 'Original fixed observation changed')
+                else:
+                    need(sample['sample_id'] not in sample_ids and sample['sample_id'], 'Repeated/missing actual model sample')
+                    sample_ids.add(sample['sample_id']); model_outputs+=1
+                    need(sample['response_token_count']==len(sample['response_token_ids']) and 0<sample['response_token_count']<=256
+                         and sample['policy']=='original_Qwen_greedy_vllm'
+                         and sample['input']['public_image_sha256']==[x['public_rgb_sha256'] for x in ds[:i+1]], 'Actual model input history or output provenance differs')
+                try: action=parse_action(sample['action'])
+                except ValueError: action=None; syntax+=int(not sample['forced_observation'])
+                parsed.append(action); task_reward+=d['reward']
+                if action is not None and action.kind in ('turn_left','turn_right','move'):
+                    obs_attempts+=1; obs_cost+=max(0.,-d['reward'])
+                    obs_count+=int(i<4 and d['action_valid'])
+                if strategy!='diag_base' and not sample['forced_observation']:
+                    need(action is not None and action.kind=='select' and d['action_valid'] is True
+                         and sample['action'] in sample['input']['guided_select_choices'], 'Original forced select differs')
+            selected=parsed[-1] is not None and parsed[-1].kind=='select'
+            need(row['actions']==[d['sample']['response'] for d in ds] and row['steps']==len(ds)
+                 and row['selected'] is selected and row['selected_object']==ds[-1]['selected_object']
+                 and row['success'] is bool(ds[-1]['success']), 'Episode result differs from original final decision')
+            need(row['independent_first_seen_step']==first and row['seen_anywhere'] is (first is not None)
+                 and row['positive_anchor_anywhere'] is positive
+                 and row['seen_before_select'] is bool(selected and first is not None and first<len(ds)), 'Original seen/select event boundary differs')
+            need(row['model_calls']==row['model_outputs']==model_outputs and row['syntax_failures']==syntax
+                 and row['observation_count']==obs_count and row['observation_attempts']==obs_attempts
+                 and row['observation_reward_cost']==obs_cost and row['task_reward']==task_reward,
+                 'Original episode success/cost/call totals differ from decisions')
+            by_pair[key]=ds; episodes.append(row)
+        need(not pending and len(episodes)==166 and set(by_pair)==expected, 'Original strategy lacks complete83x2 coverage')
+        actual=d3.summarize(episodes)
+        need(actual==pm['strategies'][strategy], 'Official summary differs from original journal: '+strategy)
+        summaries[strategy]=copy.deepcopy(pm['strategies'][strategy])
+        episodes_by_strategy[strategy]=episodes; decisions_by_strategy[strategy]=by_pair
+    progress=[json.loads(s) for s in read(journal_refs['progress.jsonl']).decode().splitlines()]
+    counts={(p['stage'],p['strategy']):p['episodes_complete'] for p in progress if 'stage' in p}
+    need(len(progress)==9 and counts=={(stage,s):2 if stage==0 else 164 for stage in (0,1) for s in d3.STRATEGIES}
+         and progress[4]['first_pair_engineering_passed'] is True
+         and progress[4]['dataset_key']==pm['first_pair_dataset_key'], 'Original first-pair/full-population progress differs')
+    negative=[]
+    for key in sorted(expected):
+        if not entries[key[0]]['kind'].startswith('direct_'): continue
+        a=decisions_by_strategy['obs_never'][key]; b=decisions_by_strategy['obs_trigger'][key]
+        need(len(a)==len(b)==1 and not a[0]['sample']['forced_observation'] and not b[0]['sample']['forced_observation'], 'Direct negative control unexpectedly observed')
+        x,y=a[0],b[0]
+        same_public=x['public_rgb_sha256']==y['public_rgb_sha256'] and x['public_text']==y['public_text']
+        same_input=x['sample']['input']==y['sample']['input']
+        different_output=any(x['sample'][f]!=y['sample'][f] for f in ('response','action','response_token_ids'))
+        negative.append({'dataset_key':key[0], 'world_id':key[1], 'pair_id':entries[key[0]]['original_pair_id'],
+            'kind':entries[key[0]]['kind'], 'same_public_image_and_text':same_public, 'same_complete_model_input_proof':same_input,
+            'different_response_action_or_tokens':different_output, 'different_action':x['sample']['action']!=y['sample']['action'],
+            'never':{f:x[f] for f in ('public_rgb_sha256','selected_object','success')},
+            'trigger':{f:y[f] for f in ('public_rgb_sha256','selected_object','success')},
+            'samples':{s:{f:d['sample'][f] for f in ('input','action','response','response_token_ids','sample_id')}
+                for s,d in (('obs_never',x),('obs_trigger',y))}})
+    negative_summary={kind:{'episodes':len(rows),
+        'same_public_input':sum(r['same_public_image_and_text'] for r in rows),
+        'same_complete_model_input':sum(r['same_complete_model_input_proof'] for r in rows),
+        'same_complete_input_different_outputs':sum(r['same_complete_model_input_proof'] and r['different_response_action_or_tokens'] for r in rows),
+        'same_complete_input_different_actions':sum(r['same_complete_model_input_proof'] and r['different_action'] for r in rows)}
+        for kind in ('direct_flip','direct_stay','direct_all')
+        for rows in [[r for r in negative if kind=='direct_all' or r['kind']==kind]]}
+    delta=summaries['obs_trigger']['look_all']['success_rate']-summaries['obs_never']['look_all']['success_rate']
+    need(delta==pm['look_trigger_minus_never_success_rate'], 'Original key comparison differs')
+    report={'source':pref, 'manifest_reference':cfg['manifest_reference'], 'holdout_reference':cfg['holdout_reference'],
+        'common_pool_hash':pm['common_pool_hash'], 'journals':pm['journals'], 'strategies':summaries,
+        'look_trigger_minus_never_success_rate':pm['look_trigger_minus_never_success_rate'],
+        'negative_control':{'summary':negative_summary,'episodes':negative,
+            'scope':'Same stored public input and complete model-input proof; differing response/action/token sequence. No causal attribution to batching, numerical nondeterminism, or vision.'},
+        'integrity':{'journal_sha_and_bytes_verified':True,'full83_each_world_once_each_strategy':True,
+            'world_permutation_verified':True,'decision_episode_state_chain_verified':True,
+            'seen_recomputed_from_original_direct_mask_count_records':True,'fresh_mask_bytes_recounted':False,
+            'original_summary_exactly_reproduced':True,'progress_journal_verified':True},
+        'limitations':['Fixed L,R,R,L can miss visibility requiring move N; actual seen rate is reported.',
+            'Privileged trigger schedule and model input history differ; this is not a pure causal vision estimate.',
+            'Direct negative-control differences, if present, prevent attributing the whole Look delta to seeing.',
+            'Greedy original model, one run, fixed83 training-scene population including frozen holdout; no paper CI or formal test-set evaluation.',
+            'Original GPU producer counted actual mask bytes. This review checks those SHA-bound records and event order, not a fresh binary/native reauthentication.']}
+    out=ROOT/'logs/review'/NAME; out.mkdir(parents=True,exist_ok=False)
+    (out/'report.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# D3 原始模型诊断：原日志独立核查', '',
+        '固定83对、每对两world、四策略各166回合。原journals SHA/bytes、完整覆盖、world交换、逐决策状态/成本/seen及官方汇总逐值一致。看到率使用原GPU直接mask计数达到250、且先于select完成步；本次未重新读mask二进制。', '',
+        '|策略|类别|回合|成功数/率|平均有效观察数|平均观察奖励成本|select前看到数/率|',
+        '|---|---|---:|---:|---:|---:|---:|']
+    labels={'direct_flip':'DF 直接翻转','direct_stay':'DS 直接不变','look_flip':'LF 观察后翻转','look_stay':'LS 观察后不变','look_all':'Look合并'}
+    for strategy in d3.STRATEGIES:
+        for kind,label in labels.items():
+            v=summaries[strategy][kind]
+            lines.append(f"|{strategy}|{label}|{v['episodes']}|{v['successes']} / {v['success_rate']:.4%}|{v['observation_count_mean']:.6f}|{v['observation_reward_cost_mean']:.6f}|{v['seen_before_select_count']} / {v['seen_before_select_rate']:.4%}|")
+    lines+=['',f"官方 Look trigger−never = {pm['look_trigger_minus_never_success_rate']:.6f}（{pm['look_trigger_minus_never_success_rate']*100:.4f}个百分点）。固定LRRL未覆盖所有可能move N观察路径，不将未看到回合当看到。",'',
+        '|Direct负对照|回合|相同完整输入|同完整输入但输出不同|同完整输入但动作不同|',
+        '|---|---:|---:|---:|---:|']
+    for kind,v in negative_summary.items():
+        lines.append(f"|{kind}|{v['episodes']}|{v['same_complete_model_input']}|{v['same_complete_input_different_outputs']}|{v['same_complete_input_different_actions']}|")
+    lines+=['','这里的“相同完整输入”比较原prompt SHA、完整图像SHA列表、文本token IDs、chat template及guided choices；sample_id不作为输入。若输出不同，不能将全部Look差异归因于看到；本诊断不推断batch或数值原因。', '',
+        '有效观察数只计实际前四次有效观察；观察奖励成本按原所有parsed观察尝试的负reward累积，第五次观察尝试可能收费但不产生新画面。', '',
+        f'原来源：`{SOURCE}`。完整字段及负对照原样本见同目录 `report.json`。']
+    (out/'report.md').write_text('\n'.join(lines)+'\n')
+    metrics.update(completed=True,report=reference(out/'report.json'),markdown=reference(out/'report.md'),
+        original_source=pref,integrity=report['integrity'],negative_control_summary=negative_summary,
+        look_trigger_minus_never_success_rate=pm['look_trigger_minus_never_success_rate'])
+except Exception as exc:
+    code=1; metrics['errors'].append({'type':type(exc).__name__,'message':str(exc)}); traceback.print_exc()
+finally:
+    signal.alarm(0); metrics['producer_exit_code']=code
+    with (ROOT/'results'/(NAME+'.json')).open('x') as f:
+        json.dump({'metrics':metrics,'config':{'name':NAME,'gpus':0,'scope':metrics['scope']},'sources':sources},f,indent=2,allow_nan=False);f.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+raise SystemExit(code)
+
+# start: 2026-11-11T00:18:00
+FINAL_METRICS_JSON: {"completed": true, "errors": [], "integrity": {"decision_episode_state_chain_verified": true, "fresh_mask_bytes_recounted": false, "full83_each_world_once_each_strategy": true, "journal_sha_and_bytes_verified": true, "original_summary_exactly_reproduced": true, "progress_journal_verified": true, "seen_recomputed_from_original_direct_mask_count_records": true, "world_permutation_verified": true}, "look_trigger_minus_never_success_rate": 0.09999999999999998, "markdown": {"bytes": 2950, "file": "logs/review/diag01_d3_journal_review_01/report.md", "sha256": "a438f9c7149e98192dd2e3f68d09b718eff3e3cbaff11d3128b75f76eb747845"}, "negative_control_summary": {"direct_all": {"episodes": 86, "same_complete_input_different_actions": 7, "same_complete_input_different_outputs": 7, "same_complete_model_input": 86, "same_public_input": 86}, "direct_flip": {"episodes": 22, "same_complete_input_different_actions": 3, "same_complete_input_different_outputs": 3, "same_complete_model_input": 22, "same_public_input": 22}, "direct_stay": {"episodes": 64, "same_complete_input_different_actions": 4, "same_complete_input_different_outputs": 4, "same_complete_model_input": 64, "same_public_input": 64}}, "original_source": {"audit": {"fail": [], "file": "results/diag_diag01_baselines_s0_01_retry1.json", "warn": []}, "exit_code": 0, "file": "results/diag_diag01_baselines_s0_01_retry1.json", "git_commit": "32faccb397ced4dc093e3d9712d9a6692ce56a8e", "metrics_sha256": "cd36f3cecbadd44ccbe002a5823277590e2b0baf8db351d524847b16ba307391", "sha256": "20bb119d047a580591f46c9613cdacf06d946a0c63e842503bba9477f4732313"}, "paper_result": false, "producer_exit_code": 0, "report": {"bytes": 1056150, "file": "logs/review/diag01_d3_journal_review_01/report.json", "sha256": "432dc2a467d9e6afe7a1ff2f1cd2cbdfb93ff21e9c8b481d8a4c3b0088ca8a7d"}, "scope": "Sealed original D3 journals and official summary integrity; no new GPU, native authentication, binary mask reread, paper confidence interval, or changed metric."}
+# exit_code: 0
