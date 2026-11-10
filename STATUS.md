@@ -1735,3 +1735,9 @@ T2 709941 在 hopper-16 同一 GPU 开头黑帧，原分配 23 秒。最初以�
 ## 2026-11-10 03:07 ET — T2 独立预算重提
 
 T2 的原 guard02、preflight 和独立 0.5 GPU·小时预算检查通过，已提交 710007（hopper-28，PBS 00:29:00、driver 1676 秒、完整 5 次更新）。此提交在 T0/T4 两次成功回执之后，原参数与证书入口不变。T0 709979 的原 qtime 为 07:49:48 UTC，20 分钟界限为 08:09:48 UTC；T4 709996 的原 qtime 为 07:58:29 UTC，界限为 08:18:29 UTC（diag_pilot_retry3_state_01）。边界时必须重新确认 Q/noallocation；不会从旧快照或缺少日志推定可以取消。
+
+## 2026-11-10 03:12 ET — 训练 Look 首单元准备
+
+原 inventory 与固定留出校验后，diag_train_look_first_unit_plan_01 已生成并审计通过首单元 review plan。明确采用本次合法、非留出的 FloorPlan315，LookStay 优先；本次新票 LookStay8、LookFlip8、Direct0，历史 pending 和每场景上限均保留。准备 helper 的 split_scenes 返回 frozenset，不能声称推荐遍历顺序跨进程稳定；这里明确固定已封存的 FP315，不重选或改写旧计划。生成 seed 与验收阈值不变。
+
+configs/gen_train_look_first_unit_01_quota.json 按原 sealed exact text 原样保存（SHA da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2）。原单场景 1200 秒、parent1600、PBS00:27:10，启用已通过原 raw10 工程判定的 rejected-raw 抽样变体；709644 原 deadline exit1 和失败记录保留，不把它计作正式池通过。本次新 trainLook 版本仍先做这一单元冒烟，未通过前不扩大。提交还须 fresh scratch>=150GiB、原预算和试跑优先名额检查，当前未提交。
