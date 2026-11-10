@@ -1903,3 +1903,11 @@ six02原8文件审计和six03/04原16文件审计均0 FAIL，原P5/P7警告保�
 原six05完成4 exported/2 error：floorplan222_00035碰撞Laptop，floorplan426_00106碰撞Towel。原six06完成5 exported/1 error：floorplan422_00012的native graph unavailable。原errors均保留，不改称科学拒绝；两批children全部结束、清理无错误，原16文件审计0 FAIL。上述exported仍不是cache通过；原95候选总体不变。710574/710584继续原共享队列，不新增生成、不提交主实验。
 
 710586的current-only PBS查询也在30秒超时，原失败及独立1文件审计（0 FAIL，P7保留）一并提交；这说明目前不只是历史查询不可用。没有可靠的Q/R或actual qtime，不执行可能误伤已运行作业的取消。继续通过原出图gate与parent文件观察真实启动，并在超过提交完成后20分钟时尝试fresh原查询；不以缺少gate推断它仍在排队。
+
+
+### 2026-11-10 12:02 ET — 测试导出six07–10封口；指定节点状态未知
+原six07为5 exported/1 error（floorplan24_00013，Teleport碰撞DishSponge）；six08为3 exported/3 error（native graph domain unavailable）；six09为2 exported/4 error（3个native graph unavailable，另floorplan322_00023 Teleport超时）；six10为6 exported。原outcomes逐项保留错误和候选，未重置领取key，仍全部cache pending。上述原批次和fresh查询的33文件范围审计0 FAIL，原失败记录保留；不将这些导出数写成最终测试集过检数。
+
+约16:59 UTC对710586.hopper-m-02执行fresh原历史PBS查询，30秒再次超时，结果diag_test_selected05_remaining_single01_retry1_qstat_fresh_01已封口保留。由于仍无实际qtime及fresh Q/未分配证据，不能安全执行20分钟取消；本地准备的原Q20链没有运行，未取消可能已运行的作业。缺少出图gate不能作为仍在排队的证明。已运行的710574/710584继续原共享测试导出队列，空队列即退出的行为不变；未提交其他生成或主实验。
+
+DIAG01已按时推送完整报告并停止诊断实验，等待人类/Claude审查。测试集候选的导出错误和后续缓存复核尚需保留并继续处理，不能据导出成功提前冻结为正式过检集。
