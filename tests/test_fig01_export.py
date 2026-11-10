@@ -42,9 +42,9 @@ def original_checks(table):
 
 
 class FigureTests(unittest.TestCase):
-    def test_original_witness_and_normalized_world_order(self):
+    def test_original_first_visible_action_and_normalized_world_order(self):
         table = fixtures.table()
-        seen, reason = fig.witness_first_seen(table, table.pair_id, [1, 0], original_checks(table),
+        seen, reason = fig.first_step_seen(table, table.pair_id, [1, 0], original_checks(table),
                                               allow_synthetic=True)
         self.assertIsNone(reason)
         self.assertEqual(seen['w0']['original_world_id'], 'w1')
@@ -52,25 +52,27 @@ class FigureTests(unittest.TestCase):
         self.assertEqual(seen['w1']['action_prefix'], ['turn_right'])
         self.assertEqual((seen['w0']['anchor_pixels'], seen['w0']['tau'], seen['w0']['tau_seen']), (250, 1, 1))
 
-    def test_unavailable_original_witness_is_not_replaced(self):
+    def test_unavailable_selection_witness_does_not_filter_visible_observation(self):
         table = fixtures.table()
         checked = original_checks(table)
         checked['witness_replay'][0] = {'applicable': False, 'passed': None, 'reason': 'original_witness_exceeds_D_plus_1'}
-        seen, reason = fig.witness_first_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
-        self.assertIsNone(seen)
-        self.assertEqual(reason, 'original_witness_unavailable_or_not_applicable')
+        seen, reason = fig.first_step_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
+        self.assertIsNone(reason)
+        self.assertEqual(seen['w0']['action_prefix'], ['turn_right'])
+        self.assertEqual(seen['w0']['original_selection_witness_replay'], checked['witness_replay'][0])
+        self.assertFalse(seen['w0']['selection_witness_used_as_visibility_evidence'])
 
-    def test_original_trace_tamper_fails(self):
+    def test_invalid_original_visibility_action_fails(self):
         table = fixtures.table()
         checked = original_checks(table)
-        checked['witness_replay'][0]['trace'][0]['state_id'] = table.initial_state
-        with self.assertRaisesRegex(ValueError, 'trace changed'):
-            fig.witness_first_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
+        checked['first_step_visible_actions']['w0'] = ['turn_left']
+        with self.assertRaisesRegex(ValueError, 'no longer sees own X'):
+            fig.first_step_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
 
     def test_no_production_synthetic_or_authority_bypass(self):
         table = fixtures.table()
         with self.assertRaisesRegex(ValueError, 'Synthetic'):
-            fig.witness_first_seen(table, table.pair_id, [0, 1], original_checks(table))
+            fig.first_step_seen(table, table.pair_id, [0, 1], original_checks(table))
         self.assertFalse(table.export_verified)
         self.assertFalse(table.cache_verified)
 
@@ -85,11 +87,11 @@ class FigureTests(unittest.TestCase):
     def test_five_original_environment_images_lossless_masks_and_sources(self):
         table = fixtures.table()
         checked = original_checks(table)
-        seen, _ = fig.witness_first_seen(table, table.pair_id, [1, 0], checked, allow_synthetic=True)
+        seen, _ = fig.first_step_seen(table, table.pair_id, [1, 0], checked, allow_synthetic=True)
         candidate = {'dataset_key': table.pair_id, 'world_order': [1, 0], 'heldout_scene': False,
                      'first_seen': seen, 'ranking_min_anchor_pixels': 250}
         package = {'worlds': [{'objects': [{'name': name, 'objectType': name + '_type'} for name in ('X', 'A', 'B')]}],
-                   'source_provenance': {'synthetic_test_only': True}}
+                   'source_provenance': {'synthetic_test_only': True}, 't01': t01_for(table)}
         before = [(v.rgb.data, copy.deepcopy(v.masks)) for state in table.states.values() for v in state.captures]
         with tempfile.TemporaryDirectory() as tmp:
             save_table(table, Path(tmp) / 'table')
@@ -139,10 +141,10 @@ class ScopedFigureTests(unittest.TestCase):
         path.write_text(json.dumps(value))
         return fig.file_ref(path)
 
-    def test_ranking_reads_only_witness_masks_and_matches_actual_environment(self):
+    def test_ranking_reads_only_first_step_masks_and_matches_actual_environment(self):
         for order in ([0, 1], [1, 0]):
             checked = original_checks(self.table)
-            actual, _ = fig.witness_first_seen(self.table, self.table.pair_id, order, checked,
+            actual, _ = fig.first_step_seen(self.table, self.table.pair_id, order, checked,
                                                allow_synthetic=True)
             paths = []
             read = Path.read_bytes
@@ -157,7 +159,7 @@ class ScopedFigureTests(unittest.TestCase):
             self.assertEqual(len(paths), 2)
             self.assertTrue(all(path.suffix == '.mask' for path in paths))
 
-    def test_ranking_rejects_mask_bytes_header_count_and_witness_tampering(self):
+    def test_ranking_rejects_mask_bytes_header_count_and_action_tampering(self):
         checked = original_checks(self.table)
         state = checked['witness_replay'][0]['trace'][0]['state_id']
         bad = copy.deepcopy(self.header)
@@ -165,13 +167,52 @@ class ScopedFigureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'pixel count'):
             fig.first_seen_metadata(bad, self.ref, [0, 1], checked, [])
         bad_check = copy.deepcopy(checked)
-        bad_check['witness_replay'][0]['trace'][0]['state_id'] = self.table.initial_state
-        with self.assertRaisesRegex(ValueError, 'trace changed'):
+        bad_check['first_step_visible_actions']['w0'] = ['move 999']
+        with self.assertRaisesRegex(ValueError, 'transition changed'):
             fig.first_seen_metadata(self.header, self.ref, [0, 1], bad_check, [])
         mask = self.root / 'table' / self.header['states'][state]['captures'][0]['masks']['X']['file']
         mask.write_bytes(bytes(255 * 255))
         with self.assertRaisesRegex(ValueError, 'mask bytes changed'):
             fig.first_seen_metadata(self.header, self.ref, [0, 1], checked, [])
+
+    def test_valid_selection_without_own_seen_remains_rankable_and_distinct(self):
+        t01 = t01_for(self.table)
+        t01['witnesses'][0]['actions'][0]['kind'] = 'turn_left'
+        t01['witnesses'][1]['actions'][0]['kind'] = 'turn_right'
+        checked = check_pair(self.table, t01)
+        self.assertTrue(checked['passed'])
+        for world, replay in enumerate(checked['witness_replay']):
+            self.assertTrue(replay['passed'])
+            self.assertEqual(self.table.states[replay['trace'][0]['state_id']].anchor_pixels[world], 0)
+        seen, reason = fig.first_seen_metadata(self.header, self.ref, [0, 1], checked, [])
+        self.assertIsNone(reason)
+        self.assertEqual(seen['w0']['action_prefix'], ['turn_right'])
+        self.assertEqual(seen['w1']['action_prefix'], ['turn_left'])
+        for world in (0, 1):
+            self.assertEqual(seen[f'w{world}']['original_selection_witness_replay'], checked['witness_replay'][world])
+            self.assertEqual(seen[f'w{world}']['prefix_source'], fig.PREFIX_SOURCE)
+            self.assertFalse(seen[f'w{world}']['selection_witness_used_as_visibility_evidence'])
+
+    def test_first_action_is_sorted_original_choice_not_max_pixel_choice(self):
+        table = self.table
+        initial = table.states[table.initial_state]
+        for action, pixels in [('turn_left', 250), ('turn_right', 900)]:
+            key = initial.transitions[action]
+            state = table.states[key]
+            first = replace(state.captures[0], masks={**state.captures[0].masks, 'X': fixtures.mask(pixels, 1000)})
+            table.states[key] = replace(state, captures=(first, state.captures[1]),
+                                       anchor_pixels=(pixels, state.anchor_pixels[1]))
+        t01 = t01_for(table)
+        t01['anchor_visible_actions_w0'] = ['turn_left', 'turn_right']
+        checked = check_pair(table, t01)
+        self.assertTrue(checked['passed'])
+        self.assertEqual(checked['first_step_visible_actions']['w0'], ['turn_left', 'turn_right'])
+        seen, reason = fig.first_step_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
+        self.assertIsNone(reason)
+        self.assertEqual((seen['w0']['action_prefix'], seen['w0']['anchor_pixels']), (['turn_left'], 250))
+        checked['first_step_visible_actions']['w0'].reverse()
+        with self.assertRaisesRegex(ValueError, 'sorted first-step visibility'):
+            fig.first_step_seen(table, table.pair_id, [0, 1], checked, allow_synthetic=True)
 
     def header_population(self):
         # 200 metadata-only state identities exercise the unchanged original sampler.

@@ -26,9 +26,10 @@ from src.tools import smoke_e2e_pilot_certificates as certificates
 from src.tools.smoke_e2e_pilot_certificates import authenticate_certificate_qualification
 from src.tools.t02_export import save_json
 
-VERSION = 'fig01_original_cache_frames_scoped_v2'
+VERSION = 'fig01_original_cache_frames_firststep_v3'
 DESTINATION = 'paper/fig_src/lookflip_frames'
-RANKING = ('nonholdout first; descending minimum of the two original-witness first-own-X>=250 '
+PREFIX_SOURCE = 'original first_step_visible_actions sorted first'
+RANKING = ('nonholdout first; descending minimum of the two original-first-step own-X>=250 '
            'mask counts; ties by dataset_key then agent-w0/agent-w1 first-seen state_id')
 
 
@@ -119,44 +120,47 @@ def accepted_pair_metadata(evidence, entry, header, accessed):
             'export_source': actual, 'evidence': evidence}
 
 
-def first_seen_metadata(header, table_reference, world_order, checked, accessed):
-    """Same original witness ranking; read only each visited own-X binary mask.
+def first_step_action(checked, original):
+    actions = checked['first_step_visible_actions'][f'w{original}']
+    need(isinstance(actions, list) and actions and all(isinstance(a, str) for a in actions)
+         and actions == sorted(set(actions)), 'Original sorted first-step visibility is unavailable')
+    return actions[0]
 
-    The SHA-bound header and original check receipt bind graph/actions. Selected
-    candidates are later replayed by the actual environment and compared here.
+
+def observation_prefix(original, action, state, pixels, checked):
+    return {'original_world_id': f'w{original}', 'state_id': state,
+            'action_prefix': [action], 'trace_prefix': [{'turn': 1, 'action': action, 'state_id': state}],
+            'anchor_pixels': pixels, 'figure_only_observation_prefix': True,
+            'prefix_source': PREFIX_SOURCE,
+            'original_selection_witness_replay': copy.deepcopy(checked['witness_replay'][original]),
+            'selection_witness_used_as_visibility_evidence': False}
+
+
+def first_seen_metadata(header, table_reference, world_order, checked, accessed):
+    """Read own-X masks at the first sorted original visible one-step action.
+
+    Look acceptance already requires a visible first step in both worlds. A
+    successful selection witness need not observe own X and is not a filter.
+    Selected prefixes are later replayed by the actual environment.
     """
     result = {}
     directory = (ROOT / table_reference['file']).resolve().parent
     for requested, original in enumerate(world_order):
-        witness = checked['witness_replay'][original]
-        if witness.get('applicable') is not True or witness.get('passed') is not True:
-            return None, 'original_witness_unavailable_or_not_applicable'
-        current, prefix = header['initial_state'], []
-        for row in witness['trace']:
-            action = row.get('action')
-            if not isinstance(action, str) or action.startswith('select '):
-                break
-            target = header['states'][current]['transitions'].get(action)
-            need(target == row['state_id'] and target in header['states'], 'Original witness/header trace changed')
-            current = target
-            prefix.append(copy.deepcopy(row))
-            ref = header['states'][current]['captures'][original]['masks'][header['anchor_name']]
-            path = (directory / ref['file']).resolve()
-            need(path.parent == directory and path.name != 'table.json' and 'encoding' not in ref,
-                 'Ranking mask escaped the fixed original uncompressed training table')
-            body = path.read_bytes()
-            need(len(body) == ref['bytes'] == 255 * 255 and hashlib.sha256(body).hexdigest() == ref['sha256']
-                 and set(body).issubset({0, 1}), 'Original ranking mask bytes changed')
-            accessed.append({**ref, 'file': str(path)})
-            pixels = body.count(1)
-            need(header['states'][current]['anchor_pixels'][original] == pixels, 'Header/mask pixel count differs')
-            if pixels >= 250:
-                result[f'w{requested}'] = {'original_world_id': f'w{original}', 'state_id': current,
-                    'action_prefix': [item['action'] for item in prefix], 'trace_prefix': prefix,
-                    'original_complete_trace': copy.deepcopy(witness['trace']), 'anchor_pixels': pixels}
-                break
-        if f'w{requested}' not in result:
-            return None, 'original_witness_has_no_own_X_250_before_select'
+        action = first_step_action(checked, original)
+        current = header['states'][header['initial_state']]['transitions'].get(action)
+        need(current in header['states'], 'Original first-step action/header transition changed')
+        ref = header['states'][current]['captures'][original]['masks'][header['anchor_name']]
+        path = (directory / ref['file']).resolve()
+        need(path.parent == directory and path.name != 'table.json' and 'encoding' not in ref,
+             'Ranking mask escaped the fixed original uncompressed training table')
+        body = path.read_bytes()
+        need(len(body) == ref['bytes'] == 255 * 255 and hashlib.sha256(body).hexdigest() == ref['sha256']
+             and set(body).issubset({0, 1}), 'Original ranking mask bytes changed')
+        accessed.append({**ref, 'file': str(path)})
+        pixels = body.count(1)
+        need(header['states'][current]['anchor_pixels'][original] == pixels, 'Header/mask pixel count differs')
+        need(pixels >= 250, 'Original first-step action no longer sees own X')
+        result[f'w{requested}'] = observation_prefix(original, action, current, pixels, checked)
     return result, None
 
 
@@ -214,38 +218,24 @@ def environment(table, key, world_order, *, allow_synthetic=False):
                                                     allow_synthetic=allow_synthetic))
 
 
-def witness_first_seen(table, key, world_order, checked, *, allow_synthetic=False):
-    """Replay only the original accepted witness's literal table actions."""
+def first_step_seen(table, key, world_order, checked, *, allow_synthetic=False):
+    """Replay the original first visible action; preserve the selection witness separately."""
     result = {}
     for requested, original in enumerate(world_order):
-        witness = checked['witness_replay'][original]
-        if witness.get('applicable') is not True or witness.get('passed') is not True:
-            return None, 'original_witness_unavailable_or_not_applicable'
+        action = first_step_action(checked, original)
         env = environment(table, key, world_order, allow_synthetic=allow_synthetic)
         world = f'w{requested}'
-        prefix = []
         try:
             env.reset(key, world)
-            for row in witness['trace']:
-                action = row.get('action')
-                if not isinstance(action, str) or action.startswith('select '):
-                    break
-                _, _, done, info = env.step(action)
-                need(info['action_success'] and not done and info['state_id'] == row['state_id'],
-                     'Original accepted witness table trace changed')
-                prefix.append(copy.deepcopy(row))
-                state = table.states[info['state_id']]
-                pixels = state.captures[original].count(table.anchor_name)
-                if pixels >= 250:
-                    result[world] = {'original_world_id': f'w{original}', 'state_id': info['state_id'],
-                        'action_prefix': [item['action'] for item in prefix], 'trace_prefix': prefix,
-                        'original_complete_trace': copy.deepcopy(witness['trace']),
-                        'anchor_pixels': pixels, 'tau': info['tau'], 'tau_seen': info['x_seen_step']}
-                    break
+            _, _, done, info = env.step(action)
+            need(info['action_success'] and not done, 'Original first visible observation action unavailable')
+            state = table.states[info['state_id']]
+            pixels = state.captures[original].count(table.anchor_name)
+            need(pixels >= 250, 'Original first-step action no longer sees own X')
+            result[world] = {**observation_prefix(original, action, info['state_id'], pixels, checked),
+                             'tau': info['tau'], 'tau_seen': info['x_seen_step']}
         finally:
             env.close()
-        if world not in result:
-            return None, 'original_witness_has_no_own_X_250_before_select'
     return result, None
 
 
@@ -336,7 +326,9 @@ def export_pair(table, package, candidate, directory, *, code_commit, allow_synt
         's0_original_raw_rgb_sha256': {f'w{i}': initial.captures[i].rgb.sha256 for i in (0, 1)},
         's0_agent_inputs_equal': True, 'frames': frames, 'table_manifest': table.manifest_reference,
         'source_provenance': package['source_provenance'], 'code_commit': code_commit,
-        'ranking_policy': RANKING, 'research_population_changed': False, 'renderer_used': False,
+        'ranking_policy': RANKING, 'figure_observation_prefix_source': PREFIX_SOURCE,
+        'original_selection_witnesses': copy.deepcopy(package['t01']['witnesses']),
+        'research_population_changed': False, 'renderer_used': False,
         'authority': 'original successful full-batch T02/cache certificates; selected complete table bytes/pair/cache binding checked; figure-only reuse',
         'new_training_or_cache_certificate': False,
         'extra_source_reauthentication': {'status': 'not_awaited', 'passed': None}}
@@ -405,7 +397,7 @@ def main():
             candidates.append({'dataset_key': key, 'world_order': order, 'heldout_scene': key not in source_keys,
                 'first_seen': seen, 'ranking_min_anchor_pixels': min(v['anchor_pixels'] for v in seen.values())})
         candidates.sort(key=rank_key)
-        need(len(candidates) >= 5, 'Fewer than five original-witness-rankable LookFlip pairs; no fabricated replacement')
+        need(len(candidates) >= 5, 'Fewer than five first-step-rankable LookFlip pairs; no fabricated replacement')
         need(len({records[row['dataset_key']]['header']['pair_id'] for row in candidates[:5]}) == 5,
              'Selected original pair IDs collide; preserve source identities and report')
         selected = copy.deepcopy(candidates[:1 if args.engineering_one_pair else 5])
@@ -416,7 +408,7 @@ def main():
         for candidate in selected:
             key = candidate['dataset_key']
             table, checked = validate_selected_table(records[key])
-            seen, reason = witness_first_seen(table, key, candidate['world_order'], checked)
+            seen, reason = first_step_seen(table, key, candidate['world_order'], checked)
             need(reason is None and all(all(seen[world].get(field) == value for field, value in row.items())
                  for world, row in candidate['first_seen'].items()), 'Full original environment replay changed metadata ranking')
             candidate['first_seen'] = seen  # Actual environment supplies tau/tau_seen; no hand-set flags.
@@ -442,7 +434,7 @@ def main():
             population_manifest_reference=manifest_ref, holdout_reference=frozen_ref, code_commit=commit,
             engineering_one_pair=args.engineering_one_pair, formal_five_export_complete=not args.engineering_one_pair,
             full_population_metadata_verified=True, full_table_payloads_verified=list(tables),
-            scope='full83 original certificate/header metadata; all LookFlip original witness X masks ranked; only selected tables fully loaded and rechecked; no new native PASS for unread tables',
+            scope='full83 original certificate/header metadata; all LookFlip original sorted-first-visible-action X masks ranked; only selected tables fully loaded and rechecked; no new native PASS for unread tables',
             new_training_or_cache_certificate=False)
         code = 0
     except BaseException as error:
