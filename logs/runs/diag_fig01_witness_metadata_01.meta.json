@@ -1,0 +1,29 @@
+{
+  "name": "diag_fig01_witness_metadata_01",
+  "command": [
+    "timeout",
+    "--signal=TERM",
+    "--kill-after=5s",
+    "60s",
+    "nice",
+    "-n",
+    "10",
+    "python3",
+    "-c",
+    "import hashlib,json,signal,time\nfrom pathlib import Path\nfrom experiments.fig01_export import first_seen_metadata\nROOT=Path.cwd().resolve(); NAME='diag_fig01_witness_metadata_01'; started=time.monotonic(); sources={}\ndef stop(*_): raise TimeoutError('55s metadata diagnostic bound; no export/native reads')\nsignal.signal(signal.SIGALRM,stop); signal.alarm(55)\ndef read(ref,logged=False):\n p=(ROOT/ref['file']).resolve(); b=p.read_bytes(); assert hashlib.sha256(b).hexdigest()==ref['sha256'],str(p)\n if 'bytes' in ref: assert len(b)==ref['bytes']\n d=json.loads(b)\n if logged: sources[str(p)]={'file':str(p),'sha256':ref['sha256'],'metrics_sha256':d['_meta']['metrics_sha256']}\n return d\ndef ref(p):\n p=(ROOT/p).resolve();b=p.read_bytes();return {'file':str(p),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)}\nqualification={'file':'results/smoke_e2e_pilot_pool_83_certificates_01.json','sha256':'0b704d1e8c1579b1f76a968084af6e919bb65ec009abcf7d91b96e02e63d91f0'}\nq=read(qualification,True); manifest=read(q['metrics']['manifest']); entries={r['dataset_key']:r for r in manifest['entries'] if r['kind']=='look_flip'}\nrows=[]\nfor cr in manifest['cache_sources']:\n cache=read(cr,True)\n for entry in cache['metrics']['population_ledger']:\n  key=entry.get('dataset_key')\n  if key not in entries:continue\n  source=read(entry['source'],True); matches=[r for r in source['metrics']['pairs'] if r['pair_id']==entry['pair_id']]; assert len(matches)==1\n  row=matches[0]; package=read(row['source_package']); checks=read(row['detail']); header=read(entries[key]['table_manifest'])\n  seen,reason=first_seen_metadata(header,entries[key]['table_manifest'],entries[key]['world_order'],checks['pair_checks'],[])\n  worlds=[]\n  for w,witness in enumerate(package['t01']['witnesses']):\n   old=checks['pair_checks']['witness_replay'][w]\n   worlds.append({'world':w,'original_witness_actions':witness.get('actions'),'action_count':len(witness.get('actions',[])), 'stored_replay':old,\n      'initial_anchor_pixels':header['states'][header['initial_state']]['anchor_pixels'][w]})\n  rows.append({'dataset_key':key,'pair_id':entry['pair_id'],'scene':entries[key]['scene'], 'source':entry['source'],\n      'source_package':row['source_package'],'checks':row['detail'],'table_manifest':entries[key]['table_manifest'],\n      'original_pair_check_passed':checks['pair_checks']['passed'],'original_min_solution_turns':checks['pair_checks']['min_solution_turns'],\n      'ranking_reason':reason,'ranking_first_seen':seen,'worlds':worlds})\nassert len(rows)==len(entries)==22 and len({r['dataset_key'] for r in rows})==22\nfailure_ref=ref('results/diag_fig01_scoped_smoke_01.json');failure=read(failure_ref,True)\nmetrics={'kind':'fig01_original_witness_metadata_diagnostic','metadata_only':True,'native_or_full_payload_revalidated':False,\n 'qualification':qualification,'original_failure':failure_ref,'pairs':rows,'elapsed_seconds':time.monotonic()-started,'producer_exit_code':0}\npath=ROOT/'logs/review'/NAME;path.mkdir(parents=True,exist_ok=False)\nreport=path/'report.json';report.write_text(json.dumps(metrics,indent=2,sort_keys=True)+'\\n')\nresult={'metrics':{**metrics,'report':ref(report)},'config':{'name':NAME,'scope':'Original22 metadata and original ranking witness masks only; no new scientific acceptance/export'},'sources':list(sources.values())}\nwith (ROOT/'results'/(NAME+'.json')).open('x') as f:json.dump(result,f,indent=2,sort_keys=True);f.write('\\n')\nsignal.alarm(0)\nprint('FINAL_METRICS_JSON: '+json.dumps(result['metrics'],sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T19:25:50",
+  "log_path": "logs/runs/diag_fig01_witness_metadata_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "720503973b78525bbbe7d980657e00c6a538c44c",
+  "git_dirty": false,
+  "end": "2026-11-10T19:26:00",
+  "duration_sec": 4.6,
+  "exit_code": 0,
+  "metrics_sha256": "f0d510936e93c47a0fb09cd67fc68b825f5966ca03d7ad672a88dbc1d7cbcfd8"
+}

@@ -1,0 +1,11 @@
+# run_logged: timeout --signal=TERM --kill-after=5s 300s nice -n 10 python3 -m experiments.fig01_export --name diag_fig01_scoped_smoke_01 --qualification-reference {"file":"results/smoke_e2e_pilot_pool_83_certificates_01.json","sha256":"0b704d1e8c1579b1f76a968084af6e919bb65ec009abcf7d91b96e02e63d91f0"} --holdout-reference {"file":"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json","sha256":"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"} --engineering-one-pair
+# start: 2026-11-10T19:22:07
+FIG01_PHASE: metadata_complete
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/fig01_export.py", line 408, in main
+    need(len(candidates) >= 5, 'Fewer than five original-witness-rankable LookFlip pairs; no fabricated replacement')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/experiments/fig01_export.py", line 37, in need
+    raise ValueError(message)
+ValueError: Fewer than five original-witness-rankable LookFlip pairs; no fabricated replacement
+FINAL_METRICS_JSON: {"complete": false, "elapsed_seconds": 30.732797860982828, "errors": ["ValueError: Fewer than five original-witness-rankable LookFlip pairs; no fabricated replacement"], "kind": "fig01_original_cache_frame_export", "metadata_seconds": 30.50342672597617, "producer_exit_code": 1, "renderer_used": false, "research_population_changed": false}
+# exit_code: 1

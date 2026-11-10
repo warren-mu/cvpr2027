@@ -1,0 +1,29 @@
+# run_logged: python3 -m src.tools.record_command --name diag_fig01_smoke_and_raw10_retry_audit_01 -- python3 -c import subprocess,json
+from pathlib import Path
+names=[]
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.append(str(p))
+assert names
+print('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))
+
+# start: 2026-11-10T19:26:05
+SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified
+WARN  results/diag_fig01_scoped_smoke_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_fig01_witness_metadata_01.json
+PASS  results/diag_raw10_shared710255_black_guard_01.json
+PASS  results/diag_raw10_shared710255_host_preflight_01.json
+PASS  results/diag_raw10_shared710255_retry_audit_01.json
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+
+7 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 12.44801518600434}
+# exit_code: 0

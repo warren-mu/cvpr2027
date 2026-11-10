@@ -1,0 +1,138 @@
+{
+  "metrics": {
+    "validated": true,
+    "host_authorization": {
+      "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293",
+      "evidence": {
+        "file": "results/diag_raw10_shared710255_black_guard_01.json",
+        "sha256": "842cf8245cc49674ac78bbd7691f778071e47bd5b1a465299d30486b4140980a"
+      },
+      "retry_of": "710255.hopper-m-02",
+      "requested_host": "hopper-28",
+      "previous_requested_host": null,
+      "rotation_index": 15,
+      "rotation_previous": {
+        "payload": {
+          "file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/payload.json",
+          "sha256": "7e994fcc3d103058b98d8407408a48c0df1b1046f3f3d1a48cf5c55ea1e4b207"
+        },
+        "receipt": {
+          "file": "logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2ef5/submission.json",
+          "sha256": "1bd5545713424eb40aa43cdcb4fc30a814141b9cdf090d8abfb5511b45a1be2a"
+        }
+      },
+      "original_node": "hopper-25",
+      "original_gpu_uuid": "GPU-d1e1ee0d-3db1-a1f2-e57e-929a37cd0e67",
+      "queue_fallback_after_seconds": 1200,
+      "scope": "opening black gate retry only; no scientific acceptance",
+      "available_hosts": [
+        "hopper-28",
+        "hopper-30"
+      ],
+      "disabled_hosts": {
+        "hopper-22": {
+          "reason": "New pinned submissions excluded after authenticated opening black gate",
+          "job_id": "709293.hopper-m-02",
+          "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+          "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+        }
+      }
+    },
+    "submit_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--name",
+      "gpu_pack_train_raw10_smoke_single_01_retry1",
+      "--task",
+      "T01",
+      "--budget-group",
+      "PACK",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:30:55",
+      "--host",
+      "hopper-28",
+      "--retry-of",
+      "710255.hopper-m-02",
+      "--black-retry-evidence",
+      "results/diag_raw10_shared710255_black_guard_01.json",
+      "--black-retry-evidence-sha256",
+      "842cf8245cc49674ac78bbd7691f778071e47bd5b1a465299d30486b4140980a",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.gpu_pack",
+      "--name",
+      "gpu_pack_train_raw10_smoke_single_01_retry1",
+      "--queue-plan",
+      "configs/shared_test_priority_raw10_train_smoke_01.json",
+      "--queue-plan-sha256",
+      "f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0",
+      "--queue-root",
+      "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_raw10_train_smoke_01",
+      "--gpus",
+      "1",
+      "--timeout-seconds",
+      "1825",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "budget_request_validated": true,
+    "mixed_budget_authorization": {
+      "version": "shared_gpu_units_budget_v1",
+      "plan_reference": {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_raw10_train_smoke_01.json",
+        "sha256": "f09822b5893abf05f668ebdc336fcf0870f2c3e2d2874989b8f7e09c3a40b8b0",
+        "bytes": 103870
+      },
+      "possible_groups": [
+        "T02"
+      ],
+      "residual_priority": [
+        "T02"
+      ],
+      "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget",
+      "total_rule": "one_allocation_once_in_T01_and_shared",
+      "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business"
+    },
+    "budget_snapshot": {
+      "file": "logs/review/diag_raw10_shared710255_host_preflight_01/budget_state.json",
+      "sha256": "045605b74e1f2fcfc27d88999af42771374d674c6c0bc36fe378b27ac2a1941f"
+    },
+    "scope": "Preflight only; original submitter must repeat budget and host checks under its own reservation lock"
+  },
+  "config": {
+    "name": "diag_raw10_shared710255_host_preflight_01"
+  },
+  "sources": [
+    {
+      "file": "results/diag_raw10_shared710255_black_guard_01.json",
+      "sha256": "842cf8245cc49674ac78bbd7691f778071e47bd5b1a465299d30486b4140980a",
+      "metrics_sha256": "16e42447883a398ed8981e7720d08238a0912d933c34cac0e2e82f38ba42ad68"
+    }
+  ],
+  "_meta": {
+    "name": "diag_raw10_shared710255_host_preflight_01",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,json,importlib.util,signal\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve(); name='diag_raw10_shared710255_host_preflight_01';guard_file='results/diag_raw10_shared710255_black_guard_01.json'\nreference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}\nguard,_=b.logged(r,reference); proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)\nnew_name='gpu_pack_train_raw10_smoke_single_01_retry1';command=list(old['command']);command[command.index('--name')+1]=new_name\nindex,previous=b.rotation(r);previous_host=None\nif previous:\n    _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']\nhost=b.next_host(b.VERSION,index,previous_host)\nbinding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='PACK',gpus=1,wall_seconds=1855)\nsubmit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:30:55','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]\ndef expired(*_): raise TimeoutError('Original budget preflight exceeded180 seconds')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(180)\nspec=importlib.util.spec_from_file_location('original_raw10_retry_budget',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\nfrom src.tools import pbs_mixed_accounting as mixed\nmixed_authorization=mixed.validate_submission(r,command,new_name,1)\nstate=phase.budget_state(r)\nphase.validate_request('T01',1,1855,new_name,state,'PACK',mixed_authorization,command=command)\nsignal.alarm(0)\nfolder=r/'logs/review'/name;folder.mkdir(parents=True,exist_ok=False)\nsnapshot=folder/'budget_state.json'\nwith snapshot.open('x') as stream:json.dump(state,stream,indent=2,allow_nan=False);stream.write('\\n')\nmetrics={'validated':True,'host_authorization':binding,'submit_command':submit,'budget_request_validated':True,'mixed_budget_authorization':mixed_authorization,'budget_snapshot':{'file':str(snapshot.relative_to(r)),'sha256':hashlib.sha256(snapshot.read_bytes()).hexdigest()},'scope':'Preflight only; original submitter must repeat budget and host checks under its own reservation lock'}\nresult={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256'])]}\nwith (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T19:22:26",
+    "log_path": "logs/runs/diag_raw10_shared710255_host_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "720503973b78525bbbe7d980657e00c6a538c44c",
+    "git_dirty": false,
+    "end": "2026-11-10T19:24:11",
+    "duration_sec": 104.3,
+    "exit_code": 0,
+    "metrics_sha256": "4fdd93a5787e1484ce6a519e79569b957b3c593e4f7d3c851a20e312d3352f59"
+  }
+}
