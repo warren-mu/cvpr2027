@@ -35,16 +35,17 @@ class VisibilityTests(unittest.TestCase):
   backend=pair_table.TableObservationBackend({self.key:self.table},world_orders={self.key:list(order)},allow_synthetic=True)
   env=pair_table.TableEnvironment(backend);env.reset(self.key,world)
   plan={'episode_id':'fixture:episode','dataset_key':self.key,'pair_id':self.key,'world_id':world,'pair_instance_id':'one'}
-  traces=[]
+  traces=[];image_history=[]
   for i,response in enumerate(actions):
    before=copy.deepcopy(env.info)
    try: parsed=diag.parse_action(response)
    except ValueError:parsed=None
    _,reward,done,after=env.step(response)
+   image_history.append({'size':[255,255],'mode':'RGB','sha256':before['capture']['marked_rgb_sha256']})
    traces.append({**plan,'decision_index':i,'response':response,'before':before,'after':copy.deepcopy(after),
      'parse_valid':parsed is not None,'action_valid':after['action_valid'],'sample_id':str(i),'reward':reward,
      'action_kind':('select' if parsed.kind=='select' else 'observe') if parsed else 'invalid',
-     'input':{'images':[{'size':[255,255],'mode':'RGB','sha256':before['capture']['marked_rgb_sha256']}]}})
+     'input':{'images':copy.deepcopy(image_history)}})
   self.assertTrue(done)
   episode=episode_observation(plan,traces,kind=env.info['kind'],final_info=env.info,selected_name=env.selected_name,success=env.success)
   episode.update(world_order=list(order),original_world_id=f'w{env.backend.world}',original_pair_id=self.table.pair_id,
@@ -135,6 +136,7 @@ class VisibilityTests(unittest.TestCase):
   outputs=diag.export_examples([row],self.index,target,process)
   m=json.loads(Path(outputs[0]['file']).read_bytes())
   self.assertIn('actual_model_input',m['frames'][0]);self.assertNotIn('actual_model_input',m['frames'][-1])
+  self.assertEqual(len(row['actions'][1]['actual_input_images']),2)
   row['actions'][0]['actual_input_images'][0]['sha256']='f'*64
   target2=self.root/'bad_model_examples';target2.mkdir()
   with self.assertRaisesRegex(ValueError,'actual policy input'):diag.export_examples([row],self.index,target2,process)

@@ -277,7 +277,7 @@ def export_examples(rows,index,directory,process_image=None):
     outputs=[]
     for number,row in enumerate(candidates):
         target=directory/f'example_{number+1:02d}';target.mkdir(parents=True,exist_ok=False)
-        frames=[]
+        frames=[];model_history=[]
         for s in row['states']:
             marked=index.marked(row['dataset_key'],s['state_id'],int(row['original_world_id'][-1]))
             need(marked.sha256==row['marked_rgb_sha256_by_state'][s['state_id']], 'Reconstructed actual marked input differs')
@@ -289,13 +289,14 @@ def export_examples(rows,index,directory,process_image=None):
                 from PIL import Image
                 image=process_image(Image.frombytes('RGB',(255,255),marked.data))
                 image_proof={'mode':image.mode,'size':list(image.size),'sha256':hashlib.sha256(image.tobytes()).hexdigest()}
-                need(row['actions'][s['observation_index']]['actual_input_images']==[image_proof],
-                     'Original processed model input differs from saved actual policy input')
+                model_history.append(image_proof)
+                need(row['actions'][s['observation_index']]['actual_input_images']==model_history,
+                     'Original processed model input history differs from saved actual policy input')
                 frame['actual_model_input']=png(target/f"state_{s['observation_index']:02d}_model.png",image.tobytes(),image.size)
             frames.append(frame)
         output={'episode_id':row['episode_id'],'arm':row['arm'],'phase':row['phase'],'update':row['update'],
                 'dataset_key':row['dataset_key'],'world_id':row['world_id'],'original_world_id':row['original_world_id'],
-                'frames':frames,'actions':row['actions'],'scope':'Original marked environment inputs; original pure preprocessing reconstructs actual model inputs with exact saved pixel SHA; terminal after-state has no invented model input'}
+                'frames':frames,'actions':row['actions'],'scope':'Original marked environment inputs; original pure preprocessing reconstructs the complete ordered image history at each decision with exact saved pixel SHA; terminal after-state has no invented model input'}
         ref=save_json(target/'manifest.json',output);outputs.append(ref)
     return outputs
 
