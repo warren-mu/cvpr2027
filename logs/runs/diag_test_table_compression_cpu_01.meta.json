@@ -1,0 +1,31 @@
+{
+  "name": "diag_test_table_compression_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_table_compression_cpu_01",
+    "--",
+    "nice",
+    "-n",
+    "10",
+    "python3",
+    "-c",
+    "import unittest,sys\nsys.path.insert(0,'tests')\npatterns=['test_pair_table*.py','test_t02_export*.py','test_t02_test_compression.py','test_t02_rejected_raw.py','test_gpu_shared_claim.py','test_t02_cache_check.py']\nsuite=unittest.TestSuite(unittest.TestLoader().discover('tests',pattern=p,top_level_dir='tests') for p in patterns)\nout=unittest.TextTestRunner(verbosity=2).run(suite)\nraise SystemExit(not out.wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T11:46:38",
+  "log_path": "logs/runs/diag_test_table_compression_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "29d20315a31f89a22fe7aec46ec5fffd746eaf4a",
+  "git_dirty": false,
+  "end": "2026-11-10T11:47:14",
+  "duration_sec": 34.0,
+  "exit_code": 0,
+  "metrics_sha256": "b59c0996d2b42878948e5da78b4935a96d4629981d19a72302058eb374d53286"
+}

@@ -1,0 +1,219 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_table_compression_cpu_01 -- nice -n 10 python3 -c import unittest,sys
+sys.path.insert(0,'tests')
+patterns=['test_pair_table*.py','test_t02_export*.py','test_t02_test_compression.py','test_t02_rejected_raw.py','test_gpu_shared_claim.py','test_t02_cache_check.py']
+suite=unittest.TestSuite(unittest.TestLoader().discover('tests',pattern=p,top_level_dir='tests') for p in patterns)
+out=unittest.TextTestRunner(verbosity=2).run(suite)
+raise SystemExit(not out.wasSuccessful())
+# start: 2026-11-10T11:46:38
+test_belief_bfs_requires_own_seen_then_selection (test_pair_table.TableTests) ... ok
+test_cached_binding_rejects_same_rgb_with_other_mask_or_labels (test_pair_table.TableTests) ... ok
+test_candidate_distance_uses_producer_arithmetic_with_no_ulp_tolerance (test_pair_table.TableTests) ... ok
+test_check_pair_cannot_replace_missing_t01_visibility (test_pair_table.TableTests) ... ok
+test_correct_reward_and_fifth_turn_observation_no_new_state (test_pair_table.TableTests) ... ok
+test_d4_graph_and_real_provenance_not_certified_by_mock (test_pair_table.TableTests) ... ok
+test_direct_does_not_require_an_extra_observation (test_pair_table.TableTests) ... ok
+test_direct_hidden_divergence_forks_counts_and_preserves_each_world (test_pair_table.TableTests) ... ok
+test_explicit_world_relabel_maps_targets_and_temporal_proof_not_pixels (test_pair_table.TableTests) ... ok
+test_export_rejects_graph_mismatch_and_missing_mask (test_pair_table.TableTests) ... ok
+test_immutable_storage_roundtrip_hash_and_no_overwrite (test_pair_table.TableTests) ... ok
+test_invalid_output_consumes_turn_not_state_or_extra_penalty (test_pair_table.TableTests) ... ok
+test_kind_is_explicit_and_direct_noise_boundary_still_shares (test_pair_table.TableTests) ... ok
+test_labels_require_actual_visible_success_eligibility (test_pair_table.TableTests) ... ok
+test_look_shadow_forks_before_seen_retains_own_rgb_and_private_diagnostics (test_pair_table.TableTests) ... ok
+test_move_witness_resolves_destination_not_old_inverse_index (test_pair_table.TableTests) ... ok
+test_native_pair_camera_and_render_identity_required (test_pair_table.TableTests) ... ok
+test_no_cost_estimate_from_missing_or_synthetic_measurements (test_pair_table.TableTests) ... ok
+test_shadow_boundary_and_clean_subset_are_not_acceptance_filters (test_pair_table.TableTests) ... ok
+test_shadow_manifest_cannot_claim_clean_or_change_counts (test_pair_table.TableTests) ... ok
+test_shared_inputs_fork_and_return_preserve_tau (test_pair_table.TableTests) ... ok
+test_witness_target_name_not_label_and_long_witness_not_false_failure (test_pair_table.TableTests) ... ok
+test_world_and_camera_bindings_do_not_accept_other_state (test_pair_table.TableTests) ... ok
+test_balanced_global_threshold_does_not_claim_full_T02 (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_deterministic_pair_id_swap_is_full_world_mapping_and_input_unchanged (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_duplicate_id_wrong_mode_and_fabricated_boolean_rejected (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_empty_scene_and_pool_remain_unknown (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_left_imbalance_is_reported_not_reselected (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_normalize_real_schema_uses_each_world_target_and_preserves_table (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_pixel_center_left_rule_preserves_midline_and_unknown (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_reporting_includes_zero_count_scene_class_without_fake_probability (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_rho_half_uses_actual_both_world_targets (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_selection_never_uses_left_measurement (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_stay_downsample_is_per_scene_and_pools_classes (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_unknown_left_not_zero_and_known_subtotal_is_separate (test_pair_table_balance.PairTableBalanceTests) ... ok
+test_equal_counts_displaced_mask_fails (test_pair_table_cache.CacheMaskTests) ... ok
+test_exact_two_percent_boundary_without_ceil (test_pair_table_cache.CacheMaskTests) ... ok
+test_iou_boundary_and_positive_vs_empty (test_pair_table_cache.CacheMaskTests) ... ok
+test_fixed_sample_and_minimum_distinct_domain (test_pair_table_cache.CacheSampleTests) ... ok
+test_missing_or_duplicate_or_replaced_state_never_qualifies (test_pair_table_cache.CacheSampleTests) ... ok
+test_one_failure_blocks_whole_sample_without_filtering (test_pair_table_cache.CacheSampleTests) ... ok
+test_synthetic_200_states_cannot_authorize_downstream (test_pair_table_cache.CacheSampleTests) ... ok
+test_both_kinds_hidden_divergence_is_a_counted_fork_in_cache_and_fresh (test_pair_table_cache.CacheStateTests) ... ok
+test_cached_shared_to_shadow_fork_still_fails_classification_match (test_pair_table_cache.CacheStateTests) ... ok
+test_capture_binding_rejects_wrong_world_or_snapshot (test_pair_table_cache.CacheStateTests) ... ok
+test_complete_both_world_fixture_does_not_certify_live (test_pair_table_cache.CacheStateTests) ... ok
+test_label_eligibility_changes_are_not_ignored (test_pair_table_cache.CacheStateTests) ... ok
+test_large_same_world_rgb_difference_is_diagnostic (test_pair_table_cache.CacheStateTests) ... ok
+test_missing_masks_or_distances_are_unknown (test_pair_table_cache.CacheStateTests) ... ok
+test_new_single_process_and_same_camera_are_required (test_pair_table_cache.CacheStateTests) ... ok
+test_one_world_mask_failure_blocks_state (test_pair_table_cache.CacheStateTests) ... ok
+test_decode_failure_or_manifest_flag_omission_cannot_load (test_pair_table_compression.CodecTests) ... ok
+test_handmade_all_state_bytes_masks_labels_tau_and_seen_equal (test_pair_table_compression.CodecTests) ... ok
+test_lossless_deterministic_dual_sha_and_declared_level (test_pair_table_compression.CodecTests) ... ok
+test_original_cache_predicates_receive_identical_decoded_bytes (test_pair_table_compression.CodecTests) ... ok
+test_pickle_wrong_dtype_shape_or_extra_member_never_loads (test_pair_table_compression.CodecTests) ... ok
+test_train_and_unknown_codec_fail_before_writing_new_table (test_pair_table_compression.CodecTests) ... ok
+test_actual_nonanchor_comparison_excludes_x_without_hiding_other_movement (test_pair_table_frozen.FrozenTableTests) ... ok
+test_actual_restore_rechecks_target_and_original_ratio_without_new_tolerance (test_pair_table_frozen.FrozenTableTests) ... ok
+test_exact_numeric_signed_zero_and_submillimeter_diagnostics (test_pair_table_frozen.FrozenTableTests) ... ok
+test_missing_anchor_or_different_inventory_fails_recipe (test_pair_table_frozen.FrozenTableTests) ... ok
+test_native_teleport_collision_stops_complete_graph_without_force_or_skip (test_pair_table_frozen.FrozenTableTests) ... ok
+test_paused_setup_requires_successful_uninterrupted_native_actions (test_pair_table_frozen.FrozenTableTests) ... ok
+test_recipe_copies_only_original_anchor_and_preserves_physical_sources (test_pair_table_frozen.FrozenTableTests) ... ok
+test_actual_g01_context_keeps_all_classes_pool_crossovers_and_fixed_labels (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_exact_g01_checkpoint_dispatch_rejects_argument_hint_and_wrong_name (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_existing_dispatchers_do_not_enter_g01_context (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_g01_container_cannot_load_ranked_or_old_g01_scene (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_original_collection_admission_association_geometry_and_science_fail_closed (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_published_association_and_label_tampering_cannot_grant_table_input (test_pair_table_g01_source.G01TableSourceTests) ... ok
+test_balance_keeps_both_identities_and_original_flip_seed (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_cache_population_counts_both_sources_without_relabeling_native_ids (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_colliding_ids_have_independent_cache_frames_and_runtime_identity (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_exact_source_identity_is_stable_and_keeps_original_label_seed (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_manifest_declared_identity_and_legacy_derivation_never_rewrite_source (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_unique_old_id_alias_preserves_explicit_world_order (test_pair_table_identity.DatasetIdentityTests) ... ok
+test_exact_controller_producer_only (test_pair_table_legacy_source.LegacyControllerSourceTests) ... ok
+test_foreign_published_controller_is_not_accepted (test_pair_table_legacy_source.LegacyControllerSourceTests) ... ok
+test_legacy_loader_binds_own_controller_without_rewriting_old_labels (test_pair_table_legacy_source.LegacyControllerSourceTests) ... ok
+test_original_scientific_or_controller_failure_still_rejects (test_pair_table_legacy_source.LegacyControllerSourceTests) ... ok
+test_full_scientific_and_controller_failures_propagate_with_context_restored (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_new_checkpoint_exact_command_whitelist (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_old_source_does_not_enter_new_context_or_gain_fixed_label_claim (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_pair_controller_not_last_controller_and_fixed_labels_bind_both_look_modes (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_stay_priority_source_uses_exact_policy_and_full_scientific_chain (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_wrong_source_version_association_and_fixed_assignment_fail_closed (test_pair_table_ranked_source.RankedTableSourceTests) ... ok
+test_ambiguous_pair_id_requires_explicit_pair_file (test_pair_table_source.PairTableSourceTests) ... ok
+test_canonical_horizon_preserved_without_readback_rounding (test_pair_table_source.PairTableSourceTests) ... ok
+test_changed_scene_hash_stops_before_any_pair_evidence (test_pair_table_source.PairTableSourceTests) ... ok
+test_container_rejects_failed_or_unfinished_checkpoint (test_pair_table_source.PairTableSourceTests) ... ok
+test_initial_capture_must_bind_actual_restored_world (test_pair_table_source.PairTableSourceTests) ... ok
+test_missing_canonical_or_non_discrete_yaw_rejected (test_pair_table_source.PairTableSourceTests) ... ok
+test_native_path_prior_capture_or_arguments_mismatch_rejected (test_pair_table_source.PairTableSourceTests) ... ok
+test_no_guessed_coordinate_when_native_move_record_missing (test_pair_table_source.PairTableSourceTests) ... ok
+test_original_turn_and_name_selection_mapped (test_pair_table_source.PairTableSourceTests) ... ok
+test_reused_move_index_maps_two_actual_targets (test_pair_table_source.PairTableSourceTests) ... ok
+test_selection_label_cannot_be_silently_changed_to_actual_target (test_pair_table_source.PairTableSourceTests) ... ok
+test_black_with_finalization_or_cleanup_error_is_not_retry_exit86 (test_t02_export.ExportTests) ... ok
+test_cleanup_uncertainty_overrides_a_scientific_rejection (test_t02_export.ExportTests) ... Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 196, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 192, in pair_worker
+    with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/tests/test_t02_export.py", line 326, in session
+    raise RuntimeError("stop failed")
+RuntimeError: stop failed
+ok
+test_direct_missing_catalog_requires_actual_query_after_restore (test_t02_export.ExportTests) ... ok
+test_failed_native_verification_never_becomes_usable_table (test_t02_export.ExportTests) ... ok
+test_gate_failure_skips_all_source_checks_and_exports (test_t02_export.ExportTests) ... ok
+test_gate_uses_actual_physical_and_vulkan_mapping_without_mask_change (test_t02_export.ExportTests) ... ok
+test_known_pair_rejection_and_unexpected_error_remain_distinct (test_t02_export.ExportTests) ... Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 196, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: graph_mismatch
+Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/t02_export.py", line 196, in pair_worker
+    detail = export_checked(sim, package, directory / "table",
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1114, in __call__
+    return self._mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1118, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/unittest/mock.py", line 1173, in _execute_mock_call
+    raise effect
+ValueError: missing source metadata
+ok
+test_later_source_failure_prevents_even_the_first_export (test_t02_export.ExportTests) ... ok
+test_look_preserves_original_catalog_order_and_checks_loaded_bytes (test_t02_export.ExportTests) ... ok
+test_missing_look_or_mixed_clone_context_does_not_invent_domain (test_t02_export.ExportTests) ... ok
+test_portable_black_proof_decodes_png_and_rejects_changed_bytes (test_t02_export.ExportTests) ... ok
+test_requires_one_real_pbs_uuid_scratch_and_twelve_cpus (test_t02_export.ExportTests) ... ok
+test_restore_failure_is_not_a_partial_complete_table (test_t02_export.ExportTests) ... ok
+test_retention_failure_preserves_started_attempt_and_stops_future_launch (test_t02_export.ExportTests) ... ok
+test_retention_is_explicit_opt_in_and_runs_only_after_owned_cleanup (test_t02_export.ExportTests) ... ok
+test_sequential_pairs_cannot_overwrite_each_others_unity_log (test_t02_export.ExportTests) ... ok
+test_successful_gate_still_authenticates_all_pairs_before_first_export (test_t02_export.ExportTests) ... ok
+test_uncertain_successful_gate_cleanup_stops_before_source_checks (test_t02_export.ExportTests) ... ok
+test_actual_t02_namespace_retains_logged_wrapper_and_gpu_mask (test_t02_export_parallel.LauncherTests) ... ok
+test_existing_evidence_and_invalid_names_never_launch (test_t02_export_parallel.LauncherTests) ... ok
+test_only_original_checks_complete_can_finish_and_never_authorizes_cache (test_t02_export_parallel.MainTests) ... ok
+test_parent_gate_failure_starts_no_children_and_preserves_all_unstarted (test_t02_export_parallel.MainTests) ... ok
+test_exact_original_cli_and_terminal_allocation_package_binding (test_t02_export_parallel.ManifestTests) ... ok
+test_hash_split_and_original_identity_bound_without_pair_id_collapse (test_t02_export_parallel.ManifestTests) ... ok
+test_black_stops_new_units_and_requests_all_owned_children_before_waiting (test_t02_export_parallel.SchedulerTests) ... ok
+test_launch_failure_keeps_prior_child_record_and_cleans_it (test_t02_export_parallel.SchedulerTests) ... ok
+test_real_failed_unit_is_retained_and_other_units_continue (test_t02_export_parallel.SchedulerTests) ... ok
+test_six_same_uuid_units_keep_duplicate_original_pair_ids_separate (test_t02_export_parallel.SchedulerTests) ... ok
+test_uncertain_cleanup_or_early_deadline_never_claim_completion (test_t02_export_parallel.SchedulerTests) ... ok
+test_unreadable_finished_evidence_does_not_interrupt_other_owned_cleanup (test_t02_export_parallel.SchedulerTests) ... ok
+test_actual_selected_snapshot_recalculation_and_complete_package_binding (test_t02_test_compression.SelectionTests) ... ok
+test_explicit_flags_old_command_unchanged_and_train_rejected (test_t02_test_compression.SelectionTests) ... ok
+test_parallel_child_result_must_match_compression_command (test_t02_test_compression.SelectionTests) ... ok
+test_rejected_compressed_payload_retention_preserves_metadata (test_t02_test_compression.SelectionTests) ... ok
+test_same_renderer_dual_storage_runs_original_native_and_pair_checker (test_t02_test_compression.SelectionTests) ... ok
+test_shared_claim_scientific_keys_do_not_change_with_storage (test_t02_test_compression.SelectionTests) ... ok
+test_snapshot_tamper_or_selection_replacement_rejected (test_t02_test_compression.SelectionTests) ... ok
+test_draw_is_reproducible_and_bound_to_whole_attempt_identity (test_t02_rejected_raw.RetentionTests) ... ok
+test_errors_black_timeout_unknown_cleanup_are_never_sampled (test_t02_rejected_raw.RetentionTests) ... ok
+test_parallel_opt_in_is_exact_and_child_declaration_is_bound (test_t02_rejected_raw.RetentionTests) ... ok
+test_partial_unlink_error_is_recorded_without_changing_scientific_status (test_t02_rejected_raw.RetentionTests) ... ok
+test_post_unlink_receipt_or_report_write_failure_keeps_inline_omission_truth (test_t02_rejected_raw.RetentionTests) ... ok
+test_published_or_other_attempt_is_not_current_private_deletion_scope (test_t02_rejected_raw.RetentionTests) ... ok
+test_real_shared_claim_storage_option_never_duplicates_scientific_key (test_t02_rejected_raw.RetentionTests) ... ok
+test_reason_counts_preserve_all_attempts_not_only_retained_examples (test_t02_rejected_raw.RetentionTests) ... ok
+test_sampled_rejected_and_accepted_keep_all_bytes (test_t02_rejected_raw.RetentionTests) ... ok
+test_shared_hardlink_symlink_hash_mismatch_fail_before_any_delete (test_t02_rejected_raw.RetentionTests) ... ok
+test_unsampled_rejected_omits_only_new_indexed_binary_after_cleanup (test_t02_rejected_raw.RetentionTests) ... ok
+test_actual_live_and_saved_claim_bind_original_bytes_and_allocation (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_edited_plan_reference_fails_even_with_old_saved_identity (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_external_original_single_job_reserves_same_scientific_keys (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_new_run_name_or_manifest_cannot_duplicate_an_original_pair (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_original_single_pair_child_is_bound_to_exact_claimed_entry (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_same_queue_cannot_silently_change_plan_or_priority_population (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_short_remaining_time_never_truncates_original_unit_grant (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_two_actual_processes_can_claim_one_scientific_unit_only_once (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_uncertain_cleanup_is_not_recycled (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_cache_keeps_the_export_catalog_in_its_original_order (test_t02_cache_check.CacheProducerTests) ... ok
+test_changed_clean_subset_or_shadow_count_is_not_trusted_from_export (test_t02_cache_check.CacheProducerTests) ... ok
+test_complete_inventory_retains_export_rejections_before_cache (test_t02_cache_check.CacheProducerTests) ... ok
+test_descriptor_roundtrip_reads_actual_png_npz_and_rejects_missing_identity (test_t02_cache_check.CacheProducerTests) ... ok
+test_evidence_finalization_failure_is_an_error_even_after_good_captures (test_t02_cache_check.CacheProducerTests) ... ok
+test_first_state_mismatch_stops_remaining_plan_without_replacement (test_t02_cache_check.CacheProducerTests) ... ok
+test_formal_minimum_rejected_before_any_runtime_work (test_t02_cache_check.CacheProducerTests) ... ok
+test_json_roundtrip_preserves_comparison_tuples_and_exact_state_prefix (test_t02_cache_check.CacheProducerTests) ... ok
+test_new_controller_reconstructs_both_clone_worlds_before_capturing (test_t02_cache_check.CacheProducerTests) ... ok
+test_only_exact_export_module_and_python_prefix (test_t02_cache_check.CacheProducerTests) ... ok
+test_reference_hash_size_and_path_are_not_optional (test_t02_cache_check.CacheProducerTests) ... ok
+test_same_original_id_from_two_authenticated_sources_is_not_filtered (test_t02_cache_check.CacheProducerTests) ... ok
+test_unfinished_error_or_duplicate_pair_is_not_filtered_to_success (test_t02_cache_check.CacheProducerTests) ... ok
+
+----------------------------------------------------------------------
+Ran 167 tests in 32.588s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 33.87040553201223}
+# exit_code: 0
