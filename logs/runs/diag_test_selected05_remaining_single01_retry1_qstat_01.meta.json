@@ -1,0 +1,28 @@
+{
+  "name": "diag_test_selected05_remaining_single01_retry1_qstat_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_selected05_remaining_single01_retry1_qstat_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,sys; p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx','-F','json','710586.hopper-m-02'],capture_output=True,text=True,timeout=30);print(p.stdout,end='');print(p.stderr,file=sys.stderr,end='');sys.exit(p.returncode)"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-11T00:39:12",
+  "log_path": "logs/runs/diag_test_selected05_remaining_single01_retry1_qstat_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "0ce3fbdb6b50e5555e01182349e8e7c3e92ad771",
+  "git_dirty": false,
+  "end": "2026-11-11T00:39:46",
+  "duration_sec": 30.2,
+  "exit_code": 1,
+  "metrics_sha256": "ff14917016892dd5fade60ea03687e71c31e660b1ac13445328e8553953fab4d"
+}

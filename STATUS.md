@@ -1887,3 +1887,13 @@ tasks/DIAG01.report.md now contains completed D1-D4, three actual marked-input e
 D2 lateLS is146/146 for both arms; T4 lateLF is91/182. D4 preserves originalLS18->13->1->0: holdout, then original0.15m displacement, then original scene A/B balance. These findings do not establish a memory mechanism or authorize training.
 D3 completed original83x2 worlds for all four strategies on oneH200. Look success is35/80 never vs43/80 privileged trigger, while mean task reward is0.4375 vs0.3825. LF is23/44 despite44/44 seen. The independent journal review also finds7/86 Direct controls give different actions despite identical complete recorded input proofs; no cause is assumed and the10pp difference is not presented as pure visual causality. All original output is retained.
 Original two-job canonical total is0.12111111111111111 charged GPU-hours (710523 opening-black22s,710558 successful414s); original queue waits163s/338s. Final DIAG01-scoped audit:33 sealed results,0FAIL, original P5/P7 WARN retained. No additional DIAG GPU run is planned. Main experiments and training-Look supplementation remain paused pending review; authorized test T02 exports continue separately.
+
+
+### 2026-11-10 11:46 ET — DIAG01已推送，测试导出继续
+DIAG01完整报告和33个封口结果的原审计（0 FAIL）已于11:30前后从Hopper推送，commit 37641111；主实验、训练Look补数继续暂停，等待审查。
+
+测试导出710571开头出图检查黑帧退出，未领取任何单元；节点hopper-20，GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310。原canonical记27秒、0.0075 GPU小时、排队11秒，原mixed全归T02，原严格黑帧guard和预算preflight通过。同参数重提710586指定hopper-28；两次30秒限时历史PBS查询均超时，失败记录保留，实际qtime尚未据此确定，不能用目录时间虚构20分钟界限。
+
+710574在hopper-27/GPU-2c9376c7-5d82-d36d-b753-697927c88368通过出图检查；第三单卡consumer710584在hopper-16/GPU-d023b691-b356-0c67-bdd5-ac55e5a1dd09通过，二者共用原不可变队列和锁，无重复领取。six02、six03、six04原封口结果分别为5 exported/1 error、5 exported/1 error、6 exported。six02失败是floorplan222_00000的TeleportFull与Box碰撞；six03失败是floorplan323_00169的Native graph domain unavailable，均为原错误，未改称科学拒绝，未删候选或重置领取键。原失败、raw和日志全部保留；已通过原导出检查不等于cache_matches_live通过，95对总体未缩减。
+
+six02原8文件审计和six03/04原16文件审计均0 FAIL，原P5/P7警告保留。运行中的PACK parent尚未封口，不据此写最终用量或完成状态；两consumer继续领取后续单元。710586的20分钟规则只在确认实际qtime并取得fresh Q/未分配证据后执行，已运行作业不取消。

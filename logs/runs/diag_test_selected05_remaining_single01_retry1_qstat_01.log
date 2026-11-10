@@ -1,0 +1,15 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_selected05_remaining_single01_retry1_qstat_01 -- python3 -c import subprocess,sys; p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx','-F','json','710586.hopper-m-02'],capture_output=True,text=True,timeout=30);print(p.stdout,end='');print(p.stderr,file=sys.stderr,end='');sys.exit(p.returncode)
+# start: 2026-11-11T00:39:12
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 505, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1154, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 2022, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1198, in _check_timeout
+    raise TimeoutExpired(
+subprocess.TimeoutExpired: Command '['/cm/shared/apps/pbspro/current/bin/qstat', '-fx', '-F', 'json', '710586.hopper-m-02']' timed out after 30 seconds
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 30.083141763985623}
+# exit_code: 1

@@ -1,0 +1,108 @@
+diff --git a/tasks/DIAG01.report.md b/tasks/DIAG01.report.md
+index 3dd0bff2..778b891e 100644
+--- a/tasks/DIAG01.report.md
++++ b/tasks/DIAG01.report.md
+@@ -1,12 +1,12 @@
+ # DIAG01 报告：独立可见性、选择行为与正式池筛选诊断
+ 
+-阶段报告：D1/D2/D4 已完成，D3 黑帧失败已保留并准备重提；尚不是完整 DIAG01 验收。最终 GPU 结果及审计将在 12:30 ET 前更新。
++完成报告：D1–D4 已完成，包含原失败记录及独立日志复核。结论供人类去留检查点使用，等待审查；不据此启动主实验。
+ 
+ 依据 `fdd373d9` 的任务说明；未修改指标、训练超参数、既有数据或筛选规则。主实验未提交，训练场景 Look 补数暂停；测试集 T02 导出与缓存复核仍按原计划继续。DF/DS/LF/LS 分别为直接 Flip、直接 Stay、Look→Flip、Look→Stay。
+ 
+ - **D1：T0 的“晚期从未看到”是统计漏计。** 原始 mask 独立核对发现更新 41–50 实际有 28/325 个 Look 回合在 select 前看到；185 次观察中仍有 157 次到了 X=0 的状态。T4 同窗口仍是 0/328。错误位于已完成环境步数与零基决策编号的比较，未改历史结果。
+ - **D2：末窗 LS 全部选对，T4 的 LF 恰为一半。** 两臂末窗 LS 均 146/146；LF 为 T0 106/179、T4 91/182。这与不区分世界也能答对 Stay 的行为相容，单凭日志不能断言记忆机制。
+-- **D3：原始模型评测待完成。** 首作业在黑帧门检退出，尚无业务结果；本节最终状态和对比将按实际输出填写，不用零或其他臂代替。
++- **D3：Look 成功率 35/80→43/80，平均任务奖励反而下降。** LF 在全部看到锚点时也只有 23/44 成功；Direct 负对照另有 7/86 个完整输入相同、输出动作不同的回合。因此这里只报告单次比较，不能将 +10 个百分点全部归因于视觉收益。
+ - **D4：LS 的原筛选链为 18→13→1→0。** 留出排除后 12 对被 0.15 m 位移条件去掉，最后 1 对被原 scene 内 A/B 平衡去掉。
+ 
+ ## D1：看到率漏计已由真实 mask 确认，T4 晚期仍未看到
+@@ -162,9 +162,61 @@
+ 这些计数说明相应状态曾被访问，不说明其导致了选择成功或失败。0 表示在已定义分母内没有命中；观察回合为 0 的窗口不能解释成策略已通过观察检验。
+ 
+ 
+-## D3：原始模型四策略（等待已授权作业实际结果）
++## D3 原始模型：Look 成功率增加10个百分点，但不能作为纯视觉因果收益
+ 
+-尚未得到完整结果，详见最终更新。
++原始 Qwen2.5-VL-3B 在固定83对、每对两world、每策略166回合的贪心诊断中，Look 的 `obs_trigger` 成功率为43/80（53.75%），`obs_never` 为35/80（43.75%），官方差值为+10个百分点。与此同时，Look 平均任务奖励从0.4375降到0.3825，`obs_trigger` 平均观察奖励成本为0.155。这不是已训练策略的改进，也不是正式测试集结果。
++
++`obs_trigger` 使用特权mask决定何时停止固定观察序列；模型仍只接收公开输入。固定L/R/R/L路径下，trigger和always均有73/80个Look回合在select前看到own X：LF44/44，LS29/36。固定转向序列不包含 `move N`，并非遍历所有可用视点；不能把7个未看到的LS回合称为“已经看到仍选错”。
++
++下面全部取原封存官方汇总。DF=直接翻转、DS=直接不变、LF=观察后翻转、LS=观察后不变。成功率和看到率的分母均为该类全部回合；看到指本world实际mask计数达到250，且首次看到步早于select完成后的步数。
++
++|策略|类别|成功数/回合（成功率）|平均有效观察数|平均观察奖励成本|select前看到数/回合（看到率）|
++|---|---|---:|---:|---:|---:|
++|`obs_never`|DF|15/22（68.18%）|0.0000|0.0000|22/22（100.00%）|
++|`obs_never`|DS|41/64（64.06%）|0.0000|0.0000|64/64（100.00%）|
++|`obs_never`|LF|22/44（50.00%）|0.0000|0.0000|0/44（0.00%）|
++|`obs_never`|LS|13/36（36.11%）|0.0000|0.0000|0/36（0.00%）|
++|`obs_never`|Look合并|35/80（43.75%）|0.0000|0.0000|0/80（0.00%）|
++|`obs_always`|DF|10/22（45.45%）|4.0000|0.2000|22/22（100.00%）|
++|`obs_always`|DS|37/64（57.81%）|4.0000|0.2000|64/64（100.00%）|
++|`obs_always`|LF|22/44（50.00%）|4.0000|0.2000|44/44（100.00%）|
++|`obs_always`|LS|20/36（55.56%）|4.0000|0.2000|29/36（80.56%）|
++|`obs_always`|Look合并|42/80（52.50%）|4.0000|0.2000|73/80（91.25%）|
++|`obs_trigger`|DF|16/22（72.73%）|0.0000|0.0000|22/22（100.00%）|
++|`obs_trigger`|DS|39/64（60.94%）|0.0000|0.0000|64/64（100.00%）|
++|`obs_trigger`|LF|23/44（52.27%）|3.0000|0.1500|44/44（100.00%）|
++|`obs_trigger`|LS|20/36（55.56%）|3.2222|0.1611|29/36（80.56%）|
++|`obs_trigger`|Look合并|43/80（53.75%）|3.1000|0.1550|73/80（91.25%）|
++|`diag_base`|DF|15/22（68.18%）|0.0000|0.0000|22/22（100.00%）|
++|`diag_base`|DS|30/64（46.88%）|0.0000|0.0000|64/64（100.00%）|
++|`diag_base`|LF|22/44（50.00%）|0.0000|0.0000|0/44（0.00%）|
++|`diag_base`|LS|16/36（44.44%）|0.0000|0.0000|0/36（0.00%）|
++|`diag_base`|Look合并|38/80（47.50%）|0.0000|0.0000|0/80（0.00%）|
++
++|策略|Look平均任务奖励（原字段）|
++|---|---:|
++|`obs_never`|0.4375|
++|`obs_always`|0.3250|
++|`obs_trigger`|0.3825|
++|`diag_base`|0.4750|
++
++**负对照限制：Direct类相同输入出现不同输出。** `obs_never` 与 `obs_trigger` 的Direct类均无观察、直接forced-select；86/86回合的公开图像SHA、公开文本以及完整已记录模型输入证明相同。该证明包含prompt SHA、chat-template SHA、完整图像SHA列表、文本token IDs与guided choices，排除非输入的sample_id。尽管如此，7/86回合的生成response/action/token序列不同，且动作也不同：DF3/22、DS4/64。这与官方DF成功数15→16、DS41→39一致。故不能将Look的全部+10个百分点差值归因于视觉收益；此诊断没有证据确定差异来自批处理、数值非确定性或其他运行因素。
++
++|同输入、不同动作的原pair/world|类别|never动作→trigger动作|
++|---|---|---|
++|`floorplan1_00016/w0`|DF|`select 2` → `select 1`|
++|`floorplan1_00001/w1`|DS|`select 1` → `select 2`|
++|`floorplan1_00026/w0`|DF|`select 1` → `select 2`|
++|`floorplan209_00003/w0`|DS|`select 1` → `select 2`|
++|`floorplan15_00001/w0`|DF|`select 2` → `select 1`|
++|`floorplan7_00011/w1`|DS|`select 1` → `select 2`|
++|`floorplan206_00077/w0`|DS|`select 1` → `select 2`|
++
++独立CPU复核逐文件核验了四份策略journal及progress的原SHA与字节数，确认每策略83×2完整覆盖、world交换、连续状态/决策/终止链、观察成本、seen事件边界和官方汇总逐值一致。复核直接使用原GPU从真实mask字节计出的逐状态像素记录，不用日志 `x_seen_step` 驱动判断；本次没有重复读取mask二进制，也没有重新认证native来源。有效观察数仅计实际产生观察的有效动作；观察奖励成本按原parsed观察尝试累积，因此第五次观察尝试可能收费但不产生新画面。原指标及原结果均未修改。
++
++这些是同一固定训练场景总体的单次原模型诊断，包含既定pilot留出场景，未使用正式测试场景；无置信区间、无主实验结论。trigger的特权调度、累计输入历史及上述Direct负对照限制均须保留。
++
++原证据：[D3原结果](../results/diag_diag01_baselines_s0_01_retry1.json)；[独立日志复核](../results/diag01_d3_journal_review_01.json)；[完整表与原负对照样本](../logs/review/diag01_d3_journal_review_01/report.json)；[紧凑生成表](../logs/review/diag01_d3_journal_review_01/report.md)；[原审计：2文件、0 FAIL](../results/diag01_d3_journal_review_audit_01.json)。
+ 
+ ## D4：原 83 对进入正式筛选时的 LS 去向
+ 
+@@ -202,6 +254,23 @@ LS 为 **18 → 13 → 1 → 0**。排除 holdout 后，12 对因位移低于 0.
+ 
+ D1、D2、D4 只读取原日志、视角表和证书；运行均经 `scripts/run_logged.py`。D1 的首轮图像历史核对失败、D3 的首次 CPU 测试失败与提交前白名单拒绝均保留，没有删除或补写。各成功诊断及其引用的本次失败记录已由原 `scripts/audit_provenance.py` 分项审计，0 FAIL；没有把已有历史未封口运行宣称为本次全库审计通过。原始 run_logged meta 记录精确命令、版本和来源 SHA。
+ 
+-D1 命令及结果：`experiments/diag01_visibility.py` → `results/diag01_visibility_02.json`；D2/D4：`experiments/diag01_learning_pool.py` → `results/diag01_learning_pool_01.json`。D3 命令、PBS 排队/用量与最终审计在完成时补入本节。
++D1 实际入口为 `nice -n 10 python3 -u -m experiments.diag01_visibility --name diag01_visibility_02 --timeout-seconds 300`；D2/D4 为 `nice -n 10 python3 experiments/diag01_learning_pool.py`，参数绑定原 D1 结果引用与300秒上限。两项分别经原 `run_logged` 封存于 [D1](../results/diag01_visibility_02.json) 和 [D2/D4](../results/diag01_learning_pool_01.json)。D3 为 `python3 -u -m src.tools.diag01_baselines`，由原 `scripts/pbs/submit_phase.py` 提交，真实参数为固定83对 manifest、固定 holdout、原始模型 source、driver 3240 秒、gate 180 秒，PBS 1 卡 55 分钟。以上精确命令及完整原始参数均在对应结果的 `_meta.command`，没有用省略的参数重跑。所有数字运行都保留原 logger、源引用和失败记录。
++
++D3 原始模型固定为 Qwen2.5-VL-3B，沿用原 `VllmPolicy`（bf16、temperature=0、seed=0、同一模型快照）；四种策略全部在同一张 NVIDIA H200 上执行（hopper-30，`GPU-203a8df0-cfd6-b9f0-407a-678d1147f22b`，原 gate 记录）。先在同一分配内完成固定首个 Look 对的四策略双世界检查，再跑其余82对；没有另抽样、换种子或重复挑选结果。83对均来自训练场景，含原试跑留出部分，不属于正式测试集。
++
++| PBS 作业 | 用途/终态 | GPU 数 | 提交到启动 | PBS 计费时长 | 队列倍率 | 计费 GPU·小时 |
++|---|---|---:|---|---|---:|---:|
++| 710523.hopper-m-02 | D3 首次入口黑帧，exit86，未运行模型 | 1 | 2分43秒 | 22秒 | 1 | 0.0061111111 |
++| 710558.hopper-m-02 | 同参数重提，完整四策略，exit0 | 1 | 5分38秒 | 6分54秒 | 1 | 0.1150000000 |
++
++本任务合计 **0.12111111111111111 GPU·小时**，包含失败分配，低于1 GPU·小时限制；D1/D2/D4及日志复核均为0 GPU。来源为[原两作业 canonical 记账](../results/diag_diag01_d3_final_accounting_01.json)，计费口径为 PBS 分配 GPU·小时乘原队列倍率。第一张黑卡是 hopper-18 / `GPU-9317c80e-33a9-8f2c-b611-9a459bb1818e`。710558 指定 hopper-30 后已正常启动，20分钟未启动取消的条件没有触发，未执行取消。
++
++原 [D3 终态审计](../results/diag_diag01_d3_final_audit_01.json) 5文件、0 FAIL；[独立 journal 复核审计](../results/diag01_d3_journal_review_audit_01.json) 2文件、0 FAIL。D3 原CPU新8项、旧8项通过；原提交器诊断入口46项、黑帧兼容35项通过。上述均是原 logged 测试，不以本地开发测试代替。
++
++本报告引用的[原 scratch 查询](../results/diag_test_selected05_remaining_scratch_quota_01.json)记录 **602.9 GiB / 1 TiB，3,246,533 文件 / unlimited**。原 `hpc quota` 的 home 段 awk 错误及整体 exit1 保留，scratch 段完整；[原预检02](../results/diag_test_selected05_remaining_preflight_02.json)确认剩余容量超过既定150 GiB门槛。
++
++提交完成报告前，原审计对本任务全部33个已封口结果再做统一检查：[diag01_final_audit_01](../results/diag01_final_audit_01.json)，**33文件、0 FAIL**。原 P7 失败记录与一次 P5 未提交改动审计警告均保留，不把它们改写为成功；该检查不宣称历史其他任务的未封口运行已通过审计。
++
++本 DIAG01 没有追加 GPU 计划。尚未解释的 Direct 同输入异输出原因、如何处理 seen 边界错误、正式池 LS=0 以及主实验去留，均留给审查与人类决定；未改变任何定义、训练配置或筛选门槛。测试集 T02 的原95个候选继续按既定选择、压缩与缓存要求执行，另记 T02 用量；候选导出错误不补写为通过，也不把导出当作缓存复核通过。
+ 
+ 本任务没有启动主实验或训练补数，不调整停止规则，不用本诊断作论文结果。完成报告推送后等 Claude/人类审查。
