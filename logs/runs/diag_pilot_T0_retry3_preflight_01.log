@@ -1,0 +1,27 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot_T0_retry3_preflight_01 -- python3 -c import hashlib,json
+from pathlib import Path
+from src.tools import pbs_black_retry as b
+r=Path.cwd().resolve()
+guard=r/'results/diag_pilot_T0_retry2_black_guard_01.json'
+gref={'file':str(guard.relative_to(r)),'sha256':hashlib.sha256(guard.read_bytes()).hexdigest()}
+gdata,_=b.logged(r,gref)
+b.require(gdata['_meta']['exit_code']==0,'Original strict guard failed')
+proof=gdata['metrics']['strict_black_gate_proof']
+path,body=b.file_ref(r,proof['original_payload'],'logs/pbs');payload=json.loads(body)
+b.require(proof['job_id']=='709961.hopper-m-02' and payload['name']=='smoke_e2e_pilot_T0_s0_01_retry2','Not original T0 black job')
+name='smoke_e2e_pilot_T0_s0_01_retry3';command=list(payload['command'])
+command[command.index('--name')+1]=name
+b.require(command[command.index('--timeout-seconds')+1]=='15536','Original driver bound differs')
+command[command.index('--timeout-seconds')+1]='15536'
+binding=b.validate_request_host(r,host='hopper-28',retry_of=proof['job_id'],evidence_path=gref['file'],evidence_sha256=gref['sha256'],name=name,command=command,task='T01',group='E2Epilot',gpus=1,wall_seconds=15600)
+submit=['python3','scripts/pbs/submit_phase.py','--name',name,'--task','T01','--budget-group','E2Epilot','--gpus','1','--walltime','04:20:00','--host','hopper-28','--retry-of',proof['job_id'],'--black-retry-evidence',gref['file'],'--black-retry-evidence-sha256',gref['sha256'],'--',*command]
+diag='diag_submit_'+name
+logged=['python3','-u','scripts/run_logged.py','--name',diag,'--seed','0','--','python3','-m','src.tools.record_command','--name',diag,'--',*submit]
+print('ORIGINAL_PILOT_RETRY_PREFLIGHT_JSON: '+json.dumps({'strict_guard':gref,'host_authorization':binding,'wall_seconds':15600,'driver_seconds':15536,'unchanged_population_and_holdout':True,'submitted':False},sort_keys=True),flush=True)
+print('ORIGINAL_SUBMIT_ARGV_JSON: '+json.dumps(logged),flush=True)
+
+# start: 2026-11-10T15:46:13
+ORIGINAL_PILOT_RETRY_PREFLIGHT_JSON: {"driver_seconds": 15536, "host_authorization": {"available_hosts": ["hopper-28", "hopper-30"], "disabled_hosts": {"hopper-22": {"gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56", "job_id": "709293.hopper-m-02", "reason": "New pinned submissions excluded after authenticated opening black gate", "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"}}, "evidence": {"file": "results/diag_pilot_T0_retry2_black_guard_01.json", "sha256": "29ed9fc18b6be988afa1370a475e1ce4e23f0e0245f81c046470487dfa26b944"}, "original_gpu_uuid": "GPU-14671969-f60b-8a74-3c07-391bb0796b80", "original_node": "hopper-16", "previous_requested_host": null, "queue_fallback_after_seconds": 1200, "requested_host": "hopper-28", "retry_of": "709961.hopper-m-02", "rotation_index": 11, "rotation_previous": {"payload": {"file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry1-20261110T071533Z-70526339/payload.json", "sha256": "073c359b9615d7ff77abe85b69f0bfedd65744c6e69a1eefdf17e46dab43a321"}, "receipt": {"file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry1-20261110T071533Z-70526339/submission.json", "sha256": "b35c1a7038ab86124d58fd97318366453caa3d19593227b23992d7c491df77e4"}}, "scope": "opening black gate retry only; no scientific acceptance", "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"}, "strict_guard": {"file": "results/diag_pilot_T0_retry2_black_guard_01.json", "sha256": "29ed9fc18b6be988afa1370a475e1ce4e23f0e0245f81c046470487dfa26b944"}, "submitted": false, "unchanged_population_and_holdout": true, "wall_seconds": 15600}
+ORIGINAL_SUBMIT_ARGV_JSON: ["python3", "-u", "scripts/run_logged.py", "--name", "diag_submit_smoke_e2e_pilot_T0_s0_01_retry3", "--seed", "0", "--", "python3", "-m", "src.tools.record_command", "--name", "diag_submit_smoke_e2e_pilot_T0_s0_01_retry3", "--", "python3", "scripts/pbs/submit_phase.py", "--name", "smoke_e2e_pilot_T0_s0_01_retry3", "--task", "T01", "--budget-group", "E2Epilot", "--gpus", "1", "--walltime", "04:20:00", "--host", "hopper-28", "--retry-of", "709961.hopper-m-02", "--black-retry-evidence", "results/diag_pilot_T0_retry2_black_guard_01.json", "--black-retry-evidence-sha256", "29ed9fc18b6be988afa1370a475e1ce4e23f0e0245f81c046470487dfa26b944", "--", "python3", "-u", "-m", "src.tools.smoke_e2e_pilot", "run", "--name", "smoke_e2e_pilot_T0_s0_01_retry3", "--arm", "T0", "--manifest", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}", "--holdout-reference", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}", "--model-source", "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}", "--pilot-spec", "configs/smoke_e2e_pilot.json", "--timeout-seconds", "15536", "--gate-timeout-seconds", "180"]
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.5225641209981404}
+# exit_code: 0

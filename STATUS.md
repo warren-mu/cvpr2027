@@ -1719,3 +1719,15 @@ Pilot host-proof patch218895e9 passed25 original server CPU tests. The actual709
 3732b24c and16be1c57 are merged. Latest night authority supersedes the earlier first-update wait: both black-frame retries were submitted consecutively, with no request for human input. T0:709866→709908 onhopper28; T4:709869→709913 onhopper30. The original verified query records qtimes07:13:03UTC and07:16:28UTC; their20-minute Q-only fallback boundaries are07:33:03 and07:36:28. The retry submissions were already in progress when16be1c57 arrived and still request03:39:24. Do not rewrite their immutable payloads or cancel any running job. At each true20-minute boundary, only a new Q/no-allocation check permits cancellation; original pre/qdel/post/canonical evidence then allows an unpinned new-name04:20:00 request (driver15536s). This will apply the new longer limit without pretending the old reservation changed.
 
 0bb3d323 implements the human-approved12GPU-hour pilot cap, separate E2EpilotT2 cap0.5, unchanged shared120, and the exact native T0/T4 four-hour-twenty exception. The unchanged science/inputs and original64-second recording margin are enforced. Original server t04_pilot_overnight_budget_cpu_01 passed89 tests,0skips. T2 smoke_e2e_pilot_T2_s0_01→709941, oneGPU/nohost/PBS00:29:00/driver1676s, explicit independentbudget on both outer submitter and native driver, full5updates. T2 is the new route's first single-GPU smoke, not a formal paper result. No other GPU work takes the two pilot slots. A report will be written before09:30ET, preserving every failure and stating any missing result. No hyperparameter search is authorized; timings for200-step planning must use actual updates after the first, with unmeasured arms labelled as proxies.
+
+## 2026-11-10 02:59 ET — 夜间原参数重提继续
+
+已再次同步 main，包含 16be1c57。T0/T4 保持相同 83 对证书入口、固定留出、seed 和各 50 次更新，新的请求均为 PBS 04:20:00、driver 15536 秒；试跑上限 12 GPU·小时，T2 独立 0.5，共享上限 120。额外来源再认证未等待的事实不变。
+
+T0 的 709961 在 hopper-16（GPU-14671969-f60b-8a74-3c07-391bb0796b80）开头黑帧，原记账为 17 秒；T4 的 709964 在 hopper-20（GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310）开头黑帧，原记账为 23 秒。两个 native gate 都是 exit 86，未进入训练。此前指定节点但未启动的 709908/709913 已按原 Q-only 证据取消并记零分配；全部原记录保留。
+
+已按原严格 guard、preflight 和预算检查提交 T0 709979（hopper-28）与 T4 709996（hopper-30）；两者是各自最后一次允许的实际基础设施重试。排队但未执行的取消不计实际训练失败次数。真实 qtime 正在查询，若仍 Q 且没有分配/启动，按 20 分钟规则回退到无 host；不会取消 R 作业。
+
+T2 709941 在 hopper-16 同一 GPU 开头黑帧，原分配 23 秒。最初以模块形式调用 pbs_usage 的原记录保留；原提交器只接受文件路径形式的 canonical，因此又以原脚本路径生成 diag_pilot709941_accounting_02 并完成严格 guard02，未更改科学检查或预算规则。T2 重提在 T0/T4 提交之后继续原独立预算检查。
+
+目前仍只有 709803 的完整工程更新；正式 50 步结果尚不存在，不能作“不学习”判断或用首步充当稳定耗时。失败与重提原结果执行 scoped provenance 审计后随本次提交推送；历史未封口的旧配额失败记录仍保留，不声称全仓历史审计清零。09:30 ET 前更新并推送 tasks/E2E.report.md。

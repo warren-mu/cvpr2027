@@ -1,0 +1,52 @@
+# run_logged: python3 -c import hashlib, importlib.util, io, json, shlex
+from pathlib import Path
+from PIL import Image
+from src.tools import pbs_black_retry as b
+r=Path.cwd().resolve(); require=b.require
+name='diag_pilot_T4_retry2_black_guard_01'
+job='709964.hopper-m-02'; parent_name='smoke_e2e_pilot_T4_s0_01_retry2'
+folder=r/'logs/pbs/smoke_e2e_pilot_T4_s0_01_retry2-20261110T074132Z-96ebd49e'
+def ref(path):
+    return {'file':str(path.relative_to(r)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+def load(filename):
+    rr=ref(r/filename); data,path=b.logged(r,rr)
+    return data,dict(rr,metrics_sha256=data['_meta']['metrics_sha256'])
+parent,pref=load('results/'+parent_name+'.json')
+gate,gref=load('results/'+parent_name+'_gate.json')
+account,aref=load('results/diag_pilot_T4_retry2_black_accounting_01.json')
+require(pref['sha256']=='aa747c77eaedadfc7eedb9296d4cf3dda829e23bb682a3d2d8449ef43ee44dde' and gref['sha256']=='d73874e24a4681dce740e45f066b91984e7d116bd483767f604968256237962c' and aref['sha256']=='0ad5476227473ffc450eb45e85d7041460e741d008f2d0cca712f03aa5b8aaad','Exact original result references differ')
+pp,sp,rp=(folder/p for p in ('payload.json','job.pbs','submission.json'))
+payload,receipt=json.loads(pp.read_bytes()),json.loads(rp.read_bytes())
+require(ref(rp)['sha256']=='1c8185434fb8711cedd2782012e0b176c6034ebab249d8ab649b5abf78159814' and ref(sp)['sha256']=='96ad95a2bb930a321af6acada36d1b93744a2bcc74bf6e4089b81095b0715bd6','Original receipt/script SHA differs')
+require(ref(pp)['sha256']=='e5cbe11b4f72c3a66cfaf82b8b85d9794c71f3d937b14ac48239fcacab105cfe','Original submitted payload SHA differs')
+expected=['python3', '-u', '-m', 'src.tools.smoke_e2e_pilot', 'run', '--name', 'smoke_e2e_pilot_T4_s0_01_retry2', '--arm', 'T4', '--manifest', '{"file":"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json","sha256":"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"}', '--holdout-reference', '{"file":"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json","sha256":"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"}', '--model-source', '{"file":"results/smoke_e2e_eval_03.json","sha256":"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9"}', '--pilot-spec', 'configs/smoke_e2e_pilot.json', '--timeout-seconds', '15536', '--gate-timeout-seconds', '180']
+require(payload['repo']==str(r) and payload['name']==parent_name and payload['command']==expected and payload['dry_run'] is False and payload['task_id']=='T01' and payload['budget_group']=='E2Epilot' and payload['budget_batch']=='t00b_t01_20261108' and payload['queue']=='autox' and payload['requested_host'] is None and payload['requested_gpu_count']==1 and payload['requested_wall_seconds']==15600,'Original exact pilot payload differs')
+require(pp.stat().st_mode & 0o222 == sp.stat().st_mode & 0o222 ==0 and receipt['returncode']==0 and receipt['stdout'].strip()==job and not receipt['stderr'],'Original immutable files/receipt differ')
+spec=importlib.util.spec_from_file_location('original_submit_for_pilot_guard',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+require(sp.read_text()==phase.render_job_script((r/'scripts/pbs/job_1gpu.pbs').read_text(),1,pp,None),'Original PBS script differs from unchanged one-GPU template')
+final=phase._final_accounting(r,{job},paths=[r/aref['file']]);require(job in final,'Original canonical accounting missing')
+rows=[v for v in account['config']['jobs'] if v['job_id']==job];require(len(rows)==1 and rows[0]['qstat_exit']==0,'Canonical job ambiguous');f=rows[0]['fields']
+require(f.get('job_state')=='F' and f.get('Exit_status')=='86' and f.get('run_count')=='1' and f.get('project')=='CFP04-SF-125' and f.get('Job_Owner','').split('@')[0]=='e1583364' and f.get('Resource_List.ngpus')=='1' and f.get('Resource_List.ncpus')=='12' and f.get('Resource_List.walltime')=='04:20:00' and f.get('queue')=='smallx' and 'PBS_O_QUEUE=autox' in f.get('Variable_List','') and shlex.split(f['Submit_arguments'])==receipt['command'][1:] and f['Output_Path'].split(':',1)[1]==str(folder/'pbs.out'),'Original canonical allocation/exit differs')
+gc,gm=gate['config'],gate['metrics']; a=gc['allocation']; pm=parent['metrics']; node=gc['node'];gpu=a['cuda_visible_devices']
+proof={'eligible_proven_black_gate_retry':False,'job_id':job,'native_kind':'smoke_e2e_pilot_training','original_payload':ref(pp),'original_job_script':ref(sp),'original_receipt':ref(rp),'original_command_unchanged':expected,'pbs_accounting':aref,'source_results':[pref,gref],'node':node,'gpu_uuid':gpu,'captures':[]}
+parent_gate=b.pilot_opening_black(payload,parent,gate,proof)
+require(parent_gate['sha256']==gref['sha256'],'Parent gate SHA differs')
+require({part.split('/')[0] for part in f['exec_host'].split('+')}=={node} and parent['_meta']['host']==gate['_meta']['host']==parent['config']['node']==node and gc['pbs_jobid']==a['pbs_jobid']==job and a['cuda_driver_uuids']==[gpu] and len(a['cpu_affinity'])==len(set(a['cpu_affinity']))==12 and gc['resolution']==255 and gc['segmentation'] is True and gate['_meta']['exit_code']==gm.get('exit_code')==86 and gm.get('passed') is False and gm.get('black_frame_detected') is True and gm.get('errors')==gm.get('cleanup_errors')==[] and gm.get('expected_gpu_count')==gm.get('completed_gpu_count')==1 and len(gm['devices'])==len(a['devices'])==1,'Original native gate identities differ')
+ob=gm['devices'][0]['observation'];require(gm['devices'][0]['worker_error'] is None and not ob.get('error') and not ob.get('cleanup_error') and ob['gpu_identity']==a['devices'][0] and ob['gpu_identity']['gpu_uuid']==gpu and ob['node']==node and [v['stage'] for v in ob['captures']]==['after_constructor','after_Pass'],'Native observations are incomplete')
+for stage in ('Pass',):
+    require(any(v['stage']==stage and v['fresh_main_rgb_payloads']>0 and v['cached_metadata'] is False for v in ob['wire_packets']),'Missing fresh native constructor/Pass payload')
+for capture in ob['captures']:
+    path=Path(capture['png']['path']).resolve();path.relative_to(r/'logs/runs'); rr=ref(path)
+    require(rr['sha256']==capture['png']['sha256'] and capture['valid_shape'] is True and capture['shape']==[255,255,3] and capture['dtype']=='uint8' and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True and capture['nonzero_rgb_values']==capture['min_rgb']==capture['max_rgb']==0,'Original native black capture invalid')
+    with Image.open(io.BytesIO(path.read_bytes())) as im:
+        require(im.mode=='RGB' and im.size==(255,255) and im.getextrema()==((0,0),)*3,'Original decoded capture is not all black')
+    proof['captures'].append(rr)
+proof['eligible_proven_black_gate_retry']=True
+metrics={'strict_black_gate_proof':proof,'scope':'Original native pilot opening black gate before source authentication/training; no submission or scientific acceptance'}
+result={'metrics':metrics,'config':{'name':name,'original_job_id':job,'original_parent':parent_name},'sources':[pref,gref,aref]}
+with (r/'results'/f'{name}.json').open('x') as handle:json.dump(result,handle,indent=2,allow_nan=False);handle.write('\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T15:51:20
+FINAL_METRICS_JSON: {"scope": "Original native pilot opening black gate before source authentication/training; no submission or scientific acceptance", "strict_black_gate_proof": {"captures": [{"file": "logs/runs/smoke_e2e_pilot_T4_s0_01_retry2_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"file": "logs/runs/smoke_e2e_pilot_T4_s0_01_retry2_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310", "job_id": "709964.hopper-m-02", "native_kind": "smoke_e2e_pilot_training", "node": "hopper-20", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.smoke_e2e_pilot", "run", "--name", "smoke_e2e_pilot_T4_s0_01_retry2", "--arm", "T4", "--manifest", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}", "--holdout-reference", "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}", "--model-source", "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}", "--pilot-spec", "configs/smoke_e2e_pilot.json", "--timeout-seconds", "15536", "--gate-timeout-seconds", "180"], "original_job_script": {"file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry2-20261110T074132Z-96ebd49e/job.pbs", "sha256": "96ad95a2bb930a321af6acada36d1b93744a2bcc74bf6e4089b81095b0715bd6"}, "original_payload": {"file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry2-20261110T074132Z-96ebd49e/payload.json", "sha256": "e5cbe11b4f72c3a66cfaf82b8b85d9794c71f3d937b14ac48239fcacab105cfe"}, "original_receipt": {"file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry2-20261110T074132Z-96ebd49e/submission.json", "sha256": "1c8185434fb8711cedd2782012e0b176c6034ebab249d8ab649b5abf78159814"}, "pbs_accounting": {"file": "results/diag_pilot_T4_retry2_black_accounting_01.json", "metrics_sha256": "003ce0fb3a40b7c3458cd5ff9d702f2324502404f98d35f659f3f1f7d5a80c15", "sha256": "0ad5476227473ffc450eb45e85d7041460e741d008f2d0cca712f03aa5b8aaad"}, "source_results": [{"file": "results/smoke_e2e_pilot_T4_s0_01_retry2.json", "metrics_sha256": "e6c6f88895b0edfc8e8fa882ba6e68e80f0c4a28acd4c4d2e00635d8137fae5b", "sha256": "aa747c77eaedadfc7eedb9296d4cf3dda829e23bb682a3d2d8449ef43ee44dde"}, {"file": "results/smoke_e2e_pilot_T4_s0_01_retry2_gate.json", "metrics_sha256": "148c5b7b2892c09323760b7c23da648acc0ec4c57ec605936753d5f764c22905", "sha256": "d73874e24a4681dce740e45f066b91984e7d116bd483767f604968256237962c"}]}}
+# exit_code: 0

@@ -1,0 +1,298 @@
+{
+  "arms": [
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01_retry3_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T0_s0_01_retry3",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T0_s0_01_retry3.json",
+        "log_exists": false
+      },
+      "submission_directories": [
+        {
+          "directory": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269",
+          "payload.json": {
+            "original": {
+              "black_retry_host_authorization": {
+                "available_hosts": [
+                  "hopper-28",
+                  "hopper-30"
+                ],
+                "disabled_hosts": {
+                  "hopper-22": {
+                    "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+                    "job_id": "709293.hopper-m-02",
+                    "reason": "New pinned submissions excluded after authenticated opening black gate",
+                    "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+                  }
+                },
+                "evidence": {
+                  "file": "results/diag_pilot_T0_retry2_black_guard_01.json",
+                  "sha256": "29ed9fc18b6be988afa1370a475e1ce4e23f0e0245f81c046470487dfa26b944"
+                },
+                "original_gpu_uuid": "GPU-14671969-f60b-8a74-3c07-391bb0796b80",
+                "original_node": "hopper-16",
+                "previous_requested_host": null,
+                "queue_fallback_after_seconds": 1200,
+                "requested_host": "hopper-28",
+                "retry_of": "709961.hopper-m-02",
+                "rotation_index": 11,
+                "rotation_previous": {
+                  "payload": {
+                    "file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry1-20261110T071533Z-70526339/payload.json",
+                    "sha256": "073c359b9615d7ff77abe85b69f0bfedd65744c6e69a1eefdf17e46dab43a321"
+                  },
+                  "receipt": {
+                    "file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry1-20261110T071533Z-70526339/submission.json",
+                    "sha256": "b35c1a7038ab86124d58fd97318366453caa3d19593227b23992d7c491df77e4"
+                  }
+                },
+                "scope": "opening black gate retry only; no scientific acceptance",
+                "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"
+              },
+              "budget_batch": "t00b_t01_20261108",
+              "budget_group": "E2Epilot",
+              "budget_revision": "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1",
+              "command": [
+                "python3",
+                "-u",
+                "-m",
+                "src.tools.smoke_e2e_pilot",
+                "run",
+                "--name",
+                "smoke_e2e_pilot_T0_s0_01_retry3",
+                "--arm",
+                "T0",
+                "--manifest",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+                "--holdout-reference",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+                "--model-source",
+                "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+                "--pilot-spec",
+                "configs/smoke_e2e_pilot.json",
+                "--timeout-seconds",
+                "15536",
+                "--gate-timeout-seconds",
+                "180"
+              ],
+              "dry_run": false,
+              "environment": {
+                "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+              },
+              "name": "smoke_e2e_pilot_T0_s0_01_retry3",
+              "queue": "autox",
+              "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+              "requested_gpu_count": 1,
+              "requested_host": "hopper-28",
+              "requested_queue_charge_rate": 1.0,
+              "requested_wall_seconds": 15600,
+              "retry_of": "709961.hopper-m-02",
+              "task_id": "T01"
+            },
+            "reference": {
+              "bytes": 3008,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/payload.json",
+              "sha256": "33ec7989f883da911bd101514a473fdca8d649bce22691c8d79047029b144344"
+            }
+          },
+          "payload.json_exists": true,
+          "pbs_out_exists": false,
+          "submission.json": {
+            "original": {
+              "command": [
+                "qsub",
+                "-N",
+                "cvpr27_4edd0269",
+                "-l",
+                "walltime=04:20:00",
+                "-o",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/pbs.out",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/job.pbs"
+              ],
+              "returncode": 0,
+              "stderr": "",
+              "stdout": "709979.hopper-m-02\n"
+            },
+            "reference": {
+              "bytes": 429,
+              "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/submission.json",
+              "sha256": "ebb70c35bc2d81779963dd393b312793d9d13af93290d5bc04f4a4569b135441"
+            }
+          },
+          "submission.json_exists": true
+        }
+      ]
+    },
+    {
+      "gate": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01_retry3_gate.json",
+        "log_exists": false
+      },
+      "name": "smoke_e2e_pilot_T4_s0_01_retry3",
+      "result": {
+        "exists": false,
+        "file": "results/smoke_e2e_pilot_T4_s0_01_retry3.json",
+        "log_exists": false
+      },
+      "submission_directories": [
+        {
+          "directory": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e",
+          "payload.json": {
+            "original": {
+              "black_retry_host_authorization": {
+                "available_hosts": [
+                  "hopper-28",
+                  "hopper-30"
+                ],
+                "disabled_hosts": {
+                  "hopper-22": {
+                    "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+                    "job_id": "709293.hopper-m-02",
+                    "reason": "New pinned submissions excluded after authenticated opening black gate",
+                    "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+                  }
+                },
+                "evidence": {
+                  "file": "results/diag_pilot_T4_retry2_black_guard_01.json",
+                  "sha256": "2ca0f2f8667a642b2bae93969698e9eefaceb31e42030a970c20eb921680143f"
+                },
+                "original_gpu_uuid": "GPU-40b0ab4a-7a75-34d7-0050-d9a548cf5310",
+                "original_node": "hopper-20",
+                "previous_requested_host": null,
+                "queue_fallback_after_seconds": 1200,
+                "requested_host": "hopper-30",
+                "retry_of": "709964.hopper-m-02",
+                "rotation_index": 12,
+                "rotation_previous": {
+                  "payload": {
+                    "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/payload.json",
+                    "sha256": "33ec7989f883da911bd101514a473fdca8d649bce22691c8d79047029b144344"
+                  },
+                  "receipt": {
+                    "file": "logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/submission.json",
+                    "sha256": "ebb70c35bc2d81779963dd393b312793d9d13af93290d5bc04f4a4569b135441"
+                  }
+                },
+                "scope": "opening black gate retry only; no scientific acceptance",
+                "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"
+              },
+              "budget_batch": "t00b_t01_20261108",
+              "budget_group": "E2Epilot",
+              "budget_revision": "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1",
+              "command": [
+                "python3",
+                "-u",
+                "-m",
+                "src.tools.smoke_e2e_pilot",
+                "run",
+                "--name",
+                "smoke_e2e_pilot_T4_s0_01_retry3",
+                "--arm",
+                "T4",
+                "--manifest",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+                "--holdout-reference",
+                "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+                "--model-source",
+                "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+                "--pilot-spec",
+                "configs/smoke_e2e_pilot.json",
+                "--timeout-seconds",
+                "15536",
+                "--gate-timeout-seconds",
+                "180"
+              ],
+              "dry_run": false,
+              "environment": {
+                "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+              },
+              "name": "smoke_e2e_pilot_T4_s0_01_retry3",
+              "queue": "autox",
+              "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+              "requested_gpu_count": 1,
+              "requested_host": "hopper-30",
+              "requested_queue_charge_rate": 1.0,
+              "requested_wall_seconds": 15600,
+              "retry_of": "709964.hopper-m-02",
+              "task_id": "T01"
+            },
+            "reference": {
+              "bytes": 3008,
+              "file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/payload.json",
+              "sha256": "00fa1e2db8597b804618548f88c8a8cb37eb7b59fb8bebfe7f9c7a75d5cd0acc"
+            }
+          },
+          "payload.json_exists": true,
+          "pbs_out_exists": false,
+          "submission.json": {
+            "original": {
+              "command": [
+                "qsub",
+                "-N",
+                "cvpr27_6e8b038e",
+                "-l",
+                "walltime=04:20:00",
+                "-o",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/pbs.out",
+                "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/job.pbs"
+              ],
+              "returncode": 0,
+              "stderr": "",
+              "stdout": "709996.hopper-m-02\n"
+            },
+            "reference": {
+              "bytes": 429,
+              "file": "logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/submission.json",
+              "sha256": "a1ada46bc1ea55a35debebc6dfbbb15ee2cb0145235e53da0660856ab4e4edb9"
+            }
+          },
+          "submission.json_exists": true
+        }
+      ]
+    }
+  ],
+  "observed_at_utc": "2026-11-10T07:59:20.069179+00:00",
+  "query": {
+    "command": [
+      "/cm/shared/apps/pbspro/current/bin/qstat",
+      "-f",
+      "-F",
+      "json",
+      "709979.hopper-m-02",
+      "709996.hopper-m-02"
+    ],
+    "returncode": 0,
+    "selected_original_fields": {
+      "709979.hopper-m-02": {
+        "Exit_status": null,
+        "etime": "Tue Nov 10 15:49:48 2026",
+        "exec_host": null,
+        "exec_vnode": null,
+        "job_state": "Q",
+        "qtime": "Tue Nov 10 15:49:48 2026",
+        "resources_used": null,
+        "stime": null
+      },
+      "709996.hopper-m-02": {
+        "Exit_status": null,
+        "etime": "Tue Nov 10 15:58:29 2026",
+        "exec_host": null,
+        "exec_vnode": null,
+        "job_state": "Q",
+        "qtime": "Tue Nov 10 15:58:29 2026",
+        "resources_used": null,
+        "stime": null
+      }
+    },
+    "stderr": "",
+    "stdout": "{\n    \"timestamp\":1794297560,\n    \"pbs_version\":\"2024.1.0.20240130071604\",\n    \"pbs_server\":\"hopper-m-02.cm.cluster\",\n    \"Jobs\":{\n        \"709979.hopper-m-02\":{\n            \"Job_Name\":\"cvpr27_4edd0269\",\n            \"Job_Owner\":\"e1583364@hopper-l-01.cm.cluster\",\n            \"job_state\":\"Q\",\n            \"queue\":\"smallx\",\n            \"server\":\"hopper-m-02.cm.cluster\",\n            \"Checkpoint\":\"u\",\n            \"ctime\":\"Tue Nov 10 15:49:48 2026\",\n            \"Error_Path\":\"hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cvpr27_4edd0269.e709979\",\n            \"Hold_Types\":\"n\",\n            \"Join_Path\":\"oe\",\n            \"Keep_Files\":\"oed\",\n            \"Mail_Points\":\"a\",\n            \"mtime\":\"Tue Nov 10 15:49:48 2026\",\n            \"Output_Path\":\"hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/pbs.out\",\n            \"Priority\":0,\n            \"qtime\":\"Tue Nov 10 15:49:48 2026\",\n            \"Rerunable\":\"True\",\n            \"Resource_List\":{\n                \"am_job_cache\":\"{\\\"job.ngpus\\\": 1.0, \\\"job.walltime\\\": 15600, \\\"job.ncpus\\\": 12.0, \\\"job.queue_charge_rate\\\": 0, \\\"formula_constants\\\": \\\"\\\", \\\"am_cloud_enabled\\\": false}\",\n                \"mem\":\"225gb\",\n                \"ncpus\":12,\n                \"ngpus\":1,\n                \"nodect\":1,\n                \"nodes\":1,\n                \"place\":\"free\",\n                \"queue_charge_rate\":1,\n                \"select\":\"1:ngpus=1:host=hopper-28:ncpus=12:mem=225GB\",\n                \"walltime\":\"04:20:00\"\n            },\n            \"substate\":10,\n            \"Variable_List\":{\n                \"PBS_O_HOME\":\"/home/svu/e1583364\",\n                \"PBS_O_LANG\":\"C.UTF-8\",\n                \"PBS_O_LOGNAME\":\"e1583364\",\n                \"PBS_O_PATH\":\"/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr2027/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/python/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin\",\n                \"PBS_O_SHELL\":\"/bin/bash\",\n                \"PBS_O_HOST\":\"hopper-l-01.cm.cluster\",\n                \"PBS_O_WORKDIR\":\"/home/svu/e1583364/CVPR2027/cvpr2027\",\n                \"PBS_O_SYSTEM\":\"Linux\",\n                \"PBS_O_QUEUE\":\"autox\"\n            },\n            \"comment\":\"Not Running: Insufficient amount of resource: host \",\n            \"etime\":\"Tue Nov 10 15:49:48 2026\",\n            \"Submit_arguments\":\"-N cvpr27_4edd0269 -l walltime=04:20:00 -o /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T0_s0_01_retry3-20261110T074848Z-4edd0269/job.pbs\",\n            \"project\":\"CFP04-SF-125\",\n            \"Submit_Host\":\"hopper-l-01.cm.cluster\"\n        },\n        \"709996.hopper-m-02\":{\n            \"Job_Name\":\"cvpr27_6e8b038e\",\n            \"Job_Owner\":\"e1583364@hopper-l-01.cm.cluster\",\n            \"job_state\":\"Q\",\n            \"queue\":\"smallx\",\n            \"server\":\"hopper-m-02.cm.cluster\",\n            \"Checkpoint\":\"u\",\n            \"ctime\":\"Tue Nov 10 15:58:29 2026\",\n            \"Error_Path\":\"hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cvpr27_6e8b038e.e709996\",\n            \"Hold_Types\":\"n\",\n            \"Join_Path\":\"oe\",\n            \"Keep_Files\":\"oed\",\n            \"Mail_Points\":\"a\",\n            \"mtime\":\"Tue Nov 10 15:58:30 2026\",\n            \"Output_Path\":\"hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/pbs.out\",\n            \"Priority\":0,\n            \"qtime\":\"Tue Nov 10 15:58:29 2026\",\n            \"Rerunable\":\"True\",\n            \"Resource_List\":{\n                \"am_job_cache\":\"{\\\"job.ngpus\\\": 1.0, \\\"job.walltime\\\": 15600, \\\"job.ncpus\\\": 12.0, \\\"job.queue_charge_rate\\\": 0, \\\"formula_constants\\\": \\\"\\\", \\\"am_cloud_enabled\\\": false}\",\n                \"mem\":\"225gb\",\n                \"ncpus\":12,\n                \"ngpus\":1,\n                \"nodect\":1,\n                \"nodes\":1,\n                \"place\":\"free\",\n                \"queue_charge_rate\":1,\n                \"select\":\"1:ngpus=1:host=hopper-30:ncpus=12:mem=225GB\",\n                \"walltime\":\"04:20:00\"\n            },\n            \"substate\":10,\n            \"Variable_List\":{\n                \"PBS_O_HOME\":\"/home/svu/e1583364\",\n                \"PBS_O_LANG\":\"C.UTF-8\",\n                \"PBS_O_LOGNAME\":\"e1583364\",\n                \"PBS_O_PATH\":\"/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr2027/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/python/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin\",\n                \"PBS_O_SHELL\":\"/bin/bash\",\n                \"PBS_O_HOST\":\"hopper-l-01.cm.cluster\",\n                \"PBS_O_WORKDIR\":\"/home/svu/e1583364/CVPR2027/cvpr2027\",\n                \"PBS_O_SYSTEM\":\"Linux\",\n                \"PBS_O_QUEUE\":\"autox\"\n            },\n            \"comment\":\"Not Running: Insufficient amount of resource: ngpus \",\n            \"etime\":\"Tue Nov 10 15:58:29 2026\",\n            \"Submit_arguments\":\"-N cvpr27_6e8b038e -l walltime=04:20:00 -o /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/smoke_e2e_pilot_T4_s0_01_retry3-20261110T075744Z-6e8b038e/job.pbs\",\n            \"project\":\"CFP04-SF-125\",\n            \"Submit_Host\":\"hopper-l-01.cm.cluster\"\n        }\n    }\n}\n",
+    "timed_out": false
+  },
+  "unchanged_checkpoint_sources": []
+}

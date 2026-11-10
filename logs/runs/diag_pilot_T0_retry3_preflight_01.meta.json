@@ -1,0 +1,28 @@
+{
+  "name": "diag_pilot_T0_retry3_preflight_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pilot_T0_retry3_preflight_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve()\nguard=r/'results/diag_pilot_T0_retry2_black_guard_01.json'\ngref={'file':str(guard.relative_to(r)),'sha256':hashlib.sha256(guard.read_bytes()).hexdigest()}\ngdata,_=b.logged(r,gref)\nb.require(gdata['_meta']['exit_code']==0,'Original strict guard failed')\nproof=gdata['metrics']['strict_black_gate_proof']\npath,body=b.file_ref(r,proof['original_payload'],'logs/pbs');payload=json.loads(body)\nb.require(proof['job_id']=='709961.hopper-m-02' and payload['name']=='smoke_e2e_pilot_T0_s0_01_retry2','Not original T0 black job')\nname='smoke_e2e_pilot_T0_s0_01_retry3';command=list(payload['command'])\ncommand[command.index('--name')+1]=name\nb.require(command[command.index('--timeout-seconds')+1]=='15536','Original driver bound differs')\ncommand[command.index('--timeout-seconds')+1]='15536'\nbinding=b.validate_request_host(r,host='hopper-28',retry_of=proof['job_id'],evidence_path=gref['file'],evidence_sha256=gref['sha256'],name=name,command=command,task='T01',group='E2Epilot',gpus=1,wall_seconds=15600)\nsubmit=['python3','scripts/pbs/submit_phase.py','--name',name,'--task','T01','--budget-group','E2Epilot','--gpus','1','--walltime','04:20:00','--host','hopper-28','--retry-of',proof['job_id'],'--black-retry-evidence',gref['file'],'--black-retry-evidence-sha256',gref['sha256'],'--',*command]\ndiag='diag_submit_'+name\nlogged=['python3','-u','scripts/run_logged.py','--name',diag,'--seed','0','--','python3','-m','src.tools.record_command','--name',diag,'--',*submit]\nprint('ORIGINAL_PILOT_RETRY_PREFLIGHT_JSON: '+json.dumps({'strict_guard':gref,'host_authorization':binding,'wall_seconds':15600,'driver_seconds':15536,'unchanged_population_and_holdout':True,'submitted':False},sort_keys=True),flush=True)\nprint('ORIGINAL_SUBMIT_ARGV_JSON: '+json.dumps(logged),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T15:46:13",
+  "log_path": "logs/runs/diag_pilot_T0_retry3_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "5106f27956c186aec038b897b293aa12f103242d",
+  "git_dirty": false,
+  "end": "2026-11-10T15:46:16",
+  "duration_sec": 0.6,
+  "exit_code": 0,
+  "metrics_sha256": "927af3faa530ab402bcd15ed081b3e02533f35b00925b476b19ea807e44a2c27"
+}
