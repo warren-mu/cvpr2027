@@ -1,0 +1,275 @@
+# run_logged: nice -n 10 python3 -c """Review-only one-off; original logger must wrap execution after smoke approval.
+
+No native/image scan, GPU submission, old queue mutation, or changed candidates.
+--write-configs is the only branch that materializes new immutable configs.
+"""
+import argparse
+import copy
+import hashlib
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import signal
+import tempfile
+
+from src.tools import gpu_shared_claim as shared
+from src.tools import pbs_mixed_accounting as mixed
+from src.tools import t02_export_parallel as parallel
+from src.tools import t02_test_compression as compression
+
+ROOT = Path.cwd().resolve()
+ROSTER = {'file':'configs/t02_test_selected05_export_roster_01.json',
+          'sha256':'78497e85a7260cc814c58250b6b15487d5b91a8b0592fdd5c2e77d9b5ca81597'}
+FIRST_PLAN = {'file':'configs/shared_test_selected05_raw10_compressed_smoke_01.json',
+              'sha256':'3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924'}
+FIRST_NAME = 'gpu_pack_test_selected05_storage_smoke_01'
+FIRST_JOB = '710528.hopper-m-02'
+ENGINEERING_NAME = 'diag_test_selected05_storage_smoke_engineering_01'
+OLD_QUEUE = Path('/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01')
+QUEUE_ID = 'test_selected05_raw10_compressed_remaining_01'
+QUEUE = OLD_QUEUE.parent / QUEUE_ID
+PLAN_FILE = 'configs/shared_test_selected05_raw10_compressed_remaining_01.json'
+SOURCES, ARTIFACTS = {}, []
+
+
+def need(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def reference(path):
+    return mixed.reference(path, ROOT)
+
+
+def logged(ref):
+    data, path = mixed.logged(ROOT, ref)
+    source = {**reference(path), 'metrics_sha256':data['_meta']['metrics_sha256']}
+    SOURCES[source['file']] = source
+    return data, source
+
+
+def same_ref(a, b):
+    return ((ROOT/a['file']).resolve() == (ROOT/b['file']).resolve()
+            and a['sha256'] == b['sha256'])
+
+
+def pair_key(entry):
+    ref = {'file':str((ROOT/entry['pair']['file']).resolve().relative_to(ROOT)),
+           'sha256':entry['pair']['sha256']}
+    return shared.canonical_hash({'kind':'t02_original_pair', 'pair':ref,
+                                 'table_protocol':'paired_view_table_d4_shadow_v2'})
+
+
+def new_ref(path, value, write):
+    body = shared.canonical(value)+b'\n'
+    target = ROOT/path
+    need(target.parent == ROOT/'configs' and not target.exists(), 'New immutable config exists/escaped: '+path)
+    ref = {'file':path, 'sha256':hashlib.sha256(body).hexdigest(), 'bytes':len(body)}
+    if write:
+        with target.open('xb') as stream:
+            stream.write(body);stream.flush();os.fsync(stream.fileno())
+        target.chmod(0o444);ARTIFACTS.append(reference(target))
+        need(reference(target) == ref, 'Created config byte identity differs')
+    return ref
+
+
+def name_unused(name):
+    for base in (ROOT/'results', ROOT/'logs/runs'):
+        need(not list(base.glob(name+'*')), 'Planned run name already has evidence: '+name)
+    need(not list((ROOT/'logs/pbs').glob(name+'-*')), 'Planned run name was submitted: '+name)
+
+
+def first_completed(engineering_reference, first):
+    """Consume root-reviewed original engineering proof; do not assert six science PASS."""
+    engineering, eref = logged(engineering_reference)
+    em = engineering['metrics']
+    need(engineering['_meta']['name'] == ENGINEERING_NAME
+         and engineering['_meta']['exit_code'] == 0 and em.get('producer_exit_code') == 0
+         and em.get('engineering_fields_verified') is True and em.get('errors') == [],
+         'Require the completed root-reviewed combined raw10/compression engineering proof')
+    pack, pref = logged(reference(ROOT/'results'/(FIRST_NAME+'.json')))
+    cfg, pm = pack['config'], pack['metrics']
+    need(cfg['pbs_jobid'] == FIRST_JOB and same_ref(cfg['plan_reference'], FIRST_PLAN)
+         and pm.get('kind') == 'gpu_shared_pack' and pm.get('all_owned_units_ended') is True
+         and pm.get('cleanup_errors') == [] and pm.get('errors') == []
+         and len(pm['unit_runs']) == len(pm['unit_claims']) == 1,
+         'The original singleton pack has unfinished/unknown ownership or cleanup')
+    run = pm['unit_runs'][0]
+    need(run['unit_id'] == first['unit_id'] and run['name'] == first['name']
+         and run['cleanup_errors'] == [], 'First batch claim/release differs')
+    unit, uref = logged(run['result_reference'])
+    um = unit['metrics']
+    need(unit['_meta']['command'] == first['command'] and unit['config']['pbs_jobid'] == FIRST_JOB
+         and um.get('all_units_ended') is True and um.get('cleanup_errors') == []
+         and um.get('unstarted_unit_indices') == [] and len(um['units']) == 6,
+         'All six original attempts must be terminal and preserved')
+    # The engineering proof separately authenticates original child_outcome,
+    # accepted all-raw retention and lossless readback, and retained error rows.
+    need(same_ref(em['parent_source'], uref)
+         and same_ref(em['manifest_reference'], first['references']['manifest']),
+         'Engineering proof binds another original batch')
+    mix, mref = logged(reference(ROOT/'results'/(FIRST_NAME+'_mixed_accounting.json')))
+    need(mix['_meta']['exit_code'] == 0, 'Original mixed accounting is incomplete')
+    mc = mix['config']
+    need(same_ref(mc['pack_reference'], pref), 'Mixed report binds another pack')
+    account, aref = logged(mc['account_reference'])
+    need(account['_meta']['exit_code'] == 0, 'Original canonical result failed')
+    spec=importlib.util.spec_from_file_location('remaining_original_submit_phase',ROOT/'scripts/pbs/submit_phase.py')
+    phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+    final=phase._final_accounting(ROOT,{FIRST_JOB},paths=[ROOT/aref['file']])
+    need(set(final)=={FIRST_JOB}, 'Original final PBS accounting does not cover the first pack')
+    actual=mixed.finalized_split(ROOT,{'name':FIRST_NAME,'job_id':FIRST_JOB,
+         'payload':mc['payload_reference']['file']},final[FIRST_JOB])
+    need(actual == mix['metrics'] and actual['job_id'] == FIRST_JOB,
+         'Original canonical/mixed accounting differs')
+    for required in (pref, uref, mref, aref):
+        need(any(same_ref(ref, required) for ref in engineering['sources']),
+             'Engineering result omits its exact original terminal source')
+    duration = run['duration_seconds_monotonic']
+    need(isinstance(duration, (int,float)) and not isinstance(duration,bool)
+         and math.isfinite(duration) and duration > 0, 'Missing measured complete batch occupancy')
+    state_raw = (OLD_QUEUE/'state.json').read_bytes()
+    state = json.loads(state_raw)
+    need(state['units'] == {first['unit_id']:{'status':'ended',
+         'claim_reference':run['claim_reference'], 'release_reference':run['release_reference']}},
+         'Old singleton queue has another/missing claim')
+    need(set(state['keys']) == set(first['claim_keys'])
+         and all(row == {'type':'shared','unit_id':first['unit_id'],
+                         'claim_reference':run['claim_reference']} for row in state['keys'].values()),
+         'Old singleton scientific-key occupancy differs')
+    return {'engineering_reference':eref,'pack_reference':pref,'unit_reference':uref,
+            'canonical_reference':aref,'mixed_reference':mref,
+            'original_pack_exit_code':pack['_meta']['exit_code'],
+            'original_batch_exit_code':unit['_meta']['exit_code'],
+            'all_six_export_checks_complete':em.get('all_six_export_checks_complete'),
+            'unit_duration_seconds_monotonic':duration,
+            'claim_reference':run['claim_reference'],'release_reference':run['release_reference'],
+            'old_state_reference':reference(OLD_QUEUE/'state.json'),
+            'scope':'Engineering fields only; ordinary scientific/error outcomes retained; no cache PASS'}, state_raw
+
+
+def main(args):
+    name = 'diag_test_selected05_remaining_plan_01' if args.write_configs else 'diag_test_selected05_remaining_validate_01'
+    need(not (ROOT/'results'/(name+'.json')).exists(), 'Unique preparation result already exists')
+    need(not QUEUE.exists() and not (ROOT/PLAN_FILE).exists(), 'New remaining queue/plan already exists')
+    roster, _ = mixed.read_reference(ROOT, ROSTER)
+    old, _ = shared.load_plan(FIRST_PLAN['file'],FIRST_PLAN['sha256'],root=ROOT)
+    need(roster['version'] == 'selected05_test_export_roster_01' and roster['selected_count'] == 95
+         and roster['reused_export_count'] == 1 and roster['pending_export_count'] == 94
+         and len(roster['batches']) == 16 and len(old['units']) == 1,
+         'Original committed cutoff changed')
+    first = old['units'][0]
+    first_manifest, _ = parallel.read_manifest(first['references']['manifest']['file'],first['references']['manifest']['sha256'])
+    need(first_manifest == roster['batches'][0], 'Singleton is not roster batch01')
+    completion, state_raw = first_completed(reference(ROOT/'results'/(ENGINEERING_NAME+'.json')), first)
+    selection = compression.load_selection(roster['test_selection'],root=ROOT)
+    excluded = set(first['claim_keys']) | {pair_key({'pair':x['selected_entry']['pair_reference']})
+                                         for x in roster['prior_export_exclusions']}
+    all_keys, specs = [], []
+    for index, manifest in enumerate(roster['batches'][1:],2):
+        unit_name = f't02_export_test_selected05_six{index:02d}'
+        name_unused(unit_name)
+        need(manifest['batch_index'] == index and manifest['test_selection'] == roster['test_selection'],
+             'Original batch ordering/selection changed')
+        compression.validate_entries(selection,manifest,root=ROOT)
+        with tempfile.TemporaryDirectory(prefix='selected05_remaining_') as tmp:
+            path=Path(tmp)/'manifest.json';path.write_bytes(shared.canonical(manifest)+b'\n')
+            checked,_=parallel.read_manifest(path,hashlib.sha256(path.read_bytes()).hexdigest())
+            need(checked == manifest, 'Original manifest validator altered input')
+        keys=sorted(pair_key(e) for e in manifest['entries']);all_keys.extend(keys)
+        specs.append((index,unit_name,manifest,keys))
+    need(len(all_keys) == 88 and len(set(all_keys)) == 88 and not excluded.intersection(all_keys),
+         'Remaining roster overlaps first batch/prior export or repeats a pair')
+    snapshots=[]
+    for path in sorted(QUEUE.parent.glob('*/state.json')):
+        raw=path.read_bytes();state=json.loads(raw)
+        need(isinstance(state.get('keys'),dict) and not set(all_keys).intersection(state['keys']),
+             'A remaining selected pair is already claimed/reserved: '+str(path))
+        snapshots.append((path,raw))
+    planned,units=[],[]
+    for index,unit_name,manifest,keys in specs:
+        mref=new_ref(f'configs/t02_export_test_selected05_six{index:02d}.json',manifest,args.write_configs)
+        unit=copy.deepcopy(first);unit['name']=unit_name
+        for flag,value in [('--name',unit_name),('--manifest',mref['file']),('--manifest-sha256',mref['sha256'])]:
+            unit['command'][unit['command'].index(flag)+1]=value
+        unit['references']['manifest']=mref
+        for field in ('identity','claim_keys','unit_id'):unit.pop(field)
+        # Every other command/resource/storage field is inherited unchanged.
+        planned.append({'manifest_reference':mref,'command':unit['command'],'claim_keys':keys})
+        if args.write_configs:
+            identity,actual_keys=shared.t02_identity(unit,ROOT)
+            need(actual_keys == keys, 'Original scientific keys changed')
+            unit.update(identity=identity,claim_keys=actual_keys,unit_id=shared.canonical_hash(identity))
+            shared.validate_unit(unit,ROOT);units.append(unit)
+    t=completion['unit_duration_seconds_monotonic'];n=args.target_units_per_consumer
+    # Measured throughput is not a hard per-unit maximum. Always preserve a full
+    # original1200s next grant +45s cleanup; an early stop keeps pending claims.
+    pack_seconds=math.ceil(180+35+max(1.3*n*t,1.3*(n-1)*t+1200)+45)
+    pbs_seconds=pack_seconds+30
+    need(pbs_seconds <= 14400, 'Measured projection exceeds original PACK four-hour cap; choose fewer target units')
+    scope='Fixed roster02..16 only; first6 and prior exact export excluded; no outcome filtering or cache authorization'
+    metrics={'prepared':True,'producer_exit_code':0,'errors':[],
+        'configuration_files_written':args.write_configs,'roster_reference':ROSTER,
+        'first_completion':completion,'planned_units':planned,'remaining_pairs':88,
+        'scope':scope,'old_queue_modified':False,'gpu_submission_performed':False,
+        'downstream_allowed':False,'cache_matches_live':None,
+        'queue_collision_snapshots':[{'file':str(p),'sha256':hashlib.sha256(b).hexdigest()} for p,b in snapshots],
+        'walltime_basis':{'observed_first_unit_seconds':t,'target_units_per_consumer':n,
+            'formula':'ceil(180+35+max(1.3*N*t,1.3*(N-1)*t+1200)+45); PBS adds30',
+            'pack_seconds':pack_seconds,'pbs_seconds':pbs_seconds,
+            'limitation':'One observed six-pair batch is not a worst-case or completion guarantee; no max-units switch; unchanged full next-unit grant may stop a consumer with pending units preserved'}}
+    if args.write_configs:
+        need(all(p.read_bytes()==raw for p,raw in snapshots) and (OLD_QUEUE/'state.json').read_bytes()==state_raw,
+             'Original occupancy changed before plan sealing')
+        plan={'version':shared.VERSION,'queue_id':QUEUE_ID,'priority_order':list(shared.PRIORITIES),
+              'units':units,'external_reservations':[],
+              'test_export_selection':{'test_selection':roster['test_selection'],'roster_reference':ROSTER,
+                  'prior_export_exclusions':roster['prior_export_exclusions'],'completed_batch_exclusions':[completion],
+                  'source_first_plan_reference':FIRST_PLAN,'scope':scope}}
+        shared.validate_plan(plan,ROOT);plan_ref=new_ref(PLAN_FILE,plan,True)
+        submits=[]
+        wall=f'{pbs_seconds//3600:02d}:{pbs_seconds%3600//60:02d}:{pbs_seconds%60:02d}'
+        for suffix in ('01','02'):
+            consumer='gpu_pack_test_selected05_remaining_single_'+suffix;name_unused(consumer)
+            command=['python3','-u','-m','src.tools.gpu_pack','--name',consumer,
+                '--queue-plan',plan_ref['file'],'--queue-plan-sha256',plan_ref['sha256'],
+                '--queue-root',str(QUEUE),'--gpus','1','--timeout-seconds',str(pack_seconds),'--gate-timeout-seconds','180']
+            binding=mixed.validate_submission(ROOT,command,consumer,1)
+            need(binding['possible_groups']==['T02'], 'Remaining test export changed budget attribution')
+            submits.append(['python3','scripts/pbs/submit_phase.py','--name',consumer,'--task','T01',
+                '--budget-group','PACK','--gpus','1','--walltime',wall,'--',*command])
+        metrics.update(plan_reference=plan_ref,review_only_submit_argv=submits,
+            scheduling='At most two single-GPU export consumers; D3 retains its slot; original fresh submitter budget check per submission; no four-GPU request')
+    need(all(p.read_bytes()==raw for p,raw in snapshots) and (OLD_QUEUE/'state.json').read_bytes()==state_raw,
+         'Original occupancy changed before final record')
+    return name,metrics
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--target-units-per-consumer',type=int,choices=range(1,9),default=8)
+    p.add_argument('--write-configs',action='store_true')
+    args=p.parse_args()
+    name='diag_test_selected05_remaining_plan_01' if args.write_configs else 'diag_test_selected05_remaining_validate_01'
+    def expired(*_):raise TimeoutError('120-second metadata-only preparation bound')
+    signal.signal(signal.SIGALRM,expired);signal.alarm(120)
+    try:
+        _,metrics=main(args)
+    except BaseException as error:
+        metrics={'prepared':False,'producer_exit_code':1,'errors':[{'type':type(error).__name__,'message':str(error)}],
+                 'configuration_files_written':args.write_configs,'partial_artifacts_preserved':True,
+                 'gpu_submission_performed':False,'downstream_allowed':False}
+        raise
+    finally:
+        signal.alarm(0)
+        with (ROOT/'results'/(name+'.json')).open('x') as stream:
+            json.dump({'config':{'name':name,**vars(args)},'metrics':metrics,
+                       'sources':list(SOURCES.values()),'artifact_references':ARTIFACTS},stream,indent=2,allow_nan=False)
+            stream.write('\n')
+        print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+ --target-units-per-consumer 8
+# start: 2026-11-11T00:08:19
+FINAL_METRICS_JSON: {"cache_matches_live": null, "configuration_files_written": false, "downstream_allowed": false, "errors": [], "first_completion": {"all_six_export_checks_complete": false, "canonical_reference": {"bytes": 6190, "file": "results/diag_test_selected05_710528_accounting_01.json", "metrics_sha256": "97f5c90b11272c69f4407cc50bbdbab71d2a6785fad7fa52f99cba6517d0c399", "sha256": "8c3666a85867e4fd268a271daee75c728fc367633f1e84b885e805ef6b8e6606"}, "claim_reference": {"bytes": 5810, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01/claims/104753cdf61590f2a03542be31ab79e8f97617e8123932a09078573897e1c27f.json", "sha256": "0e6b82fa0b39ccce6cde875e85cf5cfcfae0015ec34439a0ed7766f3269d6458"}, "engineering_reference": {"bytes": 129714, "file": "results/diag_test_selected05_storage_smoke_engineering_01.json", "metrics_sha256": "92bb1ba1369f87c82f723d1c1d24001cf1ab7409dfcd176cea06253685226543", "sha256": "fe526e680b5b3cf013ba54c32e9205fb757e52e18b91e8d84a354b29450bb93d"}, "mixed_reference": {"bytes": 6775, "file": "results/gpu_pack_test_selected05_storage_smoke_01_mixed_accounting.json", "metrics_sha256": "46e38789e239a3ba4df91ec1b9f2ccceceb1f824ff2cd29c15076ecbc8c57311", "sha256": "09cacd2d32e050967e8f1371a433ea001444d939dc9abb478c2935f500e75d57"}, "old_state_reference": {"bytes": 3455, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01/state.json", "sha256": "e22ec786feba52e9a1acd3caba9e797c8fac834074ff701a9d5a094f2db01c47"}, "original_batch_exit_code": 1, "original_pack_exit_code": 1, "pack_reference": {"bytes": 7880, "file": "results/gpu_pack_test_selected05_storage_smoke_01.json", "metrics_sha256": "e8448f8fee3ca7f09d0d269c43ede6974f572d4a3f439b80b8704cd326ddd870", "sha256": "9a0f5066b5bf1472a33fb83ba72bbd2baacf47e30d221c9621dd668555488453"}, "release_reference": {"bytes": 1236, "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01/releases/104753cdf61590f2a03542be31ab79e8f97617e8123932a09078573897e1c27f.json", "sha256": "dc95688ac0d653b1255db97b7006c7a24f638f701184bfeae61a912618988f9c"}, "scope": "Engineering fields only; ordinary scientific/error outcomes retained; no cache PASS", "unit_duration_seconds_monotonic": 346.72822383698076, "unit_reference": {"bytes": 97637, "file": "results/t02_export_test_selected05_six01.json", "metrics_sha256": "3e83227b337d9861c3845a90a90381896968d71907078c1bd4fd0c11b639442e", "sha256": "7accf1671e6eb3e7bc28fb30c3f98299f9799e9d9c82b2f9530fb82a35ef9a49"}}, "gpu_submission_performed": false, "old_queue_modified": false, "planned_units": [{"claim_keys": ["1a90e1147672ac664186fd2f0b0abb78bfff8a9b418fc332100551d5560cb0e3", "6c0611d60f89388376a77ef87b652a6b4c1dfe6001145b79a191115de15680c4", "87d1df88557886001bec0392fc46ff857052458e8d834a616573e2da5d97bd2d", "a3923b35731bfdc57e95fee2de5219dcbfc803770ed0a9a7560f5db36b518b26", "d77c48304b01c885c3c1408bc9f41c7290aa2551a00e2e2aa87d036fe9a802fb", "ff7e192e4a72b22591d75def976710362217c18a0edeb517883a098f87aca26f"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six02", "--manifest", "configs/t02_export_test_selected05_six02.json", "--manifest-sha256", "432ef45fcdb73615338093fd8bf6638b01f7aa548eca59a90be94d7ab6afd3a2", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3549, "file": "configs/t02_export_test_selected05_six02.json", "sha256": "432ef45fcdb73615338093fd8bf6638b01f7aa548eca59a90be94d7ab6afd3a2"}}, {"claim_keys": ["2ea7d3d8a322d5d2608b7b415995fe3e079e859a917bdf8d53c2ac22316255b6", "72d5f5344e6cb44810beb746ed1cf61804babdff51475a9049a1392b708bc59d", "b7b34774464ce21ac7ca81faeb78eed43fd0e29d514652bcbf8d97aa5f5fa29e", "da4fa7ffce45e867191b942fcf551c021151fcb27a99390b93d536ad92ccc8c5", "f3bfeedf83779832ec724ad99ed80b0b070c5ef7d1e8d33fd7fae360f8508eda", "fbcbc0209a5912c6aaede65d2508b7c3419713f5a0beafde3ddc23390d5a3fdb"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six03", "--manifest", "configs/t02_export_test_selected05_six03.json", "--manifest-sha256", "d92d6d1a726cca4dd0341ae24f3c883ac136845806d8b7f8cecba02ad8c6d4e1", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3523, "file": "configs/t02_export_test_selected05_six03.json", "sha256": "d92d6d1a726cca4dd0341ae24f3c883ac136845806d8b7f8cecba02ad8c6d4e1"}}, {"claim_keys": ["2632c4ba02d97393d9308de96db708619a75a3394aada9f1b8f13088a25faef6", "42afe21f57eeb8500af07f58376c200931fb22182f11e394f62f210560550a57", "5b62b7c7b0164a367070cbd699f7c1e0b6f36d51babf5a1c2193ecc482b67107", "665e2afed4a7218b13c857548dbe4f9d8e3e72c39c803ecaa736c590c478a7b0", "b68556927fd1e9eae04f7fcba4ca58fc0816ec491f9a76f5b4f018358c8879b6", "cce6cfe07664c68f2c9dcba467a7d2bedc492186de34213d2e0247012609014b"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six04", "--manifest", "configs/t02_export_test_selected05_six04.json", "--manifest-sha256", "ff1fb2f0ddb0f516136a9a621ac395ba5de6fd15d16ec6d21a7e1507831ae4af", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3534, "file": "configs/t02_export_test_selected05_six04.json", "sha256": "ff1fb2f0ddb0f516136a9a621ac395ba5de6fd15d16ec6d21a7e1507831ae4af"}}, {"claim_keys": ["0e981b11e58fb5f939ac82cd1e6f4a36bfa3f85185192c53476e79861ea69c8e", "3f865ba17841668646c751d78acd8838592eb3c329d5542e0775b79eb11c9caf", "4f8ed141db518545e669c3df60d1ecba16a6e2ec1aefc1248b3cd63fb5914a33", "5da95862ef7ffa5b92534cce9a77b13f4363dd743933f8d6a5c1eb9c1d56d50c", "6aae4eab7a681e6e027243189aa0fbe1725c0ece7ea0ef5f94ed99d01fa88488", "81fb9964704076084bab895c9cc030443fb40954d5aeac5869de20f4fe3b3a3d"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six05", "--manifest", "configs/t02_export_test_selected05_six05.json", "--manifest-sha256", "91688532218c61aa6d1d6a1ebd488e89cd998e21eac22764d8bb4955e1b2df33", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3528, "file": "configs/t02_export_test_selected05_six05.json", "sha256": "91688532218c61aa6d1d6a1ebd488e89cd998e21eac22764d8bb4955e1b2df33"}}, {"claim_keys": ["2fd01e2dbc5837bb3771c565b6e6bd766c876de698ea4737cdb5bd203c64f7b1", "352addadc37baafbc11622ee557f9ff6e608e17f465fbb8bb94eea626faf9d15", "6a1eb932da832456c1282bd0187bfc8948a652bc1e4c0e0e8ee068c69f9743b1", "8322dbbd87d39b76b54798473bd0c2f944022aff6106d71e46d180e326d1a9e7", "9bb2cfc3681fd98dd0d8fe3446af1f929954aaaa4118b3e3bb91f6204af7f5cf", "eaabdf87399f33abf46597467be457340b377b74793a2c4781bddae117756b30"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six06", "--manifest", "configs/t02_export_test_selected05_six06.json", "--manifest-sha256", "fe60ad8fa2001ac284e87cacfd8887b240333382e347fd7dff4d24f2964f5466", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3509, "file": "configs/t02_export_test_selected05_six06.json", "sha256": "fe60ad8fa2001ac284e87cacfd8887b240333382e347fd7dff4d24f2964f5466"}}, {"claim_keys": ["095b0a6caa8e1363e0a79c5157ac0e7954ae5656862d574c84bc568243694227", "a4c0fc1190e014b9d683a76ae059a6b89c020a2bafd1b05881b79d3defe99a5c", "c2771623bc36b97b538b376506dcbcc43445a36480be4361eda7521da0e412de", "ccf09c1fcb5c7b78fb5355049da7d5468ea4bfa4bc766bdd2a2884964da20948", "e49b2f3ac3452e93245c157678d7d70dfcbf16c65573b3143c83ac6b32603a22", "ec4962375dacdae16e55c74b9c5ebda918dda691a48f7ad5febcb50d833ddee1"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six07", "--manifest", "configs/t02_export_test_selected05_six07.json", "--manifest-sha256", "cc122751cf961a5c7ee87dc753c6e3e3dc2c0ccdbe31223096ddefe2e4bb0ec2", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3510, "file": "configs/t02_export_test_selected05_six07.json", "sha256": "cc122751cf961a5c7ee87dc753c6e3e3dc2c0ccdbe31223096ddefe2e4bb0ec2"}}, {"claim_keys": ["4922a8dcfe2677605d86b35827fb94712d4560dbb7ad637b483d2ce915c9e952", "72f35a8fa8811a23725cd9cafc2bc8c689a2107e26554fe024ce3fedf8101600", "a6b50484d00a155220511625428e48eb1beef628e744a1d4e383c5676b9e855b", "b98b668e902338b5710959a6145948c71997cf8f851a0f1df05fd5c95dc227b2", "c6716e4f192630ff705f50b53044c1d90f62f3ab34bb42d0c9e992528aaa8384", "d1a65b591f5c8df7ac912e9f2d0ccf76551483a1777cd99b90a6c38844310ce2"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six08", "--manifest", "configs/t02_export_test_selected05_six08.json", "--manifest-sha256", "85714e8e21f0b882aa127c2c9e526d567f538b57d93319d83c841730c5deeb5b", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3521, "file": "configs/t02_export_test_selected05_six08.json", "sha256": "85714e8e21f0b882aa127c2c9e526d567f538b57d93319d83c841730c5deeb5b"}}, {"claim_keys": ["39fe39e3dc9ac8253c5f6f10e9b34a35e5400b69aba8a6a73d968540ff2f9d72", "4a7d9e59c12feae52659f42fe3ed0d9a66a381409c57d6fd6964825189df87fb", "a44cffb0bb0825cadeee4db0b3451551ff77fca4bfad7f557c9481a99dbdbced", "c430ab7b36e4e3d5c647a18300fbf44fded414b414b392552f0d6004a90f41be", "c63680206cfc064076451c68572b6447fcc78b62c86cbacfc843f272803d44af", "cd919e48cc3f8411a69cfc2e6442a50cf0fb22d2f72d262814a79b5fb01f62d6"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six09", "--manifest", "configs/t02_export_test_selected05_six09.json", "--manifest-sha256", "277e8eda5dcdfd76eaac3717328291f6cdeb5631b98812383ed2422875613d08", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3522, "file": "configs/t02_export_test_selected05_six09.json", "sha256": "277e8eda5dcdfd76eaac3717328291f6cdeb5631b98812383ed2422875613d08"}}, {"claim_keys": ["09db2746512689bbf6aa4308f941b3137a70f87bca72afc214ac3debde65763d", "33e584bc972f3f74cd9341769674506f8dd8ae43ec1733fc1364bcc0846257bc", "64ba76119eef443857acb3d95cf7a26340a7d7b5d087b70de6cb73aab4ae4c90", "71d09df8c3604310435ba8aae2632ec5d1d262d400b45bcba1ca8b4f017eacd9", "c0af90ec7a35acc85de7d116338323cfde2364ab69396ba08fb0ec295d422094", "f570379a03dc3655a88b188a5f24c89d43b2974e2d0fb1718684a482ce6b925b"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six10", "--manifest", "configs/t02_export_test_selected05_six10.json", "--manifest-sha256", "c8df6bb8fa96b294a49b7258a8a64564f7df395c11909c9306effdea9b64e6bd", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3535, "file": "configs/t02_export_test_selected05_six10.json", "sha256": "c8df6bb8fa96b294a49b7258a8a64564f7df395c11909c9306effdea9b64e6bd"}}, {"claim_keys": ["1ebd729d5d699bce207e140c05868729d91158604674ef1238ab9e629a11c748", "531716a3796e2fc66853ff80dd2ac01e95e6d59a038edc444eefb7d69624da98", "6da25564a749aae6581b1d56b40e837c9fcc301e6ec561109d2b0c6a716cd592", "cbfdf9fc8fc3af16f5f6fa2380ac29d5ccdeaf0f6b9c7dc5c8fa3c6c169f19a1", "d302a98fe6a1f6a68f9e01938175afbee0897575831ced042388cb1e54c8db8e", "f853bbf711c181c1dfc38c3106a8bf18636b3bf05528439f06368e0fe589a011"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six11", "--manifest", "configs/t02_export_test_selected05_six11.json", "--manifest-sha256", "00e041062a4996e505703eac286b189e6d865396400436250ff8ea18d27f4cfe", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3544, "file": "configs/t02_export_test_selected05_six11.json", "sha256": "00e041062a4996e505703eac286b189e6d865396400436250ff8ea18d27f4cfe"}}, {"claim_keys": ["31c06d0fbbb4ab6a6e53d3feb3abb1b9533df3a4726f0c0291b438635e759820", "49c77708a4d4ce258231aeb4458e6cd1f876309f1ed4fe8000a3875d126fe15b", "528dbb106d913ddfe860757f5c12fe1f659420cd7ccd610152bc3d6fd8705f3e", "545c4ff2961746e19a3b4d059e41b8f8e840122ea45bf468248476d74e143d46", "8631ae88745d140f666e0f65870eb9bcf970b3335a04d5d4d370dd346e3a1986", "a74014327b4bd114d2398eb1d2942526e851852216e26925c1cadf423767a433"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six12", "--manifest", "configs/t02_export_test_selected05_six12.json", "--manifest-sha256", "f9d6aeaa126ff7eaa6ea0b7977791c53ebe8fa2a71e9abb95d8cdb9942494902", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3524, "file": "configs/t02_export_test_selected05_six12.json", "sha256": "f9d6aeaa126ff7eaa6ea0b7977791c53ebe8fa2a71e9abb95d8cdb9942494902"}}, {"claim_keys": ["2e9cfe2206bcddab76b840219061124102d790a9fcb96f42ed20ccc096a41286", "46fe97a9c1498a21a98b19456375950e81e623a6f066fd06d96cf1b4462a6369", "5acddd14f3f43fe2b93ecdebc368c1190ec461ffda30f46a01d6229af971e1ef", "6c0df04a23b6555f4722458e8295a0f558483112d8b44152f19e2d4151a6bb0d", "b4e06d5b33cad04c6364c0b2e7f3ec53f978e8c14d7860f6238a1af04366e106", "d80514a63b4df63ca26c414765448daf6f8facaf391d6b1550ea07bd6ecd913b"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six13", "--manifest", "configs/t02_export_test_selected05_six13.json", "--manifest-sha256", "59ede2f1965af1b6770d5a3c55b981028257fb95ad4ae6b19527d01140b57928", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3540, "file": "configs/t02_export_test_selected05_six13.json", "sha256": "59ede2f1965af1b6770d5a3c55b981028257fb95ad4ae6b19527d01140b57928"}}, {"claim_keys": ["0623ed56afde7f92bd282a8cd2ed8f363ba884ca8e0134e8f44e841aff2cb165", "40da5b7f251e5ec5f2f88f038c2d00ad449117560d7a4ebfb0f4ba45d195cbfc", "45ecef9609c5a2688920ba29a210a1dd92576ffd6ae4a42638bc863956694cf7", "5c955c43015762db8be8f011fd28a18c21a44208f2ff8100c484e20fdfc222f8", "674f595ad29f964d098f5794eabd42937409087f3003db005f7597940d02dd75", "cc774e44ebcfa12c6ce5a7632c4409bcc02184a48ad6b3f61bc5c6ce46ac9074"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six14", "--manifest", "configs/t02_export_test_selected05_six14.json", "--manifest-sha256", "4f4cec6dd96eeaa2e853f5da4b50af4ff3516e60f676da8e9b52d121160a3630", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3523, "file": "configs/t02_export_test_selected05_six14.json", "sha256": "4f4cec6dd96eeaa2e853f5da4b50af4ff3516e60f676da8e9b52d121160a3630"}}, {"claim_keys": ["19de0a53bcff8bf349d1c9c27572a12cfa328d980894519d5fe62c95169f5f84", "a56a3b8a70ecc4d3571698be005f5c82b925ede5ffc5dab7bd8e4a066f212f85", "bd96c95ca9db44463d8791d6e4610fdd5b8d79b68edd71a9222793f5adec2d0c", "d47be17cab85bc79f781f92426b2da9aa45a69208e394011b403c57f251092b3", "ee738066c9c3958060d9f88e81990ce77e4d04cd1ff601d3695388ad25d8d450", "f259a0a6a58fa5867252bfc12b0307904c010b3c786f62d598297cc4aba9e4b6"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six15", "--manifest", "configs/t02_export_test_selected05_six15.json", "--manifest-sha256", "8285a2ae094de1784675f974b5e147c3c39f85e36bfda83c4d246e4184a63096", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 3532, "file": "configs/t02_export_test_selected05_six15.json", "sha256": "8285a2ae094de1784675f974b5e147c3c39f85e36bfda83c4d246e4184a63096"}}, {"claim_keys": ["10480024c01a3c62b485dafdccd393e952dc8bf36db27e07dbb0f6e7e476a4f8", "376f2bf15c076ac8dbc32b4425707f5ccfdcf7d88064f4e708d85892f839b1df", "4ca54dad14d99cd417240297fe12cb3224d7b13987f3db4f82e8b8feb9c5c672", "a511bc176e9d0b07d6e65b448e92f2a41b6ae9f879edcda70f6221e023b033f0"], "command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six16", "--manifest", "configs/t02_export_test_selected05_six16.json", "--manifest-sha256", "3f76b299f509d197dc5b2d1894f5b7c0d812c2681da2abca97e947ed42e1b67f", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "manifest_reference": {"bytes": 2508, "file": "configs/t02_export_test_selected05_six16.json", "sha256": "3f76b299f509d197dc5b2d1894f5b7c0d812c2681da2abca97e947ed42e1b67f"}}], "prepared": true, "producer_exit_code": 0, "queue_collision_snapshots": [{"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01/state.json", "sha256": "c57d18399a284bc9bba8f1556b2defb7879156aac4981021050ab94bfaa8396c"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_first_unit_01/state.json", "sha256": "95c72795e1200c6ca49bcf7352d235078efc219be2fac3a5fdee2129ad038c4c"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_raw10_train_smoke_01/state.json", "sha256": "07304a415ebbc74a5d644fa8c7af76bc489f27152933a500a65cfd43669140cf"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01/state.json", "sha256": "e22ec786feba52e9a1acd3caba9e797c8fac834074ff701a9d5a094f2db01c47"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01/state.json", "sha256": "4bf07b77894c2747bb4a3bc52c4442698f5a3239eea31469868fced62e2d7302"}], "remaining_pairs": 88, "roster_reference": {"file": "configs/t02_test_selected05_export_roster_01.json", "sha256": "78497e85a7260cc814c58250b6b15487d5b91a8b0592fdd5c2e77d9b5ca81597"}, "scope": "Fixed roster02..16 only; first6 and prior exact export excluded; no outcome filtering or cache authorization", "walltime_basis": {"formula": "ceil(180+35+max(1.3*N*t,1.3*(N-1)*t+1200)+45); PBS adds30", "limitation": "One observed six-pair batch is not a worst-case or completion guarantee; no max-units switch; unchanged full next-unit grant may stop a consumer with pending units preserved", "observed_first_unit_seconds": 346.72822383698076, "pack_seconds": 4616, "pbs_seconds": 4646, "target_units_per_consumer": 8}}
+# exit_code: 0
