@@ -137,6 +137,13 @@ def completed_worker(result, config):
 def run(args):
     mode = getattr(args, 'engineering_smoke', None)
     updates, holdout_updates = execution_schedule(args.arm, mode)
+    group = getattr(args, 'budget_group', 'E2Epilot')
+    if args.arm == 'T2' or group == 'E2EpilotT2' or args.name.startswith('smoke_e2e_pilot_T2_'):
+        require(group == 'E2EpilotT2' and args.arm == 'T2' and mode is None
+            and re.fullmatch(r'smoke_e2e_pilot_T2_[A-Za-z0-9_]+', args.name),
+            'T2 requires its separate explicit budget and native five-update namespace')
+    else:
+        require(group == 'E2Epilot', 'Unknown pilot budget group')
     require(mode is None or re.fullmatch(r'smoke_e2e_pilot_engineering_T4_[A-Za-z0-9_]+', args.name),
         'The engineering prefix needs its separate T4 run namespace')
     require(mode is not None or not args.name.startswith('smoke_e2e_pilot_engineering_'),
@@ -151,7 +158,7 @@ def run(args):
     manifest_ref = ref_identity(json.loads(args.manifest))
     holdout_ref = ref_identity(json.loads(args.holdout_reference))
     common_path = ROOT / 'configs/rl_common.yaml'
-    config = {**vars(args), 'version': ENGINEERING_VERSION if mode else VERSION, 'gpus': 1, 'budget_group': 'E2Epilot',
+    config = {**vars(args), 'version': ENGINEERING_VERSION if mode else VERSION, 'gpus': 1, 'budget_group': group,
         'model': MODEL, 'updates': updates, 'episodes_per_update': 64, 'seed': 0,
         'format_policy': spec['format_policy'], 'credit_pipeline': spec['credit_pipeline'],
         'node': socket.gethostname(), 'manifest_reference': manifest_ref, 'holdout_reference': holdout_ref,
@@ -319,6 +326,8 @@ def main():
     execute = commands.add_parser('run')
     execute.add_argument('--name', required=True)
     execute.add_argument('--arm', choices=tuple(ARM_UPDATES), required=True)
+    execute.add_argument('--budget-group', choices=('E2Epilot', 'E2EpilotT2'), default='E2Epilot',
+        help='T2 requires its separate0.5 GPU-hour ledger; T0/T4 keep the original pilot ledger')
     execute.add_argument('--manifest', required=True, help='JSON {file,sha256} formal pilot pool reference')
     execute.add_argument('--holdout-reference', required=True, help='JSON {file,sha256} permanent T04 holdout freeze')
     execute.add_argument('--model-source', required=True, help='JSON {file,sha256} original model step3 result')

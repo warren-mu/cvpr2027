@@ -130,13 +130,13 @@ class PilotDecisionTests(unittest.TestCase):
 
 class PilotLifecycleTests(unittest.TestCase):
     def run_fixture(self, root, *, gate_code=0, worker_result=None, cleanup=None,
-                    arm='T0', engineering_smoke=None, name='smoke_e2e_pilot_fixture'):
+                    arm='T0', engineering_smoke=None, name='smoke_e2e_pilot_fixture', budget_group='E2Epilot'):
         (root / 'configs').mkdir()
         (root / 'configs/rl_common.yaml').write_text('fixture: true\n')
         identity = {'pbs_jobid': '123.hopper-m-02', 'scratch': str(root / 'scratch'),
                     'cpu_affinity': list(range(12)), 'cuda_visible_devices': 'GPU-fixture'}
         spec = {'format_policy': 'explicit_task_zero', 'credit_pipeline': 't05_section1b', 'split_policy': pilot.SCENE_SPLIT}
-        args = argparse.Namespace(operation='run', name=name, arm=arm, engineering_smoke=engineering_smoke,
+        args = argparse.Namespace(operation='run', name=name, arm=arm, engineering_smoke=engineering_smoke, budget_group=budget_group,
             holdout_reference=json.dumps({'file': 'data/world_pairs/train_holdout_scenes.json', 'sha256': 'd' * 64}),
             manifest=json.dumps({'file': 'data/pool.json', 'sha256': 'a' * 64}),
             model_source=json.dumps({'file': 'results/base.json', 'sha256': 'b' * 64}),
@@ -165,6 +165,29 @@ class PilotLifecycleTests(unittest.TestCase):
         saved = json.loads((root / 'results' / (name + '.json')).read_text())
         self.assertEqual(saved['metrics'], json.loads(output.getvalue().split('FINAL_METRICS_JSON: ')[-1]))
         return code, saved, observed, model.call_count, manifest.call_count
+
+    def test_t2_separate_budget_keeps_five_complete_updates_and_original_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, saved, workers, *_ = self.run_fixture(Path(directory), arm='T2',
+                name='smoke_e2e_pilot_T2_fixture', budget_group='E2EpilotT2', worker_result=complete_result('T2'))
+        self.assertEqual(code, 0)
+        self.assertTrue(saved['metrics']['pilot_completed'])
+        self.assertEqual(workers[0]['budget_group'], 'E2EpilotT2')
+        self.assertEqual(workers[0]['updates'], 5)
+        self.assertEqual(workers[0]['episodes_per_update'], 64)
+        self.assertEqual(workers[0]['seed'], 0)
+        self.assertEqual(saved['metrics']['actual_completed_updates'], 5)
+        self.assertEqual(saved['metrics']['holdout_evaluations'], [])
+
+    def test_t2_budget_aliases_and_engineering_mode_rejected_before_gate(self):
+        for arm, name, group, mode in [
+            ('T2','smoke_e2e_pilot_T2_fixture','E2Epilot',None),
+            ('T0','smoke_e2e_pilot_T2_fixture','E2EpilotT2',None),
+            ('T2','smoke_e2e_pilot_T0_fixture','E2EpilotT2',None),
+            ('T4','smoke_e2e_pilot_engineering_T4_fixture','E2EpilotT2',pilot.ENGINEERING_SMOKE)]:
+            with self.subTest(arm=arm,name=name,group=group), tempfile.TemporaryDirectory() as directory:
+                with self.assertRaises(ValueError):
+                    self.run_fixture(Path(directory), arm=arm, name=name, budget_group=group, engineering_smoke=mode)
 
     def engineering_result(self):
         result = complete_result('T4')

@@ -15,6 +15,9 @@ LEGACY_VERSION = 'c912aeab_opening_black_retry_host_v1'
 VERSION = 'c912aeab_opening_black_retry_host_v2_exclude22_after709293'
 HOSTS = ('hopper-22', 'hopper-28', 'hopper-30')
 AVAILABLE_HOSTS = ('hopper-28', 'hopper-30')
+PILOT_STOPLOSS_AUTHORIZATION = '16be1c57'
+PILOT_STOPLOSS_WALL_SECONDS = 15600
+PILOT_STOPLOSS_DRIVER_SECONDS = 15536
 DISABLED_HOSTS = {'hopper-22': {
     'reason': 'New pinned submissions excluded after authenticated opening black gate',
     'job_id': '709293.hopper-m-02',
@@ -61,18 +64,20 @@ def logged(repo, reference):
 
 
 def same_retry_command(repo, old, new, old_name, new_name, *, pilot_stoploss_reduction=0):
-    """Only run identity and an otherwise identical immutable quota plan may change."""
+    """Only run identity, immutable quota identity, or the explicit pilot stop bound may change."""
     expected = list(old)
     require(expected.count('--name') == new.count('--name') == 1, 'Ambiguous retry name')
     require(expected[expected.index('--name') + 1] == old_name, 'Original command name differs')
     expected[expected.index('--name') + 1] = new_name
     if pilot_stoploss_reduction:
         require(pilot_command(old) and pilot_command(new)
-                and type(pilot_stoploss_reduction) is int and pilot_stoploss_reduction > 0,
-                'Only a native pilot retry may shorten its engineering stop bound')
+                and type(pilot_stoploss_reduction) is int,
+                'Only a native pilot retry may change its explicitly authorized engineering stop bound')
         old_seconds, new_seconds = pilot_timeout(old), pilot_timeout(new)
-        require(old_seconds - new_seconds == pilot_stoploss_reduction and new_seconds >= 300,
-                'Pilot PBS and driver stop bounds must decrease by the same amount')
+        require(old_seconds - new_seconds == pilot_stoploss_reduction and new_seconds >= 300
+                and (pilot_stoploss_reduction > 0 or (new_seconds == PILOT_STOPLOSS_DRIVER_SECONDS
+                    and pilot_option(old, '--arm') in ('T0', 'T4'))),
+                'Pilot PBS/driver bounds need the same signed delta; increases are only the explicit16be1c57 T0/T4 bound')
         expected[expected.index('--timeout-seconds') + 1] = new[new.index('--timeout-seconds') + 1]
     if '--quota-plan' in expected:
         require(expected.count('--quota-plan') == new.count('--quota-plan') == 1
@@ -118,7 +123,7 @@ def pilot_opening_black(payload, parent, gate, proof):
     """Original formal pilot gate only; no fabricated generic status or job fields."""
     cfg, pm, command = parent['config'], parent['metrics'], payload['command']
     identity, allocation = cfg.get('identity', {}), gate['config']['allocation']
-    require(pilot_command(command) and payload.get('budget_group') == 'E2Epilot'
+    require(pilot_command(command) and payload.get('budget_group') in ('E2Epilot', 'E2EpilotT2')
             and payload['name'].startswith('smoke_e2e_pilot_')
             and cfg.get('version') == 'smoke_e2e_pilot_driver_v1'
             and proof.get('native_kind') == pm.get('kind') == 'smoke_e2e_pilot_training'
@@ -135,7 +140,7 @@ def pilot_opening_black(payload, parent, gate, proof):
     arm = pilot_option(command, '--arm')
     require(arm in ('T0', 'T4', 'T2') and cfg.get('arm') == arm
             and cfg.get('updates') == {'T0': 50, 'T4': 50, 'T2': 5}[arm]
-            and cfg.get('gpus') == 1 and cfg.get('budget_group') == 'E2Epilot'
+            and cfg.get('gpus') == 1 and cfg.get('budget_group') == payload['budget_group']
             and cfg.get('episodes_per_update') == 64 and cfg.get('seed') == 0
             and cfg.get('name') == pilot_option(command, '--name') == payload['name']
             and cfg.get('timeout_seconds') == pilot_timeout(command)
@@ -143,6 +148,13 @@ def pilot_opening_black(payload, parent, gate, proof):
             and cfg.get('critic_offload') is ('--critic-offload' in command)
             and '--engineering-smoke' not in command,
             'Pilot original arm/method/resource arguments differ')
+    if payload['budget_group'] == 'E2EpilotT2':
+        require(arm == 'T2' and pilot_option(command, '--budget-group') == 'E2EpilotT2',
+                'The separate T2 budget requires its explicit original native T2 command')
+    else:
+        require('--budget-group' not in command or (arm in ('T0', 'T4')
+                and pilot_option(command, '--budget-group') == 'E2Epilot'),
+                'Pilot explicit budget flag must preserve its original native route')
     for flag, key in (('--manifest', 'manifest_reference'), ('--holdout-reference', 'holdout_reference')):
         require(json.loads(pilot_option(command, flag)) == cfg.get(key), 'Pilot original immutable input differs: ' + flag)
     require(cfg.get('model_source') == pilot_option(command, '--model-source')
@@ -303,7 +315,7 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     allowed_hosts = HOSTS if version == LEGACY_VERSION else AVAILABLE_HOSTS
     require(group != 'PACK' or version == VERSION, 'PACK opening-black retries require the current two-host policy')
     require(host in allowed_hosts and gpus == 1 and type(gpus) is int and task == 'T01'
-            and group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot', 'PACK'), 'Only approved one-GPU black-retry hosts are allowed')
+            and group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot', 'E2EpilotT2', 'PACK'), 'Only approved one-GPU black-retry hosts are allowed')
     require(isinstance(retry_of, str) and re.fullmatch(r'\d+\.hopper-m-\d+', retry_of)
             and isinstance(evidence_path, str) and re.fullmatch(r'[0-9a-f]{64}', evidence_sha256 or ''),
             'Pinned first submissions or retries without exact black evidence are forbidden')
@@ -319,12 +331,16 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
             and payload_path.stat().st_mode & 0o222 == script_path.stat().st_mode & 0o222 == 0,
             'Original submission files are not the same immutable reservation')
     payload, receipt = json.loads(payload_bytes), json.loads(receipt_bytes)
-    pilot_retry = group == 'E2Epilot' and pilot_command(payload.get('command'))
+    pilot_retry = group in ('E2Epilot', 'E2EpilotT2') and pilot_command(payload.get('command'))
     original_wall = payload.get('requested_wall_seconds')
     stoploss_reduction = 0
     if pilot_retry:
-        require(type(original_wall) is int and type(wall_seconds) is int and 0 < wall_seconds <= original_wall,
-                'Pilot retry may only preserve or shorten its original PBS stop bound')
+        require(type(original_wall) is int and type(wall_seconds) is int and 0 < wall_seconds
+                and (wall_seconds <= original_wall or (group == 'E2Epilot'
+                    and pilot_option(payload['command'], '--arm') in ('T0', 'T4')
+                    and wall_seconds == PILOT_STOPLOSS_WALL_SECONDS
+                    and pilot_timeout(command) == PILOT_STOPLOSS_DRIVER_SECONDS)),
+                'Pilot increase requires the exact16be1c57 T0/T4 PBS/driver stop bound')
         stoploss_reduction = original_wall - wall_seconds
         require(original_wall - pilot_timeout(payload['command']) == 64
                 and wall_seconds - pilot_timeout(command) == 64,
@@ -434,6 +450,12 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
             'rotation_index': rotation_index, 'rotation_previous': rotation_previous,
             'original_node': node, 'original_gpu_uuid': gpu,
             'queue_fallback_after_seconds': 1200, 'scope': 'opening black gate retry only; no scientific acceptance'}
+    if stoploss_reduction < 0:
+        binding['pilot_stoploss_authorization'] = {
+            'revision': PILOT_STOPLOSS_AUTHORIZATION, 'original_wall_seconds': original_wall,
+            'requested_wall_seconds': wall_seconds, 'driver_seconds': PILOT_STOPLOSS_DRIVER_SECONDS,
+            'unchanged_cleanup_recording_margin_seconds': 64,
+            'scope': 'Explicit T0/T4 time bound only; original arm,50 updates and all method/input arguments unchanged'}
     if version == VERSION:
         binding.update(available_hosts=list(AVAILABLE_HOSTS), disabled_hosts=json.loads(json.dumps(DISABLED_HOSTS)))
     return binding

@@ -23,12 +23,30 @@ import uuid
 BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 120.0}
 TOTAL_LIMIT = 120.0
-BUDGET_REVISION = "20261110_human7babc169_measured709803_premium_120_t01v2_16_e2e_4_e2epilot_9_g01_40_t02_40_shared_gpu_units_v1"
-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 9.0, "G01": 40.0, "T02": 40.0}
+BUDGET_REVISION = "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1"
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 12.0, "E2EpilotT2": 0.5, "G01": 40.0, "T02": 40.0}
 PACK_GROUP = "PACK"  # A reservation route, never an additional budget.
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 EXTERNAL_FINAL_CONFIG = "configs/phase_external_final_jobs.json"
 EXTERNAL_FINAL_VERSION = "g01_direct_qsub_final_cost_v1"
+
+
+def native_pilot_budget_command(command, name, arm, group):
+    """Exact native entry and budget identity; training settings stay in the driver."""
+    if not isinstance(command, list) or not command or not re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(command[0]).name):
+        return False
+    args = command[1:]
+    if args[:1] == ["-u"]:
+        args = args[1:]
+    if args[:3] != ["-m", "src.tools.smoke_e2e_pilot", "run"]:
+        return False
+    def option(flag):
+        if args.count(flag) != 1 or args.index(flag) + 1 >= len(args):
+            return None
+        return args[args.index(flag) + 1]
+    budget = option("--budget-group") if "--budget-group" in args else "E2Epilot"
+    return (option("--name") == name and option("--arm") == arm and budget == group
+            and "--engineering-smoke" not in args)
 
 
 def budget_group(task, name, command, declared=None):
@@ -51,6 +69,12 @@ def budget_group(task, name, command, declared=None):
     g01 = isinstance(name, str) and name.startswith(("gen_train_", "gen_test_"))
     t02_launch = any(arg in ("src.tools.t02_export", "src.tools.t02_export_parallel", "src.tools.t02_cache_check") for arg in (command or []))
     t02 = isinstance(name, str) and name.startswith("t02_export_")
+    if (isinstance(name, str) and name.startswith("smoke_e2e_pilot_T2_")) or declared == "E2EpilotT2":
+        if (task != "T01" or not isinstance(name, str) or not name.startswith("smoke_e2e_pilot_T2_")
+                or declared != "E2EpilotT2"
+                or (command and not native_pilot_budget_command(command, name, "T2", "E2EpilotT2"))):
+            raise ValueError("T2 requires its explicit E2EpilotT2 budget, T2 name and native five-update arm")
+        return "E2EpilotT2"
     # Step 6 is a new explicitly declared ledger. Never infer it from a generic
     # smoke command or move historical steps 1--5 out of their original E2E cap.
     if e2e_pilot or declared == "E2Epilot":
@@ -460,7 +484,7 @@ def budget_state(repo, policy=None, live_rates=None):
             "submissions": submissions}
 
 
-def validate_request(task, gpus, seconds, name, state, group=None, mixed_authorization=None):
+def validate_request(task, gpus, seconds, name, state, group=None, mixed_authorization=None, *, command=None):
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
@@ -469,7 +493,11 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
         raise ValueError("Run name must identify the selected task")
     if any(row["name"] == name for row in state["submissions"]):
         raise ValueError("Run name already has a submission; use a distinct evidence name")
-    if not 0 < seconds <= (3 * 3600 if task == "T00b" else 4 * 3600):
+    long_pilot = (task == "T01" and group == "E2Epilot" and any(
+        name.startswith("smoke_e2e_pilot_" + arm + "_")
+        and native_pilot_budget_command(command, name, arm, "E2Epilot") for arm in ("T0", "T4")))
+    maximum_seconds = 15600 if long_pilot else (3 * 3600 if task == "T00b" else 4 * 3600)
+    if not 0 < seconds <= maximum_seconds:
         raise ValueError("Request exceeds this task's per-job walltime limit")
     proposed = gpus * seconds / 3600 * positive_rate(state["charge_policy"]["rates"][queue_for_gpus(gpus)])
     if gpus >= 8 and seconds < 7201:
@@ -497,8 +525,8 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
         return
     if mixed_authorization is not None:
         raise ValueError("Ordinary single-group jobs cannot claim a mixed reservation")
-    if group in ("E2E", "E2Epilot", "T02") and gpus != 1:
-        raise ValueError("E2E/E2Epilot/T02 use exactly one GPU per job")
+    if group in ("E2E", "E2Epilot", "E2EpilotT2", "T02") and gpus != 1:
+        raise ValueError("E2E/E2Epilot/E2EpilotT2/T02 use exactly one GPU per job")
     if group == "G01" and name.startswith("gen_test_") and gpus != 1:
         raise ValueError("Evaluation generation retains the frozen single-GPU collection plan")
     if group == "G01" and gpus == 2:
@@ -556,7 +584,7 @@ def main():
             evidence_path=args.black_retry_evidence, evidence_sha256=args.black_retry_evidence_sha256,
             name=args.name, command=command, task=args.task, group=group, gpus=args.gpus, wall_seconds=seconds)
         state = budget_state(repo)
-        validate_request(args.task, args.gpus, seconds, args.name, state, group, mixed_authorization)
+        validate_request(args.task, args.gpus, seconds, args.name, state, group, mixed_authorization, command=command)
     except (ValueError, RuntimeError) as error:
         parser.error(str(error))
     for suffix in (repo / "results" / f"{args.name}.json", repo / "logs/runs" / f"{args.name}.log",

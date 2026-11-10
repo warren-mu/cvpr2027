@@ -11,11 +11,11 @@ submit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(submit)
 
 
-def state(cost=0, total=0, rate=1, g01=0, t02=0, pilot=0):
+def state(cost=0, total=0, rate=1, g01=0, t02=0, pilot=0, t2=0):
     return {'submissions': [], 'charge_policy': {'rates': {'smallx': rate, 'mediumx': rate}},
             'accounted_or_reserved_by_task': {'T00b': 0, 'T01': 0},
             'accounted_or_reserved_total': total,
-            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'E2Epilot': pilot, 'G01': g01, 'T02': t02}}
+            'accounted_or_reserved_by_subbudget': {'T01v2': 0, 'E2E': cost, 'E2Epilot': pilot, 'E2EpilotT2': t2, 'G01': g01, 'T02': t02}}
 
 
 class E2EBudgetTests(unittest.TestCase):
@@ -90,17 +90,17 @@ class G01BudgetTests(unittest.TestCase):
 
 
 class E2EPilotBudgetTests(unittest.TestCase):
-    def test_nine_charged_hour_boundary_and_independent_old_e2e_cap(self):
+    def test_twelve_charged_hour_boundary_and_independent_old_e2e_cap(self):
         submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0',
-            state(cost=4, pilot=8.5, total=119.5), 'E2Epilot')
-        for observed in (state(pilot=8.501), state(pilot=8.1, rate=2), state(total=119.501)):
+            state(cost=4, pilot=11.5, total=119.5), 'E2Epilot')
+        for observed in (state(pilot=11.501), state(pilot=11.1, rate=2), state(total=119.501)):
             with self.subTest(state=observed), self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0', observed, 'E2Epilot')
         # Neither independent ledger lends unused budget to the other.
         with self.assertRaises(ValueError):
             submit.validate_request('T01', 1, 300, 'smoke_e2e_old', state(cost=4, pilot=0), 'E2E')
         with self.assertRaises(ValueError):
-            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T4_s0', state(cost=0, pilot=9), 'E2Epilot')
+            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T4_s0', state(cost=0, pilot=12), 'E2Epilot')
 
     def test_explicit_pilot_namespace_cannot_alias_old_steps_or_other_budgets(self):
         training = ['python3', '-m', 'src.tools.smoke_e2e_train']
@@ -169,6 +169,80 @@ class E2EPilotBudgetTests(unittest.TestCase):
                 submit.budget_state(repo, policy=policy, live_rates={'2.hopper-m-02': 2})
 
 
+class PilotT2BudgetTests(unittest.TestCase):
+    @staticmethod
+    def command(name='smoke_e2e_pilot_T2_s0', arm='T2', group='E2EpilotT2'):
+        return ['python3', '-u', '-m', 'src.tools.smoke_e2e_pilot', 'run', '--name', name,
+                '--arm', arm, '--budget-group', group]
+
+    def test_half_hour_is_separate_from_twelve_and_preserves_shared_ceiling(self):
+        name = 'smoke_e2e_pilot_T2_s0'
+        submit.validate_request('T01', 1, 900, name, state(pilot=12, t2=.25, total=119.75), 'E2EpilotT2')
+        for observed in (state(t2=.251), state(t2=.1, rate=2), state(total=119.751)):
+            with self.subTest(observed=observed), self.assertRaises(ValueError):
+                submit.validate_request('T01', 1, 900, name, observed, 'E2EpilotT2')
+        for bad in (None, True, -1, float('nan'), float('inf')):
+            with self.subTest(cost=bad), self.assertRaises(ValueError):
+                submit.validate_request('T01', 1, 300, name, state(t2=bad), 'E2EpilotT2')
+        missing = state(); del missing['accounted_or_reserved_by_subbudget']['E2EpilotT2']
+        with self.assertRaises(ValueError):
+            submit.validate_request('T01', 1, 300, name, missing, 'E2EpilotT2')
+        for count in (2, 3, 4):
+            with self.assertRaises(ValueError):
+                submit.validate_request('T01', count, 60, name, state(), 'E2EpilotT2')
+
+    def test_native_t2_and_explicit_name_arm_budget_are_all_required(self):
+        name = 'smoke_e2e_pilot_T2_s0'; command = self.command()
+        self.assertEqual(submit.budget_group('T01', name, command, 'E2EpilotT2'), 'E2EpilotT2')
+        bad_commands = [self.command(arm='T4'), self.command(group='E2Epilot'),
+            command[:-2], command + ['--arm', 'T2'], command + ['--engineering-smoke', 'other'],
+            ['bash', '-c', 'echo', *command], command[:3]+['src.tools.smoke_e2e_train']+command[4:]]
+        for bad in bad_commands:
+            with self.subTest(command=bad), self.assertRaises(ValueError):
+                submit.budget_group('T01', name, bad, 'E2EpilotT2')
+        for task, selected, group in [('T00b', name, 'E2EpilotT2'), ('T01', name, 'E2Epilot'),
+                ('T01', name, None), ('T01', 'smoke_e2e_pilot_T0_s0', 'E2EpilotT2'),
+                ('T01', 'gen_test_wrong', 'E2EpilotT2')]:
+            with self.subTest(name=selected,group=group), self.assertRaises(ValueError):
+                submit.budget_group(task, selected, command, group)
+
+    def test_four_hour_twenty_extension_is_native_t0_t4_only(self):
+        for arm in ('T0', 'T4'):
+            name = 'smoke_e2e_pilot_' + arm + '_s0'
+            command = self.command(name, arm, 'E2Epilot')
+            submit.validate_request('T01', 1, 15600, name, state(), 'E2Epilot', command=command)
+            with self.assertRaises(ValueError):
+                submit.validate_request('T01', 1, 15601, name, state(), 'E2Epilot', command=command)
+            for wrong in (None, command + ['--engineering-smoke', 'other'], self.command(name, 'T2')):
+                with self.assertRaises(ValueError):
+                    submit.validate_request('T01', 1, 15600, name, state(), 'E2Epilot', command=wrong)
+        for name, group in [('gen_train_fixture','G01'),('t02_export_fixture','T02'),
+                            ('smoke_e2e_original','E2E'),('smoke_e2e_pilot_T2_s0','E2EpilotT2')]:
+            with self.assertRaises(ValueError):
+                submit.validate_request('T01', 1, 14401, name, state(), group, command=self.command())
+
+    def test_actual_old_and_new_payload_ledgers_do_not_move_historical_costs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            for number, arm, group in [(1,'T0','E2Epilot'), (2,'T4','E2Epilot'), (3,'T2','E2EpilotT2')]:
+                directory = repo / 'logs/pbs' / str(number); directory.mkdir(parents=True)
+                name = 'smoke_e2e_pilot_' + arm + '_s0'
+                command = self.command(name, arm, group)
+                if group == 'E2Epilot': command = command[:-2]  # Original pre-change payload.
+                payload = {'name':name,'task_id':'T01','budget_group':group,'budget_batch':submit.BATCH,
+                    'command':command,'requested_gpu_count':1,'requested_wall_seconds':900,
+                    'requested_queue_charge_rate':1}
+                (directory / 'payload.json').write_text(json.dumps(payload))
+                (directory / 'submission.json').write_text(json.dumps({'stdout':f'{number}.hopper-m-02','returncode':0}))
+            final = {'1.hopper-m-02':{'gpu_hours':.25,'queue_charge_rate':2,'accounting_result':'results/old.json'}}
+            with patch.object(submit, '_final_accounting', return_value=final):
+                actual = submit.budget_state(repo, policy={'rates':{'smallx':1,'mediumx':1}},
+                    live_rates={'2.hopper-m-02':2,'3.hopper-m-02':1})
+            self.assertEqual(actual['accounted_or_reserved_by_subbudget']['E2Epilot'],1.)
+            self.assertEqual(actual['accounted_or_reserved_by_subbudget']['E2EpilotT2'],.25)
+            self.assertEqual(actual['accounted_or_reserved_total'],1.25)
+
+
 class T02BudgetTests(unittest.TestCase):
     def test_export_subbudget_full_reservation_and_shared_120_ceiling(self):
         submit.validate_request('T01', 1, 1800, 't02_export_fixture', state(t02=39.5, total=119.5), 'T02')
@@ -176,7 +250,7 @@ class T02BudgetTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
         self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
-        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 9.0, 'G01': 40.0, 'T02': 40.0})
+        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 12.0, 'E2EpilotT2': .5, 'G01': 40.0, 'T02': 40.0})
 
     def test_fresh_cache_validation_uses_t02_budget_and_exact_cache_namespace(self):
         command = ['python3', '-m', 'src.tools.t02_cache_check']
