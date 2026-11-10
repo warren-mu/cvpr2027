@@ -1,0 +1,594 @@
+{
+  "config": {
+    "common_inference_settings": {
+      "dtype": "bfloat16",
+      "enforce_eager": true,
+      "gpu_memory_utilization": 0.8,
+      "limit_mm_per_prompt": {
+        "image": 5
+      },
+      "max_model_len": 8192,
+      "max_num_seqs": 10,
+      "seed": 0,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false
+    },
+    "common_sampling_settings": {
+      "max_tokens": 256,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "episode_directory": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "holdout_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+      "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+    },
+    "identity": {
+      "cpu_affinity": [
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47
+      ],
+      "cuda_visible_devices": "GPU-7253a3f8-0e38-d7e2-98d5-24f00e347398",
+      "pbs_jobid": "710863.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "manifest": "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "maximum_requested_gpu_hours": 1.0,
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "model_path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "model_settings_reused_from": "src.tools.smoke_e2e_eval.VllmPolicy except uniform0.8 memory allocation for32B and exact-input reuse",
+    "model_size": "7b",
+    "model_source": {
+      "file": "results/diag_diag02_model_7b_download_01.json",
+      "sha256": "859470f77ad563a1f84d30957ff42c5971e0f2d0095b614c3b8e65ee65bfa829"
+    },
+    "name": "diag_diag02_baselines_7b_s0_01",
+    "node": "hopper-21",
+    "strategies": [
+      "obs_never",
+      "obs_trigger",
+      "obs_trigger_cov"
+    ],
+    "timeout_seconds": 2340.0,
+    "training_config_changed": false,
+    "version": "diag02_fixed83_cov_full_input_once_v1"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cleanup_errors": [],
+    "common_pool_hash": "d001096b0eaca28d280822ae6bdcb77b65f16b2089c8f22e0ffea2708ff9b191",
+    "completed": true,
+    "cov_rule": "same fixed trigger exploration; select immediately only when ownX>=250 and both actual candidate marks are success-eligible, otherwise return as original",
+    "determinism": {
+      "direct_control_count": 86,
+      "does_not_claim_cuda_kernel_determinism": true,
+      "protocol": "single generation per full public input, shared across strategies/worlds within model run",
+      "same_complete_request": 86,
+      "same_request_different_output": 0
+    },
+    "determinism_report": {
+      "bytes": 4345281,
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01/e5_determinism.json",
+      "sha256": "fe209024d4a7ea165ce693a57f3491a1403f3d1d3466430d679195900a6b7eb9"
+    },
+    "errors": [],
+    "evaluation_design": "original83 pairs, both worlds once, greedy; equal world weights; training scenes only",
+    "first_pair_dataset_key": "pair_0ac448b616e2d05ac4cda8bcc4d5e5cacf5bc275aeffe3b9915116b2e658df2c",
+    "first_pair_engineering_passed": true,
+    "fixed_holdout": {
+      "pilot_population_and_split_verified": true,
+      "reference": {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+        "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+      },
+      "scope": "permanent T04 whole-scene holdout; no later population redraw",
+      "selected_scenes": [
+        "FloorPlan15",
+        "FloorPlan204",
+        "FloorPlan301"
+      ]
+    },
+    "formal_test_set_evaluation": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_7b_s0_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_diag02_baselines_7b_s0_01_gate.json",
+      "git_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+      "metrics_sha256": "c232cf9d4fcd07c194c91b26d7e07e1506c93500e7ea1b9b9f76bcf1e5454448",
+      "sha256": "e7deef0b2e3ddd713d7a24c22f09356dea00856ae700b3120d3d397f1c6d2af2"
+    },
+    "inference_settings": {
+      "dtype": "bfloat16",
+      "enforce_eager": true,
+      "gpu_memory_utilization": 0.8,
+      "limit_mm_per_prompt": {
+        "image": 5
+      },
+      "max_model_len": 8192,
+      "max_num_seqs": 10,
+      "seed": 0,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false
+    },
+    "journals": [
+      {
+        "bytes": 1660529,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01/obs_never.jsonl",
+        "sha256": "f65beca4ffb13125eb28e3ae404ede370194408aac01a05077d2ffab2fca4532"
+      },
+      {
+        "bytes": 2471268,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl",
+        "sha256": "49a08f62ddb270f6828cf0b11fbbd2ee73388d06f04cf01c8d3b4f7deee5dc18"
+      },
+      {
+        "bytes": 2436407,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl",
+        "sha256": "a607c5b298ea128cac7b009a40ad74fac3529a97d4bedf4dc8a17f5abdfa7539"
+      },
+      {
+        "bytes": 880,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_7b_s0_01/progress.jsonl",
+        "sha256": "b658e5742e33d66982eb9ef7824344f001158b343237d78273c9ffe7c6d18960"
+      }
+    ],
+    "kind": "diag02_original_model",
+    "lf_cov_minus_never_success_rate": 0.11363636363636365,
+    "lf_trigger_minus_never_success_rate": 0.11363636363636365,
+    "look_cov_minus_never_success_rate": 0.08749999999999997,
+    "look_trigger_minus_never_success_rate": 0.1375,
+    "model_loading_seconds": 63.53317140205763,
+    "model_reference": {
+      "directory": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5",
+      "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+      "model_config_sha256": "77d9ec7321cc572e3579e2c84799c9cadaded63c49ce93b101733349fc330c43",
+      "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+      "source_result": {
+        "audit": {
+          "fail": [],
+          "file": "results/diag_diag02_model_7b_download_01.json",
+          "warn": [
+            "P5 run used uncommitted changes; see logs/runs/diag_diag02_model_7b_download_01.diff"
+          ]
+        },
+        "exit_code": 0,
+        "file": "results/diag_diag02_model_7b_download_01.json",
+        "git_commit": "0e84ad1fa700a6a548cf84fab94ccd70d0f4d7e3",
+        "metrics_sha256": "d72c05c445d5a7f8ee63a5dc4e093914771acd98953933a956b4095689610a57",
+        "sha256": "859470f77ad563a1f84d30957ff42c5971e0f2d0095b614c3b8e65ee65bfa829"
+      },
+      "weight_files": [
+        {
+          "bytes": 3900233256,
+          "official_lfs_match": true,
+          "path": "model-00001-of-00005.safetensors",
+          "sha256": "e97b877e47fde53a6c6e77aafb36e58e91ee9d95c4a3eeac6f1b5c0e6a1c986e"
+        },
+        {
+          "bytes": 3864726320,
+          "official_lfs_match": true,
+          "path": "model-00002-of-00005.safetensors",
+          "sha256": "a9a300a43b4724eee2abe7c18ceb26768d0ab011eb0cad19d9bfd2476a24d024"
+        },
+        {
+          "bytes": 3864726424,
+          "official_lfs_match": true,
+          "path": "model-00003-of-00005.safetensors",
+          "sha256": "111223d173e00bbee81cba1216fad28668df3476706b7fd26f4d5b50f8b3a507"
+        },
+        {
+          "bytes": 3864733680,
+          "official_lfs_match": true,
+          "path": "model-00004-of-00005.safetensors",
+          "sha256": "ef47f634fa57d46ee134edcc09f34085a47da1e16c12a2abe0d67118be6d72ed"
+        },
+        {
+          "bytes": 1089994880,
+          "official_lfs_match": true,
+          "path": "model-00005-of-00005.safetensors",
+          "sha256": "0c859795ad3a627a9b95bcb762e059d5b768a4a36fdd4affeff269d93fdecc67"
+        }
+      ],
+      "weight_index_sha256": "73b333b0b16e5286ddba615d2caebcd495cf7e616f52eb217a81781393d79de9",
+      "weight_verification_seconds": 13.651224308065139
+    },
+    "paper_result": false,
+    "producer_exit_code": 0,
+    "sampling_settings": {
+      "max_tokens": 256,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "source_authentication_seconds": 231.62018204003107,
+    "strategies": {
+      "obs_never": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 86,
+          "seen_before_select_count": 86,
+          "seen_before_select_rate": 0.5180722891566265,
+          "success_rate": 0.5301204819277109,
+          "successes": 88,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5301204819277109
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.6363636363636364,
+          "successes": 14,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.6363636363636364
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.59375,
+          "successes": 38,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.59375
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.45,
+          "successes": 36,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.45
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.5,
+          "successes": 22,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.3888888888888889,
+          "successes": 14,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.3888888888888889
+        }
+      },
+      "obs_trigger": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 1.4939759036144578,
+          "observation_reward_cost_mean": 0.07469879518072282,
+          "seen_anywhere_count": 159,
+          "seen_before_select_count": 159,
+          "seen_before_select_rate": 0.9578313253012049,
+          "success_rate": 0.5963855421686747,
+          "successes": 99,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5216867469879514
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.6363636363636364,
+          "successes": 14,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.6363636363636364
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.59375,
+          "successes": 38,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.59375
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 3.1,
+          "observation_reward_cost_mean": 0.15499999999999986,
+          "seen_anywhere_count": 73,
+          "seen_before_select_count": 73,
+          "seen_before_select_rate": 0.9125,
+          "success_rate": 0.5875,
+          "successes": 47,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.43249999999999966
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 3.0,
+          "observation_reward_cost_mean": 0.1500000000000001,
+          "seen_anywhere_count": 44,
+          "seen_before_select_count": 44,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.6136363636363636,
+          "successes": 27,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.463636363636364
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 3.2222222222222223,
+          "observation_reward_cost_mean": 0.1611111111111112,
+          "seen_anywhere_count": 29,
+          "seen_before_select_count": 29,
+          "seen_before_select_rate": 0.8055555555555556,
+          "success_rate": 0.5555555555555556,
+          "successes": 20,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.3944444444444449
+        }
+      },
+      "obs_trigger_cov": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 1.427710843373494,
+          "observation_reward_cost_mean": 0.07138554216867464,
+          "seen_anywhere_count": 159,
+          "seen_before_select_count": 159,
+          "seen_before_select_rate": 0.9578313253012049,
+          "success_rate": 0.572289156626506,
+          "successes": 95,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5009036144578307
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.6363636363636364,
+          "successes": 14,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.6363636363636364
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.59375,
+          "successes": 38,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.59375
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 2.9625,
+          "observation_reward_cost_mean": 0.1481249999999999,
+          "seen_anywhere_count": 73,
+          "seen_before_select_count": 73,
+          "seen_before_select_rate": 0.9125,
+          "success_rate": 0.5375,
+          "successes": 43,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.38937500000000036
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 3.0,
+          "observation_reward_cost_mean": 0.1500000000000001,
+          "seen_anywhere_count": 44,
+          "seen_before_select_count": 44,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.6136363636363636,
+          "successes": 27,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.463636363636364
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 2.9166666666666665,
+          "observation_reward_cost_mean": 0.1458333333333334,
+          "seen_anywhere_count": 29,
+          "seen_before_select_count": 29,
+          "seen_before_select_rate": 0.8055555555555556,
+          "success_rate": 0.4444444444444444,
+          "successes": 16,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.29861111111111116
+        }
+      }
+    },
+    "training_performed": false,
+    "trigger_privileged": true,
+    "trigger_rule": "fixed L,R,R,L; after own mask >=250 complete current excursion to s0 then select",
+    "uncached_probe_summary": [],
+    "unique_input_generation": {
+      "actual_generations": 217,
+      "logical_requests": 498,
+      "reused_generations": 281
+    }
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_7b_s0_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_diag02_baselines_7b_s0_01_gate.json",
+      "git_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+      "metrics_sha256": "c232cf9d4fcd07c194c91b26d7e07e1506c93500e7ea1b9b9f76bcf1e5454448",
+      "sha256": "e7deef0b2e3ddd713d7a24c22f09356dea00856ae700b3120d3d397f1c6d2af2"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_first5_01_retry2.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_first5_01_retry2.json",
+      "git_commit": "8913a16f853796b87a0ba80861daf396144fbe78",
+      "metrics_sha256": "1d5567d0da3584aabf6a1f3c4864f0e9be4cf3383a70a497633c389ef1cc08af",
+      "sha256": "0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_remaining24_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_remaining24_01.json",
+      "git_commit": "13277481938e6b85f3df0be6e81a39d5141b3371",
+      "metrics_sha256": "a4effbfcc4009754ccbabe41064732228daf411144b4d13fcaa600f746c9608e",
+      "sha256": "a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_six05_08_01_retry2.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_six05_08_01_retry2.json",
+      "git_commit": "fd9fb8c598c1d1738a2ea95dc38bef6716f66983",
+      "metrics_sha256": "db3ada14d96c3ee298d2bb36ee5b3be019a1bc019460e92eb4442abfea93c5c8",
+      "sha256": "24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_six09_14_01_retry4.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_six09_14_01_retry4.json",
+      "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+      "metrics_sha256": "6af596f6f5e4e75e91bc55711834e5fa840cec9c48da47af12d5d9b0e6d55be0",
+      "sha256": "f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_model_7b_download_01.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/diag_diag02_model_7b_download_01.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/diag_diag02_model_7b_download_01.json",
+      "git_commit": "0e84ad1fa700a6a548cf84fab94ccd70d0f4d7e3",
+      "metrics_sha256": "d72c05c445d5a7f8ee63a5dc4e093914771acd98953933a956b4095689610a57",
+      "sha256": "859470f77ad563a1f84d30957ff42c5971e0f2d0095b614c3b8e65ee65bfa829"
+    }
+  ],
+  "_meta": {
+    "name": "diag_diag02_baselines_7b_s0_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.diag02_baselines",
+      "--name",
+      "diag_diag02_baselines_7b_s0_01",
+      "--model-size",
+      "7b",
+      "--model-path",
+      "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5",
+      "--manifest",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+      "--holdout-reference",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\", \"sha256\": \"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+      "--model-source",
+      "{\"file\": \"results/diag_diag02_model_7b_download_01.json\", \"sha256\": \"859470f77ad563a1f84d30957ff42c5971e0f2d0095b614c3b8e65ee65bfa829\"}",
+      "--timeout-seconds",
+      "2340",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-21",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-11T04:14:14",
+    "log_path": "logs/runs/diag_diag02_baselines_7b_s0_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+    "git_dirty": false,
+    "end": "2026-11-11T04:20:12",
+    "duration_sec": 356.8,
+    "exit_code": 0,
+    "metrics_sha256": "d1d2ef9b4ce1fe485458e06418f9c78437594e6ab1bf6432c341cde16f42f172"
+  }
+}

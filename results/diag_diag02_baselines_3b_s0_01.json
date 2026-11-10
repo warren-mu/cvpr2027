@@ -1,0 +1,579 @@
+{
+  "config": {
+    "common_inference_settings": {
+      "dtype": "bfloat16",
+      "enforce_eager": true,
+      "gpu_memory_utilization": 0.8,
+      "limit_mm_per_prompt": {
+        "image": 5
+      },
+      "max_model_len": 8192,
+      "max_num_seqs": 10,
+      "seed": 0,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false
+    },
+    "common_sampling_settings": {
+      "max_tokens": 256,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "episode_directory": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "holdout_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+      "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+    },
+    "identity": {
+      "cpu_affinity": [
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61,
+        63,
+        65,
+        67,
+        69,
+        71
+      ],
+      "cuda_visible_devices": "GPU-66f994a3-cf98-4ed8-88e8-4e1823d66968",
+      "pbs_jobid": "710854.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "manifest": "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "maximum_requested_gpu_hours": 0.5,
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "model_path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "model_settings_reused_from": "src.tools.smoke_e2e_eval.VllmPolicy except uniform0.8 memory allocation for32B and exact-input reuse",
+    "model_size": "3b",
+    "model_source": {
+      "file": "results/smoke_e2e_eval_03.json",
+      "sha256": "d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9"
+    },
+    "name": "diag_diag02_baselines_3b_s0_01",
+    "node": "hopper-25",
+    "strategies": [
+      "obs_never",
+      "obs_trigger",
+      "obs_trigger_cov"
+    ],
+    "timeout_seconds": 1440.0,
+    "training_config_changed": false,
+    "version": "diag02_fixed83_cov_full_input_once_v1"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cleanup_errors": [],
+    "common_pool_hash": "d001096b0eaca28d280822ae6bdcb77b65f16b2089c8f22e0ffea2708ff9b191",
+    "completed": true,
+    "cov_rule": "same fixed trigger exploration; select immediately only when ownX>=250 and both actual candidate marks are success-eligible, otherwise return as original",
+    "determinism": {
+      "direct_control_count": 86,
+      "does_not_claim_cuda_kernel_determinism": true,
+      "protocol": "single generation per full public input, shared across strategies/worlds within model run",
+      "same_complete_request": 86,
+      "same_request_different_output": 0
+    },
+    "determinism_report": {
+      "bytes": 8240042,
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01/e5_determinism.json",
+      "sha256": "2fc881f347d69a3ad105b2c65f7ca11c7ca007e33b383d6c7f5f21550296b107"
+    },
+    "errors": [],
+    "evaluation_design": "original83 pairs, both worlds once, greedy; equal world weights; training scenes only",
+    "first_pair_dataset_key": "pair_0ac448b616e2d05ac4cda8bcc4d5e5cacf5bc275aeffe3b9915116b2e658df2c",
+    "first_pair_engineering_passed": true,
+    "fixed_holdout": {
+      "pilot_population_and_split_verified": true,
+      "reference": {
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+        "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+      },
+      "scope": "permanent T04 whole-scene holdout; no later population redraw",
+      "selected_scenes": [
+        "FloorPlan15",
+        "FloorPlan204",
+        "FloorPlan301"
+      ]
+    },
+    "formal_test_set_evaluation": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_3b_s0_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_diag02_baselines_3b_s0_01_gate.json",
+      "git_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "metrics_sha256": "c29b4c04a538edf5e09b5ad130b8e7894b79cebb512a14ce1eb8934263a55869",
+      "sha256": "72a1912baf5fd46899e24c9835957190ec3082c1486cd192780e02e64797e4ff"
+    },
+    "inference_settings": {
+      "dtype": "bfloat16",
+      "enforce_eager": true,
+      "gpu_memory_utilization": 0.8,
+      "limit_mm_per_prompt": {
+        "image": 5
+      },
+      "max_model_len": 8192,
+      "max_num_seqs": 10,
+      "seed": 0,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false
+    },
+    "journals": [
+      {
+        "bytes": 1517699,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl",
+        "sha256": "2fb97b21703de0adafd4f534c07840a8fd07b9b32aa109969289746d19079865"
+      },
+      {
+        "bytes": 2328398,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl",
+        "sha256": "e1cb40ea6fda52f15b313213e5d9ef951b5295451c2361ce979406084ea23801"
+      },
+      {
+        "bytes": 2293492,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger_cov.jsonl",
+        "sha256": "63e388b974137327d8fb15e95090f0db8ad79bff4d842e0de69661221837b69d"
+      },
+      {
+        "bytes": 880,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_3b_s0_01/progress.jsonl",
+        "sha256": "69b1fe375f99d1089e49f74debb94b449dbaec540abbe66f4efff627cb1ef66d"
+      }
+    ],
+    "kind": "diag02_original_model",
+    "lf_cov_minus_never_success_rate": 0.022727272727272707,
+    "lf_trigger_minus_never_success_rate": 0.022727272727272707,
+    "look_cov_minus_never_success_rate": 0.0625,
+    "look_trigger_minus_never_success_rate": 0.0625,
+    "model_loading_seconds": 62.79608737002127,
+    "model_reference": {
+      "directory": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "model_config_sha256": "7ed3eed5be6924cc800e8a5e53fc405c1aab1aaf36bad65c33403b36c56827f5",
+      "revision": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "scope": "original model only; no source pool/cache or training authorization inherited",
+      "source_result": {
+        "audit": {
+          "fail": [],
+          "file": "results/smoke_e2e_eval_03.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/smoke_e2e_eval_03.json",
+        "git_commit": "340f031bc48e729909ac56676e82d522bf9cd44a",
+        "metrics_sha256": "712403d3dfb331402a59b13406edb0df756eee16fe8db1c16ea736e1dfd4f9ca",
+        "sha256": "d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9"
+      }
+    },
+    "paper_result": false,
+    "producer_exit_code": 0,
+    "sampling_settings": {
+      "max_tokens": 256,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "source_authentication_seconds": 226.45592052291613,
+    "strategies": {
+      "obs_never": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 86,
+          "seen_before_select_count": 86,
+          "seen_before_select_rate": 0.5180722891566265,
+          "success_rate": 0.572289156626506,
+          "successes": 95,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.572289156626506
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.7272727272727273,
+          "successes": 16,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.7272727272727273
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.640625,
+          "successes": 41,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.640625
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.475,
+          "successes": 38,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.475
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.5,
+          "successes": 22,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 0,
+          "seen_before_select_count": 0,
+          "seen_before_select_rate": 0.0,
+          "success_rate": 0.4444444444444444,
+          "successes": 16,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.4444444444444444
+        }
+      },
+      "obs_trigger": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 1.4939759036144578,
+          "observation_reward_cost_mean": 0.07469879518072282,
+          "seen_anywhere_count": 159,
+          "seen_before_select_count": 159,
+          "seen_before_select_rate": 0.9578313253012049,
+          "success_rate": 0.6024096385542169,
+          "successes": 100,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5277108433734939
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.7272727272727273,
+          "successes": 16,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.7272727272727273
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.640625,
+          "successes": 41,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.640625
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 3.1,
+          "observation_reward_cost_mean": 0.15499999999999986,
+          "seen_anywhere_count": 73,
+          "seen_before_select_count": 73,
+          "seen_before_select_rate": 0.9125,
+          "success_rate": 0.5375,
+          "successes": 43,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.38250000000000034
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 3.0,
+          "observation_reward_cost_mean": 0.1500000000000001,
+          "seen_anywhere_count": 44,
+          "seen_before_select_count": 44,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.5227272727272727,
+          "successes": 23,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.3727272727272731
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 3.2222222222222223,
+          "observation_reward_cost_mean": 0.1611111111111112,
+          "seen_anywhere_count": 29,
+          "seen_before_select_count": 29,
+          "seen_before_select_rate": 0.8055555555555556,
+          "success_rate": 0.5555555555555556,
+          "successes": 20,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.394444444444445
+        }
+      },
+      "obs_trigger_cov": {
+        "all": {
+          "episodes": 166,
+          "model_outputs": 166,
+          "observation_count_mean": 1.427710843373494,
+          "observation_reward_cost_mean": 0.07138554216867464,
+          "seen_anywhere_count": 159,
+          "seen_before_select_count": 159,
+          "seen_before_select_rate": 0.9578313253012049,
+          "success_rate": 0.6024096385542169,
+          "successes": 100,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.5310240963855424
+        },
+        "direct_flip": {
+          "episodes": 22,
+          "model_outputs": 22,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 22,
+          "seen_before_select_count": 22,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.7272727272727273,
+          "successes": 16,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.7272727272727273
+        },
+        "direct_stay": {
+          "episodes": 64,
+          "model_outputs": 64,
+          "observation_count_mean": 0.0,
+          "observation_reward_cost_mean": 0.0,
+          "seen_anywhere_count": 64,
+          "seen_before_select_count": 64,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.640625,
+          "successes": 41,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.640625
+        },
+        "look_all": {
+          "episodes": 80,
+          "model_outputs": 80,
+          "observation_count_mean": 2.9625,
+          "observation_reward_cost_mean": 0.1481249999999999,
+          "seen_anywhere_count": 73,
+          "seen_before_select_count": 73,
+          "seen_before_select_rate": 0.9125,
+          "success_rate": 0.5375,
+          "successes": 43,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.38937500000000036
+        },
+        "look_flip": {
+          "episodes": 44,
+          "model_outputs": 44,
+          "observation_count_mean": 3.0,
+          "observation_reward_cost_mean": 0.1500000000000001,
+          "seen_anywhere_count": 44,
+          "seen_before_select_count": 44,
+          "seen_before_select_rate": 1.0,
+          "success_rate": 0.5227272727272727,
+          "successes": 23,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.3727272727272731
+        },
+        "look_stay": {
+          "episodes": 36,
+          "model_outputs": 36,
+          "observation_count_mean": 2.9166666666666665,
+          "observation_reward_cost_mean": 0.1458333333333334,
+          "seen_anywhere_count": 29,
+          "seen_before_select_count": 29,
+          "seen_before_select_rate": 0.8055555555555556,
+          "success_rate": 0.5555555555555556,
+          "successes": 20,
+          "syntax_failures": 0,
+          "task_reward_mean": 0.4097222222222226
+        }
+      }
+    },
+    "training_performed": false,
+    "trigger_privileged": true,
+    "trigger_rule": "fixed L,R,R,L; after own mask >=250 complete current excursion to s0 then select",
+    "uncached_probe_summary": [
+      {
+        "episodes": 86,
+        "mixed_batch_origin_differences": 6,
+        "name": "direct_same_order_1",
+        "prior_same_order_differences": null,
+        "status": "completed"
+      },
+      {
+        "episodes": 86,
+        "mixed_batch_origin_differences": 6,
+        "name": "direct_same_order_2",
+        "prior_same_order_differences": 2,
+        "status": "completed"
+      },
+      {
+        "episodes": 86,
+        "mixed_batch_origin_differences": 8,
+        "name": "direct_reversed",
+        "prior_same_order_differences": 2,
+        "status": "completed"
+      }
+    ],
+    "unique_input_generation": {
+      "actual_generations": 217,
+      "logical_requests": 498,
+      "reused_generations": 281
+    }
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_3b_s0_01_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_diag02_baselines_3b_s0_01_gate.json",
+      "git_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "metrics_sha256": "c29b4c04a538edf5e09b5ad130b8e7894b79cebb512a14ce1eb8934263a55869",
+      "sha256": "72a1912baf5fd46899e24c9835957190ec3082c1486cd192780e02e64797e4ff"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_first5_01_retry2.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_first5_01_retry2.json",
+      "git_commit": "8913a16f853796b87a0ba80861daf396144fbe78",
+      "metrics_sha256": "1d5567d0da3584aabf6a1f3c4864f0e9be4cf3383a70a497633c389ef1cc08af",
+      "sha256": "0a8fa8a3a5a978c628257b0ba8f30e3e64804330eeb63caa60dfea49a1f09187"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_remaining24_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_remaining24_01.json",
+      "git_commit": "13277481938e6b85f3df0be6e81a39d5141b3371",
+      "metrics_sha256": "a4effbfcc4009754ccbabe41064732228daf411144b4d13fcaa600f746c9608e",
+      "sha256": "a699d17d9507e0f337357608c7c0592caef3e4c07a3f3d601f67b553ab6fff70"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_six05_08_01_retry2.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_six05_08_01_retry2.json",
+      "git_commit": "fd9fb8c598c1d1738a2ea95dc38bef6716f66983",
+      "metrics_sha256": "db3ada14d96c3ee298d2bb36ee5b3be019a1bc019460e92eb4442abfea93c5c8",
+      "sha256": "24457f2ed6dd8f7c21f920c56cd80e8920fe806880f6cfe127228f93326c7d14"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_six09_14_01_retry4.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_cache_six09_14_01_retry4.json",
+      "git_commit": "509873032cc21998daf6ab96789597ce8d961bd6",
+      "metrics_sha256": "6af596f6f5e4e75e91bc55711834e5fa840cec9c48da47af12d5d9b0e6d55be0",
+      "sha256": "f2b0e10ff2e34bfe5331142ef2478e47687d3556c65db2c3eafc14e4adaea15b"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_eval_03.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/smoke_e2e_eval_03.json",
+      "git_commit": "340f031bc48e729909ac56676e82d522bf9cd44a",
+      "metrics_sha256": "712403d3dfb331402a59b13406edb0df756eee16fe8db1c16ea736e1dfd4f9ca",
+      "sha256": "d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9"
+    }
+  ],
+  "_meta": {
+    "name": "diag_diag02_baselines_3b_s0_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.diag02_baselines",
+      "--name",
+      "diag_diag02_baselines_3b_s0_01",
+      "--model-size",
+      "3b",
+      "--model-path",
+      "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+      "--manifest",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+      "--holdout-reference",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\", \"sha256\": \"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+      "--model-source",
+      "{\"audit\": {\"fail\": [], \"file\": \"results/smoke_e2e_eval_03.json\", \"warn\": []}, \"exit_code\": 0, \"file\": \"results/smoke_e2e_eval_03.json\", \"git_commit\": \"340f031bc48e729909ac56676e82d522bf9cd44a\", \"metrics_sha256\": \"712403d3dfb331402a59b13406edb0df756eee16fe8db1c16ea736e1dfd4f9ca\", \"sha256\": \"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+      "--timeout-seconds",
+      "1440",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-25",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-11T04:02:55",
+    "log_path": "logs/runs/diag_diag02_baselines_3b_s0_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+    "git_dirty": false,
+    "end": "2026-11-11T04:08:52",
+    "duration_sec": 353.1,
+    "exit_code": 0,
+    "metrics_sha256": "738195789cd56f48c13904b08aff289234192692b4e0799e5c1e1c0cfa98c742"
+  }
+}

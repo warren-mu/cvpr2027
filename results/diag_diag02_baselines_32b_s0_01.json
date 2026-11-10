@@ -1,0 +1,154 @@
+{
+  "config": {
+    "common_inference_settings": {
+      "dtype": "bfloat16",
+      "enforce_eager": true,
+      "gpu_memory_utilization": 0.8,
+      "limit_mm_per_prompt": {
+        "image": 5
+      },
+      "max_model_len": 8192,
+      "max_num_seqs": 10,
+      "seed": 0,
+      "tensor_parallel_size": 1,
+      "trust_remote_code": false
+    },
+    "common_sampling_settings": {
+      "max_tokens": 256,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "episode_directory": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/diag_diag02_baselines_32b_s0_01",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "holdout_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+      "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+    },
+    "identity": {
+      "cpu_affinity": [
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47
+      ],
+      "cuda_visible_devices": "GPU-1811d176-d6fe-7645-784b-f42b78cc1625",
+      "pbs_jobid": "710865.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "manifest": "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "maximum_requested_gpu_hours": 1.0,
+    "model": "Qwen/Qwen2.5-VL-32B-Instruct",
+    "model_path": "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-32B-Instruct/snapshots/7cfb30d71a1f4f49a57592323337a4a4727301da",
+    "model_settings_reused_from": "src.tools.smoke_e2e_eval.VllmPolicy except uniform0.8 memory allocation for32B and exact-input reuse",
+    "model_size": "32b",
+    "model_source": {
+      "file": "results/diag_diag02_model_32b_download_01.json",
+      "sha256": "71bd263a181d06894869b00ab388b870f9094c044346d5660974e74910c1257e"
+    },
+    "name": "diag_diag02_baselines_32b_s0_01",
+    "node": "hopper-23",
+    "strategies": [
+      "obs_never",
+      "obs_trigger",
+      "obs_trigger_cov"
+    ],
+    "timeout_seconds": 3540.0,
+    "training_config_changed": false,
+    "version": "diag02_fixed83_cov_full_input_once_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cleanup_errors": [],
+    "completed": false,
+    "errors": [],
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_32b_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/diag_diag02_baselines_32b_s0_01_gate.json",
+      "git_commit": "51120eb442e16c01afa18af581793cd6d71fb1dd",
+      "metrics_sha256": "aa92a214163932e2f4a6f64a4011cff4070d5e65c50ef79d70d32fbe44d95976",
+      "sha256": "9636dd59bdddb0e52e8cd8483e9908029bd4f7bcc8b663cce36d3f3e6e8fa861"
+    },
+    "journals": [],
+    "kind": "diag02_original_model",
+    "paper_result": false,
+    "producer_exit_code": 86
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_diag02_baselines_32b_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/diag_diag02_baselines_32b_s0_01_gate.json",
+      "git_commit": "51120eb442e16c01afa18af581793cd6d71fb1dd",
+      "metrics_sha256": "aa92a214163932e2f4a6f64a4011cff4070d5e65c50ef79d70d32fbe44d95976",
+      "sha256": "9636dd59bdddb0e52e8cd8483e9908029bd4f7bcc8b663cce36d3f3e6e8fa861"
+    }
+  ],
+  "_meta": {
+    "name": "diag_diag02_baselines_32b_s0_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.diag02_baselines",
+      "--name",
+      "diag_diag02_baselines_32b_s0_01",
+      "--model-size",
+      "32b",
+      "--model-path",
+      "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-32B-Instruct/snapshots/7cfb30d71a1f4f49a57592323337a4a4727301da",
+      "--manifest",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+      "--holdout-reference",
+      "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\", \"sha256\": \"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+      "--model-source",
+      "{\"file\": \"results/diag_diag02_model_32b_download_01.json\", \"sha256\": \"71bd263a181d06894869b00ab388b870f9094c044346d5660974e74910c1257e\"}",
+      "--timeout-seconds",
+      "3540",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-23",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-11T04:19:00",
+    "log_path": "logs/runs/diag_diag02_baselines_32b_s0_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "51120eb442e16c01afa18af581793cd6d71fb1dd",
+    "git_dirty": false,
+    "end": "2026-11-11T04:19:22",
+    "duration_sec": 19.1,
+    "exit_code": 86,
+    "metrics_sha256": "5e93ab8b1605c10947093ab1afc7cd64dbd9a0307da56296de1abdeaa3c36e6c"
+  }
+}

@@ -1,0 +1,37 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_remaining70_plan_01 -- python3 -c import json,hashlib,shlex
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+root=Path.cwd().resolve()
+report_path=Path("logs/review/diag_test_selected05_final_export_inventory_02/report.json")
+body=report_path.read_bytes();assert hashlib.sha256(body).hexdigest()=="040aee310ae817ba923706546a8d0de0de5c565683fc9752c9d332cc79394c7c"
+inventory=json.loads(body)
+cache,cache_ref=audited_result("results/t02_export_cache_test_selected05_first6_01.json")
+first=list(cache["config"]["source"]);all_sources=list(inventory["successful_source_files"])
+assert len(first)==6 and all_sources[:6]==first and len(all_sources)==76
+remaining=[s for s in all_sources if s not in set(first)]
+assert len(remaining)==70 and len(set(remaining))==70
+by_file={x["source"]["file"]:x for x in inventory["outcomes"]}
+batches=[]
+for i in range(0,len(remaining),6):
+ files=remaining[i:i+6];number=i//6+1
+ name="t02_export_cache_test_selected05_remaining_b%02d"%number
+ wrapper="diag_submit_"+name
+ assert not (root/"results"/(name+".json")).exists()
+ members=[]
+ for f in files:
+  r=by_file[f];raw=(root/f).read_bytes();assert hashlib.sha256(raw).hexdigest()==r["source"]["sha256"]
+  assert r["status"]=="exported" and r["export_checks_complete"] is True
+  members.append({k:r[k] for k in ("source","pair_id","scene","kind","pair_reference","configuration_id","table_manifest")})
+ command=["python3","-u","-m","src.tools.t02_cache_check","--name",name]
+ for f in files:command+=["--source",f]
+ command+=["--sample-size","200","--seed","0","--timeout-seconds","1200","--pair-timeout-seconds","180","--gate-timeout-seconds","180"]
+ submit=["python3","scripts/run_logged.py","--name",wrapper,"--seed","0","--","python3","-m","src.tools.record_command","--name",wrapper,"--","python3","scripts/pbs/submit_phase.py","--name",name,"--task","T01","--budget-group","T02","--gpus","1","--walltime","00:20:30","--",*command]
+ batches.append({"batch":number,"name":name,"sources":members,"checker_command":command,"submit_command":submit,"submit_shell":shlex.join(submit),"submitted":False})
+report={"scope":"Operational continuation plan only, using the unchanged original T02 checker; prepared but not submitted. Original 95 candidate denominator and all19 export errors remain intact. The failed first6 cache attempt remains intact: its one mismatched pair is not relabelled, and its other five sources remain untested. This manifest covers only the other70 exported sources in the original stable order; no scientific acceptance, source exclusion from original ledger, resampling of first6, or pool freeze.","inventory":{"file":str(report_path),"sha256":hashlib.sha256(body).hexdigest()},"first6_cache_source":cache_ref,"first6_excluded_from_this_new_work_queue_only":first,"source_order":"successful_source_files from sealed selected05 inventory, preserving original ordering","remaining_source_count":len(remaining),"batches":batches}
+out=Path("logs/review/diag_t02_cache_remaining70_plan_01/report.json");out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+print(json.dumps({"report":{"file":str(out),"sha256":hashlib.sha256(out.read_bytes()).hexdigest()},"remaining_source_count":len(remaining),"batch_sizes":[len(x["sources"]) for x in batches],"next_command":batches[0]["submit_shell"],"submitted":False},sort_keys=True))
+
+# start: 2026-11-11T04:19:42
+{"batch_sizes": [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4], "next_command": "python3 scripts/run_logged.py --name diag_submit_t02_export_cache_test_selected05_remaining_b01 --seed 0 -- python3 -m src.tools.record_command --name diag_submit_t02_export_cache_test_selected05_remaining_b01 -- python3 scripts/pbs/submit_phase.py --name t02_export_cache_test_selected05_remaining_b01 --task T01 --budget-group T02 --gpus 1 --walltime 00:20:30 -- python3 -u -m src.tools.t02_cache_check --name t02_export_cache_test_selected05_remaining_b01 --source results/t02_export_test_selected05_six02_u0000.json --source results/t02_export_test_selected05_six02_u0001.json --source results/t02_export_test_selected05_six02_u0002.json --source results/t02_export_test_selected05_six02_u0003.json --source results/t02_export_test_selected05_six02_u0005.json --source results/t02_export_test_selected05_six03_u0000.json --sample-size 200 --seed 0 --timeout-seconds 1200 --pair-timeout-seconds 180 --gate-timeout-seconds 180", "remaining_source_count": 70, "report": {"file": "logs/review/diag_t02_cache_remaining70_plan_01/report.json", "sha256": "15dbd1b46e0ddf4a9e3012bc688075bcfdf7855e15d07cb3f856554ebb715ab6"}, "submitted": false}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.17511199496220797}
+# exit_code: 0

@@ -1951,3 +1951,9 @@ DIAG02 原3B提交wrapper因现有两个PACK mixed_accounting的Python可执行�
 ### 2026-11-10 15:08 ET — DIAG02与测试缓存作业已提交
 DIAG02 3B已提交710854，1卡、25分钟、首对工程检查后才继续82对，首张开卡检查通过。T02首六对原200-state/seed0缓存复核提交710859，1卡20分30秒；与DIAG02独立记账。两提交wrapper原审计0FAIL。
 原两PACK计费使用字面python3重跑后原finalized_split双PASS，数值不变。原logger只自动归档JSON、覆盖同名log/meta，旧archive独立审计P4失败保留；不补造旧日志，不作为有效数值源。当前计费证据由未改的PBS/单位journal重算且原审计0FAIL。
+
+
+### 2026-11-10 15:26 ET — DIAG02 CPU结论与模型来源已封存
+DIAG02 3B completed all 498 episodes and independent review. Job710854 cost0.0997222222 GPUh. LF success never22/44, trigger23/44, cov23/44; LS16/36,20/36,20/36. Actual immediate cov selection: LF0/44,LS11/36. The LF variant never triggered, so its equal success does not establish failure of single-image reasoning. Uncached same-order repeats changed actual action/text/tokens in2/86 controls; exact full-input-once evaluation had0/86 inconsistent Direct controls. 7B also completed498 episodes and independent review.
+32B first job710865 failed opening rendering on hopper-23 / GPU-1811d176-d6fe-7645-784b-f42b78cc1625, exit86, no business episodes, actual0.0066666667 GPUh. Preserve evidence and use approved strict black retry; no policy or threshold change. 7B710863 cost0.1 GPUh, queue39s.
+T02 first6 job710859 failed on FP323_00139: cached inter-world maximum3 vs fresh4 at one right-edge pixel. Byte comparison ruled out compression corruption or state/world mapping errors. Preserve the threshold3 rule.30/200 states were checked; other5 original pairs remain unchecked, neither FAIL nor PASS. The remaining70 successful exports have12 fixed-order independent-check batches prepared; original95 candidate ledger,19 export errors, this1 failure and5 unchecked remain. First6 cost0.104167 GPUh; current provenance audit0FAIL.
