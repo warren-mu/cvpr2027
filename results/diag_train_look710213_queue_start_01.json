@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 1,
+    "elapsed_seconds": 30.245642491965555
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess\nfrom zoneinfo import ZoneInfo\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx','710213.hopper-m-02'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='')\np.check_returncode()\nfields={}\nfor key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',p.stdout,re.M)\n fields[key]=m.group(1) if m else None\nif fields['qtime']:\n t=datetime.datetime.strptime(fields['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n fields['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n fields['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\nfields['scope']='Read-only; no cancellation; qtime timezone Asia/Singapore from original Hopper PBS host'\nprint('QUEUE_TIMING_JSON: '+json.dumps(fields,sort_keys=True),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_train_look710213_queue_start_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_train_look710213_queue_start_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess\nfrom zoneinfo import ZoneInfo\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx','710213.hopper-m-02'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='')\np.check_returncode()\nfields={}\nfor key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',p.stdout,re.M)\n fields[key]=m.group(1) if m else None\nif fields['qtime']:\n t=datetime.datetime.strptime(fields['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n fields['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n fields['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\nfields['scope']='Read-only; no cancellation; qtime timezone Asia/Singapore from original Hopper PBS host'\nprint('QUEUE_TIMING_JSON: '+json.dumps(fields,sort_keys=True),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T18:45:25",
+    "log_path": "logs/runs/diag_train_look710213_queue_start_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "9a3b6c2e8ce9b451c40ef2e0ea9fc421050ea726",
+    "git_dirty": false,
+    "end": "2026-11-10T18:45:57",
+    "duration_sec": 30.7,
+    "exit_code": 1,
+    "metrics_sha256": "b81577f5d712781815b5b564bec8d4455b570eda9a3cf6baf35c588d95b11648"
+  }
+}

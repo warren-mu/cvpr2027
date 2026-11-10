@@ -1,0 +1,19 @@
+# run_logged: python3 -m src.tools.record_command --name diag_train_look710213_queue_status_03 -- python3 -c import subprocess,json
+p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-u','e1583364'],capture_output=True,text=True,timeout=30)
+print(p.stdout,end='');print(p.stderr,end='');p.check_returncode()
+print('TARGET_ROWS_JSON: '+json.dumps([x for x in p.stdout.splitlines() if x.strip().startswith('710213.')]),flush=True)
+
+# start: 2026-11-10T18:58:01
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 505, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1154, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 2022, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1198, in _check_timeout
+    raise TimeoutExpired(
+subprocess.TimeoutExpired: Command '['/cm/shared/apps/pbspro/current/bin/qstat', '-u', 'e1583364']' timed out after 30 seconds
+FINAL_METRICS_JSON: {"command_exit_code": 1, "elapsed_seconds": 30.173600015987176}
+# exit_code: 1

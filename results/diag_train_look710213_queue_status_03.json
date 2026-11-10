@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 1,
+    "elapsed_seconds": 30.173600015987176
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import subprocess,json\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-u','e1583364'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='');p.check_returncode()\nprint('TARGET_ROWS_JSON: '+json.dumps([x for x in p.stdout.splitlines() if x.strip().startswith('710213.')]),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_train_look710213_queue_status_03",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_train_look710213_queue_status_03",
+      "--",
+      "python3",
+      "-c",
+      "import subprocess,json\np=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-u','e1583364'],capture_output=True,text=True,timeout=30)\nprint(p.stdout,end='');print(p.stderr,end='');p.check_returncode()\nprint('TARGET_ROWS_JSON: '+json.dumps([x for x in p.stdout.splitlines() if x.strip().startswith('710213.')]),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T18:58:01",
+    "log_path": "logs/runs/diag_train_look710213_queue_status_03.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "9a3b6c2e8ce9b451c40ef2e0ea9fc421050ea726",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_train_look710213_queue_status_03.diff",
+    "end": "2026-11-10T18:58:39",
+    "duration_sec": 30.3,
+    "exit_code": 1,
+    "metrics_sha256": "4c987dd22190aab4e924501a81de0c33af99a75580cae5492d6266a4ef41e5ec"
+  }
+}

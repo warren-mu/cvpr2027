@@ -1,0 +1,53 @@
+# run_logged: python3 -m src.tools.record_command --name diag_e2e_final_report_audit_01 -- python3 -c import re,subprocess,json
+from pathlib import Path
+prefix=Path('/tmp/e1583364_e2e_final_prepend_20261110.md').read_text()
+refs=re.findall(r'\]\(\.\./([^\)]+)\)',prefix)
+for ref in refs: assert Path(ref).is_file(), 'Missing report reference '+ref
+names=set(ref for ref in refs if ref.startswith('results/') and ref.endswith('.json'))
+names.update('results/'+n+'.json' for n in (
+'smoke_e2e_pilot_T0_s0_01_retry4','smoke_e2e_pilot_T4_s0_01_retry4','smoke_e2e_pilot_T2_s0_01_retry1',
+'diag_pilot50_report_projection_01','diag_test_round2_final_candidates_funnel_01',
+'diag_train_look_first_unit_retry1_review_plan_01'))
+for raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\0'):
+ if not raw:continue
+ p=Path(raw[3:].decode())
+ if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():
+  d=json.loads(p.read_text())
+  if d.get('_meta',{}).get('end'):names.add(str(p))
+print('SCOPE: completed referenced and newly sealed result files; historical unsealed failures remain uncertified',flush=True)
+raise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*sorted(names)]))
+
+# start: 2026-11-10T18:58:40
+SCOPE: completed referenced and newly sealed result files; historical unsealed failures remain uncertified
+PASS  results/diag_pilot50_report_projection_01.json
+WARN  results/diag_pilot710029_710037_accounting_01.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_pilot710029_710037_accounting_01.diff
+PASS  results/diag_submit_gen_train_look_first_unit_01_retry1.json
+PASS  results/diag_test_priority_pending_after_pilot_01.json
+PASS  results/diag_test_priority_pending_after_pilot_audit_01.json
+PASS  results/diag_test_round2_final_candidates_funnel_01.json
+PASS  results/diag_test_round2_final_candidates_funnel_audit_01.json
+WARN  results/diag_train_look710213_queue_start_01.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/diag_train_look710213_queue_start_02.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/diag_train_look710213_queue_status_03.json
+      warn P5 run used uncommitted changes; see logs/runs/diag_train_look710213_queue_status_03.diff
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/diag_train_look_first_unit_retry1_plan_audit_01.json
+PASS  results/diag_train_look_first_unit_retry1_review_plan_01.json
+PASS  results/gen_train_look_inventory_first_unit_01.json
+WARN  results/pilot_pairs_v2_marked_kitchen_1_2_01_j707403_hopper_m_02_g0_floorplan1.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+WARN  results/pilot_pairs_v2_marked_living_201_202_01_j707475_hopper_m_02_g0_floorplan201.json
+      warn P7 run failed (exit_code 1); keep it, do not cite it
+PASS  results/smoke_e2e_pilot_T0_s0_01_retry4.json
+PASS  results/smoke_e2e_pilot_T2_s0_01_retry1.json
+PASS  results/smoke_e2e_pilot_T4_s0_01_retry4.json
+WARN  results/smoke_e2e_pilot_comparison_01.json
+      warn P5 run used uncommitted changes; see logs/runs/smoke_e2e_pilot_comparison_01.diff
+PASS  results/smoke_e2e_pilot_pool_83_certificates_01.json
+
+20 files, 0 with FAIL
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 18.749546292994637}
+# exit_code: 0

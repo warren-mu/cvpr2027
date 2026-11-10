@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.11323778005316854
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import fcntl,hashlib,json\nfrom pathlib import Path\nfrom types import SimpleNamespace\nfrom src.tools.gpu_shared_claim import SharedQueue\nr=Path.cwd().resolve()\np=r/'configs/shared_test_priority_active_01.json'\npb=p.read_bytes()\nassert hashlib.sha256(pb).hexdigest()=='a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a'\nplan=json.loads(pb)\nroot=Path('/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01')\nwith (root/'queue.lock').open('r') as stream:\n fcntl.flock(stream,fcntl.LOCK_SH)\n state_bytes=(root/'state.json').read_bytes()\n state=json.loads(state_bytes)\n binding=json.loads((root/'plan_reference.json').read_text())\n assert binding['sha256']==hashlib.sha256(pb).hexdigest()\n pending=SharedQueue.available(SimpleNamespace(plan=plan),state)\n rows=[]\n for u in plan['units']:\n  s=state['units'].get(u['unit_id'])\n  row={'name':u['name'],'budget_group':u['budget_group'],'unit_id':u['unit_id'],'available':u in pending,'state':s}\n  if s:\n   for key in ('claim_reference','release_reference'):\n    ref=s.get(key)\n    if ref:\n     path=Path(ref['file']); path=path if path.is_absolute() else r/path\n     raw=path.read_bytes()\n     assert hashlib.sha256(raw).hexdigest()==ref['sha256']\n     d=json.loads(raw)\n     if key=='claim_reference': row['claim']={k:d.get(k) for k in ('pbs_jobid','name','node','gpu_uuid','started_epoch')}\n     else: row['release']={k:d.get(k) for k in ('cleanup_errors','child_exit_code','all_owned_processes_ended','ended_epoch')}\n  rows.append(row)\nold=r/'logs/pbs/gpu_pack_test_priority_full_single_01-20261110T035335Z-d6ed5c3d/payload.json'\nob=old.read_bytes(); payload=json.loads(ob)\nprint(json.dumps({'scope':'Metadata-only read-only original shared queue snapshot; no claim/submit/release; root FP315 retry qsub receipt still pending separately','plan':{'file':str(p),'sha256':hashlib.sha256(pb).hexdigest()},'state':{'file':str(root/'state.json'),'sha256':hashlib.sha256(state_bytes).hexdigest()},'queue_plan_binding':binding,'available_units':[{'name':u['name'],'unit_id':u['unit_id'],'budget_group':u['budget_group'],'timeout_seconds':u['timeout_seconds'],'command':u['command']} for u in pending],'all_unit_status':rows,'original_consumer_payload':{'file':str(old),'sha256':hashlib.sha256(ob).hexdigest()},'original_consumer':{k:payload.get(k) for k in ('name','task','budget_group','gpus','walltime_seconds','command','requested_host')}},sort_keys=True),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_test_priority_pending_after_pilot_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_test_priority_pending_after_pilot_01",
+      "--",
+      "python3",
+      "-c",
+      "import fcntl,hashlib,json\nfrom pathlib import Path\nfrom types import SimpleNamespace\nfrom src.tools.gpu_shared_claim import SharedQueue\nr=Path.cwd().resolve()\np=r/'configs/shared_test_priority_active_01.json'\npb=p.read_bytes()\nassert hashlib.sha256(pb).hexdigest()=='a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a'\nplan=json.loads(pb)\nroot=Path('/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01')\nwith (root/'queue.lock').open('r') as stream:\n fcntl.flock(stream,fcntl.LOCK_SH)\n state_bytes=(root/'state.json').read_bytes()\n state=json.loads(state_bytes)\n binding=json.loads((root/'plan_reference.json').read_text())\n assert binding['sha256']==hashlib.sha256(pb).hexdigest()\n pending=SharedQueue.available(SimpleNamespace(plan=plan),state)\n rows=[]\n for u in plan['units']:\n  s=state['units'].get(u['unit_id'])\n  row={'name':u['name'],'budget_group':u['budget_group'],'unit_id':u['unit_id'],'available':u in pending,'state':s}\n  if s:\n   for key in ('claim_reference','release_reference'):\n    ref=s.get(key)\n    if ref:\n     path=Path(ref['file']); path=path if path.is_absolute() else r/path\n     raw=path.read_bytes()\n     assert hashlib.sha256(raw).hexdigest()==ref['sha256']\n     d=json.loads(raw)\n     if key=='claim_reference': row['claim']={k:d.get(k) for k in ('pbs_jobid','name','node','gpu_uuid','started_epoch')}\n     else: row['release']={k:d.get(k) for k in ('cleanup_errors','child_exit_code','all_owned_processes_ended','ended_epoch')}\n  rows.append(row)\nold=r/'logs/pbs/gpu_pack_test_priority_full_single_01-20261110T035335Z-d6ed5c3d/payload.json'\nob=old.read_bytes(); payload=json.loads(ob)\nprint(json.dumps({'scope':'Metadata-only read-only original shared queue snapshot; no claim/submit/release; root FP315 retry qsub receipt still pending separately','plan':{'file':str(p),'sha256':hashlib.sha256(pb).hexdigest()},'state':{'file':str(root/'state.json'),'sha256':hashlib.sha256(state_bytes).hexdigest()},'queue_plan_binding':binding,'available_units':[{'name':u['name'],'unit_id':u['unit_id'],'budget_group':u['budget_group'],'timeout_seconds':u['timeout_seconds'],'command':u['command']} for u in pending],'all_unit_status':rows,'original_consumer_payload':{'file':str(old),'sha256':hashlib.sha256(ob).hexdigest()},'original_consumer':{k:payload.get(k) for k in ('name','task','budget_group','gpus','walltime_seconds','command','requested_host')}},sort_keys=True),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T18:44:48",
+    "log_path": "logs/runs/diag_test_priority_pending_after_pilot_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "9a3b6c2e8ce9b451c40ef2e0ea9fc421050ea726",
+    "git_dirty": false,
+    "end": "2026-11-10T18:44:52",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "f5760acdd26132daf92631da77d165f8d7d36d6fd0e2633faeaa39ecf9e02b45"
+  }
+}

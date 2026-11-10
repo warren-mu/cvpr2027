@@ -1,0 +1,317 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_round2_final_candidates_funnel_01 -- timeout --signal=KILL 450s nice -n 10 python3 -c """Review-only one-off: original selector + source-recorded funnel; not executed."""
+from pathlib import Path
+from collections import Counter, defaultdict
+import copy, datetime, hashlib, json, signal, time, traceback
+from src.tools import merge_pair_v2 as merge
+from src.tools import g01_quota_plan as quota
+from src.tools import t01v2_look_funnel as funnel
+from src.tools.t01_partition import audited_result
+from src.envs import pair_table_source as sources
+from src.tools.t02_test_compression import load_selection
+
+# INPUTS are populated below from the exact original read-only metadata.
+INPUTS = {'selected05': {'file': 'logs/review/diag_current_test_selected_05/report.json', 'sha256': 'e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff', 'logged_result': {'file': 'results/diag_current_test_selected_05.json', 'sha256': '9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840'}}, 'all_checkpoint_references': [{'file': 'results/t01v2_checkpoint_test_a_full_01.json', 'sha256': '98a6f19079edfda4bdcd52d6ec213bce3755b062af4aa24dcec672eabd7e51b0'}, {'file': 'results/t01v2_checkpoint_test_b_full_01.json', 'sha256': 'd4e2ffacaabc11f30130539d77e51ff2dc69b44ba9db9f49c3c13af54cdfa048'}, {'file': 'results/t01v2_checkpoint_test_s16_s01_01.json', 'sha256': 'c8b2a178ea54e1ca9b9aaa23f4e1d9348e54eb9b2fbaa61b13eab665fa7febde'}, {'file': 'results/t01v2_checkpoint_test_s16_s02_01.json', 'sha256': 'dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a'}, {'file': 'results/t01v2_checkpoint_test_s16_s03_01.json', 'sha256': '18fcf0a4a09b14b864a2ed001716fd1ef467418736ddf3a85ebde0c5ef673e9d'}, {'file': 'results/t01v2_checkpoint_test_s16_s04_retry1_01.json', 'sha256': '6ac3e99e8c7eeede81a3e6a0e54e75d5285dafc93c71d5c120709309001945ee'}, {'file': 'results/t01v2_checkpoint_test_s16_s05_01.json', 'sha256': 'e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5'}, {'file': 'results/t01v2_checkpoint_test_s16_s06_01.json', 'sha256': 'bc42d4e1a56988cfc1bcfda33ded483bdcab34ed0d8bd65bcbf5ae185887280d'}, {'file': 'results/t01v2_checkpoint_test_s16_s07_01.json', 'sha256': '9aec9acefd969c4551d406ca412ad9f572267086895fd4062af6574e73367091'}], 'round2_checkpoint_references': [{'file': 'results/t01v2_checkpoint_test_s16_s01_01.json', 'sha256': 'c8b2a178ea54e1ca9b9aaa23f4e1d9348e54eb9b2fbaa61b13eab665fa7febde'}, {'file': 'results/t01v2_checkpoint_test_s16_s02_01.json', 'sha256': 'dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a'}, {'file': 'results/t01v2_checkpoint_test_s16_s03_01.json', 'sha256': '18fcf0a4a09b14b864a2ed001716fd1ef467418736ddf3a85ebde0c5ef673e9d'}, {'file': 'results/t01v2_checkpoint_test_s16_s04_retry1_01.json', 'sha256': '6ac3e99e8c7eeede81a3e6a0e54e75d5285dafc93c71d5c120709309001945ee'}, {'file': 'results/t01v2_checkpoint_test_s16_s05_01.json', 'sha256': 'e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5'}, {'file': 'results/t01v2_checkpoint_test_s16_s06_01.json', 'sha256': 'bc42d4e1a56988cfc1bcfda33ded483bdcab34ed0d8bd65bcbf5ae185887280d'}, {'file': 'results/t01v2_checkpoint_test_s16_s07_01.json', 'sha256': '9aec9acefd969c4551d406ca412ad9f572267086895fd4062af6574e73367091'}], 'split_reference': {'file': 'configs/g01_s16_round2_standalone_split.json', 'sha256': 'f46265de72eafca69b8a2b48a868d7edfd58f0116e12c307088758eae1cbb774'}, 'batches': [{'batch': 'S01', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s01_01.json', 'sha256': 'c8b2a178ea54e1ca9b9aaa23f4e1d9348e54eb9b2fbaa61b13eab665fa7febde'}, 'scenes': ['FloorPlan21', 'FloorPlan221', 'FloorPlan321', 'FloorPlan421', 'FloorPlan22', 'FloorPlan222'], 'sources': [{'file': 'results/gen_test_s16_round2_s01_c6_floorplan21.json', 'sha256': 'b280a8be40b87dd21254c9c4a924f9dd411363be1ae0dfad97025b6a47b3b55c'}, {'file': 'results/gen_test_s16_round2_s01_c6_floorplan221.json', 'sha256': 'e4c57aba8b5c310cc0f42d7b7fa17d269558d11253961b0d30fe7da2e9ab07bc'}, {'file': 'results/gen_test_s16_round2_s01_c6_floorplan321.json', 'sha256': 'a765c276bc3d2f0066bad930b1cf03cb0dbdb39d3c2e7366413fe81391c83ec5'}, {'file': 'results/gen_test_s16_round2_s01_c6_floorplan421.json', 'sha256': '8af27eb63cea0caa2f24424ea9f1b3a10ab0f03aa62b5203592952711152e7bb'}, {'file': 'results/gen_test_s16_round2_s01_c6_floorplan22.json', 'sha256': 'bfdca9f78f4f47ef387c4bc1e7d5f49f99a841ad839e797160398ec82180d462'}, {'file': 'results/gen_test_s16_round2_s01_c6_floorplan222.json', 'sha256': '48c05e1c1437ea8797195988a5530d976b1625981acd6cc2d0115375da73e24a'}]}, {'batch': 'S02', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s02_01.json', 'sha256': 'dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a'}, 'scenes': ['FloorPlan322', 'FloorPlan422', 'FloorPlan23', 'FloorPlan223', 'FloorPlan323', 'FloorPlan423'], 'sources': [{'file': 'results/gen_test_s16_round2_s02_c6_floorplan322.json', 'sha256': '1d4d05a75caaca7cf501a52eea229a31bbe075baae33f5b6202befd4a138b1ce'}, {'file': 'results/gen_test_s16_round2_s02_c6_floorplan422.json', 'sha256': 'a5625e78dd4da293f15227667c5b068ec05d83de0c3522364ea051f627113f69'}, {'file': 'results/gen_test_s16_round2_s02_c6_floorplan23.json', 'sha256': '2ba91b7b01892d7603c4cea50c9dfd1da26bf1ee7698b5fbb00b904c1248eb45'}, {'file': 'results/gen_test_s16_round2_s02_c6_floorplan223.json', 'sha256': '3a7faf1763b712e826501acf1c73828f43b446a01bf5d52ff72c5cd3ad99ac37'}, {'file': 'results/gen_test_s16_round2_s02_c6_floorplan323.json', 'sha256': '8a04f2fb59059d132966140a9837fd71479ef14dfad5ec78491df6e82cebb4d1'}, {'file': 'results/gen_test_s16_round2_s02_c6_floorplan423.json', 'sha256': 'bcd45818e96cac9703ca9889c8858d456932054068f35489e248279331032b9e'}]}, {'batch': 'S03', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s03_01.json', 'sha256': '18fcf0a4a09b14b864a2ed001716fd1ef467418736ddf3a85ebde0c5ef673e9d'}, 'scenes': ['FloorPlan24', 'FloorPlan224', 'FloorPlan324', 'FloorPlan424', 'FloorPlan25', 'FloorPlan225'], 'sources': [{'file': 'results/gen_test_s16_round2_s03_c6_floorplan24.json', 'sha256': 'd8ab6321babd1c28cbb47e7e3ddfc9785238a41b33644aa557c688bb3c4602f9'}, {'file': 'results/gen_test_s16_round2_s03_c6_floorplan224.json', 'sha256': '2a0b27bd71cd7b1808e09e9b4460dcad229a7a309599a5a9503fc7b9cc503709'}, {'file': 'results/gen_test_s16_round2_s03_c6_floorplan324.json', 'sha256': 'ee0651e3cc7adb04ab6897daa4ba8d8cc82109b20712821a2ee72326e086adc3'}, {'file': 'results/gen_test_s16_round2_s03_c6_floorplan424.json', 'sha256': '542e7386de2a545fcf204ab43e4c0ed56c0c294974c607f01162381c0e6b1875'}, {'file': 'results/gen_test_s16_round2_s03_c6_floorplan25.json', 'sha256': 'c12ee3c617f863b0f0ad1a7ac43a30a89e5f280e1c30d879eb30892925a054df'}, {'file': 'results/gen_test_s16_round2_s03_c6_floorplan225.json', 'sha256': '5c61567781f3375de391f9c13864856c264a05610388818ba2e8bb707246e296'}]}, {'batch': 'S04', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s04_retry1_01.json', 'sha256': '6ac3e99e8c7eeede81a3e6a0e54e75d5285dafc93c71d5c120709309001945ee'}, 'scenes': ['FloorPlan325', 'FloorPlan425', 'FloorPlan26', 'FloorPlan226', 'FloorPlan326', 'FloorPlan426'], 'sources': [{'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan325.json', 'sha256': 'a956eeff4c5a3f70723498a3d6fc0e310f9e91c82fbe78d6fa3584925e573852'}, {'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan425.json', 'sha256': 'f0f00e9f8c0f1b1d9fc30fb9038a443be61a4243136cd8388e759f8900089f90'}, {'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan26.json', 'sha256': '52559053462e889c20c75be8318cf511d0bcf2699bd5f138e1a76673997fe207'}, {'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan226.json', 'sha256': 'bd8e4831cd3c9ef9a1763f8d2afc7dc4c2137204c7f6a0b5fb58a19975738df2'}, {'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan326.json', 'sha256': '4b055cee47896d51796efac7f9d14c3b179acdcb21675663486e5c2847c2fc38'}, {'file': 'results/gen_test_s16_round2_s04_retry1_c6_floorplan426.json', 'sha256': '415a20dd068b16274efaf259910a2fe700d12b3acfd67b53067b6369f141ef0e'}]}, {'batch': 'S05', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s05_01.json', 'sha256': 'e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5'}, 'scenes': ['FloorPlan27', 'FloorPlan227', 'FloorPlan327', 'FloorPlan427', 'FloorPlan28', 'FloorPlan228'], 'sources': [{'file': 'results/gen_test_s16_round2_s05_c6_floorplan27.json', 'sha256': 'e882ba97d800836f535d9f5c454b087283f40d6e1767c20a40d230379fe40623'}, {'file': 'results/gen_test_s16_round2_s05_c6_floorplan227.json', 'sha256': 'accbcdd9dd2b3490a9a9f74c9eefadb5919115826458dcf1d0e83da503676740'}, {'file': 'results/gen_test_s16_round2_s05_c6_floorplan327.json', 'sha256': 'ee70ddf37acdfef7aaa4094dcbc47fd7b85cf3eece62276a7573351e0b11fe86'}, {'file': 'results/gen_test_s16_round2_s05_c6_floorplan427.json', 'sha256': '90202742fe217ea20ec8e4feb22ae35e4b298c80e0f75d32a47bd466858f4e18'}, {'file': 'results/gen_test_s16_round2_s05_c6_floorplan28.json', 'sha256': '47bad2fc222985ad4553a01befbb53468667ee205abfd51a39e4cdaf8cde7f19'}, {'file': 'results/gen_test_s16_round2_s05_c6_floorplan228.json', 'sha256': '03eb960e33ba326320019c4898ea545e0e0417a759581a103b055a7fdb2ba143'}]}, {'batch': 'S06', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s06_01.json', 'sha256': 'bc42d4e1a56988cfc1bcfda33ded483bdcab34ed0d8bd65bcbf5ae185887280d'}, 'scenes': ['FloorPlan328', 'FloorPlan428', 'FloorPlan29', 'FloorPlan229', 'FloorPlan329', 'FloorPlan429'], 'sources': [{'file': 'results/gen_test_s16_round2_s06_c6_floorplan328.json', 'sha256': '3600f5f0b57cf5872ad5b1d81af1a80a8b066c5cdcd7bb67d384ea5912edf12a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan428.json', 'sha256': '0091cb243e70e04739da16e35a0bb70a1a881d2f710bfd8ee79db1bb4b26523a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan29.json', 'sha256': '3cc35b2290c1ba5741107706e6eeebcb8b17d28710214969e82441a1c1ceb2d1'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan229.json', 'sha256': '3ec0b27a150b037f3edff6ea2753ea81c21d56c11c53fbaf96e0681144a4b707'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan329.json', 'sha256': 'ce5b19d36c9d8e94c88a7f7a31c6b5e1f19bf6dcf17f4e8070f02338d941b35a'}, {'file': 'results/gen_test_s16_round2_s06_c6_floorplan429.json', 'sha256': '460be458fbb14d176e4b53557dc94a88e3225f00e5e3b82f7d653e5a80c4e5de'}]}, {'batch': 'S07', 'checkpoint': {'file': 'results/t01v2_checkpoint_test_s16_s07_01.json', 'sha256': '9aec9acefd969c4551d406ca412ad9f572267086895fd4062af6574e73367091'}, 'scenes': ['FloorPlan30', 'FloorPlan230', 'FloorPlan330', 'FloorPlan430'], 'sources': [{'file': 'results/gen_test_s16_round2_s07_c6_floorplan30.json', 'sha256': '77982dda942677fc29f60c0c17c1559766ede59b9e417e6e1f6ff7e7aa85409c'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan230.json', 'sha256': '3ea72a80b66e1a442e2ba31b8e253f52de9ca246fd2e6cebf1a80036e0fa8d52'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan330.json', 'sha256': 'f8023a6a6a3e4c617748ca4b1d7525b0bb01bfefb50c2625dbda8e0d8458c081'}, {'file': 'results/gen_test_s16_round2_s07_c6_floorplan430.json', 'sha256': 'd22f21afc73741e8d5dd32d727c63eabf788dce42c7e6b7831f6574466b6bfdb'}]}], 'original_module_sha256': {'src/tools/t01v2_look_funnel.py': '7ff247d3df90c1e6d13cb0295b9a20b79c33f27ab60843a98ffedba46c824795', 'src/tools/g01_quota_plan.py': 'cf7639111ee231f08f37f1c91347b34477d5527ff974f0cb5381b093870aea71'}}
+NAME = 'diag_test_round2_final_candidates_funnel_01'
+ROOT = Path.cwd().resolve()
+KINDS = tuple(quota.KINDS)
+ORDER = ('physical_both', 'hidden_both', 'prefix_le3', 'first_evidence_ge250', 'solvable_both', 'witness_both')
+report = {'scope': 'All seven published supplement16 shards and their exact forty ended scene sources. Original independent construction and source-recorded rejection diagnostics only; no new native/T02/cache acceptance or final evaluation freeze.',
+          'cutoff': None, 'coverage': {}, 'existing_cumulative_selection': None,
+          'round2_only_selection': None, 'sources': [], 'groups': [], 'errors': [],
+          'thresholds_changed': False, 'source_artifacts_modified': False,
+          'unknown_policy': 'Unmeasured gate/reason/class fields remain unknown. Source exit1/deadline rows are retained. Missing/authentication failures make this report incomplete, never zero failures.',
+          'funnel_denominator': 'Counted original journal attempts grouped by proposed_pool + mode; actual successful class crossovers remain separate. These are not the deduplicated published-pair denominator.',
+          'gate_order': 'Physics executes first. The six Look gates are recorded observations, not a reconstructed causal stopping sequence; Direct has no Look hidden-anchor gate.',
+          'not_included_as_new_attempts': 'A/B are included only through the already-sealed cumulative selection. Superseded engineering/black/unfinished historical retries remain their original records and are not counted again as these forty finalized shard sources.'}
+input_sources = []
+rows_by_kind = defaultdict(list)
+
+
+def need(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def identity(ref):
+    return {key: ref[key] for key in ('file', 'sha256')}
+
+
+def same_bound(a, b):
+    return all(a.get(key) == b.get(key) and a.get(key) is not None
+               for key in ('file', 'sha256', 'metrics_sha256', 'git_commit'))
+
+
+def arm_deadline(seconds):
+    need(signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0), 'Refuse existing deadline')
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+
+
+def deadline_expired(*_):
+    raise TimeoutError('Explicit original-metadata diagnostic bound reached; incomplete rows remain unknown')
+
+
+def checked_logged(ref):
+    data, actual = audited_result(ROOT / ref['file'])
+    need(identity(actual) == identity(ref), 'Original logged result SHA differs: ' + ref['file'])
+    input_sources.append(actual)
+    return data, actual
+
+
+def selector_phase():
+    selection = load_selection(INPUTS['selected05'], root=ROOT)
+    frozen = merge.read_reference(identity(INPUTS['selected05']), within=ROOT / 'logs/review')
+    need([identity(x) for x in frozen['proof']['checkpoint_references']] == INPUTS['all_checkpoint_references'],
+         'Original cumulative selection cutoff differs')
+    report['existing_cumulative_selection'] = {
+        'reference': selection['reference'], 'logged_reference': selection['logged_reference'],
+        'counts_by_kind': frozen['counts_by_kind'], 'scene_counts_by_kind': frozen['scene_counts_by_kind'],
+        'selected_count': frozen['selected_count'],
+        'scope': 'Existing sealed A/B plus S01-S07 cumulative configuration selection; not round2 alone.'}
+    input_sources.append(selection['logged_reference'])
+    # The unmodified original receipt/configuration selector is the count authority.
+    proof = quota.reconstruct_test_inventory(INPUTS['round2_checkpoint_references'],
+                                             configuration=True, authority=quota.RECEIPT_AUTHORITY)
+    selected = proof['configuration_selection']['selected']
+    report['round2_only_selection'] = {
+        'proof': proof, 'counts_by_kind': proof['confirmed_by_kind'],
+        'scene_counts_by_kind': {kind: len({row['scene'] for row in selected if row['kind'] == kind}) for kind in KINDS},
+        'selected_count': len(selected),
+        'scope': 'Original selector applied to S01-S07 only. Do not add this count to A/B or label it as the cumulative95; a separate incremental-contribution statistic is not inferred.'}
+    input_sources.extend(proof['checkpoint_references'])
+
+
+def funnel_phase():
+    fixed_split = merge.read_reference(INPUTS['split_reference'], within=ROOT / 'configs')
+    need([row['scenes'] for row in fixed_split['slices']] == [row['scenes'] for row in INPUTS['batches']],
+         'Original seven-shard scene allocation differs')
+    expected_scenes = [scene for batch in INPUTS['batches'] for scene in batch['scenes']]
+    need(len(expected_scenes) == len(set(expected_scenes)) == 40 and
+         set(expected_scenes) == {f'FloorPlan{base+n}' for base in (0, 200, 300, 400) for n in range(21, 31)},
+         'Require the complete original forty test scenes')
+    observed_sources, unit_data = set(), []
+    for batch in INPUTS['batches']:
+        checkpoint, cref, _ = sources._container(ROOT / batch['checkpoint']['file'])
+        need(identity(cref) == batch['checkpoint'], 'Checkpoint identity changed')
+        need(sources._checkpoint_module(checkpoint['_meta']['command']) == sources.G01_CHECKPOINT_MODULE,
+             'Wrong original checkpoint producer')
+        need(checkpoint['_meta'].get('end') and checkpoint['_meta']['exit_code'] == 0
+             and checkpoint['metrics']['errors'] == [], 'Incomplete independent publication')
+        runs = {item['source']['file']: item for item in checkpoint['metrics']['source_runs']}
+        refs = checkpoint['sources']
+        need([identity(ref) for ref in refs] == batch['sources'] and
+             len(runs) == len(refs) and set(runs) == {ref['file'] for ref in refs},
+             'Checkpoint complete source ledger differs')
+        requested = checkpoint['config']['requested_sources']
+        need([x['file'] if isinstance(x, dict) else x for x in requested] == [r['file'] for r in refs],
+             'Checkpoint omitted or reordered an original source')
+        for scene, ref in zip(batch['scenes'], refs):
+            need(ref['file'] not in observed_sources, 'Duplicate source in fixed forty-source cutoff')
+            observed_sources.add(ref['file'])
+            data, actual = audited_result(ROOT / ref['file'])
+            cfg, metrics, meta = data['config'], data['metrics'], data['_meta']
+            run = runs[ref['file']]
+            need(same_bound(ref, actual) and same_bound(run['source'], actual), 'Source receipt binding differs')
+            need(meta.get('end') and type(meta.get('exit_code')) is int and
+                 cfg.get('g01_partition') == 'test' and cfg.get('field_of_view') == 60
+                 and cfg['scene'] == scene, 'Source not ended or wrong scene/partition/FOV')
+            unit = next(x for x in report['sources'] if x['expected_source']['file'] == ref['file'])
+            unit.update(source=actual, exit_code=meta['exit_code'], status=metrics.get('status'),
+                        original_error=metrics.get('error'), cleanup_errors=metrics.get('cleanup_errors'),
+                        scene_excluded=metrics.get('scene_excluded'), journal=run.get('attempt_journal'),
+                        verified_attempts=run.get('verified_attempts'),
+                        reported_by_proposed_pool_mode=(metrics.get('g01_collection') or {}).get('counted_by_proposed_pool_mode'),
+                        original_placement_exhausted_proposals=metrics.get('placement_exhausted_proposals'),
+                        unknown_reason='Journal not yet read')
+            input_sources.append(actual)
+            unit_data.append((unit, cfg, metrics, run))
+    need(len(observed_sources) == 40, 'Incomplete fixed40 source metadata')
+    report['coverage']['source_metadata_complete'] = True
+    seen_attempts, seen_raw = set(), set()
+    for unit, cfg, metrics, run in unit_data:
+        ref = unit['journal']
+        if ref is None:
+            unit['unknown_reason'] = 'Original checkpoint has no observed complete journal'
+            continue
+        path = merge.reference_path(ref, within=ROOT / 'data/world_pairs/v2')
+        body = path.read_bytes()
+        need(not body or body.endswith(b'\n'), 'Original journal has unfinished final line')
+        observed, modes = 0, {kind: 0 for kind in KINDS}
+        for line in body.splitlines():
+            if not line.strip():
+                continue
+            journal = json.loads(line)
+            rawref = journal['raw_attempt']
+            raw = merge.read_reference(rawref, within=cfg['raw_evidence_dir'])
+            need(raw.get('counts_as_pair_attempt') is True and
+                 all(raw.get(k) == journal.get(k) for k in ('pair_id', 'scene', 'kind', 'status',
+                      'discard_reasons', 'proposed_pool', 'pair_file', 'pair_sha256')),
+                 'Raw attempt differs from its original counted journal row')
+            key = (unit['source']['file'], raw.get('pair_id'))
+            rawkey = (str((ROOT / rawref['file']).resolve()), rawref['sha256'])
+            need(key not in seen_attempts and rawkey not in seen_raw, 'Attempt/raw would be counted twice')
+            seen_attempts.add(key);seen_raw.add(rawkey)
+            proposed = f"{raw.get('proposed_pool')}_{raw.get('mode')}"
+            need(proposed in KINDS, 'Unrecorded proposal class; no mode inferred from final class')
+            modes[proposed] += 1; observed += 1
+            gates, values = funnel.measurements(raw)
+            row = {field: raw.get(field) for field in ('pair_id', 'scene', 'kind', 'status', 'discard_reasons')}
+            row.update(source_file=unit['source']['file'], raw_attempt=rawref,
+                       prefix_measurement={'prefix_edit_mask_pixels': values['prefix_anchor_pixels'],
+                         'prefix_max_abs_diff': values['prefix_max_abs_diff'],
+                         'candidates_visible_and_marked': values['candidate_prefix_visibility']},
+                       look_solvability={'complete': values['catalog_complete'],
+                         'solvable_w0': values['solvable_by_world'][0], 'solvable_w1': values['solvable_by_world'][1],
+                         'actions': values['first_actions']},
+                       physical_w0=values['physical_by_world']['physical_w0'],
+                       physical_w1=values['physical_by_world']['physical_w1'], witnesses=values['witnesses'])
+            need(funnel.measurements(row)[0] == gates, 'Compact view changed an original recorded gate')
+            rows_by_kind[proposed].append({'row': row, 'gates': gates})
+        need(observed == run.get('verified_attempts') == metrics.get('attempts'),
+             'Journal count differs from original source/checkpoint count')
+        need(modes == unit['reported_by_proposed_pool_mode'], 'Original proposal-class counters differ')
+        unit.update(scan_complete=True, unknown_reason=None, observed_attempts=observed,
+                    observed_by_proposed_pool_mode=modes)
+        print('FUNNEL_SOURCE_SCANNED: ' + json.dumps({'file': unit['source']['file'], 'complete': True}), flush=True)
+    report['coverage']['journals_complete'] = all(unit['scan_complete'] for unit in report['sources'])
+
+
+def assemble_groups():
+    complete = report['coverage'].get('journals_complete') is True
+    for kind in KINDS:
+        chosen = rows_by_kind[kind]
+        outcomes, raw_statuses, reasons, first_failures = Counter(), Counter(), Counter(), Counter()
+        missing_reasons = 0
+        for item in chosen:
+            row, gates = item['row'], item['gates']
+            raw_statuses[str(row.get('status'))] += 1
+            if row.get('status') == 'passed':
+                outcomes['passed_expected_class' if row.get('kind') == kind else 'passed_cross_over_to_' + str(row.get('kind'))] += 1
+                continue
+            outcomes['nonpassed_original_status_' + str(row.get('status'))] += 1
+            recorded = row.get('discard_reasons')
+            if not isinstance(recorded, list) or not recorded:
+                missing_reasons += 1
+            else:
+                reasons.update(recorded)
+            order = ORDER if kind.startswith('look_') else ('physical_both',)
+            failed = next((stage for stage in order if gates[stage] is False), None)
+            bucket = ('no_observed_failure_in_reported_gates' if failed is None else
+                      'failure_with_earlier_unknown_' + failed if any(gates[s] is None for s in order[:order.index(failed)])
+                      else 'first_observed_failure_' + failed)
+            first_failures[bucket] += 1
+        group = {'actual_proposed_class': kind, 'observed_attempts': len(chosen), 'scan_complete': complete,
+                 'unobserved_sources': [u['expected_source'] for u in report['sources'] if not u['scan_complete']],
+                 'raw_status_counts': dict(raw_statuses), 'outcomes': dict(outcomes),
+                 'recorded_discard_reasons_nonexclusive': dict(reasons),
+                 'nonpassed_missing_recorded_reason_count': missing_reasons,
+                 'first_observed_failure_not_causal': dict(first_failures)}
+        if kind.startswith('look_'):
+            group['six_recorded_gates'] = (funnel.summarize([x['row'] for x in chosen]) if complete or chosen else None)
+        else:
+            group['physical_gate'] = ({label: sum(x['gates']['physical_both'] is value for x in chosen)
+                                       for label, value in (('pass', True), ('fail', False), ('unknown', None))}
+                                      if complete or chosen else None)
+            group['look_hidden_prefix_evidence_solvability_witness_funnel'] = 'not_applied_to_Direct'
+        report['groups'].append(group)
+
+
+def main():
+    started = time.monotonic()
+    output = ROOT / 'logs/review' / NAME
+    need(not output.exists(), 'Preserve existing report')
+    expected_scenes = [scene for batch in INPUTS['batches'] for scene in batch['scenes']]
+    # Predeclare every expected source before reading any attempt, so a failure
+    # cannot silently omit later scenes from the report.
+    for batch in INPUTS['batches']:
+        for scene, ref in zip(batch['scenes'], batch['sources']):
+            report['sources'].append({'batch': batch['batch'], 'scene': scene, 'expected_source': ref,
+                                      'source': None, 'scan_complete': False,
+                                      'unknown_reason': 'Not yet authenticated/read'})
+    report['coverage'] = {'expected_split_reference': INPUTS['split_reference'],
+                          'expected_source_count': 40, 'expected_scenes': expected_scenes,
+                          'source_metadata_complete': False, 'journals_complete': False}
+    previous = signal.signal(signal.SIGALRM, deadline_expired)
+    try:
+        for path, expected in INPUTS['original_module_sha256'].items():
+            need(hashlib.sha256((ROOT/path).read_bytes()).hexdigest() == expected, 'Original implementation changed: ' + path)
+        report['cutoff'] = copy.deepcopy(INPUTS)
+        arm_deadline(120)
+        selector_phase()
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        arm_deadline(300)
+        funnel_phase()
+    except Exception as error:
+        report['errors'].append({'error': f'{type(error).__name__}: {error}', 'traceback': traceback.format_exc()})
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+    assemble_groups()
+    complete = not report['errors'] and report['coverage'].get('journals_complete') is True and report['round2_only_selection'] is not None
+    report.update(status='complete_recorded_diagnostic' if complete else 'incomplete_recorded_diagnostic',
+                  observed_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                  elapsed_seconds=time.monotonic()-started, native_scientific_revalidation_performed=False)
+    output.mkdir(parents=True, exist_ok=False)
+    path=output/'report.json';path.write_text(json.dumps(report,indent=2,sort_keys=True,allow_nan=False)+'\n')
+    lines=['第二轮原40场景来源：去重候选与记录漏斗（T02前，非最终测试冻结）','',report['scope'],'',
+           '累计A/B+S01–S07与第二轮S01–S07单独去重不可相加；实际成功类型与提议类型分别报告。',
+           '缺少来源或关卡时保留unknown/不完整；Direct不套Look隐藏关。','',
+           '| 范围 | DF | DS | LF | LS |','|---|---:|---:|---:|---:|']
+    for key,label in [('existing_cumulative_selection','A/B+S01–S07（原selected05）'),('round2_only_selection','S01–S07单独原selector')]:
+        value=report[key]
+        lines.append('| '+label+' | '+' | '.join(str(value['counts_by_kind'][k]) if value else 'unknown' for k in KINDS)+' |')
+    lines += ['', '| 原提议类 | 已读尝试 | 完整 | 原状态/跨类 | 原拒因（非互斥） |', '|---|---:|---|---|---|']
+    for group in report['groups']:
+        lines.append('| '+group['actual_proposed_class']+' | '+str(group['observed_attempts'])+' | '+str(group['scan_complete'])+' | '+json.dumps(group['outcomes'])+' | '+json.dumps(group['recorded_discard_reasons_nonexclusive'])+' |')
+    lines += ['', '原六关及逐源失败/缺失ledger见同目录report.json。', 'Errors: '+json.dumps(report['errors'])]
+    (output/'report.md').write_text('\n'.join(lines)+'\n')
+    print('TEST_ROUND2_FINAL_CANDIDATES_FUNNEL_JSON: '+json.dumps({'report':{'file':str(path.relative_to(ROOT)),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()},'status':report['status'],'errors':report['errors'],'existing_cumulative_selection':report['existing_cumulative_selection'],'round2_only_counts':None if report['round2_only_selection'] is None else report['round2_only_selection']['counts_by_kind']}),flush=True)
+    return 0 if complete else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+
+# start: 2026-11-10T18:39:47
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan21.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan221.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan321.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan421.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan22.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s01_c6_floorplan222.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan322.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan422.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan23.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan223.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan323.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s02_c6_floorplan423.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan24.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan224.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan324.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan424.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan25.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s03_c6_floorplan225.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan325.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan425.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan26.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan226.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan326.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s04_retry1_c6_floorplan426.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan27.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan227.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan327.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan427.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan28.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s05_c6_floorplan228.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan328.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan428.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan29.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan229.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan329.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s06_c6_floorplan429.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s07_c6_floorplan30.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s07_c6_floorplan230.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s07_c6_floorplan330.json", "complete": true}
+FUNNEL_SOURCE_SCANNED: {"file": "results/gen_test_s16_round2_s07_c6_floorplan430.json", "complete": true}
+TEST_ROUND2_FINAL_CANDIDATES_FUNNEL_JSON: {"report": {"file": "logs/review/diag_test_round2_final_candidates_funnel_01/report.json", "sha256": "e74d68afa4860aa3581618494aaebbb9234f1edb4167228497cf9e42a2ddd77f"}, "status": "complete_recorded_diagnostic", "errors": [], "existing_cumulative_selection": {"reference": {"file": "logs/review/diag_current_test_selected_05/report.json", "sha256": "e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff", "logged_result": {"file": "results/diag_current_test_selected_05.json", "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840"}}, "logged_reference": {"file": "results/diag_current_test_selected_05.json", "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840", "metrics_sha256": "fefd109e29ccc282378596738f7ccf707655a6044accb0f4d37988fa9811cc0d", "exit_code": 0, "git_commit": "92f451751bb6803086809b3918c62d659b84737b", "audit": {"file": "results/diag_current_test_selected_05.json", "fail": [], "warn": []}}, "counts_by_kind": {"direct_flip": 18, "direct_stay": 41, "look_flip": 16, "look_stay": 20}, "scene_counts_by_kind": {"direct_flip": 12, "direct_stay": 25, "look_flip": 10, "look_stay": 15}, "selected_count": 95, "scope": "Existing sealed A/B plus S01-S07 cumulative configuration selection; not round2 alone."}, "round2_only_counts": {"direct_flip": 5, "direct_stay": 19, "look_flip": 4, "look_stay": 16}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 109.92328241100768}
+# exit_code: 0
