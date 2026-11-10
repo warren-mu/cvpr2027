@@ -58,6 +58,11 @@ class ObservedWorkerHooks(Worker):
         return super().init_model()
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
+    def save_final_actor_model(self, local_path, global_step):
+        from src.tools.smoke_e2e_actor_checkpoint import save_final_actor_model
+        return save_final_actor_model(self, local_path, global_step)
+
+    @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def smoke_memory(self, reset=False):
         torch.cuda.synchronize()
         result = {'device': torch.cuda.current_device(),
@@ -441,14 +446,15 @@ class SmokeTrainer(RayPPOTrainer):
                         env.close()
         # Only one final checkpoint; no previous checkpoint is deleted.
         checkpoint = Path(checkpoint_directory)
-        self.actor_rollout_wg.save_checkpoint(str(checkpoint / 'actor'), None, 5, remove_previous_ckpt=False)
-        self.critic_wg.save_checkpoint(str(checkpoint / 'critic'), None, 5, remove_previous_ckpt=False)
+        checkpoint_records = self.actor_rollout_wg.save_final_actor_model(str(checkpoint / 'actor'), 5)
         return {'actual_completed_updates': len(updates), 'updates': updates,
             'coverage': coverage(list(tables.values())),
             'critic_offload': bool(self.config.critic.model.fsdp_config.param_offload),
             'critic_offload_needed': None,
             'critic_offload_interpretation': 'this run records only its explicit setting; necessity requires a retained failed nonoffload run',
-            'final_checkpoint_directory': str(checkpoint), 'pre_evidence_logic_covered': any(row['pre_evidence_logic_covered'] for row in updates),
+            'final_checkpoint_directory': str(checkpoint), 'checkpoint_records': checkpoint_records,
+            'checkpoint_policy': 'smoke_pilot_final_actor_bf16_only_v1', 'training_resume_supported': False,
+            'pre_evidence_logic_covered': any(row['pre_evidence_logic_covered'] for row in updates),
             'pre_evidence_coverage_note': '实际证据前步有记录' if any(row['pre_evidence_logic_covered'] for row in updates) else '证据前逻辑未覆盖',
             's1_variance': None, 's1_variance_status': 'not_estimated; actual token vectors and independent unit membership retained for analyst',
             's2_due_updates': [], 'formal_T04_T05_acceptance': None, 'paper_result': False}

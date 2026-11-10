@@ -1423,3 +1423,30 @@ S02=709440科学/共享首单元已全部独立通过：DF true1/false0、DS3/2�
 S04=709455因配额满停止，原PBS F、实扣0.06861111111111111GPU·小时、排队18秒。四子源无完整封口，原清理身份unknown保留，不纳入通过；原JSON/log/launcher逐字节副本与SHA见diag_test_s16_s04_unsealed_archive_01，未补造_meta/end。PBS allocation结束不等于逐PID清理证明。
 
 新共享active配置为configs/shared_test_priority_active_01.json：S02已完成、S03/S04独立占位，余S05–S07和未领训练20–26，原参数/票额不变。4卡与single只用同一active plan，不使用旧prepared全plan。按原S02单元1197.4805372250266秒及近四批T02最大376.722556381952秒，保守规划每卡1测试+2导出，乘1.3后加180秒gate、45秒收尾和30秒PBS余量，取整申请47分钟（规划上界，不是运行结果），空队列或全部工作完成即退出。22:00美东从未启动取消保护仍生效。现存待提交metadata已完成原绑定验证；清理产物审计推送后再提交。
+
+### scratch清理后目录占用（只读；2026-11-10T01:49:03.804727+00:00）
+
+Owner scratch root; top-level cvpr2027 expanded one level, other project roots retained as totals, so reported directory rows do not overlap. Read-only; no removals.
+
+|目录|实际分配字节|文件对象数（包含目录）|
+|---|---:|---:|
+|/scratch/e1583364/cvpr2027/g01_parallel|210929233920|911132|
+|/scratch/e1583364/hf_ckpts|199760306176|203|
+|/scratch/e1583364/qwen3vl_specialists|18034520064|7650|
+|/scratch/e1583364/cvpr2027/cache|7973044224|6612|
+|/scratch/e1583364/cvpr2027/ai2thor|1101144064|184|
+|/scratch/e1583364/cvpr2027/conda|1089331200|9545|
+|/scratch/e1583364/cvpr2027/miniforge3-24.11.3-2|530202624|17821|
+|/scratch/e1583364/cvpr2027/miniforge3|415473664|14243|
+|/scratch/e1583364/cvpr2027/tex|395227136|14362|
+|/scratch/e1583364/cvpr2027/installers|203563008|23|
+
+本账号scratch树实际分配字节：None；文件对象数：None。个人容量/文件数配额上限须以单独quota结果为准，不把集群df数字当个人配额。完整原查询及是否超时见logs/review/diag_scratch_top10_01/report.json。
+
+### 2026-11-09 20:55 ET：个人配额刷新与作业恢复
+
+hpc quota于09:43SGT的清理后快照：scratch879.8GB/1.0TB，chunk files2907908/unlimited。该命令因home报告除零返回1，原错误保留；scratch表本身完整，未借用PB级全文件系统容量。此前diag_scratch_top10_01双全树扫描600秒超时，其表只是已扫目录的部分结果，不是完整最大10；已切换按目录分批只读统计，不延迟GPU恢复。
+
+原31对、seed0、200状态已重新提交709482（retry2，01:59:29）；共享单卡709485/709489和4卡709496（47min）均使用同active plan，测试S05–S07优先，其后训练20–26，无重复领取。刷新查询mediumx17Q/8R；NUS节点无至少4张未分配卡，唯一满足4卡计数的是AISG池hopper-44，不把它当作本项目可用节点。按授权仍提交4卡，03:00UTC（美东22:00）若从未启动则取消。约01:54UTC三个smallx均Q、资源不足，尚无run/gate，不能当作已运行。S04配额失败的四未封口源继续保留及归档，未升为通过。
+
+按02aba62b接入最终actor-only bf16保存：不写critic/optimizer/RNG，不写中间checkpoint，保留HF配置副本且不改变在线参数/配置，明确不是完整训练续跑状态。另只在pilot fresh证据认证阶段复用已读原始字节，原科学检查全部执行、退出仍全SHA重验；与load_exports作用域不嵌套。两切片独立静态复核已通过；正式Hopper CPU测试随后执行，尚未宣称真实GPU保存通过。

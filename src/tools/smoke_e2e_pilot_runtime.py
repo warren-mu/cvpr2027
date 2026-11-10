@@ -280,10 +280,11 @@ class PilotTrainer(SmokeTrainer):
             row['episode_log'] = file_ref(path, ROOT / 'logs')
             if update in holdout_updates: evaluate(update)
         checkpoint = Path(checkpoint_directory)
-        self.actor_rollout_wg.save_checkpoint(str(checkpoint / 'actor'), None, update_count, remove_previous_ckpt=False)
-        self.critic_wg.save_checkpoint(str(checkpoint / 'critic'), None, update_count, remove_previous_ckpt=False)
+        checkpoint_records = self.actor_rollout_wg.save_final_actor_model(str(checkpoint / 'actor'), update_count)
         result = {'actual_completed_updates': len(updates), 'updates': updates, 'holdout_evaluations': evaluations,
             'checkpoint_saved': True, 'final_checkpoint_directory': str(checkpoint),
+            'checkpoint_records': checkpoint_records,
+            'checkpoint_policy': 'smoke_pilot_final_actor_bf16_only_v1', 'training_resume_supported': False,
             'pre_evidence_logic_covered': any(row['pre_evidence_decision_count'] > 0 for row in updates),
             's1_variance': None, 's1_scope': 'actual token vectors and independent units retained for analyst',
             's2_due_updates': [row['update'] for row in evaluations if row['update'] in (20, 40)],

@@ -63,6 +63,7 @@ def immutable_ledger(rows):
 def authenticate_cache_batch(expected):
     """Rebuild one entire original certificate, never concatenate sample plans."""
     from src.tools import t02_cache_check as cache
+    from src.tools.t02_evidence_read_session import authenticated_read_reuse
     from src.envs.pair_table_cache import sample_state_keys, validate_cache_sample
     from src.envs.pair_table_checks import authorize_tables, authenticate_cache_sources
     expected = ref_identity(expected)
@@ -108,42 +109,46 @@ def authenticate_cache_batch(expected):
     samples, authenticated = [], set()
     cached_processes = {capture.process_id for table in tables.values()
                         for state in table.states.values() for capture in state.captures}
-    for index, (key, state_ids) in enumerate(groups.items()):
-        row, table, package = rows[index], tables[key], packages[key]
-        pair_dir = directory / f'pair_{index:04d}'
-        require(row.get('status') == 'captured' and row.get('error') is None
-                and row.get('cleanup_errors') == [] and not row.get('raw_index_error')
-                and not row.get('black_frame_reference') and not row.get('native_authentication_error')
-                and Path(row['scratch_directory']).resolve() == pair_dir,
-                'Fresh cache worker is incomplete or cleanup is unknown')
-        stored = cache.read_json_ref(row['report_reference'], pair_dir, expected=pair_dir / 'worker_report.json')
-        require(all(row.get(k) == value for k, value in stored.items()), 'Immutable fresh worker report changed')
-        cache.read_json_ref(row['raw_index'], pair_dir, expected=pair_dir / 'raw/evidence_index.json')
-        roots = [*package['cache_evidence_roots'], str(pair_dir)]
-        observed = cache.load_samples(table, row, pair_dir, roots, state_ids, use_dataset_key=True)
-        require(not any(c.process_id in cached_processes for sample in observed for c in sample.fresh),
-                'Cache fresh process reused an original export process')
-        identities = authenticate_cache_sources([table], observed, evidence_roots=roots)
-        samples.extend(observed)
-        authenticated.update(identities)
-    actual = validate_cache_sample(samples, population=population, sampling_plan=plan)
-    actual['table_shadow_metadata'] = {key: table.shadow_metadata for key, table in tables.items()}
-    actual['native_authenticated_render_ids'] = [list(key) for key in sorted(authenticated)]
-    actual['producer_cleanup_errors'], actual['producer_errors'] = [], []
-    authorize_tables(list(tables.values()), pair_checks=checks, cache_report=actual,
-                     authenticated_cache_source_ids=authenticated)
-    actual['table_native_and_pair_checks_authorized'] = True
-    recorded = cache.read_json_ref(metrics['validation_report'], directory, expected=directory / 'cache_validation.json')
-    require(canonical_hash(actual) == canonical_hash(recorded), 'Full reconstructed cache report changed')
-    certificate = cache.read_json_ref(metrics['authorization_manifest'], directory,
-                                     expected=directory / 'cache_authorization.json')
-    require(certificate.get('version') == cache.VERSION
-            and certificate.get('tables') == {key: table.manifest_reference for key, table in tables.items()}
-            and certificate.get('table_shadow_metadata') == actual['table_shadow_metadata']
-            and certificate.get('cache_validation') == metrics['validation_report']
-            and certificate.get('sampling_plan') == metrics['sampling_plan']
-            and certificate.get('full_T02_acceptance') is None,
-            'Cache authorization does not cover its exact original table population')
+    # load_exports has already closed its independent, non-reentrant scope.
+    # Reuse only authenticated bytes here; every fresh scientific check still
+    # runs, and the scope must rehash all accessed files before returning.
+    with authenticated_read_reuse(cache):
+        for index, (key, state_ids) in enumerate(groups.items()):
+            row, table, package = rows[index], tables[key], packages[key]
+            pair_dir = directory / f'pair_{index:04d}'
+            require(row.get('status') == 'captured' and row.get('error') is None
+                    and row.get('cleanup_errors') == [] and not row.get('raw_index_error')
+                    and not row.get('black_frame_reference') and not row.get('native_authentication_error')
+                    and Path(row['scratch_directory']).resolve() == pair_dir,
+                    'Fresh cache worker is incomplete or cleanup is unknown')
+            stored = cache.read_json_ref(row['report_reference'], pair_dir, expected=pair_dir / 'worker_report.json')
+            require(all(row.get(k) == value for k, value in stored.items()), 'Immutable fresh worker report changed')
+            cache.read_json_ref(row['raw_index'], pair_dir, expected=pair_dir / 'raw/evidence_index.json')
+            roots = [*package['cache_evidence_roots'], str(pair_dir)]
+            observed = cache.load_samples(table, row, pair_dir, roots, state_ids, use_dataset_key=True)
+            require(not any(c.process_id in cached_processes for sample in observed for c in sample.fresh),
+                    'Cache fresh process reused an original export process')
+            identities = authenticate_cache_sources([table], observed, evidence_roots=roots)
+            samples.extend(observed)
+            authenticated.update(identities)
+        actual = validate_cache_sample(samples, population=population, sampling_plan=plan)
+        actual['table_shadow_metadata'] = {key: table.shadow_metadata for key, table in tables.items()}
+        actual['native_authenticated_render_ids'] = [list(key) for key in sorted(authenticated)]
+        actual['producer_cleanup_errors'], actual['producer_errors'] = [], []
+        authorize_tables(list(tables.values()), pair_checks=checks, cache_report=actual,
+                         authenticated_cache_source_ids=authenticated)
+        actual['table_native_and_pair_checks_authorized'] = True
+        recorded = cache.read_json_ref(metrics['validation_report'], directory, expected=directory / 'cache_validation.json')
+        require(canonical_hash(actual) == canonical_hash(recorded), 'Full reconstructed cache report changed')
+        certificate = cache.read_json_ref(metrics['authorization_manifest'], directory,
+                                         expected=directory / 'cache_authorization.json')
+        require(certificate.get('version') == cache.VERSION
+                and certificate.get('tables') == {key: table.manifest_reference for key, table in tables.items()}
+                and certificate.get('table_shadow_metadata') == actual['table_shadow_metadata']
+                and certificate.get('cache_validation') == metrics['validation_report']
+                and certificate.get('sampling_plan') == metrics['sampling_plan']
+                and certificate.get('full_T02_acceptance') is None,
+                'Cache authorization does not cover its exact original table population')
     proof = {'source': source, 'authorization_manifest': copy.deepcopy(metrics['authorization_manifest']),
         'validation_report': copy.deepcopy(metrics['validation_report']), 'sampling_plan': copy.deepcopy(metrics['sampling_plan']),
         'dataset_keys': sorted(tables), 'source_export_results': export_refs}
