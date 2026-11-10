@@ -1817,3 +1817,8 @@ FIG01 scoped真实单对CPU冒烟diag_fig01_scoped_smoke_01于30.732797860982828
 
 ### 2026-11-10 06:38 ET — FIG01选图前缀修复已过17项CPU测试
 b3527166只修正figure-only的额外限制：每world取原first_step_visible_actions已排序列表首项，不按像素数挑动作；记录figure_only_observation_prefix，原selection witness另列且不作为可见证据。图像排名仍非留出优先、两world各该状态X像素数min降序、原tie不变。完整83证书/header、选中全表及原check_pair/缓存绑定不变；Hopper原run_logged测试17项通过，准备再次单真实对CPU冒烟，失败记录不覆盖。
+
+
+### 2026-11-10 06:41 ET — FIG01真实单对通过；710213零用量回退
+FIG01 firststep v3原真实CPU冒烟diag_fig01_firststep_smoke_01 exit0，29.674252249998972秒；选中floorplan203_00062，图用w0/w1一步X掩码4793/4563像素，实际环境tau/tau_seen均1。完整83总体metadata、所选完整表和所有原校验通过，22个LookFlip可排序。正式paper尚未导出；单对结果只在logs/review/diag_fig01_firststep_smoke_01/cpu_smoke，manifest SHA25ac39dc8f72a538159de6b7ec1ca0da7d7552c73f2624ab0d7b113527a0ab2f。现可按同一预定排名导出5对，仍不用GPU、295秒止损、无重渲染/缩放/改色。
+710213完整原链已证明Q/无分配→qdel0→F/无分配，原canonical diag_trainlook710213_pin20_accounting_01记0 GPU小时；原pre snapshot显示已等3229秒，stime缺失故原queue-to-start字段仍null，不补值。未动任何运行作业；下一步准备同参数无host retry2，保留此次排队/取消证据。
