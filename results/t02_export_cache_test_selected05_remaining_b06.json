@@ -1,0 +1,169 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794346971.161827,
+    "cpu_affinity": [
+      24,
+      26,
+      28,
+      30,
+      32,
+      34,
+      36,
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "cuda_visible_devices": "GPU-41b4dc5b-ab2e-9066-f4b6-13baa1b17eac",
+    "engineering_timing_scope": "perf_counter wall durations; failed phases retained; normal return is not scientific acceptance; fresh validation includes final byte rehash",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "initialization_retry_policy": {
+      "cleanup_required": "original_owned_worker_stop_and_private_group_absent",
+      "deadline_extension": false,
+      "maximum_retries": 2,
+      "same_pair_and_state_sequence": true,
+      "version": "fresh_controller_initialize_timeout_retry_v1"
+    },
+    "max_raw_mib": 2048,
+    "max_raw_mib_scope": "per owned fresh pair worker, not whole job",
+    "name": "t02_export_cache_test_selected05_remaining_b06",
+    "node": "hopper-19",
+    "pair_timeout_seconds": 180.0,
+    "pbs_jobid": "710949.hopper-m-02",
+    "policy": {
+      "clean_subset": "Look tables with zero shadow-divergent states; diagnostic subset only, not a cache acceptance gate",
+      "either_positive_requires_iou": true,
+      "failure_scope": "whole_downstream_pipeline",
+      "fresh_pair_render_process": "one_new_process_same_exact_camera_pose",
+      "mask_count_absolute_tolerance_pixels": 10,
+      "mask_count_reference": "cached_count",
+      "mask_count_relative_tolerance": 0.02,
+      "minimum_distinct_pair_states": 200,
+      "minimum_mask_iou": 0.9,
+      "non_anchor_divergence": "Both Look and Direct fork with own world RGB; record shadow counts; never exclude by this predicate",
+      "resolution": 255,
+      "rgb_difference": "diagnostic_only_except_existing_shared_state_definition"
+    },
+    "resolution": 255,
+    "sample_count_scope": "native-authenticated complete paired captures; unverified worker diagnostics retained separately",
+    "sample_size": 200,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_cache/t02_export_cache_test_selected05_remaining_b06/710949.hopper-m-02",
+    "seed": 0,
+    "source": [
+      "results/t02_export_test_selected05_six08_u0000.json",
+      "results/t02_export_test_selected05_six08_u0001.json",
+      "results/t02_export_test_selected05_six08_u0003.json",
+      "results/t02_export_test_selected05_six09_u0003.json",
+      "results/t02_export_test_selected05_six09_u0004.json",
+      "results/t02_export_test_selected05_six10_u0000.json"
+    ],
+    "timeout_seconds": 1200.0,
+    "version": "t02_formal_fresh_cache_dataset_v3"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cache_matches_live": null,
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "engineering_timings": {
+      "fresh_pairs": [],
+      "gate": {
+        "elapsed_seconds": 20.17460128106177,
+        "returned_normally": true
+      },
+      "version": "t02_engineering_phases_v1"
+    },
+    "errors": [],
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_test_selected05_remaining_b06_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_export_cache_test_selected05_remaining_b06_gate.json",
+      "git_commit": "8a6636a880dbe84ec7ab9cbd5c58a74a6dde0953",
+      "metrics_sha256": "4ccd8eade927a0dd11d29bddfe0b7919e4804face97d5688627476226e9c5dd1",
+      "sha256": "d2beccb14cae0519410547655125c4c2778d58ec97027c1fc8ae9f8cb06094b7"
+    },
+    "kind": "t02_formal_cache_check",
+    "population_ledger": [],
+    "producer_exit_code": 86,
+    "sampling_plan": null,
+    "status": "blocked_by_render_gate",
+    "stop_downstream": true,
+    "task_acceptance": null,
+    "validation_report": null,
+    "worker_runs": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_cache_test_selected05_remaining_b06_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/t02_export_cache_test_selected05_remaining_b06_gate.json",
+      "git_commit": "8a6636a880dbe84ec7ab9cbd5c58a74a6dde0953",
+      "metrics_sha256": "4ccd8eade927a0dd11d29bddfe0b7919e4804face97d5688627476226e9c5dd1",
+      "sha256": "d2beccb14cae0519410547655125c4c2778d58ec97027c1fc8ae9f8cb06094b7"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_cache_test_selected05_remaining_b06",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.t02_cache_check",
+      "--name",
+      "t02_export_cache_test_selected05_remaining_b06",
+      "--source",
+      "results/t02_export_test_selected05_six08_u0000.json",
+      "--source",
+      "results/t02_export_test_selected05_six08_u0001.json",
+      "--source",
+      "results/t02_export_test_selected05_six08_u0003.json",
+      "--source",
+      "results/t02_export_test_selected05_six09_u0003.json",
+      "--source",
+      "results/t02_export_test_selected05_six09_u0004.json",
+      "--source",
+      "results/t02_export_test_selected05_six10_u0000.json",
+      "--sample-size",
+      "200",
+      "--seed",
+      "0",
+      "--timeout-seconds",
+      "1200",
+      "--pair-timeout-seconds",
+      "180",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-19",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-11T05:22:47",
+    "log_path": "logs/runs/t02_export_cache_test_selected05_remaining_b06.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "8a6636a880dbe84ec7ab9cbd5c58a74a6dde0953",
+    "git_dirty": false,
+    "end": "2026-11-11T05:23:11",
+    "duration_sec": 20.6,
+    "exit_code": 86,
+    "metrics_sha256": "8613ad7f30a6c95f27d768c59ac8eef6032877a6b7237d0364f31b36c1c44836"
+  }
+}

@@ -1,0 +1,113 @@
+# run_logged: python3 -c """One-off exact fixed05-08 cache black-gate retry proof; run_logged only."""
+import io
+import json
+import shlex
+from pathlib import Path
+from PIL import Image
+from src.tools import phase_watch as watch
+from src.tools import t02_cache_check as cache
+ROOT = Path.cwd().resolve()
+NAME, JOB = 't02_export_cache_test_selected05_remaining_b06', '710949.hopper-m-02'
+ACCOUNT = 'diag_t02_cache_test_selected05_b06_accounting_01'
+DIRECTORY = ROOT / 'logs/pbs/t02_export_cache_test_selected05_remaining_b06-20261110T212153Z-b468492d'
+auditor = watch.load_module('cache_retry_original_auditor', ROOT / 'scripts/audit_provenance.py')
+def require(value, message):
+    if not value: raise ValueError(message)
+def load(name):
+    return watch.load_logged(ROOT, ROOT / 'results' / (name + '.json'), auditor)
+def ref(path):
+    return {'file': str(path.relative_to(ROOT)), 'sha256': watch.digest(path), 'bytes': path.stat().st_size}
+outer, outer_ref = load(NAME)
+gate, gate_ref = load(NAME + '_gate')
+account, account_ref = load(ACCOUNT)
+payload_path = DIRECTORY / 'payload.json'
+payload = json.loads(payload_path.read_text())
+receipt = json.loads((DIRECTORY / 'submission.json').read_text())
+require(account['_meta']['command'] == ['python3','src/tools/pbs_usage.py','--name',ACCOUNT,JOB]
+        and account['_meta']['exit_code'] == 0 and account['metrics']['complete_allocation_accounting'] is True
+        and account['config']['errors'] == [], 'Canonical final allocation accounting is incomplete')
+require(json.dumps(account['config'], indent=2) in (ROOT / account['_meta']['log_path']).read_text(), 'Canonical config not in authenticated log')
+entries = [row for row in account['config']['jobs'] if row['job_id'] == JOB]
+require(len(entries) == 1 and entries[0]['qstat_exit'] == 0, 'Canonical job missing or ambiguous')
+f = entries[0]['fields']
+require(f['Job_Owner'].split('@')[0] == 'e1583364' and f['run_count'] == '1', 'Wrong owned original job')
+require(payload['repo'] == str(ROOT) and payload['name'] == NAME and payload['task_id'] == 'T01'
+        and payload['budget_group'] == 'T02' and payload['queue'] == 'autox'
+        and payload['requested_gpu_count'] == 1 and payload['requested_host'] is None
+        and payload['requested_wall_seconds'] == 1230 and payload['dry_run'] is False,
+        'Not the exact approved unpinned cache allocation')
+require(receipt['returncode'] == 0 and receipt['stdout'].strip() == JOB and not receipt['stderr'], 'Original submission receipt mismatch')
+script = DIRECTORY / 'job.pbs'
+require(payload_path.stat().st_mode & 0o222 == 0 and script.stat().st_mode & 0o222 == 0, 'Original allocation files not immutable')
+template = (ROOT / 'scripts/pbs/job_1gpu.pbs').read_text()
+phase=watch.load_module('original_submit_phase_for_cache_guard',ROOT/'scripts/pbs/submit_phase.py')
+require(script.read_text()==phase.render_job_script(template,1,payload_path,None), 'Original one-GPU PBS template mismatch')
+qsub = ['qsub','-N',f['Job_Name'],'-l','walltime=00:20:30','-o',str(DIRECTORY/'pbs.out'),str(script)]
+require(receipt['command'] == qsub and shlex.split(f['Submit_arguments']) == qsub[1:]
+        and f['Output_Path'].split(':',1)[1] == str(DIRECTORY/'pbs.out')
+        and f['Resource_List.walltime'] == '00:20:30' and f['Resource_List.ngpus'] == '1'
+        and f['Resource_List.ncpus'] == '12' and f['queue'] == 'smallx'
+        and 'PBS_O_QUEUE=autox' in f['Variable_List']
+        and float(f['Resource_List.queue_charge_rate']) == payload['requested_queue_charge_rate'], 'Actual PBS resources/command/charge mismatch')
+fixed = ROOT / 'logs/review/diag_t02_cache_remaining70_plan_01/report.json'
+require(watch.digest(fixed) == '15dbd1b46e0ddf4a9e3012bc688075bcfdf7855e15d07cb3f856554ebb715ab6', 'Fixed original cache plan changed')
+batch = json.loads(fixed.read_text())['batches'][5]
+require(batch['name'] == NAME, 'Fixed batch is not b06')
+source_names=[r['source']['file'] for r in batch['sources']]
+expected = ['python3','-u','-m','src.tools.t02_cache_check','--name',NAME]
+for source in source_names: expected += ['--source',source]
+expected += ['--sample-size','200','--seed','0','--timeout-seconds','1200','--pair-timeout-seconds','180','--gate-timeout-seconds','180']
+require(payload['command'] == expected and outer['_meta']['command'] == expected, 'Cache plan or submitted command changed')
+c,m = outer['config'],outer['metrics']
+require(c['version'] == cache.VERSION and c['policy'] == cache.CACHE_POLICY and c['source'] == source_names
+        and c['sample_size'] == 200 and c['seed'] == 0 and c['gpus'] == 1 and c['resolution'] == 255
+        and c['timeout_seconds'] == 1200 and c['pair_timeout_seconds'] == 180 and c['gate_timeout_seconds'] == 180
+        and c['max_raw_mib'] == 2048 and c['pbs_jobid'] == JOB and c['name'] == NAME,
+        'Recorded cache policy/source/population parameters changed')
+require(m['kind'] == 't02_formal_cache_check' and m['status'] == 'blocked_by_render_gate'
+        and m['producer_exit_code'] == 86 and m['black_frame_detected'] is True
+        and m['worker_runs'] == [] and m['population_ledger'] == [] and m['sampling_plan'] is None
+        and m['validation_report'] is None and m['cache_matches_live'] is None
+        and m['downstream_allowed'] is False and m['stop_downstream'] is True
+        and m['errors'] == [] and m['cleanup_errors'] == [], 'Not a clean pre-sampling native black stop')
+require(m['gate'].get('file') == gate_ref['path'] and m['gate'].get('sha256') == gate_ref['sha256']
+        and all(m['gate'].get(k) == gate['_meta'].get(k) for k in ('metrics_sha256','git_commit','exit_code')), 'Exact original gate reference mismatch')
+reason = watch.validate_black_retry(payload, JOB, f, outer, gate, NAME+'_gate', 't02_formal_cache_check')
+g,a,gm = gate['config'],gate['config']['allocation'],gate['metrics']
+require(g['name'] == NAME+'_gate' and g['resolution'] == 255 and g['segmentation'] is True and g['timeout_seconds'] == 180
+        and g['node'] == c['node'] == outer['_meta']['host'] == gate['_meta']['host']
+        and a['cuda_visible_devices'] == c['cuda_visible_devices']
+        and a['cuda_driver_uuids'] == [c['cuda_visible_devices']]
+        and a['cpu_affinity'] == c['cpu_affinity'] and len(set(c['cpu_affinity'])) == len(c['cpu_affinity']) == 12
+        and a['scratch'] == payload['environment']['CVPR_SCRATCH'], 'Native gate mask/CPU/scratch/producer mismatch')
+argv = gate['_meta']['command']
+require(Path(argv[0]).name == 'python3' and argv[1:-1] == ['-u','-m','src.tools.render_gate','--name',NAME+'_gate','--gpus','1','--resolution','255','--segmentation','--timeout-seconds'] and argv[-1] in ('180','180.0'), 'Exact gate producer command mismatch')
+obs = gm['devices'][0]['observation']
+require([r['stage'] for r in obs['captures']] == ['after_constructor','after_Pass']
+        and any(p['stage'] == 'Pass' and p['fresh_main_rgb_payloads'] > 0 and p['cached_metadata'] is False for p in obs['wire_packets']), 'Missing actual fresh constructor/Pass proof')
+images = []
+for capture in obs['captures']:
+    require(capture['shape'] == [255,255,3] and capture['dtype'] == 'uint8' and capture['black'] is True
+            and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0 and not capture['error_message'], 'Not actual full-zero RGB')
+    p = Path(capture['png']['path']).resolve()
+    require(p.parent == ROOT/'logs/runs'/(NAME+'_gate')/'render_gate' and watch.digest(p) == capture['png']['sha256'], 'Native PNG original bytes mismatch')
+    with Image.open(io.BytesIO(p.read_bytes())) as image:
+        require(image.mode == 'RGB' and image.size == (255,255) and image.getextrema() == ((0,0),)*3, 'Decoded original PNG is not all zero')
+    images.append(ref(p))
+for p in (ROOT/'logs/pbs').glob('*/payload.json'):
+    require(json.loads(p.read_text()).get('retry_of') != JOB, 'Retry already submitted; do not duplicate')
+proof = {'eligible_proven_black_gate_retry':True, 'reason':reason, 'job_id':JOB, 'name':NAME,
+ 'node':c['node'], 'gpu_uuid':c['cuda_visible_devices'], 'native_kind':'t02_formal_cache_check',
+ 'original_payload':ref(payload_path), 'original_job_script':ref(script),
+ 'original_receipt':ref(DIRECTORY/'submission.json'), 'source_results':[outer_ref,gate_ref],
+ 'pbs_accounting':account_ref, 'captures':images, 'original_command_unchanged':payload['command'],
+ 'fixed_export_sources':source_names, 'sample_size':200, 'seed':0, 'cleanup_errors':[],
+ 'permission_scope':'Only original fixed-population cache retry with new name; no submission performed'}
+import os
+run_name='diag_t02_cache_test_selected05_b06_black_guard_01'
+(ROOT/'results'/(run_name+'.json')).write_text(json.dumps({'metrics':proof,'config':{'name':run_name,'scope':'original strict cache black-gate proof'}},indent=2,sort_keys=True)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(proof,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-11T05:26:05
+FINAL_METRICS_JSON: {"captures": [{"bytes": 269, "file": "logs/runs/t02_export_cache_test_selected05_remaining_b06_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"bytes": 269, "file": "logs/runs/t02_export_cache_test_selected05_remaining_b06_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "cleanup_errors": [], "eligible_proven_black_gate_retry": true, "fixed_export_sources": ["results/t02_export_test_selected05_six08_u0000.json", "results/t02_export_test_selected05_six08_u0001.json", "results/t02_export_test_selected05_six08_u0003.json", "results/t02_export_test_selected05_six09_u0003.json", "results/t02_export_test_selected05_six09_u0004.json", "results/t02_export_test_selected05_six10_u0000.json"], "gpu_uuid": "GPU-41b4dc5b-ab2e-9066-f4b6-13baa1b17eac", "job_id": "710949.hopper-m-02", "name": "t02_export_cache_test_selected05_remaining_b06", "native_kind": "t02_formal_cache_check", "node": "hopper-19", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.t02_cache_check", "--name", "t02_export_cache_test_selected05_remaining_b06", "--source", "results/t02_export_test_selected05_six08_u0000.json", "--source", "results/t02_export_test_selected05_six08_u0001.json", "--source", "results/t02_export_test_selected05_six08_u0003.json", "--source", "results/t02_export_test_selected05_six09_u0003.json", "--source", "results/t02_export_test_selected05_six09_u0004.json", "--source", "results/t02_export_test_selected05_six10_u0000.json", "--sample-size", "200", "--seed", "0", "--timeout-seconds", "1200", "--pair-timeout-seconds", "180", "--gate-timeout-seconds", "180"], "original_job_script": {"bytes": 1128, "file": "logs/pbs/t02_export_cache_test_selected05_remaining_b06-20261110T212153Z-b468492d/job.pbs", "sha256": "c7459637957770d34db7ca153a7040cb969ffe3f6dd1efe5329a24ba93834e5c"}, "original_payload": {"bytes": 1357, "file": "logs/pbs/t02_export_cache_test_selected05_remaining_b06-20261110T212153Z-b468492d/payload.json", "sha256": "4000b705b2b81ea2eb2c956950c0d3c7715ac6058cc3ed5127a68c20401b4669"}, "original_receipt": {"bytes": 459, "file": "logs/pbs/t02_export_cache_test_selected05_remaining_b06-20261110T212153Z-b468492d/submission.json", "sha256": "1279a1846b7f54b18b38f07dbadf8a6e7dd202220092d016947fa4ae63c0aca8"}, "pbs_accounting": {"log_path": "logs/runs/diag_t02_cache_test_selected05_b06_accounting_01.log", "log_sha256": "93395fa010e082af9158cbc65e7a0ae5ddbc66c1f6f9fa35be515560faa4f8ff", "path": "results/diag_t02_cache_test_selected05_b06_accounting_01.json", "sha256": "47c12d30e10c3699d91d89698a653381d0d5bbb6795337df50f7dad2087b9db3"}, "permission_scope": "Only original fixed-population cache retry with new name; no submission performed", "reason": "render_gate_black_capture", "sample_size": 200, "seed": 0, "source_results": [{"log_path": "logs/runs/t02_export_cache_test_selected05_remaining_b06.log", "log_sha256": "dcd520f19dae52c9c79925dc0c4c6127461c67e600fc0660822c9b842cc55124", "path": "results/t02_export_cache_test_selected05_remaining_b06.json", "sha256": "16603e0681ab1a7f5b0adf73f2646f2d55db2ad17eb6e7c038befa742df12d16"}, {"log_path": "logs/runs/t02_export_cache_test_selected05_remaining_b06_gate.log", "log_sha256": "2a7b2ec69a28911275df97a087a7dedebb8c4147949a2234af72f727ce8d86ca", "path": "results/t02_export_cache_test_selected05_remaining_b06_gate.json", "sha256": "d2beccb14cae0519410547655125c4c2778d58ec97027c1fc8ae9f8cb06094b7"}]}
+# exit_code: 0

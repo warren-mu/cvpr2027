@@ -1,0 +1,28 @@
+{
+  "name": "diag_t02_cache_test_selected05_b06_black_preflight_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_t02_cache_test_selected05_b06_black_preflight_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport hashlib,json,shlex\nfrom src.tools import pbs_black_retry as b\nroot=Path.cwd().resolve();job=\"710949.hopper-m-02\";parent=\"t02_export_cache_test_selected05_remaining_b06\";new=parent+\"_retry1\";guard=\"results/diag_t02_cache_test_selected05_b06_black_guard_01.json\"\nsha=hashlib.sha256((root/guard).read_bytes()).hexdigest()\nidx,previous=b.rotation(root)\nprev_host=None\nif previous:\n _,data=b.file_ref(root,previous[\"payload\"],\"logs/pbs\");prev_host=json.loads(data)[\"requested_host\"]\nhost=b.next_host(b.VERSION,idx,prev_host)\nbatch=json.loads((root/\"logs/review/diag_t02_cache_remaining70_plan_01/report.json\").read_text())[\"batches\"][5]\nassert batch[\"name\"]==parent\ncmd=[new if v==parent else v for v in batch[\"checker_command\"]]\nproof=b.validate_request_host(root,host=host,retry_of=job,evidence_path=guard,evidence_sha256=sha,name=new,command=cmd,task=\"T01\",group=\"T02\",gpus=1,wall_seconds=1230)\nwrapper=\"diag_submit_\"+new\nsubmit=[\"python3\",\"scripts/run_logged.py\",\"--name\",wrapper,\"--seed\",\"0\",\"--\",\"python3\",\"-m\",\"src.tools.record_command\",\"--name\",wrapper,\"--\",\"python3\",\"scripts/pbs/submit_phase.py\",\"--name\",new,\"--task\",\"T01\",\"--budget-group\",\"T02\",\"--gpus\",\"1\",\"--walltime\",\"00:20:30\",\"--host\",host,\"--retry-of\",job,\"--black-retry-evidence\",guard,\"--black-retry-evidence-sha256\",sha,\"--\",*cmd]\nreport={\"original_host_validator_pass\":True,\"black_retry_evidence\":{\"file\":guard,\"sha256\":sha},\"binding\":proof,\"submit_command\":submit,\"submit_shell\":shlex.join(submit),\"submitted\":False,\"scope\":\"Read-only original validator/rotation at this receipt cutoff. Submitter must revalidate under the normal lock and budget. 20-minute pin fallback unchanged.\"}\nout=Path(\"logs/review/diag_t02_cache_test_selected05_b06_black_preflight_01/report.json\");out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(report,indent=2,sort_keys=True)+\"\\n\")\nprint(json.dumps({\"report_file\":str(out),\"report_sha256\":hashlib.sha256(out.read_bytes()).hexdigest(),\"job\":job,\"host\":host,\"guard_sha256\":sha,\"original_host_validator_pass\":True,\"submitted\":False},sort_keys=True))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-11T05:26:07",
+  "log_path": "logs/runs/diag_t02_cache_test_selected05_b06_black_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ef1f988d2ae6ed26655b95973438b6640fa9b01a",
+  "git_dirty": false,
+  "end": "2026-11-11T05:26:07",
+  "duration_sec": 0.6,
+  "exit_code": 0,
+  "metrics_sha256": "c264cf912751f3d3d77322bd2ae9bc38c8217fe8d2de506ced0f28bd058f3a22"
+}
