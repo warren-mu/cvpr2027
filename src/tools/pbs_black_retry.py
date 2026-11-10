@@ -176,6 +176,64 @@ def diag01_opening_black(repo, payload, parent, gate, proof):
     return pm['gate']
 
 
+def diag02_command(command):
+    if (not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command)
+            or re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(command[0]).name) is None):
+        return False
+    arguments = command[1:]
+    if arguments[:1] == ['-u']:
+        arguments = arguments[1:]
+    return arguments[:2] == ['-m', 'src.tools.diag02_baselines'] and arguments.count('-m') == 1
+
+
+def diag02_opening_black(repo, payload, parent, gate, proof):
+    """The new diagnostic may retry only before any source/model/evaluation work."""
+    cfg, pm, command = parent['config'], parent['metrics'], payload['command']
+    identity, allocation = cfg.get('identity', {}), gate['config']['allocation']
+    def option(flag):
+        require(command.count(flag) == 1 and command.index(flag) + 1 < len(command),
+                'Missing/ambiguous DIAG02 option: ' + flag)
+        return command[command.index(flag) + 1]
+    size = option('--model-size')
+    require(size in ('3b', '7b', '32b') and diag02_command(command)
+            and payload.get('budget_group') == ('DIAG02E3' if size == '3b' else 'DIAG02E4')
+            and re.fullmatch(r'diag_diag02_baselines_' + size + r'_[A-Za-z0-9_]+', payload['name'])
+            and cfg.get('name') == option('--name') == payload['name']
+            and cfg.get('version') == 'diag02_fixed83_cov_full_input_once_v1'
+            and proof.get('native_kind') == pm.get('kind') == 'diag02_original_model'
+            and parent['_meta']['command'] == command and parent['_meta']['name'] == payload['name']
+            and parent['_meta']['exit_code'] == pm.get('producer_exit_code') == 86
+            and set(pm) == {'kind', 'completed', 'errors', 'cleanup_errors', 'black_frame_detected',
+                           'paper_result', 'gate', 'journals', 'producer_exit_code'}
+            and pm.get('completed') is False and pm.get('paper_result') is False
+            and pm.get('black_frame_detected') is True and pm.get('journals') == []
+            and pm.get('errors') == pm.get('cleanup_errors') == [],
+            'DIAG02 did not stop cleanly at its opening gate')
+    require(cfg.get('gpus') == 1 and cfg.get('model_size') == size
+            and cfg.get('model_path') == option('--model-path')
+            and cfg.get('model') == 'Qwen/Qwen2.5-VL-' + size.upper() + '-Instruct'
+            and cfg.get('strategies') == ['obs_never', 'obs_trigger', 'obs_trigger_cov']
+            and cfg.get('timeout_seconds') == float(option('--timeout-seconds'))
+            and cfg.get('gate_timeout_seconds') == (float(option('--gate-timeout-seconds'))
+                if '--gate-timeout-seconds' in command else 180.)
+            and cfg.get('training_config_changed') is False,
+            'DIAG02 model/policy/grant declaration differs')
+    from src.tools.smoke_e2e_pilot_dataset import ref_identity
+    for flag, key in (('--manifest', 'manifest_reference'), ('--holdout-reference', 'holdout_reference'),
+                      ('--model-source', 'model_source')):
+        require(ref_identity(json.loads(option(flag))) == cfg.get(key), 'DIAG02 immutable input differs')
+    require(cfg.get('manifest') == option('--manifest')
+            and identity.get('pbs_jobid') == proof['job_id'] == allocation['pbs_jobid']
+            and identity.get('cuda_visible_devices') == proof['gpu_uuid'] == allocation['cuda_visible_devices']
+            and identity.get('cpu_affinity') == allocation['cpu_affinity']
+            and identity.get('scratch') == allocation.get('scratch') == payload.get('environment', {}).get('CVPR_SCRATCH'),
+            'DIAG02 exact original allocation identity differs')
+    directory = repo / 'logs/runs' / payload['name']
+    require(Path(cfg.get('episode_directory', '')).resolve() == directory.resolve()
+            and directory.is_dir() and not list(directory.glob('*.jsonl')), 'DIAG02 has evaluation journals')
+    return pm['gate']
+
+
 def pilot_opening_black(payload, parent, gate, proof):
     """Original formal pilot gate only; no fabricated generic status or job fields."""
     cfg, pm, command = parent['config'], parent['metrics'], payload['command']
@@ -372,9 +430,11 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
     allowed_hosts = HOSTS if version == LEGACY_VERSION else AVAILABLE_HOSTS
     require(group != 'PACK' or version == VERSION, 'PACK opening-black retries require the current two-host policy')
     diag01_retry = group is None and diag01_command(command)
+    diag02_retry = group in ('DIAG02E3', 'DIAG02E4') and diag02_command(command)
+    require(not diag02_retry or version == VERSION, 'DIAG02 requires the current two-host retry policy')
     require(not diag01_retry or version == VERSION, 'DIAG01 requires the current two-host retry policy')
     require(host in allowed_hosts and gpus == 1 and type(gpus) is int and task == 'T01'
-            and (group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot', 'E2EpilotT2', 'PACK') or diag01_retry),
+            and (group in ('G01', 'T02', 'T01v2', 'E2E', 'E2Epilot', 'E2EpilotT2', 'PACK') or diag01_retry or diag02_retry),
             'Only approved one-GPU black-retry hosts are allowed')
     require(isinstance(retry_of, str) and re.fullmatch(r'\d+\.hopper-m-\d+', retry_of)
             and isinstance(evidence_path, str) and re.fullmatch(r'[0-9a-f]{64}', evidence_sha256 or ''),
@@ -442,6 +502,13 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
         new_timeout = phase.diag01_timeout(command, name)
         require(old_timeout == new_timeout and 0 < wall_seconds <= 3600 and new_timeout <= wall_seconds - 60,
                 'DIAG01 retry changed its original sub-hour grant or cleanup margin')
+    if diag02_retry:
+        require(diag02_command(payload['command']), 'DIAG02 cannot alias another producer')
+        phase.budget_group(task, name, command, group)
+        old_size, old_timeout, old_group = phase.diag02_parameters(payload['command'], payload['name'])
+        size, timeout, new_group = phase.diag02_parameters(command, name)
+        require((old_size, old_timeout, old_group) == (size, timeout, new_group)
+                and timeout <= wall_seconds - 60, 'DIAG02 retry changed its model/grant or cleanup margin')
     final = phase._final_accounting(repo, {retry_of}, paths=[account_path])
     require(retry_of in final, 'Original canonical final accounting is unavailable')
     jobs = [row for row in account['config']['jobs'] if row.get('job_id') == retry_of]
@@ -468,6 +535,8 @@ def validate_request_host(repo, *, host, retry_of, evidence_path, evidence_sha25
         parent_gate = pilot_opening_black(payload, parent, gate, proof)
     elif diag01_retry:
         parent_gate = diag01_opening_black(repo, payload, parent, gate, proof)
+    elif diag02_retry:
+        parent_gate = diag02_opening_black(repo, payload, parent, gate, proof)
     else:
         require(parent['_meta']['command'] == payload['command'] and parent['_meta']['exit_code'] == 86
                 and parent['config']['pbs_jobid'] == retry_of and pm.get('status') == 'blocked_by_render_gate'

@@ -58,7 +58,8 @@ class Diag01BudgetTests(unittest.TestCase):
         p.validate_request('T01',1,14400,'t01_legacy',state())
         with self.assertRaises(ValueError):p.validate_request('T01',1,14401,'t01_legacy',state())
         self.assertEqual(p.TOTAL_LIMIT,120);self.assertEqual(p.LIMITS,{'T00b':60.0,'T01':120.0})
-        self.assertEqual(p.SUBBUDGET_LIMITS,{'T01v2':16.0,'E2E':4.0,'E2Epilot':12.0,'E2EpilotT2':.5,'G01':40.0,'T02':40.0})
+        self.assertEqual({k:v for k,v in p.SUBBUDGET_LIMITS.items() if not k.startswith('DIAG02')},
+                         {'T01v2':16.0,'E2E':4.0,'E2Epilot':12.0,'E2EpilotT2':.5,'G01':40.0,'T02':40.0})
         self.assertEqual(p.budget_group('T01','gen_test_old',[]),'G01')
         self.assertEqual(p.budget_group('T01','pilot_pairs_v2_old',[]),'T01v2')
         with self.assertRaises(ValueError):p.validate_request('T01',1,3300,NAME,{**state(),'submissions':[{'name':NAME}]},command=command())

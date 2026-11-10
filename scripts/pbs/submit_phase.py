@@ -24,7 +24,8 @@ BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 120.0}
 TOTAL_LIMIT = 120.0
 BUDGET_REVISION = "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1"
-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 12.0, "E2EpilotT2": 0.5, "G01": 40.0, "T02": 40.0}
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 12.0, "E2EpilotT2": 0.5, "G01": 40.0, "T02": 40.0,
+                    "DIAG02E3": 0.5, "DIAG02E4": 2.0}
 PACK_GROUP = "PACK"  # A reservation route, never an additional budget.
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 EXTERNAL_FINAL_CONFIG = "configs/phase_external_final_jobs.json"
@@ -75,8 +76,42 @@ def diag01_timeout(command, name):
     return timeout
 
 
+def diag02_parameters(command, name):
+    """Explicit native diagnostic/model identity, with task-specific stop bounds."""
+    if (not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command)
+            or not re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(command[0]).name)):
+        raise ValueError("DIAG02 requires its native Python module command")
+    args = command[1:]
+    if args[:1] == ["-u"]:
+        args = args[1:]
+    if args[:2] != ["-m", "src.tools.diag02_baselines"] or args.count("-m") != 1:
+        raise ValueError("DIAG02 requires its exact native producer")
+    def option(flag):
+        if args.count(flag) != 1 or args.index(flag) + 1 >= len(args):
+            raise ValueError("Missing/ambiguous DIAG02 argument: " + flag)
+        return args[args.index(flag) + 1]
+    size = option("--model-size")
+    if size not in ("3b", "7b", "32b") or option("--name") != name or not re.fullmatch(
+            r"diag_diag02_baselines_" + size + r"_[A-Za-z0-9_]+", name):
+        raise ValueError("DIAG02 model/name identity differs")
+    for flag in ("--model-path", "--model-source", "--manifest", "--holdout-reference"):
+        option(flag)
+    timeout = float(option("--timeout-seconds"))
+    if not math.isfinite(timeout) or not 300 <= timeout <= (1740 if size == "3b" else 3540):
+        raise ValueError("DIAG02 driver time is outside its task-specific bound")
+    return size, timeout, "DIAG02E3" if size == "3b" else "DIAG02E4"
+
+
 def budget_group(task, name, command, declared=None):
     """Subbudgets share the approved120 total; historical diagnostic routes are retained."""
+    diag02 = isinstance(name, str) and re.fullmatch(r"diag_diag02_baselines_[A-Za-z0-9_]+", name)
+    if diag02 or "src.tools.diag02_baselines" in (command or []) or declared in ("DIAG02E3", "DIAG02E4"):
+        if task != "T01" or not diag02:
+            raise ValueError("DIAG02 requires its isolated native diagnostic name and task")
+        _, _, expected = diag02_parameters(command, name)
+        if declared != expected:
+            raise ValueError("DIAG02 requires the exact model-specific budget group")
+        return expected
     diag01 = isinstance(name, str) and re.fullmatch(r"diag_diag01_baselines_[A-Za-z0-9_]+", name)
     if diag01 or "src.tools.diag01_baselines" in (command or []):
         if task != "T01" or not diag01 or declared is not None:
@@ -520,10 +555,16 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
     permitted = {"T00b": (1, 2, 4, 8), "T01": (1, 2, 3, 4)}
     if task not in permitted or type(gpus) is not int or gpus not in permitted[task]:
         raise ValueError("GPU count is outside the authorized single-node task plan")
-    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:diag_diag01_baselines_[A-Za-z0-9_]+|t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+|gpu_pack_[A-Za-z0-9_]+)"
+    allowed_name = r"t00b_[A-Za-z0-9_]+" if task == "T00b" else r"(?:diag_diag0[12]_baselines_[A-Za-z0-9_]+|t01_[A-Za-z0-9_]+|pilot_pairs(?:_[A-Za-z0-9_]+)?|smoke_e2e_[A-Za-z0-9_]+|gen_(?:train|test)_[A-Za-z0-9_]+|t02_export_[A-Za-z0-9_]+|gpu_pack_[A-Za-z0-9_]+)"
     if not re.fullmatch(allowed_name, name):
         raise ValueError("Run name must identify the selected task")
     diag01 = bool(re.fullmatch(r"diag_diag01_baselines_[A-Za-z0-9_]+", name))
+    diag02 = bool(re.fullmatch(r"diag_diag02_baselines_[A-Za-z0-9_]+", name))
+    if diag02 or "src.tools.diag02_baselines" in (command or []) or group in ("DIAG02E3", "DIAG02E4"):
+        budget_group(task, name, command, group)
+        size, timeout, _ = diag02_parameters(command, name)
+        if gpus != 1 or not 0 < seconds <= (1800 if size == "3b" else 3600) or timeout > seconds - 60:
+            raise ValueError("DIAG02 requires one GPU and 60 seconds cleanup within its model stop bound")
     if diag01 or "src.tools.diag01_baselines" in (command or []):
         budget_group(task, name, command, group)
         timeout = diag01_timeout(command, name)
@@ -548,7 +589,11 @@ def validate_request(task, gpus, seconds, name, state, group=None, mixed_authori
         raise ValueError("Request would exceed the task's measured-plus-reserved GPU budget")
     if state["accounted_or_reserved_total"] + proposed > TOTAL_LIMIT + 1e-12:
         raise ValueError("Request would exceed the combined 120 GPU-hour budget")
-    group = budget_group(task, name, command if diag01 else [], group)
+    group = budget_group(task, name, command if (diag01 or diag02) else [], group)
+    if diag02:
+        prior = sum(state.get("accounted_or_reserved_by_subbudget", {}).get(g, 0.) for g in ("DIAG02E3", "DIAG02E4"))
+        if not math.isfinite(prior) or prior < 0 or prior + proposed > 3.0 + 1e-12:
+            raise ValueError("DIAG02 exceeds its combined three charged GPU-hour bound")
     if group == PACK_GROUP:
         from src.tools.pbs_mixed_accounting import VERSION, PRIORITY
         groups = (mixed_authorization or {}).get("possible_groups")
