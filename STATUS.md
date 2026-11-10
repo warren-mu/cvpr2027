@@ -1868,3 +1868,9 @@ D1新诊断的首轮失败仅在例图校验处误把累计图片历史当作单
 ### 2026-11-10 10:28 ET — DIAG01 D1真实mask确认漏计，D2/D4原诊断完成
 D1成功02逐实际mask字节重算全部50次训练更新及四次留出，原4文件审计无FAIL；没有用x_seen_step判可见，原首次可见步记录与独立重算均一致。T0训练Look 1614回合实际select前看到80，旧seen42（漏38）；晚期41–50为28/325而旧值0。185次有效观察后mask=0有157、1–249为0、>=250为28。T4晚期328个Look回合仍0，12次观察后均mask0。错误是pilot_contract.episode_observation第87行将完成环境步数与零基select.decision_index严格比较；未修改历史指标/训练配置，T4适用性及证据前信用未见同类错位。3例实际255标号与512模型输入完整有序history逐图SHA全等，路径logs/review/diag01/diag01_visibility_02/example_01..03。原01图像历史检查失败完整保留。
 D2/D4正式diag01_learning_pool_01与两文件原audit均完成无FAIL，详细四类窗口、逐pair选择和LS原筛选链见logs/review/diag01_learning_pool_01/report.json，结论并入DIAG01.report。两项均0 GPU。主实验和训练Look补数继续暂停，D3及测试T02仅按已推固定入口执行。
+
+
+### 2026-11-10 10:58 ET - DIAG01 D3 black retry submitted
+The CPU D1/D2/D4 interim report and three original marked-input episode sets are pushed. D3 original710523 ended at its opening black gate on hopper-18 / GPU-9317c80e-33a9-8f2c-b611-9a459bb1818e before any source/model/evaluation work. Original canonical records163s queue and22s allocation (0.006111111111111111 charged GPU-hours, rate1). Original failure, raw gate images and all evidence remain committed.
+After the exact native DIAG-only retry support and35 original logged CPU regressions passed, the strict guard and seven-file original audit passed. Same-input retry710558 is pinned to hopper-30, 1GPU, PBS55min/driver3240s; actual previous cost plus the full new request is0.9227777777777777 GPU-hours, below the DIAG01-specific1GPU-hour bound. No training configuration or scientific threshold changed.
+The original15:55:52UTC query records710558 Q/no allocation, actualqtime15:54:56UTC. The20-minute boundary is16:14:56UTC; any cancellation will require a fresh Q/no-allocation check at that time. Running jobs are not cancelled. Original query and submit wrapper audit:2files,0FAIL. The main experiments and training Look supplementation remain paused; testT02 exports continue separately.

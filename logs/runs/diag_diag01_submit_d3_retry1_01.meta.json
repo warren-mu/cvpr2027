@@ -1,0 +1,28 @@
+{
+  "name": "diag_diag01_submit_d3_retry1_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_diag01_submit_d3_retry1_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport hashlib,subprocess\nfrom src.tools.t01_partition import audited_result\np=Path('results/diag_diag01_d3_710523_host_preflight_01.json')\nassert hashlib.sha256(p.read_bytes()).hexdigest()=='4aad290351c14d01d0f0aa17bfe86e0d85e139695c109a9397cf69132e620177'\nd,ref=audited_result(p);assert d['_meta']['exit_code']==0\nname='diag_diag01_baselines_s0_01_retry1'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\nraise SystemExit(subprocess.call(d['metrics']['submit_command']))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T23:53:18",
+  "log_path": "logs/runs/diag_diag01_submit_d3_retry1_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c8b09a4319f17430f202c509f5c6264600ceaad4",
+  "git_dirty": false,
+  "end": "2026-11-10T23:54:57",
+  "duration_sec": 98.0,
+  "exit_code": 0,
+  "metrics_sha256": "18ea983bc7c0f33de08a5b332e14e545bf6ebf77941c4f01e136b360c69547a5"
+}

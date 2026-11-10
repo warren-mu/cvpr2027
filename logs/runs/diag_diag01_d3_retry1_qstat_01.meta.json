@@ -1,0 +1,28 @@
+{
+  "name": "diag_diag01_d3_retry1_qstat_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_diag01_d3_retry1_qstat_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,sys; p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx','-F','json','710558.hopper-m-02'],capture_output=True,text=True,timeout=30);print(p.stdout,end='');print(p.stderr,file=sys.stderr,end='');sys.exit(p.returncode)"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T23:55:49",
+  "log_path": "logs/runs/diag_diag01_d3_retry1_qstat_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "c8b09a4319f17430f202c509f5c6264600ceaad4",
+  "git_dirty": false,
+  "end": "2026-11-10T23:56:12",
+  "duration_sec": 20.2,
+  "exit_code": 0,
+  "metrics_sha256": "fe62d8f3b46365ae2f2a431780104b1ce6d62923259bb8cf8d67ec6619d6bbf6"
+}
