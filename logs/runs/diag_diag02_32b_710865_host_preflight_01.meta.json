@@ -1,0 +1,22 @@
+{
+  "name": "diag_diag02_32b_710865_host_preflight_01",
+  "command": [
+    "python3",
+    "-c",
+    "import hashlib,json,importlib.util\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve();name='diag_diag02_32b_710865_host_preflight_01';guard_file='results/diag_diag02_32b_710865_black_guard_01.json'\nreference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}\nguard,_=b.logged(r,reference);proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)\nnew_name='diag_diag02_baselines_32b_s0_01_retry1';command=list(old['command']);command[command.index('--name')+1]=new_name\nindex,previous=b.rotation(r);previous_host=None\nif previous:\n _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']\nhost=b.next_host(b.VERSION,index,previous_host)\nbinding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='DIAG02E4',gpus=1,wall_seconds=3600)\nspec=importlib.util.spec_from_file_location('diag02_original_phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)\naccount,apath=b.logged(r,proof['pbs_accounting']);final=phase._final_accounting(r,{'710863.hopper-m-02','710865.hopper-m-02'},paths=[apath]);b.require(set(final)=={'710863.hopper-m-02','710865.hopper-m-02'},'Both original E4 jobs require canonical final accounting')\nactual=sum(row['charged_gpu_hours'] for row in final.values())\nqueue_policy=phase.charge_policy();rate=phase.positive_rate(queue_policy['rates']['smallx']);requested=3600/3600*rate\nb.require(actual+requested<=2.,'E4 previous actual plus unchanged request exceeds two charged GPU hours')\nb.require(not(r/'results'/f'{new_name}.json').exists() and not list((r/'logs/pbs').glob(new_name+'-*')),'Retry name already used')\nsubmit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--gpus','1','--walltime','01:00:00','--budget-group','DIAG02E4','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]\nmetrics={'validated':True,'host_authorization':binding,'submit_command':submit,'diag02_e4_charged_gpu_hours_limit':2.,'prior_e4_actual_charged_gpu_hours':actual,'requested_full_charged_gpu_hours':requested,'actual_plus_full_request_charged_gpu_hours':actual+requested,'charge_policy':queue_policy,'scope':'Preflight only; original submitter repeats complete group and shared checks under its reservation lock'}\nresult={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256']),dict(proof['pbs_accounting'],metrics_sha256=account['_meta']['metrics_sha256'])]}\nwith (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write(chr(10))\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-11T04:25:14",
+  "log_path": "logs/runs/diag_diag02_32b_710865_host_preflight_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "51120eb442e16c01afa18af581793cd6d71fb1dd",
+  "git_dirty": false,
+  "end": "2026-11-11T04:25:17",
+  "duration_sec": 0.8,
+  "exit_code": 1,
+  "results_missing": true
+}

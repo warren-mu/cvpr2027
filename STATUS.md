@@ -1957,3 +1957,13 @@ DIAG02 3B已提交710854，1卡、25分钟、首对工程检查后才继续82对
 DIAG02 3B completed all 498 episodes and independent review. Job710854 cost0.0997222222 GPUh. LF success never22/44, trigger23/44, cov23/44; LS16/36,20/36,20/36. Actual immediate cov selection: LF0/44,LS11/36. The LF variant never triggered, so its equal success does not establish failure of single-image reasoning. Uncached same-order repeats changed actual action/text/tokens in2/86 controls; exact full-input-once evaluation had0/86 inconsistent Direct controls. 7B also completed498 episodes and independent review.
 32B first job710865 failed opening rendering on hopper-23 / GPU-1811d176-d6fe-7645-784b-f42b78cc1625, exit86, no business episodes, actual0.0066666667 GPUh. Preserve evidence and use approved strict black retry; no policy or threshold change. 7B710863 cost0.1 GPUh, queue39s.
 T02 first6 job710859 failed on FP323_00139: cached inter-world maximum3 vs fresh4 at one right-edge pixel. Byte comparison ruled out compression corruption or state/world mapping errors. Preserve the threshold3 rule.30/200 states were checked; other5 original pairs remain unchecked, neither FAIL nor PASS. The remaining70 successful exports have12 fixed-order independent-check batches prepared; original95 candidate ledger,19 export errors, this1 failure and5 unchecked remain. First6 cost0.104167 GPUh; current provenance audit0FAIL.
+
+
+### 2026-11-10 15:38 ET — DIAG02与测试缓存作业已提交
+32B 黑帧首投 710865 的严格 guard 与 host preflight 均已通过，按原 1 卡、1 小时、3540 秒业务上限重提为 710872，指定 hopper-30。原 PBS qtime/etime 为 20:28:53 UTC；20:48:53 UTC（15:48:53 美东）若仍未启动且无分配，才走原取消与不指定节点重提流程，运行中的作业不动。黑帧 hopper-23 与 GPU UUID、原 24 秒用量完整保留。
+
+7B 的 LF 原成功数为 never 22/44、trigger/cov 各 27/44；LS 为 14/36、20/36、16/36。3B、7B 的独立复核都确认实际 cov 当场选择为 LF 0/44、LS 11/36，因此没有通过本轮 LF 变体检验“共视后单图选择”的收益。两个模型各 86 个 Direct 控制完整输入/输出一致；3B 未缓存同序再调用的 2/86 差异确实涉及选择动作。
+
+测试集原剩余 70 个成功导出来源按已推送计划继续独立缓存复核，b01 为 710875（hopper-18 开卡检查通过），b02 使用另一个空闲单卡名额。原 first6 的 FP323_00139 真实共享/分叉分类失败、另外 5 对未检查和全部原 95 候选账本均保留。没有修改阈值、训练配置或冻结数据池，没有提交主实验。
+
+b02: PBS 710881.hopper-m-02.

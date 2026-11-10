@@ -1,0 +1,37 @@
+# run_logged: python3 -c import hashlib,json,importlib.util
+from pathlib import Path
+from src.tools import pbs_black_retry as b
+r=Path.cwd().resolve();name='diag_diag02_32b_710865_host_preflight_01';guard_file='results/diag_diag02_32b_710865_black_guard_01.json'
+reference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}
+guard,_=b.logged(r,reference);proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)
+new_name='diag_diag02_baselines_32b_s0_01_retry1';command=list(old['command']);command[command.index('--name')+1]=new_name
+index,previous=b.rotation(r);previous_host=None
+if previous:
+ _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']
+host=b.next_host(b.VERSION,index,previous_host)
+binding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='DIAG02E4',gpus=1,wall_seconds=3600)
+spec=importlib.util.spec_from_file_location('diag02_original_phase',r/'scripts/pbs/submit_phase.py');phase=importlib.util.module_from_spec(spec);spec.loader.exec_module(phase)
+account,apath=b.logged(r,proof['pbs_accounting']);final=phase._final_accounting(r,{'710863.hopper-m-02','710865.hopper-m-02'},paths=[apath]);b.require(set(final)=={'710863.hopper-m-02','710865.hopper-m-02'},'Both original E4 jobs require canonical final accounting')
+actual=sum(row['charged_gpu_hours'] for row in final.values())
+queue_policy=phase.charge_policy();rate=phase.positive_rate(queue_policy['rates']['smallx']);requested=3600/3600*rate
+b.require(actual+requested<=2.,'E4 previous actual plus unchanged request exceeds two charged GPU hours')
+b.require(not(r/'results'/f'{new_name}.json').exists() and not list((r/'logs/pbs').glob(new_name+'-*')),'Retry name already used')
+submit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--gpus','1','--walltime','01:00:00','--budget-group','DIAG02E4','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]
+metrics={'validated':True,'host_authorization':binding,'submit_command':submit,'diag02_e4_charged_gpu_hours_limit':2.,'prior_e4_actual_charged_gpu_hours':actual,'requested_full_charged_gpu_hours':requested,'actual_plus_full_request_charged_gpu_hours':actual+requested,'charge_policy':queue_policy,'scope':'Preflight only; original submitter repeats complete group and shared checks under its reservation lock'}
+result={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256']),dict(proof['pbs_accounting'],metrics_sha256=account['_meta']['metrics_sha256'])]}
+with (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write(chr(10))
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-11T04:25:14
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/scripts/pbs/submit_phase.py", line 234, in charge_policy
+    query = subprocess.run(command, capture_output=True, text=True, timeout=180)
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 503, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 971, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/subprocess.py", line 1863, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'qstat'
+# exit_code: 1
