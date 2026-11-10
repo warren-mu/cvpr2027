@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 141.13566620001802
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,subprocess\nfrom pathlib import Path\nold=json.loads(Path('logs/pbs/t02_export_cache_six09_14_01_retry2-20261110T014318Z-b5ccb023/payload.json').read_text())\nname='t02_export_cache_six09_14_01_retry3'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\ncommand=[name if value==old['name'] else value for value in old['command']]\nargs=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','T02','--name',name,'--gpus','1','--walltime','01:59:29','--host','hopper-28','--retry-of','709482.hopper-m-02','--black-retry-evidence','results/diag_t02_cache_six09_14_retry2_black_host_guard_01.json','--black-retry-evidence-sha256','fe84afe8a6598b377073faf1c46d89f834952ba4d616d081fd565d1ef194b79d','--',*command]\nprint('SAME_CACHE_BLACK_RETRY_COMMAND: '+json.dumps(args),flush=True)\nraise SystemExit(subprocess.call(args))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_submit_t02_cache_retry3_black_host_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_submit_t02_cache_retry3_black_host_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,subprocess\nfrom pathlib import Path\nold=json.loads(Path('logs/pbs/t02_export_cache_six09_14_01_retry2-20261110T014318Z-b5ccb023/payload.json').read_text())\nname='t02_export_cache_six09_14_01_retry3'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\ncommand=[name if value==old['name'] else value for value in old['command']]\nargs=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','T02','--name',name,'--gpus','1','--walltime','01:59:29','--host','hopper-28','--retry-of','709482.hopper-m-02','--black-retry-evidence','results/diag_t02_cache_six09_14_retry2_black_host_guard_01.json','--black-retry-evidence-sha256','fe84afe8a6598b377073faf1c46d89f834952ba4d616d081fd565d1ef194b79d','--',*command]\nprint('SAME_CACHE_BLACK_RETRY_COMMAND: '+json.dumps(args),flush=True)\nraise SystemExit(subprocess.call(args))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T10:06:24",
+    "log_path": "logs/runs/diag_submit_t02_cache_retry3_black_host_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "6ce9bf38c21568efbd64d9619c9bb6ed26b073a6",
+    "git_dirty": false,
+    "end": "2026-11-10T10:08:49",
+    "duration_sec": 141.4,
+    "exit_code": 0,
+    "metrics_sha256": "87a2d40ffcb89abde4ee9223f1fa3a34d96edcae590cd74aa2908aa003303f35"
+  }
+}

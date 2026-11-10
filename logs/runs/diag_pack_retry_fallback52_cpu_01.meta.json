@@ -1,0 +1,28 @@
+{
+  "name": "diag_pack_retry_fallback52_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pack_retry_fallback52_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest,sys\nloader=unittest.TestLoader(); suite=unittest.TestSuite()\nfor p in ('test_pbs_pack_black_retry.py','test_pbs_black_retry.py','test_gpu_pack.py','test_mixed_phase_budget.py','test_smoke_e2e_pilot_dataset.py'):\n suite.addTests(loader.discover('tests',pattern=p))\nr=unittest.TextTestRunner(verbosity=2).run(suite)\nsys.exit(not r.wasSuccessful())\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:22:34",
+  "log_path": "logs/runs/diag_pack_retry_fallback52_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "9efb3706870b61fd7e37b60977443220f0811902",
+  "git_dirty": false,
+  "end": "2026-11-10T10:22:49",
+  "duration_sec": 13.2,
+  "exit_code": 0,
+  "metrics_sha256": "dc377639cf60aa532ab76a8c1c41df076296cac9548c2c507118cbca0d7bd984"
+}

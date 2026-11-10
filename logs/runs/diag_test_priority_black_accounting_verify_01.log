@@ -1,0 +1,19 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_priority_black_accounting_verify_01 -- python3 -c from pathlib import Path
+import json,importlib.util
+from src.tools import pbs_mixed_accounting as mixed
+root=Path.cwd().resolve()
+spec=importlib.util.spec_from_file_location('existing_original_submit',root/'scripts/pbs/submit_phase.py')
+submit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)
+rows=[('gpu_pack_test_priority_single_01','709485.hopper-m-02'),('gpu_pack_test_priority_single_02','709489.hopper-m-02')]
+canonical=submit._final_accounting(root,{j for n,j in rows},paths=[root/'results/diag_gpu_pack_test_priority_singles_0102_accounting_01.json'])
+for name,job in rows:
+ report=json.loads((root/'results'/(name+'_mixed_accounting.json')).read_text())
+ actual=mixed.finalized_split(root,{'name':name,'payload':report['config']['payload_reference']['file'],'job_id':job},canonical[job])
+ assert actual is not None
+ print('ORIGINAL_FINALIZED_SPLIT_ACCEPTED: '+json.dumps({'name':name,'job_id':job,'charged_gpu_hours_by_group':actual['charged_gpu_hours_by_group'],'total_charged_gpu_hours':actual['total_charged_gpu_hours']}),flush=True)
+
+# start: 2026-11-10T10:06:27
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED: {"name": "gpu_pack_test_priority_single_01", "job_id": "709485.hopper-m-02", "charged_gpu_hours_by_group": {"G01": 0.005833333333333334, "T02": 0.0}, "total_charged_gpu_hours": 0.005833333333333334}
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED: {"name": "gpu_pack_test_priority_single_02", "job_id": "709489.hopper-m-02", "charged_gpu_hours_by_group": {"G01": 0.006111111111111111, "T02": 0.0}, "total_charged_gpu_hours": 0.006111111111111111}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.13125219498761}
+# exit_code: 0

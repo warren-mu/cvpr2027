@@ -1,0 +1,77 @@
+# run_logged: python3 -m src.tools.record_command --name diag_current_storage_forecast_01 -- python3 -c """One-off planning amendment; preserves the original retained-byte measurement."""
+import hashlib,json,os
+from pathlib import Path
+ROOT=Path.cwd().resolve()
+NAME='diag_current_storage_forecast_01'
+refs=[]
+def read(path,sha=None):
+ p=(ROOT/path).resolve();p.relative_to(ROOT);b=p.read_bytes();s=hashlib.sha256(b).hexdigest()
+ if sha is not None and s!=sha:raise ValueError('Original SHA mismatch: '+path)
+ ref={'file':str(p.relative_to(ROOT)),'sha256':s};refs.append(ref)
+ return json.loads(b),ref
+def main():
+ if os.environ.get('CVPR_RUN_NAME')!=NAME:raise ValueError('Logged identity required')
+ m,mref=read('logs/review/diag_current_owned_storage_01/report.json','8673fb06d7ef85dd7028c02ba4aff7690dda6bda4da27446c3a88714c6359f0e')
+ measured={r['name']:r for r in m['groups']}
+ success=measured['t02_export_cache_six05_08_01_retry2']
+ original,_=read(success['source']['file'],success['source']['sha256'])
+ if original['_meta']['exit_code']!=0 or success['exit_code']!=0 or success['sample_size_requested']!=200:
+  raise ValueError('Planning basis must be original successful23/200 run')
+ if len(original['metrics']['population_ledger'])!=23:raise ValueError('Expected exact23 original population')
+ inventory,iref=read('configs/t02_export_current_train.json')
+ full={e['proposal_identity']:e for e in inventory['entries']}
+ if len(full)!=len(inventory['entries']) or len(full)!=161:raise ValueError('Original161 unique inputs changed')
+ pending=[]
+ for u in m['remaining_queue_units']:
+  if u['already_claimed_or_reserved']:continue
+  v,_=read(u['manifest']['file'],u['manifest']['sha256'])
+  pending.extend(v['entries'])
+ def identify(rows):
+  ids=[]
+  for e in rows:
+   key=e['proposal_identity'];base=full[key]
+   if any(e.get(k)!=base.get(k) for k in ['pair','source','original_id','pair_id','field_of_view','dataset_key']):
+    raise ValueError('Original candidate identity differs')
+   ids.append(key)
+  if len(set(ids))!=len(ids):raise ValueError('Duplicate original proposal')
+  return set(ids)
+ pids=identify(pending)
+ fixed,fref=read('configs/t02_cache_six09_14_fixed.json','03888e80a440e6fc28a7847b9aa4cdc4cdd44cd1591538d8a13fac0431994f9f')
+ usable=[r for r in fixed['attempt_ledger'] if r['export_complete_pending_cache'] is True]
+ cids=identify([r['entry'] for r in usable])
+ if len(cids)!=31 or set(fixed['source'])!={r['result']['file'] for r in usable} or pids&cids:
+  raise ValueError('31 cache population overlaps pending exports or differs from fixed source list')
+ checked,checkedref=read('results/diag_t02_checked_training_52_02.json','f5646c14580a284b461ef32b3c5f8b61a68fd3af5f678ef1c2b7a679f137cee8')
+ if checked['_meta']['exit_code']!=0 or checked['metrics']['pair_count']!=52:raise ValueError('Original52 count record mismatch')
+ cache_reserve=success['allocated_bytes']*31/23*1.3
+ planning={'scope':'Explicit planning assumptions only; fixed200 sample is unchanged, so31/23 scaling is neither measured performance nor a hard storage upper bound',
+  'successful_cache_basis_bytes':success['allocated_bytes'],'successful_cache_population':23,'future_cache_population':31,'sample_size_both':200,
+  'cache_scale_formula':'successful23 retained_bytes *31/23 *1.3','same31_cache_reserve_bytes':cache_reserve,
+  'future_export_reserve_bytes':m['planning']['future_export_reserve_bytes'],
+  'future_test_reserve_bytes':m['planning']['future_test_reserve_bytes'],
+  'four_final_pilot_actors_assumed_bytes':28e9,'twelve_later_main_actors_assumed_bytes':84e9,
+  'hard_upper_bound_bytes':None,'unbounded_retries_and_future_test_T02_excluded':True}
+ planning['pipeline_and_pilot_reserve_bytes']=sum(planning[k] for k in ['same31_cache_reserve_bytes','future_export_reserve_bytes','future_test_reserve_bytes','four_final_pilot_actors_assumed_bytes'])
+ planning['including_later_main_reserve_bytes']=planning['pipeline_and_pilot_reserve_bytes']+84e9
+ report={'source_references':refs,'measurement_unchanged':mref,'candidate_inventory':iref,'fixed31_reference':fref,'existing52_count_reference':checkedref,
+  'counts':{'original_candidate_inputs':161,'unclaimed_export_attempts_at_snapshot':len(pids),'earlier_scheduled_candidates_not_all_cache_passed':161-len(pids),
+    'already_exported_fixed31_pending_cache':len(cids),'intersection_unclaimed_and_fixed31':len(pids&cids),'existing_formal_cache52':52},
+  'planning':planning,'original_measurement_method':m['measurement'],'queue_snapshot_reference':m['queue_state_snapshot']}
+ out=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False)
+ body=(json.dumps(report,indent=2,sort_keys=True)+'\n').encode();(out/'report.json').write_bytes(body)
+ lines=['存储只读测量与规划：`diag_current_owned_storage_01`（98.3秒，最多2路du；原结果未修改）。完整路径/SHA见 `logs/review/diag_current_owned_storage_01/report.json`；本次规划修正见 `logs/review/'+NAME+'/report.json`。单位为十进制GB。','',
+ '| 原任务独有 scratch（父与全部子目录） | 当前留存 GB |','|---|---:|']
+ for name in ['gen_test_s16_round2_s01','gen_test_s16_round2_s02','gen_test_s16_round2_s03','t02_export_train_six_16','t02_export_train_six_17','t02_export_train_six_18','t02_export_train_six_19','t02_export_cache_six09_14_01','t02_export_cache_six09_14_01_retry1','t02_export_cache_six05_08_01_retry2']:
+  lines.append('| '+name+' | %.3f |'%(measured[name]['allocated_bytes']/1e9))
+ lines+=['', '这些数字是本次新建独有目录目前留存，不是历史写入峰值，也不含已有source表、home产物及共享缓存。两个31缓存均失败，其留存不用于完整31规划。', '',
+  '原161候选manifest中，锁内队列快照尚未领取20–26批共%d对；这%d对与已导出、等待正式cache的固定31对交集为0。原52正式cache通过单独保留；161或已导出均不等于训练池合格。'%(len(pids),len(pids)), '',
+  '后续规划：41次导出按近期最大每attempt×1.3预留%.3f GB；S04修复重跑及S05–S07共22场景按最大每scene×1.3预留%.3f GB。唯一成功23对/200states缓存留存%.3f GB，按31/23×1.3假设预留%.3f GB；200states不变，因此该线性式仅为工程假设，不是实测上界。'% (planning['future_export_reserve_bytes']/1e9,planning['future_test_reserve_bytes']/1e9,success['allocated_bytes']/1e9,cache_reserve/1e9), '',
+  '四次短测/T0/T4/T2各最后actor按7GB共28GB；以后main12×7GB为84GB。当前pipeline+pilot规划新增%.3f GB，连以后main为%.3f GB；未包含无限重试和未来测试集完整T02导出，不能当硬上界。以root最新879.8GB/1TB观察为基线，容量不足。只报告，不删除文件，不改变记录规则；任何仅针对未来拒绝记录的精简方案等待人类/Claude决定。'%(planning['pipeline_and_pilot_reserve_bytes']/1e9,planning['including_later_main_reserve_bytes']/1e9)]
+ (out/'status_append.md').write_text('\n'.join(lines)+'\n')
+ print('STORAGE_FORECAST_JSON: '+json.dumps({'report':{'file':str((out/'report.json').relative_to(ROOT)),'sha256':hashlib.sha256(body).hexdigest()},'counts':report['counts'],'planning':planning}),flush=True)
+if __name__=='__main__':main()
+
+# start: 2026-11-10T10:23:34
+STORAGE_FORECAST_JSON: {"report": {"file": "logs/review/diag_current_storage_forecast_01/report.json", "sha256": "8dcbdabef141dc131030ffa27581107338d9a0567af1844dfc4a2a594870d816"}, "counts": {"original_candidate_inputs": 161, "unclaimed_export_attempts_at_snapshot": 41, "earlier_scheduled_candidates_not_all_cache_passed": 120, "already_exported_fixed31_pending_cache": 31, "intersection_unclaimed_and_fixed31": 0, "existing_formal_cache52": 52}, "planning": {"scope": "Explicit planning assumptions only; fixed200 sample is unchanged, so31/23 scaling is neither measured performance nor a hard storage upper bound", "successful_cache_basis_bytes": 1000914944, "successful_cache_population": 23, "future_cache_population": 31, "sample_size_both": 200, "cache_scale_formula": "successful23 retained_bytes *31/23 *1.3", "same31_cache_reserve_bytes": 1753777054.0521739, "future_export_reserve_bytes": 67737844872.53334, "future_test_reserve_bytes": 61041545898.66667, "four_final_pilot_actors_assumed_bytes": 28000000000.0, "twelve_later_main_actors_assumed_bytes": 84000000000.0, "hard_upper_bound_bytes": null, "unbounded_retries_and_future_test_T02_excluded": true, "pipeline_and_pilot_reserve_bytes": 158533167825.2522, "including_later_main_reserve_bytes": 242533167825.2522}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.07041317998664454}
+# exit_code: 0

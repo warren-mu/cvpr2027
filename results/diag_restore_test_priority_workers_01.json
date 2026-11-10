@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 416.38340011495166
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,json,subprocess,time\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nplan='configs/shared_test_priority_active_01.json'\nsha='a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a'\nassert hashlib.sha256(Path(plan).read_bytes()).hexdigest()==sha\nold=json.loads(Path('logs/pbs/gpu_pack_test_priority_first_01-20261110T005523Z-e04dcd1f/payload.json').read_text())\nroot='/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01'\ndef query(cmd):\n rows=[]\n for attempt in range(2):\n  try:\n   p=subprocess.run(cmd,text=True,capture_output=True,timeout=30)\n   rows.append({'attempt':attempt+1,'returncode':p.returncode,'stdout':p.stdout,'stderr':p.stderr});break\n  except subprocess.TimeoutExpired:rows.append({'attempt':attempt+1,'timeout_seconds':30})\n return {'command':cmd,'attempts':rows}\nfor row in ThreadPoolExecutor(max_workers=3).map(query,[['qstat','-Qf','mediumx','smallx'],['qstat','-u','e1583364'],['pbsnodes','-a','-F','json']]):\n print('PRESUBMISSION_CLUSTER_QUERY: '+json.dumps(row),flush=True)\nfor name,gpus,timeout,wall in [('gpu_pack_test_priority_single_01',1,1825,'00:30:55'),('gpu_pack_test_priority_single_02',1,1825,'00:30:55'),('gpu_pack_test_priority_4gpu_01',4,2790,'00:47:00')]:\n assert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\n command=list(old['command'])\n for flag,value in [('--name',name),('--gpus',str(gpus)),('--queue-plan',plan),('--queue-plan-sha256',sha),('--queue-root',root),('--timeout-seconds',str(timeout))]:\n  index=command.index(flag);command[index+1]=value\n args=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','PACK','--name',name,'--gpus',str(gpus),'--walltime',wall,'--',*command]\n print('SHARED_EXACT_SUBMISSION: '+json.dumps(args),flush=True)\n code=subprocess.call(args)\n if code:raise SystemExit(code)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_restore_test_priority_workers_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_restore_test_priority_workers_01",
+      "--",
+      "python3",
+      "-c",
+      "import hashlib,json,subprocess,time\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nplan='configs/shared_test_priority_active_01.json'\nsha='a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a'\nassert hashlib.sha256(Path(plan).read_bytes()).hexdigest()==sha\nold=json.loads(Path('logs/pbs/gpu_pack_test_priority_first_01-20261110T005523Z-e04dcd1f/payload.json').read_text())\nroot='/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01'\ndef query(cmd):\n rows=[]\n for attempt in range(2):\n  try:\n   p=subprocess.run(cmd,text=True,capture_output=True,timeout=30)\n   rows.append({'attempt':attempt+1,'returncode':p.returncode,'stdout':p.stdout,'stderr':p.stderr});break\n  except subprocess.TimeoutExpired:rows.append({'attempt':attempt+1,'timeout_seconds':30})\n return {'command':cmd,'attempts':rows}\nfor row in ThreadPoolExecutor(max_workers=3).map(query,[['qstat','-Qf','mediumx','smallx'],['qstat','-u','e1583364'],['pbsnodes','-a','-F','json']]):\n print('PRESUBMISSION_CLUSTER_QUERY: '+json.dumps(row),flush=True)\nfor name,gpus,timeout,wall in [('gpu_pack_test_priority_single_01',1,1825,'00:30:55'),('gpu_pack_test_priority_single_02',1,1825,'00:30:55'),('gpu_pack_test_priority_4gpu_01',4,2790,'00:47:00')]:\n assert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\n command=list(old['command'])\n for flag,value in [('--name',name),('--gpus',str(gpus)),('--queue-plan',plan),('--queue-plan-sha256',sha),('--queue-root',root),('--timeout-seconds',str(timeout))]:\n  index=command.index(flag);command[index+1]=value\n args=['python3','scripts/pbs/submit_phase.py','--task','T01','--budget-group','PACK','--name',name,'--gpus',str(gpus),'--walltime',wall,'--',*command]\n print('SHARED_EXACT_SUBMISSION: '+json.dumps(args),flush=True)\n code=subprocess.call(args)\n if code:raise SystemExit(code)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:45:34",
+    "log_path": "logs/runs/diag_restore_test_priority_workers_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "928a0c6803cb73a1105268afcc45d9d8514712d9",
+    "git_dirty": false,
+    "end": "2026-11-10T09:52:34",
+    "duration_sec": 416.6,
+    "exit_code": 0,
+    "metrics_sha256": "ce4ee57a148c8a566fc06491761527efc72e28c007bba4e021dc003cd6bacf0f"
+  }
+}

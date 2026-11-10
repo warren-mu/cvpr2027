@@ -1,0 +1,79 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pack_retry_fallback52_cpu_01 -- python3 -c import unittest,sys
+loader=unittest.TestLoader(); suite=unittest.TestSuite()
+for p in ('test_pbs_pack_black_retry.py','test_pbs_black_retry.py','test_gpu_pack.py','test_mixed_phase_budget.py','test_smoke_e2e_pilot_dataset.py'):
+ suite.addTests(loader.discover('tests',pattern=p))
+r=unittest.TextTestRunner(verbosity=2).run(suite)
+sys.exit(not r.wasSuccessful())
+
+# start: 2026-11-10T10:22:34
+test_any_started_claim_or_unit_cleanup_or_nonblack_gate_rejects (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_hidden_actual_claim_rejected_by_original_mixed_ownership_scan (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_missing_or_tampered_mixed_cost_cannot_authorize_retry (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_only_name_can_change_and_four_gpu_pack_cannot_pin (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_real_mixed_zero_business_and_common_native_black_chain (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_runtime_revalidates_pinned_payload_but_leaves_unpinned_path_unchanged (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_unrelated_gate_command_and_allocation_do_not_pass (test_pbs_pack_black_retry.PackBlackRetryTests) ... ok
+test_first_nonblack_unknown_host_and_two_gpu_rejected (test_pbs_black_retry.BlackRetryTests) ... ok
+test_global_mixed_version_history_and_runtime_prefix_are_stable (test_pbs_black_retry.BlackRetryTests) ... ok
+test_immutable_quota_retry_only_changes_parent_identity (test_pbs_black_retry.BlackRetryTests) ... ok
+test_missing_cleanup_or_nonblack_actual_png_rejected (test_pbs_black_retry.BlackRetryTests) ... ok
+test_new_requests_exclude22_and_bind_available_policy (test_pbs_black_retry.BlackRetryTests) ... ok
+test_new_strict_retry_after_three_legacy_reservations_uses28 (test_pbs_black_retry.BlackRetryTests) ... ok
+test_original_source_byte_mutation_rejected (test_pbs_black_retry.BlackRetryTests) ... ok
+test_real_black_chain_and_runtime_exact_binding (test_pbs_black_retry.BlackRetryTests) ... ok
+test_science_arguments_or_business_started_are_never_retried (test_pbs_black_retry.BlackRetryTests) ... ok
+test_black_lane_is_retired_and_other_lanes_keep_claiming (test_gpu_pack.PackMainTests) ... ok
+test_empty_shared_queue_exits_before_any_gpu_gate (test_gpu_pack.PackMainTests) ... ok
+test_four_gpu_lanes_use_disjoint_twelve_cpu_masks_and_original_commands (test_gpu_pack.PackMainTests) ... ok
+test_launch_failure_release_explicitly_records_no_started_process (test_gpu_pack.PackMainTests) ... ok
+test_real_original_unit_failure_is_retained_and_next_unit_still_runs (test_gpu_pack.PackMainTests) ... ok
+test_unknown_cleanup_stops_new_claims_and_never_claims_complete (test_gpu_pack.PackMainTests) ... Traceback (most recent call last):
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_pack.py", line 227, in main
+    ended, data = end_unit(queue, running, sources)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_pack.py", line 119, in end_unit
+    require(data['metrics'].get('cleanup_errors') == [], 'Unit did not confirm owned-process cleanup')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/gpu_shared_claim.py", line 28, in require
+    raise ValueError(message)
+ValueError: Unit did not confirm owned-process cleanup
+ok
+test_explicit_route_no_alias_unbound_plan_or_two_gpu (test_mixed_phase_budget.BudgetTests) ... ok
+test_final_shared_cost_keeps_full_group_reservations_until_exact_split (test_mixed_phase_budget.BudgetTests) ... ok
+test_reserve_each_possible_group_shared_once (test_mixed_phase_budget.BudgetTests) ... ok
+test_intervals_actual_rate_priority_remainder_and_exact_total (test_mixed_phase_budget.CostTests) ... ok
+test_invalid_rate_group_and_gpu_reject (test_mixed_phase_budget.CostTests) ... ok
+test_overlap_unknown_cleanup_wrong_duration_and_excess_time_reject (test_mixed_phase_budget.CostTests) ... ok
+test_started_group_or_zero_business_priority (test_mixed_phase_budget.CostTests) ... ok
+test_changed_original_release_and_unknown_cleanup_reject (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_failed_science_unit_still_has_conserved_allocation_cost (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_finalized_split_replays_every_original_reference_and_rejects_claimed_cost_change (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_no_finalized_split_returns_none_and_does_not_invent_zero (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_owned_claim_cannot_be_omitted_from_parent_unit_runs (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_unknown_cleanup_rejects_release (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_wrong_actual_gpu_count_rejected_by_original_canonical (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_zero_business_still_charged_to_highest_planned_group (test_mixed_phase_budget.ProvenanceTests) ... ok
+test_51_and_missing_class_rejected_after_complete_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_default80_gate_has_no_exception_and_no_qualification_fields (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_early_selection_rejected_before_any_native_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_exact52_all_retained_with_original_flip_and_scene_split (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_frozen_fallback_reload_reauthenticates_exact_sources_and_policy (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_reload_before_deadline_still_rejected (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_source_replacement_or_later_cache_addition_rejected_before_authentication (test_smoke_e2e_pilot_dataset.DeadlineFallback52Tests) ... ok
+test_failed_missing_or_unsealed_cache_is_not_training_authorization (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_chain_and_immutable_reports_are_required (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_native_failure_and_reused_process_propagate (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_only_fresh_audit_annotation_is_ignored_not_source_bytes_or_membership (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_duplicate_proposals_not_dropped_even_across_different_ids (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_keep_all_and_scene_holdout_preserve_world_orders_and_no_overlap (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_manifest_recomputed_not_trusting_saved_authorization_flags (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_single_sided_stay_and_global_skew_do_not_remove_any_qualified_pair (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_size_gate_applies_to_authenticated_inventory_and_no_class_can_be_missing (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_split_is_stable_under_input_order_and_same_scene_is_indivisible (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_test_scene_nonformal_and_other_camera_cannot_enter (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_unknown_or_skewed_left_diagnostic_is_not_a_new_pilot_gate (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+
+----------------------------------------------------------------------
+Ran 56 tests in 11.791s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 12.719737502979115}
+# exit_code: 0

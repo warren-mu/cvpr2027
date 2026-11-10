@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 62.107186755980365
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import importlib,json,sys,unittest\nfrom pathlib import Path\nsys.path.insert(0,str(Path('tests').resolve()))\nnames=['test_smoke_e2e_actor_checkpoint','test_pilot_fresh_read_reuse','test_smoke_e2e_pilot_dataset','test_smoke_e2e_pilot','test_smoke_e2e_pilot_actor','test_smoke_e2e_pilot_contract','test_smoke_e2e_frozen_training','test_t02_evidence_read_session','test_t02_cache_check','test_pair_table_cache']\nsuite=unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(importlib.import_module(name)) for name in names)\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nprint('CPU_SUITE_SUMMARY: '+json.dumps({'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':[str(test) for test,_ in result.skipped],'modules':names}),flush=True)\nraise SystemExit(0 if result.wasSuccessful() and not result.skipped else 1)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot_actor_bf16_fresh_reuse_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot_actor_bf16_fresh_reuse_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import importlib,json,sys,unittest\nfrom pathlib import Path\nsys.path.insert(0,str(Path('tests').resolve()))\nnames=['test_smoke_e2e_actor_checkpoint','test_pilot_fresh_read_reuse','test_smoke_e2e_pilot_dataset','test_smoke_e2e_pilot','test_smoke_e2e_pilot_actor','test_smoke_e2e_pilot_contract','test_smoke_e2e_frozen_training','test_t02_evidence_read_session','test_t02_cache_check','test_pair_table_cache']\nsuite=unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(importlib.import_module(name)) for name in names)\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nprint('CPU_SUITE_SUMMARY: '+json.dumps({'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':[str(test) for test,_ in result.skipped],'modules':names}),flush=True)\nraise SystemExit(0 if result.wasSuccessful() and not result.skipped else 1)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:57:50",
+    "log_path": "logs/runs/diag_pilot_actor_bf16_fresh_reuse_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "6ce9bf38c21568efbd64d9619c9bb6ed26b073a6",
+    "git_dirty": false,
+    "end": "2026-11-10T09:59:03",
+    "duration_sec": 62.2,
+    "exit_code": 0,
+    "metrics_sha256": "c79b22f126bffd02ab8588f10009628a3d58a3cd5d48448f446240d8539b3d01"
+  }
+}

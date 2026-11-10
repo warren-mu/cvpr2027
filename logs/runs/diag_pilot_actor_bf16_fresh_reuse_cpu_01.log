@@ -1,0 +1,123 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot_actor_bf16_fresh_reuse_cpu_01 -- python3 -c import importlib,json,sys,unittest
+from pathlib import Path
+sys.path.insert(0,str(Path('tests').resolve()))
+names=['test_smoke_e2e_actor_checkpoint','test_pilot_fresh_read_reuse','test_smoke_e2e_pilot_dataset','test_smoke_e2e_pilot','test_smoke_e2e_pilot_actor','test_smoke_e2e_pilot_contract','test_smoke_e2e_frozen_training','test_t02_evidence_read_session','test_t02_cache_check','test_pair_table_cache']
+suite=unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(importlib.import_module(name)) for name in names)
+result=unittest.TextTestRunner(verbosity=2).run(suite)
+print('CPU_SUITE_SUMMARY: '+json.dumps({'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':[str(test) for test,_ in result.skipped],'modules':names}),flush=True)
+raise SystemExit(0 if result.wasSuccessful() and not result.skipped else 1)
+
+# start: 2026-11-10T09:57:50
+test_both_actual_training_endpoints_use_one_actor_rpc_and_no_critic_save (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_existing_destination_is_never_overwritten_or_deleted (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_offloaded_parameters_restored_on_success_and_serialization_failure (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_only_final_model_and_original_hf_metadata_are_written (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_partial_parameter_load_failure_still_restores_offload (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_real_torch_cpu_model_state_roundtrip (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_saved_cast_preserves_live_state_nonfloat_buffers_and_metadata (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_wrong_role_allocation_manager_or_update_fails_before_writing (test_smoke_e2e_actor_checkpoint.ActorCheckpointTests) ... ok
+test_actual_colocated_factory_dispatches_actor_save_to_actual_role (test_smoke_e2e_actor_checkpoint.PinnedCheckpointDispatch) ... INFO 11-10 09:58:39 [__init__.py:243] No platform detected, vLLM is running on UnspecifiedPlatform
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/site-packages/gym_sokoban/__init__.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+ok
+test_changed_fresh_evidence_after_native_read_fails_final_rehash (test_pilot_fresh_read_reuse.PilotFreshReadReuseTests) ... ok
+test_original_checks_execute_in_two_sequential_scopes_and_finally_rehash (test_pilot_fresh_read_reuse.PilotFreshReadReuseTests) ... ok
+test_real_native_failure_is_not_replaced_by_certificate_and_restores_readers (test_pilot_fresh_read_reuse.PilotFreshReadReuseTests) ... ok
+test_failed_missing_or_unsealed_cache_is_not_training_authorization (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_chain_and_immutable_reports_are_required (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_full_native_failure_and_reused_process_propagate (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_only_fresh_audit_annotation_is_ignored_not_source_bytes_or_membership (test_smoke_e2e_pilot_dataset.FormalBatchTests) ... ok
+test_duplicate_proposals_not_dropped_even_across_different_ids (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_keep_all_and_scene_holdout_preserve_world_orders_and_no_overlap (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_manifest_recomputed_not_trusting_saved_authorization_flags (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_single_sided_stay_and_global_skew_do_not_remove_any_qualified_pair (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_size_gate_applies_to_authenticated_inventory_and_no_class_can_be_missing (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_split_is_stable_under_input_order_and_same_scene_is_indivisible (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_test_scene_nonformal_and_other_camera_cannot_enter (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_unknown_or_skewed_left_diagnostic_is_not_a_new_pilot_gate (test_smoke_e2e_pilot_dataset.PilotPoolTests) ... ok
+test_both_arms_both_small_changes_stop_without_mutating_configuration (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_current_spec_and_unknown_or_pending_t4_definition (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_either_arm_change_and_exact_threshold_prevent_stop (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_engineering_cannot_enter_comparison_even_with_fabricated_full_length (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_keep_all_qualification_and_conditional_budget_are_explicit (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_missing_updates_empty_look_or_incomplete_eval_cannot_mean_no_change (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_pools_and_public_hyperparameters_must_match (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_window_gives_each_update_equal_weight_with_unequal_episode_counts (test_smoke_e2e_pilot.PilotDecisionTests) ... ok
+test_black_gate_precedes_model_manifest_and_worker (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_complete_worker_and_same_common_inputs_are_recorded (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_failure_and_uncertain_cleanup_preserve_incomplete_status (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_namespace_and_black_gate_cannot_bypass_authorization (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_success_is_one_update_without_formal_pilot_permission (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_engineering_worker_reauthenticates_original_qualified_pool_before_ray (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_failed_update_or_uncertain_cleanup_is_not_completion (test_smoke_e2e_pilot.PilotLifecycleTests) ... ok
+test_real_auxiliary_gradient_accumulates_before_original_step_with_full_N (test_smoke_e2e_pilot_actor.ActorGradientOrderTests) ... ok
+test_missing_t4_episode_or_unapproved_dynamic_batch_fails_before_update (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_native_skipped_optimizer_is_retained_but_never_completed (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_original_minibatch_order_and_optimizer_methods_survive_context (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_unfinished_or_extra_minibatch_is_not_complete_and_hooks_restore (test_smoke_e2e_pilot_actor.ActorScheduleTests) ... ok
+test_actual_colocated_factory_keeps_actor_critic_and_reference_role_dispatch (test_smoke_e2e_pilot_actor.PinnedPilotWorkerWiring) ... ok
+test_original_default_hooks_and_new_arm_dispatch_are_explicit (test_smoke_e2e_pilot_actor.PinnedPilotWorkerWiring) ... ok
+test_empty_classes_remain_unknown_and_denominators_are_explicit (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_engineering_mode_is_only_an_explicit_t4_prefix_of_original_schedule (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_holdout_is_exact_both_worlds_without_training_draws_or_fake_t2_endpoint (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_learning_seen_uses_strict_parsed_select_boundary_and_all_episode_denominator (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_seen_without_any_parsed_select_still_counts_false (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_training_uses_only_explicit_train_keys_and_exact_frozen_arm_budget (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_unparseable_unavailable_and_terminal_select_are_distinct (test_smoke_e2e_pilot_contract.PilotContractTests) ... ok
+test_actual_batch_reordering_keeps_paired_credit_and_original_critic_returns (test_smoke_e2e_frozen_training.FrozenRuntime) ... ok
+test_frozen_configuration_retains_common_actor_kl_and_task_only_rewards (test_smoke_e2e_frozen_training.FrozenRuntime) ... ok
+test_opt_in_keeps_legacy_direct_boundary (test_smoke_e2e_frozen_training.FrozenScope) ... ok
+test_byte_budget_evicts_without_dropping_the_final_recheck (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_changed_file_on_hit_is_rechecked_not_reused (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_evicted_and_large_files_remain_in_final_authentication_set (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_final_hash_catches_mutation_without_another_read (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_final_hash_is_not_only_a_stat_fingerprint_check (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_load_exports_runs_original_body_and_seals_before_return (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_original_sha_reader_once_and_mutable_json_not_shared (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_other_threads_keep_the_original_readers (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_reader_exception_and_nested_scope_restore_original_entrypoints (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_removed_file_cannot_return_a_certificate (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_roots_and_identity_checked_on_every_hit (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_same_path_different_digest_never_reuses_success (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_wrong_consumer_fails_without_leaving_patches_or_lock (test_t02_evidence_read_session.EvidenceReuseTests) ... ok
+test_cache_keeps_the_export_catalog_in_its_original_order (test_t02_cache_check.CacheProducerTests) ... ok
+test_changed_clean_subset_or_shadow_count_is_not_trusted_from_export (test_t02_cache_check.CacheProducerTests) ... ok
+test_complete_inventory_retains_export_rejections_before_cache (test_t02_cache_check.CacheProducerTests) ... ok
+test_descriptor_roundtrip_reads_actual_png_npz_and_rejects_missing_identity (test_t02_cache_check.CacheProducerTests) ... ok
+test_evidence_finalization_failure_is_an_error_even_after_good_captures (test_t02_cache_check.CacheProducerTests) ... ok
+test_first_state_mismatch_stops_remaining_plan_without_replacement (test_t02_cache_check.CacheProducerTests) ... ok
+test_formal_minimum_rejected_before_any_runtime_work (test_t02_cache_check.CacheProducerTests) ... ok
+test_json_roundtrip_preserves_comparison_tuples_and_exact_state_prefix (test_t02_cache_check.CacheProducerTests) ... ok
+test_new_controller_reconstructs_both_clone_worlds_before_capturing (test_t02_cache_check.CacheProducerTests) ... ok
+test_only_exact_export_module_and_python_prefix (test_t02_cache_check.CacheProducerTests) ... ok
+test_reference_hash_size_and_path_are_not_optional (test_t02_cache_check.CacheProducerTests) ... ok
+test_same_original_id_from_two_authenticated_sources_is_not_filtered (test_t02_cache_check.CacheProducerTests) ... ok
+test_unfinished_error_or_duplicate_pair_is_not_filtered_to_success (test_t02_cache_check.CacheProducerTests) ... ok
+test_equal_counts_displaced_mask_fails (test_pair_table_cache.CacheMaskTests) ... ok
+test_exact_two_percent_boundary_without_ceil (test_pair_table_cache.CacheMaskTests) ... ok
+test_iou_boundary_and_positive_vs_empty (test_pair_table_cache.CacheMaskTests) ... ok
+test_fixed_sample_and_minimum_distinct_domain (test_pair_table_cache.CacheSampleTests) ... ok
+test_missing_or_duplicate_or_replaced_state_never_qualifies (test_pair_table_cache.CacheSampleTests) ... ok
+test_one_failure_blocks_whole_sample_without_filtering (test_pair_table_cache.CacheSampleTests) ... ok
+test_synthetic_200_states_cannot_authorize_downstream (test_pair_table_cache.CacheSampleTests) ... ok
+test_both_kinds_hidden_divergence_is_a_counted_fork_in_cache_and_fresh (test_pair_table_cache.CacheStateTests) ... ok
+test_cached_shared_to_shadow_fork_still_fails_classification_match (test_pair_table_cache.CacheStateTests) ... ok
+test_capture_binding_rejects_wrong_world_or_snapshot (test_pair_table_cache.CacheStateTests) ... ok
+test_complete_both_world_fixture_does_not_certify_live (test_pair_table_cache.CacheStateTests) ... ok
+test_label_eligibility_changes_are_not_ignored (test_pair_table_cache.CacheStateTests) ... ok
+test_large_same_world_rgb_difference_is_diagnostic (test_pair_table_cache.CacheStateTests) ... ok
+test_missing_masks_or_distances_are_unknown (test_pair_table_cache.CacheStateTests) ... ok
+test_new_single_process_and_same_camera_are_required (test_pair_table_cache.CacheStateTests) ... ok
+test_one_world_mask_failure_blocks_state (test_pair_table_cache.CacheStateTests) ... ok
+
+----------------------------------------------------------------------
+Ran 98 tests in 50.871s
+
+OK
+CPU_SUITE_SUMMARY: {"tests_run": 98, "failures": 0, "errors": 0, "skipped": [], "modules": ["test_smoke_e2e_actor_checkpoint", "test_pilot_fresh_read_reuse", "test_smoke_e2e_pilot_dataset", "test_smoke_e2e_pilot", "test_smoke_e2e_pilot_actor", "test_smoke_e2e_pilot_contract", "test_smoke_e2e_frozen_training", "test_t02_evidence_read_session", "test_t02_cache_check", "test_pair_table_cache"]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 62.107186755980365}
+# exit_code: 0

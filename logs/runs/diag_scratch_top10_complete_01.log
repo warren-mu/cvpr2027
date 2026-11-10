@@ -1,0 +1,205 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_top10_complete_01 -- python3 -u -c """One authorized, read-only capacity scan; executed as logged inline source."""
+import concurrent.futures
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+import sys
+import time
+
+NAME = 'diag_scratch_top10_complete_01'
+BASE = Path('/scratch/e1583364')
+PROJECT = BASE / 'cvpr2027'
+OUT = Path('logs/review') / NAME
+TIMEOUT_SECONDS = 900
+PARALLELISM = 4
+
+
+def utc():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def reference(path):
+    path = Path(path)
+    raw = path.read_bytes()
+    return {'file': str(path), 'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)}
+
+
+def enumerate_candidates():
+    candidates, skipped, direct_large_files = [], [], []
+    for parent in (BASE, PROJECT):
+        st = parent.lstat()
+        if not stat.S_ISDIR(st.st_mode):
+            raise ValueError('Refusing a missing or symlink scan root: ' + str(parent))
+        with os.scandir(parent) as entries:
+            for entry in sorted(entries, key=lambda e: e.name):
+                path = Path(entry.path)
+                info = entry.stat(follow_symlinks=False)
+                if parent == BASE and path == PROJECT:
+                    continue
+                if stat.S_ISDIR(info.st_mode):
+                    candidates.append({'path': str(path), 'st_dev': info.st_dev, 'st_ino': info.st_ino})
+                elif stat.S_ISLNK(info.st_mode):
+                    skipped.append({'path': str(path), 'kind': 'symlink_not_followed'})
+                elif stat.S_ISREG(info.st_mode) and info.st_size > 1_000_000_000:
+                    direct_large_files.append({'path': str(path), 'logical_bytes': info.st_size,
+                        'allocated_bytes': info.st_blocks * 512, 'hardlink_count': info.st_nlink})
+    return sorted(candidates, key=lambda r: r['path']), skipped, direct_large_files
+
+
+def same_directory(item):
+    actual = Path(item['path']).lstat()
+    return stat.S_ISDIR(actual.st_mode) and (actual.st_dev, actual.st_ino) == (item['st_dev'], item['st_ino'])
+
+
+def scan(item):
+    started = time.monotonic()
+    cmd = ['nice', '-n', '15', 'du', '--summarize', '--one-file-system',
+           '--count-links', '--no-dereference', '--block-size=1', '--', item['path']]
+    row = {**item, 'command': cmd, 'started_at_utc': utc(), 'timeout_seconds': TIMEOUT_SECONDS}
+    stdout, stderr = '', ''
+    try:
+        if not same_directory(item):
+            raise ValueError('Candidate identity changed before scan')
+        proc = subprocess.run(cmd, text=True, capture_output=True, timeout=TIMEOUT_SECONDS,
+                              env={**os.environ, 'LC_ALL': 'C'})
+        stdout, stderr = proc.stdout, proc.stderr
+        row['exit_code'] = proc.returncode
+        lines = stdout.splitlines()
+        if proc.returncode != 0:
+            raise ValueError('du did not complete successfully')
+        if len(lines) != 1:
+            raise ValueError('Expected one complete du summary')
+        count, path = lines[0].split('\t', 1)
+        if path != item['path'] or not count.isdigit() or not same_directory(item):
+            raise ValueError('du summary identity/count mismatch')
+        row.update(status='complete', allocated_path_bytes=int(count))
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout.decode() if isinstance(exc.stdout, bytes) else exc.stdout or ''
+        stderr = exc.stderr.decode() if isinstance(exc.stderr, bytes) else exc.stderr or ''
+        row.update(status='unknown_timeout', error=str(exc), exit_code=None)
+    except Exception as exc:
+        row.update(status='unknown_error', error=repr(exc))
+    row.update(finished_at_utc=utc(), elapsed_seconds=time.monotonic()-started)
+    key = hashlib.sha256(item['path'].encode()).hexdigest()[:16]
+    stdout_path, stderr_path = OUT/(key+'.stdout.txt'), OUT/(key+'.stderr.txt')
+    stdout_path.write_text(stdout); stderr_path.write_text(stderr)
+    row.update(stdout_reference=reference(stdout_path), stderr_reference=reference(stderr_path))
+    (OUT/(key+'.json')).write_text(json.dumps(row, indent=2)+'\n')
+    return row
+
+
+def main():
+    started = utc()
+    OUT.mkdir(parents=True, exist_ok=False)
+    candidates, symlinks, direct_files = enumerate_candidates()
+    (OUT/'candidate_inventory.json').write_text(json.dumps({
+        'observed_at_utc': started, 'candidates': candidates, 'skipped_symlinks': symlinks,
+        'direct_files_over_1GB': direct_files}, indent=2)+'\n')
+    queries = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=PARALLELISM) as executor:
+        futures = {executor.submit(scan, item): item for item in candidates}
+        for future in concurrent.futures.as_completed(futures):
+            row = future.result()
+            queries.append(row)
+            print('SCRATCH_DIRECTORY_DONE: '+json.dumps({k:row.get(k) for k in
+                ('path','status','allocated_path_bytes','elapsed_seconds')}, sort_keys=True), flush=True)
+    final_candidates, final_symlinks, final_files = enumerate_candidates()
+    changed = final_candidates != candidates
+    complete = not changed and all(row['status'] == 'complete' for row in queries)
+    ordered = sorted((row for row in queries if row['status'] == 'complete'),
+                     key=lambda row: (-row['allocated_path_bytes'], row['path']))
+    quota = Path('results/diag_scratch_account_quota_after_cleanup_01.json')
+    quota_data = json.loads(quota.read_text())
+    report = {'name': NAME, 'started_at_utc': started, 'finished_at_utc': utc(),
+        'scope': 'All real first-level cvpr2027 directories plus other real owner scratch top-level directories; parents do not overlap. No symlink following, removals, inode tree scan, or scratch writes.',
+        'measurement_semantics': 'GNU du allocated blocks in bytes, count-links consistently counts every hardlinked directory entry; same-filesystem traversal. This path-capacity total is NOT unique quota usage. Direct files and root directory metadata are outside the directory ranking. Active jobs can change contents while measured; this is not an atomic filesystem snapshot.',
+        'candidate_inventory_reference': reference(OUT/'candidate_inventory.json'),
+        'candidate_count': len(candidates), 'completed_count': len(ordered),
+        'all_candidates_successful': complete, 'candidate_directory_identities_changed': changed,
+        'final_candidate_inventory': final_candidates, 'parallelism': PARALLELISM,
+        'largest_directories': [{'path': r['path'], 'allocated_path_bytes': r['allocated_path_bytes'],
+            'allocated_path_GB_decimal': r['allocated_path_bytes']/1e9,
+            'allocated_path_GiB': r['allocated_path_bytes']/(1024**3),
+            'observed_started_at_utc': r['started_at_utc'], 'observed_finished_at_utc': r['finished_at_utc']}
+            for r in ordered[:10]] if complete else None,
+        'unknown_directories': [r for r in queries if r['status'] != 'complete'],
+        'skipped_symlinks': symlinks, 'direct_files_over_1GB': direct_files,
+        'quota_result_reference': reference(quota), 'quota_wrapper_exit_code': quota_data['_meta']['exit_code'],
+        'quota_log_reference': reference(Path('logs/runs/diag_scratch_account_quota_after_cleanup_01.log')),
+        'quota_note': 'Use the existing hpc quota output for account capacity/files; original command exit status is retained, not relabeled as success. No inode rescan performed.',
+        'queries': sorted(queries, key=lambda row: row['path'])}
+    (OUT/'report.json').write_text(json.dumps(report, indent=2)+'\n')
+    print('SCRATCH_TOP10_COMPLETE_JSON: '+json.dumps({k:v for k,v in report.items() if k!='queries'}, sort_keys=True), flush=True)
+    return 0 if complete else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+# start: 2026-11-10T09:55:24
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 4096, "elapsed_seconds": 0.009840674989391118, "path": "/scratch/e1583364/.git", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 8192, "elapsed_seconds": 0.01163204899057746, "path": "/scratch/e1583364/6424142731_", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 36864, "elapsed_seconds": 0.0250739449984394, "path": "/scratch/e1583364/.cache", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 61440, "elapsed_seconds": 0.011587048007640988, "path": "/scratch/e1583364/__pycache__", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 2617344, "elapsed_seconds": 0.08788769401144236, "path": "/scratch/e1583364/.hf_cache", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 101400686592, "elapsed_seconds": 0.10624638001900166, "path": "/scratch/e1583364/Video-MME", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 1101144064, "elapsed_seconds": 0.1000377059681341, "path": "/scratch/e1583364/cvpr2027/ai2thor", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 118784, "elapsed_seconds": 0.041381237970199436, "path": "/scratch/e1583364/cvpr2027/config", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 63479808, "elapsed_seconds": 0.12697531504090875, "path": "/scratch/e1583364/cvpr2027/data", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 12288, "elapsed_seconds": 0.008085826004389673, "path": "/scratch/e1583364/cvpr2027/diag_look_table_census_01_inputs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 16384, "elapsed_seconds": 0.009041756973601878, "path": "/scratch/e1583364/cvpr2027/diag_look_table_census_combined_01_inputs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 16384, "elapsed_seconds": 0.009005725965835154, "path": "/scratch/e1583364/cvpr2027/diag_look_table_census_latest_01_inputs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 16384, "elapsed_seconds": 0.009124702017288655, "path": "/scratch/e1583364/cvpr2027/diag_look_table_census_morning_01_inputs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 16384, "elapsed_seconds": 0.0081350959953852, "path": "/scratch/e1583364/cvpr2027/diag_look_table_census_next_01_inputs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 3612672, "elapsed_seconds": 0.01121316000353545, "path": "/scratch/e1583364/cvpr2027/diagnostics", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 1089331200, "elapsed_seconds": 3.9621133159962483, "path": "/scratch/e1583364/cvpr2027/conda", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 7973044224, "elapsed_seconds": 7.3654307260294445, "path": "/scratch/e1583364/cvpr2027/cache", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 81920, "elapsed_seconds": 0.029505091020837426, "path": "/scratch/e1583364/cvpr2027/g01_round2_prepare", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 434176, "elapsed_seconds": 0.0294519150047563, "path": "/scratch/e1583364/cvpr2027/gpu_pack", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 53248, "elapsed_seconds": 0.016717190039344132, "path": "/scratch/e1583364/cvpr2027/gpu_queue", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 203563008, "elapsed_seconds": 0.014101255976129323, "path": "/scratch/e1583364/cvpr2027/installers", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 415473664, "elapsed_seconds": 8.453306757030077, "path": "/scratch/e1583364/cvpr2027/miniforge3", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 741310464, "elapsed_seconds": 7.477277558005881, "path": "/scratch/e1583364/cvpr2027/miniforge3-24.11.3-2", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 4096, "elapsed_seconds": 0.0065261999843642116, "path": "/scratch/e1583364/cvpr2027/models", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 22179840, "elapsed_seconds": 0.24622998700942844, "path": "/scratch/e1583364/cvpr2027/monitor_logs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 61440, "elapsed_seconds": 0.022823273029644042, "path": "/scratch/e1583364/cvpr2027/paper_tex_runtime", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 90214400, "elapsed_seconds": 1.63751422095811, "path": "/scratch/e1583364/cvpr2027/r", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 44908544, "elapsed_seconds": 0.8600245809648186, "path": "/scratch/e1583364/cvpr2027/ray", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 3100672, "elapsed_seconds": 0.0828645690344274, "path": "/scratch/e1583364/cvpr2027/render_probe", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 491520, "elapsed_seconds": 0.031556642963550985, "path": "/scratch/e1583364/cvpr2027/shared_gpu_queue", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 9280913408, "elapsed_seconds": 29.68650053604506, "path": "/scratch/e1583364/cvpr2027/envs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 218578944, "elapsed_seconds": 1.396829683042597, "path": "/scratch/e1583364/cvpr2027/sources", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 7348224, "elapsed_seconds": 0.24326659803045914, "path": "/scratch/e1583364/cvpr2027/t00", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 37438791680, "elapsed_seconds": 20.817056542029604, "path": "/scratch/e1583364/cvpr2027/smoke_e2e", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 91488796672, "elapsed_seconds": 3.7972662780084647, "path": "/scratch/e1583364/cvpr2027/t00b_scale", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 83451904, "elapsed_seconds": 0.3476433680043556, "path": "/scratch/e1583364/cvpr2027/t01_collision_probe", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 23695360, "elapsed_seconds": 0.011337037954945117, "path": "/scratch/e1583364/cvpr2027/t01_merged_approved", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 487424, "elapsed_seconds": 0.029939861968159676, "path": "/scratch/e1583364/cvpr2027/t01_parallel", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 641323008, "elapsed_seconds": 4.003495548968203, "path": "/scratch/e1583364/cvpr2027/t01_raw", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 68194304, "elapsed_seconds": 32.55795719800517, "path": "/scratch/e1583364/cvpr2027/t00_sessions", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 3749818368, "elapsed_seconds": 5.103515533963218, "path": "/scratch/e1583364/cvpr2027/t02_cache", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 8192, "elapsed_seconds": 0.010901756002567708, "path": "/scratch/e1583364/cvpr2027/t02_cache_plan_consoles", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 30825553920, "elapsed_seconds": 77.96984047500882, "path": "/scratch/e1583364/cvpr", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 1462272, "elapsed_seconds": 0.10511071601649746, "path": "/scratch/e1583364/cvpr2027/t02_export_parallel", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 395227136, "elapsed_seconds": 4.357525855011772, "path": "/scratch/e1583364/cvpr2027/tex", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 6795264, "elapsed_seconds": 2.0161018820363097, "path": "/scratch/e1583364/cvpr2027/thor_sessions", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 49385472, "elapsed_seconds": 1.4840027120080777, "path": "/scratch/e1583364/cvpr2027/tmp", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 289067008, "elapsed_seconds": 3.060113543004263, "path": "/scratch/e1583364/cvpr2027/venvs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 33497088, "elapsed_seconds": 0.026343127014115453, "path": "/scratch/e1583364/cvpr2027/vulkan-runtime", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 4096, "elapsed_seconds": 0.006221854011528194, "path": "/scratch/e1583364/cvpr2027/wandb", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 8192, "elapsed_seconds": 0.012400344014167786, "path": "/scratch/e1583364/hf_cache", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 199760306176, "elapsed_seconds": 0.1278114000451751, "path": "/scratch/e1583364/hf_ckpts", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 1282048, "elapsed_seconds": 0.013049560016952455, "path": "/scratch/e1583364/logs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 18034520064, "elapsed_seconds": 4.823164911009371, "path": "/scratch/e1583364/qwen3vl_specialists", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 4096, "elapsed_seconds": 0.011067827988881618, "path": "/scratch/e1583364/tmp", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 43202281472, "elapsed_seconds": 108.12770846002968, "path": "/scratch/e1583364/cvpr2027/t01v2_parallel", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 17084420096, "elapsed_seconds": 89.86627776600653, "path": "/scratch/e1583364/venvs", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 210929233920, "elapsed_seconds": 444.02714020898566, "path": "/scratch/e1583364/cvpr2027/g01_parallel", "status": "complete"}
+SCRATCH_DIRECTORY_DONE: {"allocated_path_bytes": 168485429248, "elapsed_seconds": 664.2536217060406, "path": "/scratch/e1583364/cvpr2027/t02_export", "status": "complete"}
+SCRATCH_TOP10_COMPLETE_JSON: {"all_candidates_successful": true, "candidate_count": 59, "candidate_directory_identities_changed": false, "candidate_inventory_reference": {"bytes": 7450, "file": "logs/review/diag_scratch_top10_complete_01/candidate_inventory.json", "sha256": "8950391938f846f246e464c11b82077674187893bd038adff4e8b39a7f60571c"}, "completed_count": 59, "direct_files_over_1GB": [], "final_candidate_inventory": [{"path": "/scratch/e1583364/.cache", "st_dev": 48, "st_ino": 9223372039202282444}, {"path": "/scratch/e1583364/.git", "st_dev": 48, "st_ino": 9223372038529413866}, {"path": "/scratch/e1583364/.hf_cache", "st_dev": 48, "st_ino": 9223372037387061504}, {"path": "/scratch/e1583364/6424142731_", "st_dev": 48, "st_ino": 9223372039203905371}, {"path": "/scratch/e1583364/Video-MME", "st_dev": 48, "st_ino": 9223372039202266905}, {"path": "/scratch/e1583364/__pycache__", "st_dev": 48, "st_ino": 9223372038139177836}, {"path": "/scratch/e1583364/cvpr", "st_dev": 48, "st_ino": 9223372042946414002}, {"path": "/scratch/e1583364/cvpr2027/ai2thor", "st_dev": 48, "st_ino": 9223372046158705024}, {"path": "/scratch/e1583364/cvpr2027/cache", "st_dev": 48, "st_ino": 9223372046158704864}, {"path": "/scratch/e1583364/cvpr2027/conda", "st_dev": 48, "st_ino": 9223372046158704832}, {"path": "/scratch/e1583364/cvpr2027/config", "st_dev": 48, "st_ino": 9223372046158693281}, {"path": "/scratch/e1583364/cvpr2027/data", "st_dev": 48, "st_ino": 9223372046158693313}, {"path": "/scratch/e1583364/cvpr2027/diag_look_table_census_01_inputs", "st_dev": 48, "st_ino": 9223372046316530817}, {"path": "/scratch/e1583364/cvpr2027/diag_look_table_census_combined_01_inputs", "st_dev": 48, "st_ino": 9223372046317199258}, {"path": "/scratch/e1583364/cvpr2027/diag_look_table_census_latest_01_inputs", "st_dev": 48, "st_ino": 9223372046323188672}, {"path": "/scratch/e1583364/cvpr2027/diag_look_table_census_morning_01_inputs", "st_dev": 48, "st_ino": 9223372046320340658}, {"path": "/scratch/e1583364/cvpr2027/diag_look_table_census_next_01_inputs", "st_dev": 48, "st_ino": 9223372046322606208}, {"path": "/scratch/e1583364/cvpr2027/diagnostics", "st_dev": 48, "st_ino": 9223372046343415833}, {"path": "/scratch/e1583364/cvpr2027/envs", "st_dev": 48, "st_ino": 9223372046158690435}, {"path": "/scratch/e1583364/cvpr2027/g01_parallel", "st_dev": 48, "st_ino": 9223372046307935104}, {"path": "/scratch/e1583364/cvpr2027/g01_round2_prepare", "st_dev": 48, "st_ino": 9223372046332318884}, {"path": "/scratch/e1583364/cvpr2027/gpu_pack", "st_dev": 48, "st_ino": 9223372046342653937}, {"path": "/scratch/e1583364/cvpr2027/gpu_queue", "st_dev": 48, "st_ino": 9223372046260802797}, {"path": "/scratch/e1583364/cvpr2027/installers", "st_dev": 48, "st_ino": 9223372046158697248}, {"path": "/scratch/e1583364/cvpr2027/miniforge3", "st_dev": 48, "st_ino": 9223372046158702528}, {"path": "/scratch/e1583364/cvpr2027/miniforge3-24.11.3-2", "st_dev": 48, "st_ino": 9223372046159672832}, {"path": "/scratch/e1583364/cvpr2027/models", "st_dev": 48, "st_ino": 9223372046158693377}, {"path": "/scratch/e1583364/cvpr2027/monitor_logs", "st_dev": 48, "st_ino": 9223372046204214024}, {"path": "/scratch/e1583364/cvpr2027/paper_tex_runtime", "st_dev": 48, "st_ino": 9223372046200837605}, {"path": "/scratch/e1583364/cvpr2027/r", "st_dev": 48, "st_ino": 9223372046216498238}, {"path": "/scratch/e1583364/cvpr2027/ray", "st_dev": 48, "st_ino": 9223372046158690499}, {"path": "/scratch/e1583364/cvpr2027/render_probe", "st_dev": 48, "st_ino": 9223372046180354389}, {"path": "/scratch/e1583364/cvpr2027/shared_gpu_queue", "st_dev": 48, "st_ino": 9223372046342660448}, {"path": "/scratch/e1583364/cvpr2027/smoke_e2e", "st_dev": 48, "st_ino": 9223372046294871049}, {"path": "/scratch/e1583364/cvpr2027/sources", "st_dev": 48, "st_ino": 9223372046160529636}, {"path": "/scratch/e1583364/cvpr2027/t00", "st_dev": 48, "st_ino": 9223372046158690531}, {"path": "/scratch/e1583364/cvpr2027/t00_sessions", "st_dev": 48, "st_ino": 9223372046160284350}, {"path": "/scratch/e1583364/cvpr2027/t00b_scale", "st_dev": 48, "st_ino": 9223372046209947594}, {"path": "/scratch/e1583364/cvpr2027/t01_collision_probe", "st_dev": 48, "st_ino": 9223372046260750967}, {"path": "/scratch/e1583364/cvpr2027/t01_merged_approved", "st_dev": 48, "st_ino": 9223372046252511057}, {"path": "/scratch/e1583364/cvpr2027/t01_parallel", "st_dev": 48, "st_ino": 9223372046216590159}, {"path": "/scratch/e1583364/cvpr2027/t01_raw", "st_dev": 48, "st_ino": 9223372046179743431}, {"path": "/scratch/e1583364/cvpr2027/t01v2_parallel", "st_dev": 48, "st_ino": 9223372046276104489}, {"path": "/scratch/e1583364/cvpr2027/t02_cache", "st_dev": 48, "st_ino": 9223372046331507360}, {"path": "/scratch/e1583364/cvpr2027/t02_cache_plan_consoles", "st_dev": 48, "st_ino": 9223372046336208238}, {"path": "/scratch/e1583364/cvpr2027/t02_export", "st_dev": 48, "st_ino": 9223372046310713710}, {"path": "/scratch/e1583364/cvpr2027/t02_export_parallel", "st_dev": 48, "st_ino": 9223372046330282834}, {"path": "/scratch/e1583364/cvpr2027/tex", "st_dev": 48, "st_ino": 9223372046200747733}, {"path": "/scratch/e1583364/cvpr2027/thor_sessions", "st_dev": 48, "st_ino": 9223372046209916377}, {"path": "/scratch/e1583364/cvpr2027/tmp", "st_dev": 48, "st_ino": 9223372046158701056}, {"path": "/scratch/e1583364/cvpr2027/venvs", "st_dev": 48, "st_ino": 9223372046141688841}, {"path": "/scratch/e1583364/cvpr2027/vulkan-runtime", "st_dev": 48, "st_ino": 9223372046142349965}, {"path": "/scratch/e1583364/cvpr2027/wandb", "st_dev": 48, "st_ino": 9223372046158697120}, {"path": "/scratch/e1583364/hf_cache", "st_dev": 48, "st_ino": 9223372038975025420}, {"path": "/scratch/e1583364/hf_ckpts", "st_dev": 48, "st_ino": 9223372037387042630}, {"path": "/scratch/e1583364/logs", "st_dev": 48, "st_ino": 9223372038949147408}, {"path": "/scratch/e1583364/qwen3vl_specialists", "st_dev": 48, "st_ino": 9223372042946477478}, {"path": "/scratch/e1583364/tmp", "st_dev": 48, "st_ino": 9223372038139178125}, {"path": "/scratch/e1583364/venvs", "st_dev": 48, "st_ino": 9223372038949100817}], "finished_at_utc": "2026-11-10T02:07:42.035039+00:00", "largest_directories": [{"allocated_path_GB_decimal": 210.92923392, "allocated_path_GiB": 196.44315719604492, "allocated_path_bytes": 210929233920, "observed_finished_at_utc": "2026-11-10T02:02:53.714473+00:00", "observed_started_at_utc": "2026-11-10T01:55:29.687356+00:00", "path": "/scratch/e1583364/cvpr2027/g01_parallel"}, {"allocated_path_GB_decimal": 199.760306176, "allocated_path_GiB": 186.0412826538086, "allocated_path_bytes": 199760306176, "observed_finished_at_utc": "2026-11-10T01:56:58.987401+00:00", "observed_started_at_utc": "2026-11-10T01:56:58.859613+00:00", "path": "/scratch/e1583364/hf_ckpts"}, {"allocated_path_GB_decimal": 168.485429248, "allocated_path_GiB": 156.9142837524414, "allocated_path_bytes": 168485429248, "observed_finished_at_utc": "2026-11-10T02:07:41.757183+00:00", "observed_started_at_utc": "2026-11-10T01:56:37.503583+00:00", "path": "/scratch/e1583364/cvpr2027/t02_export"}, {"allocated_path_GB_decimal": 101.400686592, "allocated_path_GiB": 94.43674850463867, "allocated_path_bytes": 101400686592, "observed_finished_at_utc": "2026-11-10T01:55:25.217475+00:00", "observed_started_at_utc": "2026-11-10T01:55:25.111248+00:00", "path": "/scratch/e1583364/Video-MME"}, {"allocated_path_GB_decimal": 91.488796672, "allocated_path_GiB": 85.20558166503906, "allocated_path_bytes": 91488796672, "observed_finished_at_utc": "2026-11-10T01:56:19.469147+00:00", "observed_started_at_utc": "2026-11-10T01:56:15.671905+00:00", "path": "/scratch/e1583364/cvpr2027/t00b_scale"}, {"allocated_path_GB_decimal": 43.202281472, "allocated_path_GiB": 40.235260009765625, "allocated_path_bytes": 43202281472, "observed_finished_at_utc": "2026-11-10T01:58:14.108478+00:00", "observed_started_at_utc": "2026-11-10T01:56:25.980798+00:00", "path": "/scratch/e1583364/cvpr2027/t01v2_parallel"}, {"allocated_path_GB_decimal": 37.43879168, "allocated_path_GiB": 34.867591857910156, "allocated_path_bytes": 37438791680, "observed_finished_at_utc": "2026-11-10T01:56:15.661800+00:00", "observed_started_at_utc": "2026-11-10T01:55:54.844767+00:00", "path": "/scratch/e1583364/cvpr2027/smoke_e2e"}, {"allocated_path_GB_decimal": 30.82555392, "allocated_path_GiB": 28.708534240722656, "allocated_path_bytes": 30825553920, "observed_finished_at_utc": "2026-11-10T01:56:43.095930+00:00", "observed_started_at_utc": "2026-11-10T01:55:25.126110+00:00", "path": "/scratch/e1583364/cvpr"}, {"allocated_path_GB_decimal": 18.034520064, "allocated_path_GiB": 16.795955657958984, "allocated_path_bytes": 18034520064, "observed_finished_at_utc": "2026-11-10T01:57:05.298650+00:00", "observed_started_at_utc": "2026-11-10T01:57:00.475516+00:00", "path": "/scratch/e1583364/qwen3vl_specialists"}, {"allocated_path_GB_decimal": 17.084420096, "allocated_path_GiB": 15.91110610961914, "allocated_path_bytes": 17084420096, "observed_finished_at_utc": "2026-11-10T01:58:36.717137+00:00", "observed_started_at_utc": "2026-11-10T01:57:06.850882+00:00", "path": "/scratch/e1583364/venvs"}], "measurement_semantics": "GNU du allocated blocks in bytes, count-links consistently counts every hardlinked directory entry; same-filesystem traversal. This path-capacity total is NOT unique quota usage. Direct files and root directory metadata are outside the directory ranking. Active jobs can change contents while measured; this is not an atomic filesystem snapshot.", "name": "diag_scratch_top10_complete_01", "parallelism": 4, "quota_log_reference": {"bytes": 1208, "file": "logs/runs/diag_scratch_account_quota_after_cleanup_01.log", "sha256": "fd7581432d4626c3309640998d15eb9d095708840562f9ea107d0cb8794a0624"}, "quota_note": "Use the existing hpc quota output for account capacity/files; original command exit status is retained, not relabeled as success. No inode rescan performed.", "quota_result_reference": {"bytes": 1090, "file": "results/diag_scratch_account_quota_after_cleanup_01.json", "sha256": "38f550d4da585e29d837bfec18e26bdddb7fe29538288d60516b85ed09e6a250"}, "quota_wrapper_exit_code": 1, "scope": "All real first-level cvpr2027 directories plus other real owner scratch top-level directories; parents do not overlap. No symlink following, removals, inode tree scan, or scratch writes.", "skipped_symlinks": [], "started_at_utc": "2026-11-10T01:55:25.032121+00:00", "unknown_directories": []}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 737.0523626010399}
+# exit_code: 0

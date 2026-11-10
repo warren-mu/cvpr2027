@@ -1,0 +1,28 @@
+{
+  "name": "diag_test_priority_black_accounting_verify_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_test_priority_black_accounting_verify_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport json,importlib.util\nfrom src.tools import pbs_mixed_accounting as mixed\nroot=Path.cwd().resolve()\nspec=importlib.util.spec_from_file_location('existing_original_submit',root/'scripts/pbs/submit_phase.py')\nsubmit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)\nrows=[('gpu_pack_test_priority_single_01','709485.hopper-m-02'),('gpu_pack_test_priority_single_02','709489.hopper-m-02')]\ncanonical=submit._final_accounting(root,{j for n,j in rows},paths=[root/'results/diag_gpu_pack_test_priority_singles_0102_accounting_01.json'])\nfor name,job in rows:\n report=json.loads((root/'results'/(name+'_mixed_accounting.json')).read_text())\n actual=mixed.finalized_split(root,{'name':name,'payload':report['config']['payload_reference']['file'],'job_id':job},canonical[job])\n assert actual is not None\n print('ORIGINAL_FINALIZED_SPLIT_ACCEPTED: '+json.dumps({'name':name,'job_id':job,'charged_gpu_hours_by_group':actual['charged_gpu_hours_by_group'],'total_charged_gpu_hours':actual['total_charged_gpu_hours']}),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T10:06:27",
+  "log_path": "logs/runs/diag_test_priority_black_accounting_verify_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "6ce9bf38c21568efbd64d9619c9bb6ed26b073a6",
+  "git_dirty": false,
+  "end": "2026-11-10T10:06:31",
+  "duration_sec": 3.4,
+  "exit_code": 0,
+  "metrics_sha256": "d6435242049a28f30f86b810f830fe1fca79baf1a63e1000f0d52e9a657cac02"
+}

@@ -1,0 +1,33 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_top10_01 -- python3 -c import json,subprocess,datetime
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+base=Path('/scratch/e1583364')
+out=Path('logs/review/diag_scratch_top10_01');out.mkdir(parents=True,exist_ok=False)
+def run(kind):
+ cmd=['du','--max-depth=2','--inodes' if kind=='inodes' else '--block-size=1',str(base)]
+ try:
+  r=subprocess.run(cmd,text=True,capture_output=True,timeout=600)
+  raw=r.stdout;row={'command':cmd,'exit_code':r.returncode,'stderr':r.stderr}
+ except subprocess.TimeoutExpired as e:
+  raw=e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout or '';row={'command':cmd,'timeout_seconds':600}
+ (out/(kind+'.txt')).write_text(raw)
+ values={}
+ for line in raw.splitlines():
+  count,path=line.split('\t',1);values[path]=int(count)
+ row['values']=values;return kind,row
+rows=dict(ThreadPoolExecutor(max_workers=2).map(run,['bytes','inodes']))
+capacity=rows['bytes']['values'];inodes=rows['inodes']['values']
+eligible=[(path,size) for path,size in capacity.items() if (Path(path).parent==base and Path(path).name!='cvpr2027') or Path(path).parent==base/'cvpr2027']
+largest=[{'path':path,'allocated_bytes':size,'file_objects_including_directories':inodes.get(path)} for path,size in sorted(eligible,key=lambda x:(-x[1],x[0]))[:10]]
+result={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Owner scratch root; top-level cvpr2027 expanded one level, other project roots retained as totals, so reported directory rows do not overlap. Read-only; no removals.','user_root_allocated_bytes':capacity.get(str(base)),'user_root_file_objects_including_directories':inodes.get(str(base)),'account_capacity_limit_bytes':None,'account_file_quota_limit':None,'limit_note':'Account limits require a separate quota response; global df/statvfs is not the account limit.','largest_directories':largest,'queries':rows}
+(out/'report.json').write_text(json.dumps(result,indent=2)+'\n')
+print(json.dumps({k:v for k,v in result.items() if k!='queries'},sort_keys=True),flush=True)
+status=Path('STATUS.md');lines=['\n### scratch清理后目录占用（只读；'+result['observed_at_utc']+'）\n',result['scope'],'\n|目录|实际分配字节|文件对象数（包含目录）|','|---|---:|---:|']
+for row in largest:lines.append('|{path}|{allocated_bytes}|{file_objects_including_directories}|'.format(**row))
+lines.append('\n本账号scratch树实际分配字节：'+str(result['user_root_allocated_bytes'])+'；文件对象数：'+str(result['user_root_file_objects_including_directories'])+'。个人容量/文件数配额上限须以单独quota结果为准，不把集群df数字当个人配额。完整原查询及是否超时见logs/review/diag_scratch_top10_01/report.json。')
+status.open('a').write('\n'.join(lines)+'\n')
+
+# start: 2026-11-10T09:38:57
+{"account_capacity_limit_bytes": null, "account_file_quota_limit": null, "largest_directories": [{"allocated_bytes": 210929233920, "file_objects_including_directories": 911132, "path": "/scratch/e1583364/cvpr2027/g01_parallel"}, {"allocated_bytes": 199760306176, "file_objects_including_directories": 203, "path": "/scratch/e1583364/hf_ckpts"}, {"allocated_bytes": 18034520064, "file_objects_including_directories": 7650, "path": "/scratch/e1583364/qwen3vl_specialists"}, {"allocated_bytes": 7973044224, "file_objects_including_directories": 6612, "path": "/scratch/e1583364/cvpr2027/cache"}, {"allocated_bytes": 1101144064, "file_objects_including_directories": 184, "path": "/scratch/e1583364/cvpr2027/ai2thor"}, {"allocated_bytes": 1089331200, "file_objects_including_directories": 9545, "path": "/scratch/e1583364/cvpr2027/conda"}, {"allocated_bytes": 530202624, "file_objects_including_directories": 17821, "path": "/scratch/e1583364/cvpr2027/miniforge3-24.11.3-2"}, {"allocated_bytes": 415473664, "file_objects_including_directories": 14243, "path": "/scratch/e1583364/cvpr2027/miniforge3"}, {"allocated_bytes": 395227136, "file_objects_including_directories": 14362, "path": "/scratch/e1583364/cvpr2027/tex"}, {"allocated_bytes": 203563008, "file_objects_including_directories": 23, "path": "/scratch/e1583364/cvpr2027/installers"}], "limit_note": "Account limits require a separate quota response; global df/statvfs is not the account limit.", "observed_at_utc": "2026-11-10T01:49:03.804727+00:00", "scope": "Owner scratch root; top-level cvpr2027 expanded one level, other project roots retained as totals, so reported directory rows do not overlap. Read-only; no removals.", "user_root_allocated_bytes": null, "user_root_file_objects_including_directories": null}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 600.249087955046}
+# exit_code: 0

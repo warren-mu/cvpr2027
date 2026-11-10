@@ -1,0 +1,60 @@
+diff --git a/STATUS.md b/STATUS.md
+index c37ab570..6af37537 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1450,3 +1450,55 @@ hpc quota于09:43SGT的清理后快照：scratch879.8GB/1.0TB，chunk files29079
+ 原31对、seed0、200状态已重新提交709482（retry2，01:59:29）；共享单卡709485/709489和4卡709496（47min）均使用同active plan，测试S05–S07优先，其后训练20–26，无重复领取。刷新查询mediumx17Q/8R；NUS节点无至少4张未分配卡，唯一满足4卡计数的是AISG池hopper-44，不把它当作本项目可用节点。按授权仍提交4卡，03:00UTC（美东22:00）若从未启动则取消。约01:54UTC三个smallx均Q、资源不足，尚无run/gate，不能当作已运行。S04配额失败的四未封口源继续保留及归档，未升为通过。
+ 
+ 按02aba62b接入最终actor-only bf16保存：不写critic/optimizer/RNG，不写中间checkpoint，保留HF配置副本且不改变在线参数/配置，明确不是完整训练续跑状态。另只在pilot fresh证据认证阶段复用已读原始字节，原科学检查全部执行、退出仍全SHA重验；与load_exports作用域不嵌套。两切片独立静态复核已通过；正式Hopper CPU测试随后执行，尚未宣称真实GPU保存通过。
++
++
++## 2026-11-09 21:23 ET — 完整 scratch 目录排名与截止路径
++
++真实账户配额查询（09:43 SGT）为 **879.8 GB / 1.0 TB，2,907,908 chunk files / unlimited**；查询工具因 HOME awk 错误退出 1，scratch 部分完整，原退出码保留。文件系统整体 df/statvfs 不作为个人配额。此前 top10 超时的部分排名已被本次 59/59 成功的完整测量取代。
++
++来源：`results/diag_scratch_top10_complete_01.json`、`logs/review/diag_scratch_top10_complete_01/report.json`。以下以 `/scratch/e1583364/` 为共同前缀；GB 为十进制 allocated blocks，hardlink 按路径计，表内不列父子重叠目录，但总和仍不能当成账户独占 quota 用量。只报告，没有追加删除。
++
++|目录|留存 GB|
++|---|---:|
++|cvpr2027/g01_parallel|210.929|
++|hf_ckpts|199.760|
++|cvpr2027/t02_export|168.485|
++|Video-MME|101.401|
++|cvpr2027/t00b_scale|91.489|
++|cvpr2027/t01v2_parallel|43.202|
++|cvpr2027/smoke_e2e|37.439|
++|cvpr|30.826|
++|qwen3vl_specialists|18.035|
++|venvs|17.084|
++
++代码 `6ce9bf38` 的 final actor bf16-only 与读取复用正式 CPU 回归 98 项通过；`9efb3706` 的零业务单卡 PACK 黑帧重提和 fixed52 截止例外正式 CPU 回归 56 项通过。没有使用 GPU；最终 actor 保存仍须由一完整 T4 update 实测验证。默认 >=80 对规则不变，fixed52 只能在 2026-11-10 03:30 UTC 后由执行者确认原31复核仍未通过再显式启用，来源固定为已通过三份 cache certificate，保留全部52对。
++
++当前不改变任何运行的原始记录保留方式。由于当前 quota 已超过80%，正在发布按每次运行实测占用得出的未来容量方案，等待人类决定后才实施记录方式修改。
++
++
++## 2026-11-09 21:25 ET — 剩余工作存储预算与待决定方案
++存储只读测量与规划：`diag_current_owned_storage_01`（98.3秒，最多2路du；原结果未修改）。完整路径/SHA见 `logs/review/diag_current_owned_storage_01/report.json`；本次规划修正见 `logs/review/diag_current_storage_forecast_01/report.json`。单位为十进制GB。
++
++| 原任务独有 scratch（父与全部子目录） | 当前留存 GB |
++|---|---:|
++| gen_test_s16_round2_s01 | 12.806 |
++| gen_test_s16_round2_s02 | 10.947 |
++| gen_test_s16_round2_s03 | 11.502 |
++| t02_export_train_six_16 | 5.606 |
++| t02_export_train_six_17 | 7.625 |
++| t02_export_train_six_18 | 5.023 |
++| t02_export_train_six_19 | 5.826 |
++| t02_export_cache_six09_14_01 | 0.709 |
++| t02_export_cache_six09_14_01_retry1 | 0.128 |
++| t02_export_cache_six05_08_01_retry2 | 1.001 |
++
++这些数字是本次新建独有目录目前留存，不是历史写入峰值，也不含已有source表、home产物及共享缓存。两个31缓存均失败，其留存不用于完整31规划。
++
++原161候选manifest中，锁内队列快照尚未领取20–26批共41对；这41对与已导出、等待正式cache的固定31对交集为0。原52正式cache通过单独保留；161或已导出均不等于训练池合格。
++
++后续规划：41次导出按近期最大每attempt×1.3预留67.738 GB；S04修复重跑及S05–S07共22场景按最大每scene×1.3预留61.042 GB。唯一成功23对/200states缓存留存1.001 GB，按31/23×1.3假设预留1.754 GB；200states不变，因此该线性式仅为工程假设，不是实测上界。
++
++四次短测/T0/T4/T2各最后actor按7GB共28GB；以后main12×7GB为84GB。当前pipeline+pilot规划新增158.533 GB，连以后main为242.533 GB；未包含无限重试和未来测试集完整T02导出，不能当硬上界。以root最新879.8GB/1TB观察为基线，容量不足。只报告，不删除文件，不改变记录规则；任何仅针对未来拒绝记录的精简方案等待人类/Claude决定。
++CLI quota 的 GB/TB 与下列十进制 GB 尚未确认同一换算，故不把二者直接相加作为精确占比；当前已经超过 80%，且下列新增约 242.5 十进制 GB 在二进制或十进制解释下均会超过现有余量。
++\n**请求决定（仅影响今后新运行）**：所有已存在文件不动，所有已通过世界对、视角表、复核记录和失败运行日志仍完整保留；新生成运行的每次被拒提议均保留简要记录、类别、随机种子、关键判定量和拒绝原因，只对每个（场景、类别、拒绝关卡）固定 seed=0 随机抽样最多 3 个被拒提议保存完整原始证据。抽样规则在运行前写入配置并推送，简要记录明确是否留存原始证据，不能留下指向未保存文件的伪引用。验收阈值、合格对的完整证据和原审计脚本均不改。此方案尚未实施，不能先声称节省了多少；批准后先以一个新单元冒烟实测新增 GB，再更新容量预测。现有证据不删、不重写。
++\n未来试跑/主实验按已批准规则只存最终 bf16 actor；这一项已经实现。仅压缩未来被拒证据是否足够覆盖导出与 actor 占用仍须实测；若依旧超限，继续报告，由人类决定增加空间或其他存储安排。

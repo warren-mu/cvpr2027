@@ -1,0 +1,29 @@
+{
+  "name": "diag_storage_budget_and_retry_publish_audit_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_storage_budget_and_retry_publish_audit_01",
+    "--",
+    "python3",
+    "-c",
+    "import subprocess,json\nfrom pathlib import Path\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=Path(raw[3:].decode())\n if p.suffix=='.json' and p.parent==Path('results') and Path('logs/runs',p.stem+'.meta.json').exists():\n  d=json.loads(p.read_text())\n  if d.get('_meta',{}).get('end'):names.append(str(p))\nassert names\nprint('SCOPE: newly completed sealed result files; preserved unsealed quota-failure sources are not certified',flush=True)\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T10:25:36",
+  "log_path": "logs/runs/diag_storage_budget_and_retry_publish_audit_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "9efb3706870b61fd7e37b60977443220f0811902",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_storage_budget_and_retry_publish_audit_01.diff",
+  "end": "2026-11-10T10:25:55",
+  "duration_sec": 13.4,
+  "exit_code": 0,
+  "metrics_sha256": "5e36acba447ea14157778828e04774028b76f07d4956f14f131dfa5e3a944281"
+}

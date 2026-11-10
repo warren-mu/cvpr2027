@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.9628941440023482
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\nfrom src.tools import pbs_black_retry as original\nroot=Path.cwd().resolve();proof_path='results/diag_t02_cache_six09_14_retry2_black_host_guard_01.json'\nproof_sha='fe84afe8a6598b377073faf1c46d89f834952ba4d616d081fd565d1ef194b79d'\npayload=json.loads((root/'logs/pbs/t02_export_cache_six09_14_01_retry2-20261110T014318Z-b5ccb023/payload.json').read_text())\nindex,prior=original.rotation(root)\nprevious=json.loads((root/prior['payload']['file']).read_text())['requested_host'] if prior else None\nhost=original.next_host(original.VERSION,index,previous)\nnew_name='t02_export_cache_six09_14_01_retry3'\ncommand=list(payload['command']);command[command.index('--name')+1]=new_name\nbinding=original.validate_request_host(root,host=host,retry_of='709482.hopper-m-02',\n evidence_path=proof_path,evidence_sha256=proof_sha,name=new_name,command=command,\n task='T01',group='T02',gpus=1,wall_seconds=payload['requested_wall_seconds'])\nprint('ORIGINAL_HOST_PREFLIGHT_JSON: '+json.dumps({'scope':'Read-only recommendation; no reservation/submission. Original submit lock must re-evaluate current rotation.','requested_name':new_name,'original_host_binding':binding,'original_command':command,'day_known_node_policy':{'available_hosts':list(original.AVAILABLE_HOSTS),'disabled_hosts':original.DISABLED_HOSTS},'source_plan_unchanged':True},ensure_ascii=False),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_t02_cache_six09_14_retry3_host_preflight_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_t02_cache_six09_14_retry3_host_preflight_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\nfrom src.tools import pbs_black_retry as original\nroot=Path.cwd().resolve();proof_path='results/diag_t02_cache_six09_14_retry2_black_host_guard_01.json'\nproof_sha='fe84afe8a6598b377073faf1c46d89f834952ba4d616d081fd565d1ef194b79d'\npayload=json.loads((root/'logs/pbs/t02_export_cache_six09_14_01_retry2-20261110T014318Z-b5ccb023/payload.json').read_text())\nindex,prior=original.rotation(root)\nprevious=json.loads((root/prior['payload']['file']).read_text())['requested_host'] if prior else None\nhost=original.next_host(original.VERSION,index,previous)\nnew_name='t02_export_cache_six09_14_01_retry3'\ncommand=list(payload['command']);command[command.index('--name')+1]=new_name\nbinding=original.validate_request_host(root,host=host,retry_of='709482.hopper-m-02',\n evidence_path=proof_path,evidence_sha256=proof_sha,name=new_name,command=command,\n task='T01',group='T02',gpus=1,wall_seconds=payload['requested_wall_seconds'])\nprint('ORIGINAL_HOST_PREFLIGHT_JSON: '+json.dumps({'scope':'Read-only recommendation; no reservation/submission. Original submit lock must re-evaluate current rotation.','requested_name':new_name,'original_host_binding':binding,'original_command':command,'day_known_node_policy':{'available_hosts':list(original.AVAILABLE_HOSTS),'disabled_hosts':original.DISABLED_HOSTS},'source_plan_unchanged':True},ensure_ascii=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T10:02:29",
+    "log_path": "logs/runs/diag_t02_cache_six09_14_retry3_host_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "6ce9bf38c21568efbd64d9619c9bb6ed26b073a6",
+    "git_dirty": false,
+    "end": "2026-11-10T10:02:35",
+    "duration_sec": 1.1,
+    "exit_code": 0,
+    "metrics_sha256": "3222febe5bce07b478ff5de6e8182d32c6cb5cf4725b8478d809a63b828cea9a"
+  }
+}

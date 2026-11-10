@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 600.249087955046
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,subprocess,datetime\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nbase=Path('/scratch/e1583364')\nout=Path('logs/review/diag_scratch_top10_01');out.mkdir(parents=True,exist_ok=False)\ndef run(kind):\n cmd=['du','--max-depth=2','--inodes' if kind=='inodes' else '--block-size=1',str(base)]\n try:\n  r=subprocess.run(cmd,text=True,capture_output=True,timeout=600)\n  raw=r.stdout;row={'command':cmd,'exit_code':r.returncode,'stderr':r.stderr}\n except subprocess.TimeoutExpired as e:\n  raw=e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout or '';row={'command':cmd,'timeout_seconds':600}\n (out/(kind+'.txt')).write_text(raw)\n values={}\n for line in raw.splitlines():\n  count,path=line.split('\\t',1);values[path]=int(count)\n row['values']=values;return kind,row\nrows=dict(ThreadPoolExecutor(max_workers=2).map(run,['bytes','inodes']))\ncapacity=rows['bytes']['values'];inodes=rows['inodes']['values']\neligible=[(path,size) for path,size in capacity.items() if (Path(path).parent==base and Path(path).name!='cvpr2027') or Path(path).parent==base/'cvpr2027']\nlargest=[{'path':path,'allocated_bytes':size,'file_objects_including_directories':inodes.get(path)} for path,size in sorted(eligible,key=lambda x:(-x[1],x[0]))[:10]]\nresult={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Owner scratch root; top-level cvpr2027 expanded one level, other project roots retained as totals, so reported directory rows do not overlap. Read-only; no removals.','user_root_allocated_bytes':capacity.get(str(base)),'user_root_file_objects_including_directories':inodes.get(str(base)),'account_capacity_limit_bytes':None,'account_file_quota_limit':None,'limit_note':'Account limits require a separate quota response; global df/statvfs is not the account limit.','largest_directories':largest,'queries':rows}\n(out/'report.json').write_text(json.dumps(result,indent=2)+'\\n')\nprint(json.dumps({k:v for k,v in result.items() if k!='queries'},sort_keys=True),flush=True)\nstatus=Path('STATUS.md');lines=['\\n### scratch清理后目录占用（只读；'+result['observed_at_utc']+'）\\n',result['scope'],'\\n|目录|实际分配字节|文件对象数（包含目录）|','|---|---:|---:|']\nfor row in largest:lines.append('|{path}|{allocated_bytes}|{file_objects_including_directories}|'.format(**row))\nlines.append('\\n本账号scratch树实际分配字节：'+str(result['user_root_allocated_bytes'])+'；文件对象数：'+str(result['user_root_file_objects_including_directories'])+'。个人容量/文件数配额上限须以单独quota结果为准，不把集群df数字当个人配额。完整原查询及是否超时见logs/review/diag_scratch_top10_01/report.json。')\nstatus.open('a').write('\\n'.join(lines)+'\\n')\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_scratch_top10_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_scratch_top10_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,subprocess,datetime\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nbase=Path('/scratch/e1583364')\nout=Path('logs/review/diag_scratch_top10_01');out.mkdir(parents=True,exist_ok=False)\ndef run(kind):\n cmd=['du','--max-depth=2','--inodes' if kind=='inodes' else '--block-size=1',str(base)]\n try:\n  r=subprocess.run(cmd,text=True,capture_output=True,timeout=600)\n  raw=r.stdout;row={'command':cmd,'exit_code':r.returncode,'stderr':r.stderr}\n except subprocess.TimeoutExpired as e:\n  raw=e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout or '';row={'command':cmd,'timeout_seconds':600}\n (out/(kind+'.txt')).write_text(raw)\n values={}\n for line in raw.splitlines():\n  count,path=line.split('\\t',1);values[path]=int(count)\n row['values']=values;return kind,row\nrows=dict(ThreadPoolExecutor(max_workers=2).map(run,['bytes','inodes']))\ncapacity=rows['bytes']['values'];inodes=rows['inodes']['values']\neligible=[(path,size) for path,size in capacity.items() if (Path(path).parent==base and Path(path).name!='cvpr2027') or Path(path).parent==base/'cvpr2027']\nlargest=[{'path':path,'allocated_bytes':size,'file_objects_including_directories':inodes.get(path)} for path,size in sorted(eligible,key=lambda x:(-x[1],x[0]))[:10]]\nresult={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Owner scratch root; top-level cvpr2027 expanded one level, other project roots retained as totals, so reported directory rows do not overlap. Read-only; no removals.','user_root_allocated_bytes':capacity.get(str(base)),'user_root_file_objects_including_directories':inodes.get(str(base)),'account_capacity_limit_bytes':None,'account_file_quota_limit':None,'limit_note':'Account limits require a separate quota response; global df/statvfs is not the account limit.','largest_directories':largest,'queries':rows}\n(out/'report.json').write_text(json.dumps(result,indent=2)+'\\n')\nprint(json.dumps({k:v for k,v in result.items() if k!='queries'},sort_keys=True),flush=True)\nstatus=Path('STATUS.md');lines=['\\n### scratch清理后目录占用（只读；'+result['observed_at_utc']+'）\\n',result['scope'],'\\n|目录|实际分配字节|文件对象数（包含目录）|','|---|---:|---:|']\nfor row in largest:lines.append('|{path}|{allocated_bytes}|{file_objects_including_directories}|'.format(**row))\nlines.append('\\n本账号scratch树实际分配字节：'+str(result['user_root_allocated_bytes'])+'；文件对象数：'+str(result['user_root_file_objects_including_directories'])+'。个人容量/文件数配额上限须以单独quota结果为准，不把集群df数字当个人配额。完整原查询及是否超时见logs/review/diag_scratch_top10_01/report.json。')\nstatus.open('a').write('\\n'.join(lines)+'\\n')\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:38:57",
+    "log_path": "logs/runs/diag_scratch_top10_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "43bc49c5bb7b8710d2931ae80175538535ae9036",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_scratch_top10_01.diff",
+    "end": "2026-11-10T09:49:03",
+    "duration_sec": 600.4,
+    "exit_code": 0,
+    "metrics_sha256": "f6f4b4b803d27479d5dd388d4e7368746dc302938201eac9930e4f4c8556fda2"
+  }
+}
