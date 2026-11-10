@@ -1,0 +1,117 @@
+# run_logged: python3 -m src.tools.record_command --name diag_raw10_710282_pin20_sequence_01 -- python3 -c import datetime,subprocess
+from pathlib import Path
+plan={'scope': 'Prepared commands only; root executes fresh preflight, read-only verification, qdel, postflight, canonical in strict order. Never cancel R/unknown. No entire logger timeout. Existing cancellation verifier requires literal qstat/qdel argv. No submission performed.', 'earliest_original_qtime_boundary_utc': '2026-11-10T11:50:08+00:00', 'job_id': '710282.hopper-m-02', 'original_folder': 'logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908Z-5933a5b2', 'stages': {'pre': ['python3', 'scripts/run_logged.py', '--name', 'diag_raw10pack710282_pin20_pre_01', '--seed', '0', '--', 'python3', '-m', 'src.tools.record_command', '--name', 'diag_raw10pack710282_pin20_pre_01', '--', 'qstat', '-xf', '-F', 'json', '710282.hopper-m-02'], 'post': ['python3', 'scripts/run_logged.py', '--name', 'diag_raw10pack710282_pin20_post_01', '--seed', '0', '--', 'python3', '-m', 'src.tools.record_command', '--name', 'diag_raw10pack710282_pin20_post_01', '--', 'qstat', '-xf', '-F', 'json', '710282.hopper-m-02'], 'cancel': ['python3', 'scripts/run_logged.py', '--name', 'diag_raw10pack710282_pin20_cancel_01', '--seed', '0', '--', 'python3', '-m', 'src.tools.record_command', '--name', 'diag_raw10pack710282_pin20_cancel_01', '--', 'qdel', '710282.hopper-m-02'], 'accounting': ['python3', 'scripts/run_logged.py', '--name', 'diag_raw10pack710282_pin20_accounting_01', '--seed', '0', '--', 'python3', 'src/tools/pbs_usage.py', '--name', 'diag_raw10pack710282_pin20_accounting_01', '--cancelled-evidence', 'results/diag_raw10pack710282_pin20_pre_01.json', 'results/diag_raw10pack710282_pin20_cancel_01.json', 'results/diag_raw10pack710282_pin20_post_01.json', '710282.hopper-m-02']}, 'read_only_preflight_verification_source': '# Read only. Run in the repository after the original preflight has sealed.\nimport datetime, hashlib, json, shlex, time\nfrom pathlib import Path\nfrom src.tools.pbs_cancel_evidence import flatten_fields, not_started\nfrom src.tools.phase_watch import load_logged, load_module\nroot=Path.cwd().resolve()\njob=\'710282.hopper-m-02\'; folder=root/\'logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908Z-5933a5b2\'\nfor suffix,expected in [(\'payload.json\',\'3a25a2c16f63f34a5b63ad9ddf4073afbd1718f3c1008f947e0f2d682674091b\'),(\'submission.json\',\'e0e5f50c5ad0641f9aa229772031d14b26b65d3642dbbae4636a8eca8e961170\')]:\n    assert hashlib.sha256((folder/suffix).read_bytes()).hexdigest()==expected, \'Original submission bytes changed\'\npayload=json.loads((folder/\'payload.json\').read_bytes());receipt=json.loads((folder/\'submission.json\').read_bytes())\nassert receipt[\'returncode\']==0 and receipt[\'stdout\'].strip()==job\nname=\'diag_raw10pack710282_pin20_pre_01\'\nauditor=load_module(\'pin20_original_auditor\',root/\'scripts/audit_provenance.py\')\ndata,ref=load_logged(root,root/\'results\'/(name+\'.json\'),auditor)\nexpected=[\'qstat\',\'-xf\',\'-F\',\'json\',job]\nassert data[\'_meta\'][\'exit_code\']==data[\'metrics\'][\'command_exit_code\']==0 and data[\'error\'] is None\nassert data[\'config\'][\'command\']==expected\nassert data[\'_meta\'][\'command\']==[\'python3\',\'-m\',\'src.tools.record_command\',\'--name\',name,\'--\',*expected]\nlog=(root/data[\'_meta\'][\'log_path\']).read_text();decoder=json.JSONDecoder();observations=[]\nimport re\nfor match in re.finditer(r\'(?m)^\\s*\\{\',log):\n    try:value,_=decoder.raw_decode(log[match.start():].lstrip())\n    except ValueError:continue\n    if isinstance(value,dict) and isinstance(value.get(\'Jobs\'),dict):observations.append(value)\nassert len(observations)==1 and set(observations[0][\'Jobs\'])=={job}\nobservation=observations[0];row=observation[\'Jobs\'][job];fields=flatten_fields(row)\nassert not_started(fields,\'Q\'), \'Not a fresh queued, never-allocated job; do not cancel\'\nassert fields[\'Job_Owner\'].startswith(\'e1583364@\') and fields[\'project\']==\'CFP04-SF-125\'\nassert fields[\'Resource_List.ngpus\']==\'1\' and fields[\'Resource_List.ncpus\']==\'12\'\nassert shlex.split(fields[\'Submit_arguments\'])==receipt[\'command\'][1:]\nassert fields[\'Output_Path\'].split(\':\',1)[1]==str(folder/\'pbs.out\')\nassert fields[\'Resource_List.select\']==f"1:ngpus=1:host={payload[\'requested_host\']}:ncpus=12:mem=225GB"\nassert fields[\'Resource_List.walltime\']==\'00:30:55\'\nzone=datetime.timezone(datetime.timedelta(hours=8))\nqtime=datetime.datetime.strptime(fields[\'qtime\'],\'%a %b %d %H:%M:%S %Y\').replace(tzinfo=zone).timestamp()\nobserved=observation[\'timestamp\'];assert type(observed) is int\nassert observed-qtime>=1200, \'Observed Q snapshot is before the20-minute boundary\'\nassert 0<=time.time()-observed<=120, \'Preflight is stale; do not cancel from old snapshot\'\nassert not (root/\'results\'/(payload[\'name\']+\'.json\')).exists(), \'Producer result appeared; inspect original state before cancellation\'\nprint(\'QUEUED_CANCELLATION_PREFLIGHT_VERIFIED\',job,fields[\'qtime\'],observed-qtime,flush=True)\n', 'postcondition': 'Original pbs_cancel_evidence/ pbs_usage must prove Q-noallocation -> qdel0 -> F-noallocation; failures keep prior reservation. Do not repeat qdel merely because post query fails.'}
+assert datetime.datetime.now(datetime.timezone.utc)>=datetime.datetime.fromisoformat(plan["earliest_original_qtime_boundary_utc"])
+for a in plan["stages"].values():
+ name=a[a.index("--name")+1]
+ assert not Path("results",name+".json").exists(),name
+def run_stage(label,command):
+ print("BEGIN_PIN_FALLBACK_STAGE",label,flush=True)
+ with subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True) as proc:
+  for line in proc.stdout:
+   if label=="accounting" or line.startswith(("FINAL_METRICS_JSON:","[run_logged]","Traceback","AssertionError")): print(line,end="",flush=True)
+  rc=proc.wait()
+ print("END_PIN_FALLBACK_STAGE",label,rc,flush=True)
+ if rc: raise SystemExit(rc)
+run_stage("pre",plan["stages"]["pre"])
+subprocess.run(["python3","-c",plan["read_only_preflight_verification_source"]],check=True)
+run_stage("cancel",plan["stages"]["cancel"])
+run_stage("post",plan["stages"]["post"])
+run_stage("accounting",plan["stages"]["accounting"])
+
+# start: 2026-11-10T19:50:37
+BEGIN_PIN_FALLBACK_STAGE pre
+[run_logged] stamped results/diag_raw10pack710282_pin20_pre_01.json (exit_code=0)
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 30.111640067014378}
+END_PIN_FALLBACK_STAGE pre 0
+QUEUED_CANCELLATION_PREFLIGHT_VERIFIED 710282.hopper-m-02 Tue Nov 10 19:30:08 2026 1232.0
+BEGIN_PIN_FALLBACK_STAGE cancel
+[run_logged] stamped results/diag_raw10pack710282_pin20_cancel_01.json (exit_code=0)
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 15.052839544019662}
+END_PIN_FALLBACK_STAGE cancel 0
+BEGIN_PIN_FALLBACK_STAGE post
+[run_logged] stamped results/diag_raw10pack710282_pin20_post_01.json (exit_code=0)
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 30.068047361972276}
+END_PIN_FALLBACK_STAGE post 0
+BEGIN_PIN_FALLBACK_STAGE accounting
+[run_logged] stamped results/diag_raw10pack710282_pin20_accounting_01.json (exit_code=0)
+{
+  "formula": "allocated Resource_List.ngpus * resources_used.walltime_seconds / 3600",
+  "queue_wait_formula": "stime - qtime, in seconds; only final jobs with run_count=1",
+  "eligible_wait_formula": "stime - etime, in seconds; only final jobs with run_count=1",
+  "timestamp_timezone": "Asia/Singapore (+08:00)",
+  "queue_wait_scope": "Recorded intervals only; transfers/requeues may hide earlier waiting. Missing, invalid, or multi-run history remains null.",
+  "scope": "PBS allocation GPU-hours, not an independently reconciled project credit charge",
+  "jobs": [
+    {
+      "job_id": "710282.hopper-m-02",
+      "qstat_exit": 0,
+      "fields": {
+        "Job_Name": "cvpr27_5933a5b2",
+        "Job_Owner": "e1583364@hopper-l-01.cm.cluster",
+        "job_state": "F",
+        "queue": "smallx",
+        "server": "hopper-m-02.cm.cluster",
+        "Checkpoint": "u",
+        "ctime": "Tue Nov 10 19:30:08 2026",
+        "Error_Path": "hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cvpr27_5933a5b2.e710282",
+        "Hold_Types": "n",
+        "Join_Path": "oe",
+        "Keep_Files": "oed",
+        "Mail_Points": "a",
+        "mtime": "Tue Nov 10 19:51:28 2026",
+        "Output_Path": "hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908Z-5933a5b2/pbs.out",
+        "Priority": "0",
+        "qtime": "Tue Nov 10 19:30:08 2026",
+        "Rerunable": "True",
+        "Resource_List.am_job_cache": "{\"job.ngpus\": 1.0, \"job.walltime\": 1855,\"job.ncpus\": 12.0, \"job.queue_charge_rate\": 0,\"formula_constants\": \"\", \"am_cloud_enabled\": false}",
+        "Resource_List.mem": "225gb",
+        "Resource_List.ncpus": "12",
+        "Resource_List.ngpus": "1",
+        "Resource_List.nodect": "1",
+        "Resource_List.nodes": "1",
+        "Resource_List.place": "free",
+        "Resource_List.queue_charge_rate": "1",
+        "Resource_List.select": "1:ngpus=1:host=hopper-28:ncpus=12:mem=225GB",
+        "Resource_List.walltime": "00:30:55",
+        "substate": "91",
+        "Variable_List": "PBS_O_HOME=/home/svu/e1583364,PBS_O_LANG=C.UTF-8,PBS_O_LOGNAME=e1583364,PBS_O_PATH=/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr2027/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/python/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin,PBS_O_SHELL=/bin/bash,PBS_O_HOST=hopper-l-01.cm.cluster,PBS_O_WORKDIR=/home/svu/e1583364/CVPR2027/cvpr2027,PBS_O_SYSTEM=Linux,PBS_O_QUEUE=autox",
+        "comment": "Not Running: Insufficient amount of resource: host  and terminated",
+        "etime": "Tue Nov 10 19:30:08 2026",
+        "Submit_arguments": "-N cvpr27_5933a5b2 -l walltime=00:30:55 -o /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908Z-5933a5b2/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908Z-5933a5b2/job.pbs",
+        "history_timestamp": "1794311488",
+        "project": "CFP04-SF-125",
+        "Submit_Host": "hopper-l-01.cm.cluster"
+      },
+      "queue_wait_seconds": null,
+      "eligible_wait_seconds": null,
+      "queue_wait_unavailable_reason": "run_count_not_one_total_wait_unknown",
+      "eligible_wait_unavailable_reason": "run_count_not_one_total_wait_unknown",
+      "pbs_timestamp_timezone": "Asia/Singapore",
+      "pbs_timestamp_utc_offset": "+08:00",
+      "pbs_timestamps_raw": {
+        "qtime": "Tue Nov 10 19:30:08 2026",
+        "etime": "Tue Nov 10 19:30:08 2026",
+        "stime": null
+      },
+      "pbs_timestamps_iso8601": {
+        "qtime": "2026-11-10T19:30:08+08:00",
+        "etime": "2026-11-10T19:30:08+08:00",
+        "stime": null
+      },
+      "queue_wait_scope": "recorded_queue_entry_to_start_for_single_run_job_not_cumulative_queue_history",
+      "allocation_accounting_basis": "verified_logged_queued_cancellation"
+    }
+  ],
+  "errors": [],
+  "cancelled_evidence": [
+    "results/diag_raw10pack710282_pin20_pre_01.json",
+    "results/diag_raw10pack710282_pin20_cancel_01.json",
+    "results/diag_raw10pack710282_pin20_post_01.json"
+  ],
+  "cancellation_basis": "Only a verified logged Q/no-allocation -> qdel exit0 -> F/no-allocation chain may supply zero when run_count is absent; raw fields remain unchanged"
+}
+FINAL_METRICS_JSON: {"allocation_gpu_hours_by_job": {"710282.hopper-m-02": 0.0}, "complete_allocation_accounting": true, "queue_wait_seconds_by_job": {"710282.hopper-m-02": null}, "eligible_wait_seconds_by_job": {"710282.hopper-m-02": null}, "verified_never_started_cancelled_jobs": ["710282.hopper-m-02"], "total_allocation_gpu_hours": 0.0}
+END_PIN_FALLBACK_STAGE accounting 0
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 113.03539805300534}
+# exit_code: 0

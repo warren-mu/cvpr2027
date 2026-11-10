@@ -1,0 +1,30 @@
+diff --git a/STATUS.md b/STATUS.md
+index 0e721851..c6adcbd7 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1822,3 +1822,13 @@ b3527166只修正figure-only的额外限制：每world取原first_step_visible_a
+ ### 2026-11-10 06:41 ET — FIG01真实单对通过；710213零用量回退
+ FIG01 firststep v3原真实CPU冒烟diag_fig01_firststep_smoke_01 exit0，29.674252249998972秒；选中floorplan203_00062，图用w0/w1一步X掩码4793/4563像素，实际环境tau/tau_seen均1。完整83总体metadata、所选完整表和所有原校验通过，22个LookFlip可排序。正式paper尚未导出；单对结果只在logs/review/diag_fig01_firststep_smoke_01/cpu_smoke，manifest SHA25ac39dc8f72a538159de6b7ec1ca0da7d7552c73f2624ab0d7b113527a0ab2f。现可按同一预定排名导出5对，仍不用GPU、295秒止损、无重渲染/缩放/改色。
+ 710213完整原链已证明Q/无分配→qdel0→F/无分配，原canonical diag_trainlook710213_pin20_accounting_01记0 GPU小时；原pre snapshot显示已等3229秒，stime缺失故原queue-to-start字段仍null，不补值。未动任何运行作业；下一步准备同参数无host retry2，保留此次排队/取消证据。
++
++
++### 2026-11-10 06:50 ET — FIG01正式5对已导出并复制到Mac
++diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项CPU测试、真实单对冒烟、5对完整表与PNG字节检查通过。按已记录固定排名5对均来自训练场景FloorPlan203（living，LookFlip），不重渲染/缩放/改色。Mac已逐PNG及manifest SHA核对复制到 /Users/warren/Documents/cvpr2027_fig_frames；另有用户下载包 /Users/warren/Documents/Codex/2026-11-07/l/outputs/cvpr2027_fig01_frames.zip。原所有失败记录保留。
++- floorplan203_00062 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4793, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00062/manifest.json | manifest SHA 9535c5bad907d08a0ae25e3c3fba08b20aba92a03b547e091e2b25f9c313632d
++- floorplan203_00034 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 5962, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00034/manifest.json | manifest SHA 77dd44ec00c6968144a32cfcd78999f5caf0f820ec3ed9f0746c440d7ccd63d7
++- floorplan203_00010 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4793, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00010/manifest.json | manifest SHA c825d7f58b543a17c47a305e7c6d5b2571e50d6f3a2280452ec98234bb41587d
++- floorplan203_00002 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4562, "w1": 5962} | paper/fig_src/lookflip_frames/floorplan203_00002/manifest.json | manifest SHA 187f49c450e2cdc189cfd777fc5af87ae3d28c2c4b0b4fa18f321194d13221e9
++- floorplan203_00004 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4230, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00004/manifest.json | manifest SHA 39588df9dc51c59b5be1b56fb260be2ddf5b6aae6e9203af1dca58d3a0d87d3c
++710213已按原Q/noalloc→qdel→F/noalloc链取消（0 GPUh）。无host retry2仅父run identity变，quota/同参数验证/原预算preflight已通过，配置 gen_train_look_first_unit_01_retry2_quota.json；此处尚未提交新作业。
+diff --git a/tasks/E2E.report.md b/tasks/E2E.report.md
+index 6ba8b969..cf301bb1 100644
+--- a/tasks/E2E.report.md
++++ b/tasks/E2E.report.md
+@@ -129,7 +129,7 @@ S01–S07 的原 40 场景来源均已终态，独立 checkpoint 与日志覆盖
+ 
+ 预算来源为[原预算快照](../logs/review/diag_train_look_first_unit_retry1_review_plan_01/budget_state.json)，最终两臂费用见[原 canonical](../results/diag_pilot710029_710037_accounting_01.json)。本次[原审计](../results/diag_e2e_final_report_audit_01.json)覆盖20个新封口或报告引用结果、0 FAIL，保留 P5/P7 警告；本次新封口结果及报告引用范围的原审计无 FAIL；旧未封口配额记录和 `accounting01` 缺结果日志的失败记录继续保留，不声称全仓历史问题已清零。
+ 
+-最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。FIG01 保持暂停，先前唯一 CPU 导出因时限停止，未产出成功图集，不列为完成。trainLook 补数当前新提交 **710213（hopper30，同参数 FP315）**，仍遵循指定节点 20 分钟未启动才取消回退的规则；它不是本试跑通过记录，也未据此增加正式训练库存。
++最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。本报告首推时 FIG01 保持暂停；此后已完成五对原帧导出并复制到 Mac，见[FIG01 原结果](../results/diag_fig01_firststep_frames_01.json)与 STATUS 的后续记录。这不改变本节试跑结果。trainLook 补数当前新提交 **710213（hopper30，同参数 FP315）**，仍遵循指定节点 20 分钟未启动才取消回退的规则；它不是本试跑通过记录，也未据此增加正式训练库存。
+ 
+ ---

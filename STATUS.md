@@ -1832,3 +1832,8 @@ diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项C
 - floorplan203_00002 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4562, "w1": 5962} | paper/fig_src/lookflip_frames/floorplan203_00002/manifest.json | manifest SHA 187f49c450e2cdc189cfd777fc5af87ae3d28c2c4b0b4fa18f321194d13221e9
 - floorplan203_00004 | FloorPlan203 | living | look_flip | 原first-step X像素 {"w0": 4230, "w1": 4563} | paper/fig_src/lookflip_frames/floorplan203_00004/manifest.json | manifest SHA 39588df9dc51c59b5be1b56fb260be2ddf5b6aae6e9203af1dca58d3a0d87d3c
 710213已按原Q/noalloc→qdel→F/noalloc链取消（0 GPUh）。无host retry2仅父run identity变，quota/同参数验证/原预算preflight已通过，配置 gen_train_look_first_unit_01_retry2_quota.json；此处尚未提交新作业。
+
+
+### 2026-11-10 06:58 ET — 训练补数已开始；导出同批无host预检完成
+710213→710298 无host同参数重提成功（gen_train_look_first_unit_01_retry2，27:10），原开头gate已于11:55:02–11:55:10 UTC在hopper-24通过、无黑帧，parent仍运行/未封口，尚未增加任何正式合格数量。该节点本日有其他黑帧GPU，不因此重新加入指定节点名单。
+710282满20分钟后的原fresh Q快照/身份/noalloc验证通过，1232秒时执行取消；原canonical证明F且0GPU小时，未取消任何R作业。无host gpu_pack_train_raw10_smoke_single_01_retry2原same_retry_command/mixed/fresh预算preflight已通过，仍只含six20、1825秒parent/PBS1855秒，同科学参数；尚未qsub。新旧映射待receipt记录。FIG01完整5对已推ec3c263d并在Mac核SHA复制完成。
