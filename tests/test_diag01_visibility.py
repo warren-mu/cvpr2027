@@ -153,6 +153,15 @@ class VisibilityTests(unittest.TestCase):
   self.assertTrue(all(r['applicable'] for r in descriptors(members).values()))
   self.assertFalse(pre_evidence(1,1));self.assertTrue(pre_evidence(0,1))
 
+ def test_logged_valid_observations_are_partitioned_by_actual_after_mask(self):
+  rows=[]
+  for action in ('turn_left','turn_right'):
+   ep,traces=self.trajectory([action,'select 999']);rows.append(self.recalc(ep,traces))
+  result=diag.summarize(rows)
+  self.assertEqual(result['valid_observation_actions'],2)
+  self.assertEqual({k:result['observation_after_state_masks'][k] for k in ('zero','positive_below250','at_least250')},
+                   {'zero':1,'positive_below250':0,'at_least250':1})
+
  def test_rehash_rejects_change_after_count_cache(self):
   h=self.index.header(self.key);self.index.state(self.key,h['initial_state'],0)
   ref=self.index.payload(self.key,h['states'][h['initial_state']]['captures'][0]['masks']['X'])

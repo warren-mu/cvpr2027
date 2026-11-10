@@ -1,0 +1,298 @@
+# run_logged: python3 -c """One-off selected05 test export preparation; no GPU, no native replay.
+
+Run directly under run_logged (not same-name record_command). --write-configs
+creates new immutable configs only after root has reviewed --validate output.
+The only runnable queue unit is the first six not already exported. The rest
+remain a fixed roster, not queued work. All original source checks run in T02.
+"""
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path
+import signal
+import sys
+import tempfile
+
+from src.tools import gpu_shared_claim as shared
+from src.tools import pbs_mixed_accounting as mixed
+from src.tools import t02_export_parallel as parallel
+from src.tools import t02_test_compression as compression
+from src.tools.t01_partition import sha_file
+
+ROOT = Path.cwd().resolve()
+WRITE = sys.argv[1:] == ['--write-configs']
+NAME = 'diag_test_selected05_export_plan_01' if WRITE else 'diag_test_selected05_export_validate_02'
+SELECTION = {'file':'logs/review/diag_current_test_selected_05/report.json',
+    'sha256':'e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff',
+    'logged_result':{'file':'results/diag_current_test_selected_05.json',
+                    'sha256':'9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840'}}
+COMPRESSION_SMOKE = {'file':'results/t02_export_test_compression_smoke_01.json',
+    'sha256':'3fdc9132df35d676a2f33db4f0356747198066f93dcd6956175ef686c96d889e'}
+RAW_SMOKE = {'file':'results/t02_export_raw10_smoke_01.json',
+    'sha256':'20112639aa293301c9129fbca03432072b1cb75549f08c40d62d835275e898b2'}
+QUEUE_ID = 'test_selected05_raw10_compressed_smoke_01'
+QUEUE = Path('/scratch/e1583364/cvpr2027/shared_gpu_queue') / QUEUE_ID
+UNIT_NAME = 't02_export_test_selected05_six01'
+CONSUMER_NAME = 'gpu_pack_test_selected05_storage_smoke_01'
+MANIFEST_FILE = 'configs/t02_export_test_selected05_six01.json'
+ROSTER_FILE = 'configs/t02_test_selected05_export_roster_01.json'
+PLAN_FILE = 'configs/shared_test_selected05_raw10_compressed_smoke_01.json'
+SOURCES, ARTIFACTS = {}, []
+
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+def ref(path):
+    return mixed.reference(path, ROOT)
+
+
+def logged(reference):
+    data, path = mixed.logged(ROOT, reference)
+    source = {**ref(path), 'metrics_sha256':data['_meta']['metrics_sha256']}
+    SOURCES[source['file']] = source
+    return data, source
+
+
+def exact_file(reference):
+    path = (ROOT / reference['file']).resolve()
+    require(sha_file(path) == reference['sha256'], 'Original file SHA changed: '+reference['file'])
+    return path
+
+
+def logical_ref(reference):
+    return {'file':str((ROOT/reference['file']).resolve().relative_to(ROOT)), 'sha256':reference['sha256']}
+
+
+def pair_key(entry):
+    return shared.canonical_hash({'kind':'t02_original_pair', 'pair':logical_ref(entry['pair']),
+                                  'table_protocol':'paired_view_table_d4_shadow_v2'})
+
+
+def entry(row):
+    pair = logical_ref(row['pair_reference'])
+    return {'scene':row['scene'], 'field_of_view':60,
+            'pair_id':Path(pair['file']).parent.name,
+            'proposal_identity':row['proposal_identity'], 'kind':row['kind'],
+            'source':logical_ref(row['checkpoint_reference']), 'pair':pair}
+
+
+def planned_ref(filename, value):
+    body = shared.canonical(value)+b'\n'
+    return {'file':filename, 'sha256':hashlib.sha256(body).hexdigest(), 'bytes':len(body)}
+
+
+def absent(name):
+    for folder in (ROOT/'results', ROOT/'logs/runs'):
+        require(not any(p.name == name or p.name.startswith(name+'_') or p.name.startswith(name+'.')
+                        for p in folder.glob(name+'*')), 'Existing evidence with planned run name: '+name)
+    require(not list((ROOT/'logs/pbs').glob(name+'-*')), 'Prior submission with planned run name: '+name)
+
+
+def original_smokes(selection):
+    data, compression_ref = logged(COMPRESSION_SMOKE)
+    cfg,m,meta = data['config'],data['metrics'],data['_meta']
+    require(meta['exit_code'] == 0 and meta['command'][1:4] == ['-u','-m','src.tools.t02_export']
+            and cfg.get('pbs_jobid') == '709607.hopper-m-02'
+            and cfg.get('compress_test_tables') is True and cfg.get('compression_smoke_dual') is True
+            and m.get('export_checks_complete') is True and m.get('errors') == []
+            and m.get('cleanup_errors') == [] and len(m.get('pairs',[])) == 1,
+            'Original dual-format smoke is not a complete successful export')
+    row = m['pairs'][0]
+    dual = row.get('test_compression',{}).get('dual_format_comparison',{})
+    require(row.get('status') == 'exported' and row.get('table_complete') is True
+            and row.get('native_evidence_verified') is True and row.get('pair_checks_passed') is True
+            and row.get('error') is None and row.get('cleanup_errors') == []
+            and all(dual.get(k) is True for k in ('passed','rgb_bytes_equal','mask_bytes_equal',
+                                                'labels_equal','tau_and_tau_seen_equal')),
+            'Original compression/native/table equality evidence is incomplete')
+    original = row['test_compression']['selection']['selected_entry']
+    matched = compression.selected_entry(selection,source=original['checkpoint_reference'],pair=original['pair_reference'],
+        scene=original['scene'],proposal_identity=original['proposal_identity'],kind=original['kind'],root=ROOT)
+    for key in ('configuration','target_names'):
+        require(matched[key] == original[key], 'Original exported selected configuration changed')
+    # Metadata/SHA proof only; do not decode table payloads or replay native captures.
+    package_path = exact_file(row['source_package']); package = json.loads(package_path.read_text())
+    provenance = package['source_provenance']
+    require(logical_ref(provenance['pair']) == logical_ref(matched['pair_reference'])
+            and logical_ref(provenance['container']) == logical_ref(matched['checkpoint_reference'])
+            and package['independent_verification']['proposal_identity'] == matched['proposal_identity'],
+            'Original exported package is another selected pair')
+    for reference in (row['table_manifest'],dual['plain_manifest'],row['report_reference']):
+        exact_file(reference)
+    gate,_ = logged(m['gate'])
+    require(gate['_meta']['exit_code'] == 0 and gate['metrics'].get('passed') is True
+            and gate['metrics'].get('cleanup_errors') == [], 'Original compression gate failed')
+    raw,raw_ref = logged(RAW_SMOKE);r=raw['metrics'];c=raw['config']
+    require(raw['_meta']['exit_code'] == 0 and c.get('sample_rejected_raw') is True
+            and c.get('pbs_jobid') == '709559.hopper-m-02' and r.get('export_checks_complete') is True
+            and r.get('errors') == [] and r.get('cleanup_errors') == [] and len(r.get('pairs',[])) == 1,
+            'Original raw-retention engineering smoke failed')
+    from src.tools.t02_rejected_raw import POLICY
+    require(c.get('raw_retention_policy') == POLICY and r['pairs'][0].get('status') == 'exported'
+            and r['pairs'][0].get('raw_retention',{}).get('binary_payloads_retained') is True
+            and r['pairs'][0]['raw_retention'].get('cleanup_confirmed') is True,
+            'Original accepted raw-retention smoke is incomplete')
+    raw_gate,_ = logged(r['gate'])
+    require(raw_gate['_meta']['exit_code'] == 0 and raw_gate['metrics'].get('passed') is True
+            and raw_gate['metrics'].get('cleanup_errors') == [], 'Original raw-retention gate failed')
+    return {'selected_entry':matched, 'export_reference':compression_ref,
+        'table_manifest':row['table_manifest'], 'source_package':row['source_package'],
+        'compression_equality':dual, 'raw10_smoke_reference':raw_ref,
+        'cache_matches_live':row['cache_matches_live'], 'downstream_allowed':False,
+        'scope':'Previously exported exact selected05 pair reused; no fresh cache claim'}, matched
+
+
+def first_unit(manifest_ref):
+    command = ['python3','-u','-m','src.tools.t02_export_parallel','--name',UNIT_NAME,
+        '--manifest',manifest_ref['file'],'--manifest-sha256',manifest_ref['sha256'],
+        '--concurrency','6','--timeout-seconds','1200','--unit-timeout-seconds','900',
+        '--pair-timeout-seconds','660','--gate-timeout-seconds','180',
+        '--sample-rejected-raw', *compression.command_suffix(SELECTION)]
+    return {'name':UNIT_NAME,'producer_module':'src.tools.t02_export_parallel',
+            'budget_group':'T02','priority':200,'gpus':1,'cpu_cores':12,
+            'timeout_seconds':1200,'command':command,
+            'references':{'manifest':manifest_ref,'test_selection':SELECTION}}
+
+
+def verify_new_inputs(manifests):
+    # The unmodified manifest validator checks every pair/checkpoint SHA. Small
+    # temporary JSON manifests only: no source native/image scan, no GPU.
+    for manifest in manifests:
+        compression.validate_entries({'selected':SELECTED},manifest,root=ROOT)
+        with tempfile.TemporaryDirectory(prefix='selected05_manifest_') as directory:
+            path=Path(directory)/'manifest.json';path.write_bytes(shared.canonical(manifest)+b'\n')
+            checked,_=parallel.read_manifest(path,sha_file(path))
+            require(checked == manifest,'Original manifest validation changed input')
+
+
+def queue_collision_check(keys):
+    snapshots=[]
+    for path in sorted(QUEUE.parent.glob('*/state.json')):
+        raw=path.read_bytes();state=json.loads(raw)
+        require(isinstance(state.get('keys'),dict),'Unknown existing shared queue state')
+        require(not set(keys).intersection(state['keys']),'Selected test pair already claimed/reserved in '+str(path))
+        snapshots.append((path,raw))
+    return snapshots
+
+
+def write_config(filename,value):
+    path=ROOT/filename
+    require(path.parent==ROOT/'configs' and not path.exists(),'New immutable config already exists')
+    with path.open('xb') as stream:
+        stream.write(shared.canonical(value)+b'\n');stream.flush();os.fsync(stream.fileno())
+    path.chmod(0o444)
+    ARTIFACTS.append(ref(path))
+    return ref(path)
+
+
+def main():
+    global SELECTED
+    require(sys.argv[1:] in (['--validate'],['--write-configs']),'Explicit validate or write stage required')
+    require(not (ROOT/'results'/(NAME+'.json')).exists(),'Unique preparation result already exists')
+    absent(UNIT_NAME);absent(CONSUMER_NAME)
+    require(not QUEUE.exists(),'New queue already exists')
+    selection=compression.load_selection(SELECTION,root=ROOT)
+    _,selected_source=logged(SELECTION['logged_result'])
+    SELECTED=selection['selected']
+    report=json.loads(exact_file(SELECTION).read_text())
+    require(len(SELECTED)==95 and report['counts_by_kind']==
+            {'direct_flip':18,'direct_stay':41,'look_flip':16,'look_stay':20},'Approved selected05 cutoff differs')
+    reuse,old=original_smokes(selection)
+    reuse_key=pair_key(entry(old))
+    all_entries=[entry(row) for row in SELECTED]
+    all_keys=[pair_key(e) for e in all_entries]
+    require(len(set(all_keys))==95 and all_keys.count(reuse_key)==1,'Repeated/missing original selected pair')
+    pending=[e for e in all_entries if pair_key(e)!=reuse_key]
+    require(len(pending)==94,'Exact prior export exclusion differs')
+    batches=[pending[i:i+6] for i in range(0,len(pending),6)]
+    manifests=[{'version':parallel.MANIFEST_VERSION,'partition':'test','entries':batch,
+        'test_selection':SELECTION,'batch_index':i+1,'ordering':'original selected05 order, exact prior exported pair excluded'}
+        for i,batch in enumerate(batches)]
+    verify_new_inputs(manifests)
+    snapshot=queue_collision_check([pair_key(e) for e in pending])
+    first=manifests[0];manifest_ref=planned_ref(MANIFEST_FILE,first)
+    unit=first_unit(manifest_ref)
+    roster={'version':'selected05_test_export_roster_01','test_selection':SELECTION,
+        'selected_count':95,'reused_export_count':1,'pending_export_count':94,
+        'prior_export_exclusions':[reuse], 'batches':manifests,
+        'scope':'Immutable construction-selected test population; no T02/fresh-cache/heldout evaluation authorization',
+        'ordering':'original selected05 order; no class/outcome reordering; exact prior export excluded',
+        'first_unit_only':True,'expansion_requires':'First combined raw10+lossless unit clean original completion, field checks, canonical and mixed audit; separate immutable plan/root for remaining batches with nonoverlapping claim keys'}
+    roster_ref=planned_ref(ROSTER_FILE,roster)
+    for filename in (MANIFEST_FILE,ROSTER_FILE,PLAN_FILE):
+        require(not (ROOT/filename).exists(),'Planned immutable config already exists: '+filename)
+    metrics={'prepared':True,'producer_exit_code':0,'errors':[], 'configuration_files_written':WRITE,
+        'selection_reference':SELECTION,'selected_count':95,'reused_export_count':1,'pending_export_count':94,
+        'first_unit_entries':first['entries'],'first_manifest':manifest_ref,'roster_reference':roster_ref,
+        'pending_batch_sizes':[len(b) for b in batches], 'original_validators':['compression.load_selection','compression.validate_entries','parallel.read_manifest'],
+        'queue_collision_snapshots':[{'file':str(p),'sha256':hashlib.sha256(raw).hexdigest()} for p,raw in snapshot],
+        'runnable_unit_names':[UNIT_NAME], 'planned_unit_command':unit['command'],
+        'old_queue_modified':False,'gpu_submission_performed':False,
+        'scope':roster['scope'],'fresh_cache_status':'not_performed','downstream_allowed':False,
+        'scheduling':'D3 keeps one smallx slot; test export uses at most two remaining one-GPU slots after first-unit validation'}
+    if WRITE:
+        require(all(p.read_bytes()==raw for p,raw in snapshot),'Shared occupancy changed during preparation')
+        require(not QUEUE.exists(),'New queue appeared during preparation')
+        require(write_config(MANIFEST_FILE,first)==manifest_ref,'Manifest bytes changed')
+        require(write_config(ROSTER_FILE,roster)==roster_ref,'Roster bytes changed')
+        identity,keys=shared.t02_identity(unit,ROOT)
+        require(keys==sorted(pair_key(e) for e in first['entries']),'Original scientific keys differ')
+        unit.update(identity=identity,claim_keys=keys,unit_id=shared.canonical_hash(identity))
+        shared.validate_unit(unit,ROOT)
+        plan={'version':shared.VERSION,'queue_id':QUEUE_ID,'priority_order':list(shared.PRIORITIES),
+            'units':[unit],'external_reservations':[],
+            'test_export_selection':{'test_selection':SELECTION,'roster_reference':roster_ref,
+                'prior_export_exclusions':[reuse], 'combined_storage_first_unit_only':True,
+                'remaining_batch_count':len(batches)-1,'remaining_pairs_not_runnable':sum(map(len,batches[1:])),
+                'scope':roster['scope']}}
+        shared.validate_plan(plan,ROOT)
+        plan_ref=write_config(PLAN_FILE,plan)
+        # Full fixed unit1200 + outer gate180 + minimum cleanup45 + setup35;
+        # PBS adds30. This is a bounded engineering grant, not measured throughput.
+        command=['python3','-u','-m','src.tools.gpu_pack','--name',CONSUMER_NAME,
+            '--queue-plan',plan_ref['file'],'--queue-plan-sha256',plan_ref['sha256'],
+            '--queue-root',str(QUEUE),'--gpus','1','--timeout-seconds','1460','--gate-timeout-seconds','180']
+        binding=mixed.validate_submission(ROOT,command,CONSUMER_NAME,1)
+        require(binding['possible_groups']==['T02'],'Test export budget group changed')
+        metrics.update(plan_reference=plan_ref,mixed_budget_authorization=binding,
+            review_only_submit_argv=['python3','scripts/pbs/submit_phase.py','--name',CONSUMER_NAME,
+                '--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:24:50','--',*command],
+            pbs_wall_seconds=1490,pack_seconds=1460,
+            walltime_scope='Complete unchanged original unit grant + outer gate/cleanup/setup; no new measured performance assertion')
+    require(all(p.read_bytes()==raw for p,raw in snapshot),'Shared occupancy changed before final sealing')
+    return metrics
+
+
+def finish(metrics):
+    path=ROOT/'results'/(NAME+'.json')
+    with path.open('x') as stream:
+        json.dump({'metrics':metrics,'config':{'name':NAME,'write_configs':WRITE,'selection_reference':SELECTION},
+            'sources':list(SOURCES.values()),'artifact_references':ARTIFACTS},stream,indent=2,allow_nan=False)
+        stream.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+
+if __name__=='__main__':
+    def expired(*_):raise TimeoutError('120-second bounded metadata-only selected05 preparation')
+    signal.signal(signal.SIGALRM,expired);signal.alarm(120)
+    try:
+        metrics=main()
+    except BaseException as error:
+        signal.alarm(0)
+        if not (ROOT/'results'/(NAME+'.json')).exists():
+            finish({'prepared':False,'producer_exit_code':1,'errors':[{'type':type(error).__name__,'message':str(error)}],
+                'configuration_files_written':WRITE,'partial_artifacts_preserved':True,
+                'gpu_submission_performed':False,'downstream_allowed':False})
+        raise
+    else:
+        finish(metrics)
+    finally:
+        signal.alarm(0)
+ --write-configs
+# start: 2026-11-10T23:10:58
+FINAL_METRICS_JSON: {"configuration_files_written": true, "downstream_allowed": false, "errors": [], "first_manifest": {"bytes": 3525, "file": "configs/t02_export_test_selected05_six01.json", "sha256": "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1"}, "first_unit_entries": [{"field_of_view": 60, "kind": "direct_stay", "pair": {"file": "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan427/floorplan427_00012/pair.json", "sha256": "c463e645ec6953fd052c0a13a4fc3467fef1bf93d74cb080368d2c14b5837588"}, "pair_id": "floorplan427_00012", "proposal_identity": "5e4ea3a43bfbaa43b3196865f0cafc27551cf3a5e95d69561ea24462ee6b6e73", "scene": "FloorPlan427", "source": {"file": "results/t01v2_checkpoint_test_s16_s05_01.json", "sha256": "e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5"}}, {"field_of_view": 60, "kind": "direct_flip", "pair": {"file": "data/world_pairs/v2/gen_test_fixed40_60_b01_c6_floorplan325/floorplan325_00002/pair.json", "sha256": "a438797c416368be3d55ef1d7854eb52eb71b706ca5034474de26f12c3c8a8f2"}, "pair_id": "floorplan325_00002", "proposal_identity": "8052c9adec15e685ce06663166a6a9f14068a84e487d7683e04f7f1911c1f396", "scene": "FloorPlan325", "source": {"file": "results/t01v2_checkpoint_test_b_full_01.json", "sha256": "d4e2ffacaabc11f30130539d77e51ff2dc69b44ba9db9f49c3c13af54cdfa048"}}, {"field_of_view": 60, "kind": "direct_flip", "pair": {"file": "data/world_pairs/v2/gen_test_fixed40_60_a01_retry1_c6_floorplan323/floorplan323_00008/pair.json", "sha256": "1fc9d6ae8b9d6ba89c37e38a3291a21e65f977a6c30c18ed57aa12d5f30091d8"}, "pair_id": "floorplan323_00008", "proposal_identity": "e62b6857aa2ffd5d28f719aa5bb963e6025d9f53cecb7a78d09bdb92bebadf86", "scene": "FloorPlan323", "source": {"file": "results/t01v2_checkpoint_test_a_full_01.json", "sha256": "98a6f19079edfda4bdcd52d6ec213bce3755b062af4aa24dcec672eabd7e51b0"}}, {"field_of_view": 60, "kind": "direct_stay", "pair": {"file": "data/world_pairs/v2/gen_test_fixed40_60_a01_retry1_c6_floorplan323/floorplan323_00139/pair.json", "sha256": "368ee95665c9f10a5cb4bd2da73bf47819b606bb3f80d534f560b39bcce5fd69"}, "pair_id": "floorplan323_00139", "proposal_identity": "2365273b06db5be2e8533dd11573fe345a7d18378928e7bb64ef3b72fcf08c21", "scene": "FloorPlan323", "source": {"file": "results/t01v2_checkpoint_test_a_full_01.json", "sha256": "98a6f19079edfda4bdcd52d6ec213bce3755b062af4aa24dcec672eabd7e51b0"}}, {"field_of_view": 60, "kind": "direct_stay", "pair": {"file": "data/world_pairs/v2/gen_test_fixed40_60_b01_c6_floorplan224/floorplan224_00029/pair.json", "sha256": "a88678e339707d36ee952d095574a9a888db53a9d5f979d18a71ce4a611c3ecc"}, "pair_id": "floorplan224_00029", "proposal_identity": "5384c37e0aea7d341471c3dd2b69e121f632d3ab65f125f616de7c15a4b6e431", "scene": "FloorPlan224", "source": {"file": "results/t01v2_checkpoint_test_b_full_01.json", "sha256": "d4e2ffacaabc11f30130539d77e51ff2dc69b44ba9db9f49c3c13af54cdfa048"}}, {"field_of_view": 60, "kind": "look_stay", "pair": {"file": "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan227/floorplan227_00038/pair.json", "sha256": "72d0ea9e043f04bd2a67f402ac9d89a0dfc3a596dbaceafe8c0d3ebb867197e1"}, "pair_id": "floorplan227_00038", "proposal_identity": "27296d6cc1e595198dbc2186c085ab449bb1f1182ad5f63189423c07710520b3", "scene": "FloorPlan227", "source": {"file": "results/t01v2_checkpoint_test_s16_s05_01.json", "sha256": "e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5"}}], "fresh_cache_status": "not_performed", "gpu_submission_performed": false, "mixed_budget_authorization": {"plan_reference": {"bytes": 8443, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_selected05_raw10_compressed_smoke_01.json", "sha256": "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924"}, "possible_groups": ["T02"], "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget", "residual_priority": ["T02"], "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business", "total_rule": "one_allocation_once_in_T01_and_shared", "version": "shared_gpu_units_budget_v1"}, "old_queue_modified": false, "original_validators": ["compression.load_selection", "compression.validate_entries", "parallel.read_manifest"], "pack_seconds": 1460, "pbs_wall_seconds": 1490, "pending_batch_sizes": [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4], "pending_export_count": 94, "plan_reference": {"bytes": 8443, "file": "configs/shared_test_selected05_raw10_compressed_smoke_01.json", "sha256": "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924"}, "planned_unit_command": ["python3", "-u", "-m", "src.tools.t02_export_parallel", "--name", "t02_export_test_selected05_six01", "--manifest", "configs/t02_export_test_selected05_six01.json", "--manifest-sha256", "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1", "--concurrency", "6", "--timeout-seconds", "1200", "--unit-timeout-seconds", "900", "--pair-timeout-seconds", "660", "--gate-timeout-seconds", "180", "--sample-rejected-raw", "--compress-test-tables", "--test-selection", "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"], "prepared": true, "producer_exit_code": 0, "queue_collision_snapshots": [{"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01/state.json", "sha256": "c57d18399a284bc9bba8f1556b2defb7879156aac4981021050ab94bfaa8396c"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_first_unit_01/state.json", "sha256": "95c72795e1200c6ca49bcf7352d235078efc219be2fac3a5fdee2129ad038c4c"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_raw10_train_smoke_01/state.json", "sha256": "07304a415ebbc74a5d644fa8c7af76bc489f27152933a500a65cfd43669140cf"}, {"file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01/state.json", "sha256": "4bf07b77894c2747bb4a3bc52c4442698f5a3239eea31469868fced62e2d7302"}], "reused_export_count": 1, "review_only_submit_argv": ["python3", "scripts/pbs/submit_phase.py", "--name", "gpu_pack_test_selected05_storage_smoke_01", "--task", "T01", "--budget-group", "PACK", "--gpus", "1", "--walltime", "00:24:50", "--", "python3", "-u", "-m", "src.tools.gpu_pack", "--name", "gpu_pack_test_selected05_storage_smoke_01", "--queue-plan", "configs/shared_test_selected05_raw10_compressed_smoke_01.json", "--queue-plan-sha256", "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924", "--queue-root", "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01", "--gpus", "1", "--timeout-seconds", "1460", "--gate-timeout-seconds", "180"], "roster_reference": {"bytes": 60232, "file": "configs/t02_test_selected05_export_roster_01.json", "sha256": "78497e85a7260cc814c58250b6b15487d5b91a8b0592fdd5c2e77d9b5ca81597"}, "runnable_unit_names": ["t02_export_test_selected05_six01"], "scheduling": "D3 keeps one smallx slot; test export uses at most two remaining one-GPU slots after first-unit validation", "scope": "Immutable construction-selected test population; no T02/fresh-cache/heldout evaluation authorization", "selected_count": 95, "selection_reference": {"file": "logs/review/diag_current_test_selected_05/report.json", "logged_result": {"file": "results/diag_current_test_selected_05.json", "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840"}, "sha256": "e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff"}, "walltime_scope": "Complete unchanged original unit grant + outer gate/cleanup/setup; no new measured performance assertion"}
+# exit_code: 0

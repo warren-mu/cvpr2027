@@ -1,0 +1,303 @@
+# run_logged: python3 -c """One-off selected05 test export preparation; no GPU, no native replay.
+
+Run directly under run_logged (not same-name record_command). --write-configs
+creates new immutable configs only after root has reviewed --validate output.
+The only runnable queue unit is the first six not already exported. The rest
+remain a fixed roster, not queued work. All original source checks run in T02.
+"""
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path
+import signal
+import sys
+import tempfile
+
+from src.tools import gpu_shared_claim as shared
+from src.tools import pbs_mixed_accounting as mixed
+from src.tools import t02_export_parallel as parallel
+from src.tools import t02_test_compression as compression
+from src.tools.t01_partition import sha_file
+
+ROOT = Path.cwd().resolve()
+WRITE = sys.argv[1:] == ['--write-configs']
+NAME = 'diag_test_selected05_export_plan_01' if WRITE else 'diag_test_selected05_export_validate_01'
+SELECTION = {'file':'logs/review/diag_current_test_selected_05/report.json',
+    'sha256':'e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff',
+    'logged_result':{'file':'results/diag_current_test_selected_05.json',
+                    'sha256':'9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840'}}
+COMPRESSION_SMOKE = {'file':'results/t02_export_test_compression_smoke_01.json',
+    'sha256':'3fdc9132df35d676a2f33db4f0356747198066f93dcd6956175ef686c96d889e'}
+RAW_SMOKE = {'file':'results/t02_export_raw10_smoke_01.json',
+    'sha256':'20112639aa293301c9129fbca03432072b1cb75549f08c40d62d835275e898b2'}
+QUEUE_ID = 'test_selected05_raw10_compressed_smoke_01'
+QUEUE = Path('/scratch/e1583364/cvpr2027/shared_gpu_queue') / QUEUE_ID
+UNIT_NAME = 't02_export_test_selected05_six01'
+CONSUMER_NAME = 'gpu_pack_test_selected05_storage_smoke_01'
+MANIFEST_FILE = 'configs/t02_export_test_selected05_six01.json'
+ROSTER_FILE = 'configs/t02_test_selected05_export_roster_01.json'
+PLAN_FILE = 'configs/shared_test_selected05_raw10_compressed_smoke_01.json'
+SOURCES, ARTIFACTS = {}, []
+
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+def ref(path):
+    return mixed.reference(path, ROOT)
+
+
+def logged(reference):
+    data, path = mixed.logged(ROOT, reference)
+    source = {**ref(path), 'metrics_sha256':data['_meta']['metrics_sha256']}
+    SOURCES[source['file']] = source
+    return data, source
+
+
+def exact_file(reference):
+    path = (ROOT / reference['file']).resolve()
+    require(sha_file(path) == reference['sha256'], 'Original file SHA changed: '+reference['file'])
+    return path
+
+
+def logical_ref(reference):
+    return {'file':str((ROOT/reference['file']).resolve().relative_to(ROOT)), 'sha256':reference['sha256']}
+
+
+def pair_key(entry):
+    return shared.canonical_hash({'kind':'t02_original_pair', 'pair':logical_ref(entry['pair']),
+                                  'table_protocol':'paired_view_table_d4_shadow_v2'})
+
+
+def entry(row):
+    pair = logical_ref(row['pair_reference'])
+    return {'scene':row['scene'], 'field_of_view':60,
+            'pair_id':Path(pair['file']).parent.name,
+            'proposal_identity':row['proposal_identity'], 'kind':row['kind'],
+            'source':logical_ref(row['checkpoint_reference']), 'pair':pair}
+
+
+def planned_ref(filename, value):
+    body = shared.canonical(value)+b'\n'
+    return {'file':filename, 'sha256':hashlib.sha256(body).hexdigest(), 'bytes':len(body)}
+
+
+def absent(name):
+    for folder in (ROOT/'results', ROOT/'logs/runs'):
+        require(not any(p.name == name or p.name.startswith(name+'_') or p.name.startswith(name+'.')
+                        for p in folder.glob(name+'*')), 'Existing evidence with planned run name: '+name)
+    require(not list((ROOT/'logs/pbs').glob(name+'-*')), 'Prior submission with planned run name: '+name)
+
+
+def original_smokes(selection):
+    data, compression_ref = logged(COMPRESSION_SMOKE)
+    cfg,m,meta = data['config'],data['metrics'],data['_meta']
+    require(meta['exit_code'] == 0 and meta['command'][1:4] == ['-u','-m','src.tools.t02_export']
+            and cfg.get('pbs_jobid') == '709607.hopper-m-02'
+            and cfg.get('compress_test_tables') is True and cfg.get('compression_smoke_dual') is True
+            and m.get('export_checks_complete') is True and m.get('errors') == []
+            and m.get('cleanup_errors') == [] and len(m.get('pairs',[])) == 1,
+            'Original dual-format smoke is not a complete successful export')
+    row = m['pairs'][0]
+    dual = row.get('test_compression',{}).get('dual_format_comparison',{})
+    require(row.get('status') == 'exported' and row.get('table_complete') is True
+            and row.get('native_evidence_verified') is True and row.get('pair_checks_passed') is True
+            and row.get('error') is None and row.get('cleanup_errors') == []
+            and all(dual.get(k) is True for k in ('passed','rgb_bytes_equal','mask_bytes_equal',
+                                                'labels_equal','tau_and_tau_seen_equal')),
+            'Original compression/native/table equality evidence is incomplete')
+    original = row['test_compression']['selection']['selected_entry']
+    matched = compression.selected_entry(selection,source=original['checkpoint_reference'],pair=original['pair_reference'],
+        scene=original['scene'],proposal_identity=original['proposal_identity'],kind=original['kind'],root=ROOT)
+    for key in ('configuration','target_names'):
+        require(matched[key] == original[key], 'Original exported selected configuration changed')
+    # Metadata/SHA proof only; do not decode table payloads or replay native captures.
+    package_path = exact_file(row['source_package']); package = json.loads(package_path.read_text())
+    provenance = package['source_provenance']
+    require(logical_ref(provenance['pair']) == logical_ref(matched['pair_reference'])
+            and logical_ref(provenance['container']) == logical_ref(matched['checkpoint_reference'])
+            and package['independent_verification']['proposal_identity'] == matched['proposal_identity'],
+            'Original exported package is another selected pair')
+    for reference in (row['table_manifest'],dual['plain_manifest'],row['report_reference']):
+        exact_file(reference)
+    gate,_ = logged(m['gate'])
+    require(gate['_meta']['exit_code'] == 0 and gate['metrics'].get('passed') is True
+            and gate['metrics'].get('cleanup_errors') == [], 'Original compression gate failed')
+    raw,raw_ref = logged(RAW_SMOKE);r=raw['metrics'];c=raw['config']
+    require(raw['_meta']['exit_code'] == 0 and c.get('sample_rejected_raw') is True
+            and c.get('pbs_jobid') == '709559.hopper-m-02' and r.get('export_checks_complete') is True
+            and r.get('errors') == [] and r.get('cleanup_errors') == [] and len(r.get('pairs',[])) == 1,
+            'Original raw-retention engineering smoke failed')
+    from src.tools.t02_rejected_raw import POLICY
+    require(c.get('raw_retention_policy') == POLICY and r['pairs'][0].get('status') == 'exported'
+            and r['pairs'][0].get('raw_retention',{}).get('binary_payloads_retained') is True
+            and r['pairs'][0]['raw_retention'].get('cleanup_confirmed') is True,
+            'Original accepted raw-retention smoke is incomplete')
+    raw_gate,_ = logged(r['gate'])
+    require(raw_gate['_meta']['exit_code'] == 0 and raw_gate['metrics'].get('passed') is True
+            and raw_gate['metrics'].get('cleanup_errors') == [], 'Original raw-retention gate failed')
+    return {'selected_entry':matched, 'export_reference':compression_ref,
+        'table_manifest':row['table_manifest'], 'source_package':row['source_package'],
+        'compression_equality':dual, 'raw10_smoke_reference':raw_ref,
+        'cache_matches_live':row['cache_matches_live'], 'downstream_allowed':False,
+        'scope':'Previously exported exact selected05 pair reused; no fresh cache claim'}, matched
+
+
+def first_unit(manifest_ref):
+    command = ['python3','-u','-m','src.tools.t02_export_parallel','--name',UNIT_NAME,
+        '--manifest',manifest_ref['file'],'--manifest-sha256',manifest_ref['sha256'],
+        '--concurrency','6','--timeout-seconds','1200','--unit-timeout-seconds','900',
+        '--pair-timeout-seconds','660','--gate-timeout-seconds','180',
+        '--sample-rejected-raw', *compression.command_suffix(SELECTION)]
+    return {'name':UNIT_NAME,'producer_module':'src.tools.t02_export_parallel',
+            'budget_group':'T02','priority':200,'gpus':1,'cpu_cores':12,
+            'timeout_seconds':1200,'command':command,
+            'references':{'manifest':manifest_ref,'test_selection':SELECTION}}
+
+
+def verify_new_inputs(manifests):
+    # The unmodified manifest validator checks every pair/checkpoint SHA. Small
+    # temporary JSON manifests only: no source native/image scan, no GPU.
+    for manifest in manifests:
+        compression.validate_entries({'selected':SELECTED},manifest,root=ROOT)
+        with tempfile.TemporaryDirectory(prefix='selected05_manifest_') as directory:
+            path=Path(directory)/'manifest.json';path.write_bytes(shared.canonical(manifest)+b'\n')
+            checked,_=parallel.read_manifest(path,sha_file(path))
+            require(checked == manifest,'Original manifest validation changed input')
+
+
+def queue_collision_check(keys):
+    snapshots=[]
+    for path in sorted(QUEUE.parent.glob('*/state.json')):
+        raw=path.read_bytes();state=json.loads(raw)
+        require(isinstance(state.get('keys'),dict),'Unknown existing shared queue state')
+        require(not set(keys).intersection(state['keys']),'Selected test pair already claimed/reserved in '+str(path))
+        snapshots.append((path,raw))
+    return snapshots
+
+
+def write_config(filename,value):
+    path=ROOT/filename
+    require(path.parent==ROOT/'configs' and not path.exists(),'New immutable config already exists')
+    with path.open('xb') as stream:
+        stream.write(shared.canonical(value)+b'\n');stream.flush();os.fsync(stream.fileno())
+    path.chmod(0o444)
+    ARTIFACTS.append(ref(path))
+    return ref(path)
+
+
+def main():
+    global SELECTED
+    require(sys.argv[1:] in (['--validate'],['--write-configs']),'Explicit validate or write stage required')
+    absent(NAME);absent(UNIT_NAME);absent(CONSUMER_NAME)
+    require(not QUEUE.exists(),'New queue already exists')
+    selection=compression.load_selection(SELECTION,root=ROOT)
+    _,selected_source=logged(SELECTION['logged_result'])
+    SELECTED=selection['selected']
+    report=json.loads(exact_file(SELECTION).read_text())
+    require(len(SELECTED)==95 and report['counts_by_kind']==
+            {'direct_flip':18,'direct_stay':41,'look_flip':16,'look_stay':20},'Approved selected05 cutoff differs')
+    reuse,old=original_smokes(selection)
+    reuse_key=pair_key(entry(old))
+    all_entries=[entry(row) for row in SELECTED]
+    all_keys=[pair_key(e) for e in all_entries]
+    require(len(set(all_keys))==95 and all_keys.count(reuse_key)==1,'Repeated/missing original selected pair')
+    pending=[e for e in all_entries if pair_key(e)!=reuse_key]
+    require(len(pending)==94,'Exact prior export exclusion differs')
+    batches=[pending[i:i+6] for i in range(0,len(pending),6)]
+    manifests=[{'version':parallel.MANIFEST_VERSION,'partition':'test','entries':batch,
+        'test_selection':SELECTION,'batch_index':i+1,'ordering':'original selected05 order, exact prior exported pair excluded'}
+        for i,batch in enumerate(batches)]
+    verify_new_inputs(manifests)
+    snapshot=queue_collision_check([pair_key(e) for e in pending])
+    first=manifests[0];manifest_ref=planned_ref(MANIFEST_FILE,first)
+    unit=first_unit(manifest_ref)
+    roster={'version':'selected05_test_export_roster_01','test_selection':SELECTION,
+        'selected_count':95,'reused_export_count':1,'pending_export_count':94,
+        'prior_export_exclusions':[reuse], 'batches':manifests,
+        'scope':'Immutable construction-selected test population; no T02/fresh-cache/heldout evaluation authorization',
+        'ordering':'original selected05 order; no class/outcome reordering; exact prior export excluded',
+        'first_unit_only':True,'expansion_requires':'First combined raw10+lossless unit clean original completion, field checks, canonical and mixed audit; separate immutable plan/root for remaining batches with nonoverlapping claim keys'}
+    roster_ref=planned_ref(ROSTER_FILE,roster)
+    for filename in (MANIFEST_FILE,ROSTER_FILE,PLAN_FILE):
+        require(not (ROOT/filename).exists(),'Planned immutable config already exists: '+filename)
+    metrics={'prepared':True,'producer_exit_code':0,'errors':[], 'configuration_files_written':WRITE,
+        'selection_reference':SELECTION,'selected_count':95,'reused_export_count':1,'pending_export_count':94,
+        'first_unit_entries':first['entries'],'first_manifest':manifest_ref,'roster_reference':roster_ref,
+        'pending_batch_sizes':[len(b) for b in batches], 'original_validators':['compression.load_selection','compression.validate_entries','parallel.read_manifest'],
+        'queue_collision_snapshots':[{'file':str(p),'sha256':hashlib.sha256(raw).hexdigest()} for p,raw in snapshot],
+        'runnable_unit_names':[UNIT_NAME], 'planned_unit_command':unit['command'],
+        'old_queue_modified':False,'gpu_submission_performed':False,
+        'scope':roster['scope'],'fresh_cache_status':'not_performed','downstream_allowed':False,
+        'scheduling':'D3 keeps one smallx slot; test export uses at most two remaining one-GPU slots after first-unit validation'}
+    if WRITE:
+        require(all(p.read_bytes()==raw for p,raw in snapshot),'Shared occupancy changed during preparation')
+        require(not QUEUE.exists(),'New queue appeared during preparation')
+        require(write_config(MANIFEST_FILE,first)==manifest_ref,'Manifest bytes changed')
+        require(write_config(ROSTER_FILE,roster)==roster_ref,'Roster bytes changed')
+        identity,keys=shared.t02_identity(unit,ROOT)
+        require(keys==sorted(pair_key(e) for e in first['entries']),'Original scientific keys differ')
+        unit.update(identity=identity,claim_keys=keys,unit_id=shared.canonical_hash(identity))
+        shared.validate_unit(unit,ROOT)
+        plan={'version':shared.VERSION,'queue_id':QUEUE_ID,'priority_order':list(shared.PRIORITIES),
+            'units':[unit],'external_reservations':[],
+            'test_export_selection':{'test_selection':SELECTION,'roster_reference':roster_ref,
+                'prior_export_exclusions':[reuse], 'combined_storage_first_unit_only':True,
+                'remaining_batch_count':len(batches)-1,'remaining_pairs_not_runnable':sum(map(len,batches[1:])),
+                'scope':roster['scope']}}
+        shared.validate_plan(plan,ROOT)
+        plan_ref=write_config(PLAN_FILE,plan)
+        # Full fixed unit1200 + outer gate180 + minimum cleanup45 + setup35;
+        # PBS adds30. This is a bounded engineering grant, not measured throughput.
+        command=['python3','-u','-m','src.tools.gpu_pack','--name',CONSUMER_NAME,
+            '--queue-plan',plan_ref['file'],'--queue-plan-sha256',plan_ref['sha256'],
+            '--queue-root',str(QUEUE),'--gpus','1','--timeout-seconds','1460','--gate-timeout-seconds','180']
+        binding=mixed.validate_submission(ROOT,command,CONSUMER_NAME,1)
+        require(binding['possible_groups']==['T02'],'Test export budget group changed')
+        metrics.update(plan_reference=plan_ref,mixed_budget_authorization=binding,
+            review_only_submit_argv=['python3','scripts/pbs/submit_phase.py','--name',CONSUMER_NAME,
+                '--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:24:50','--',*command],
+            pbs_wall_seconds=1490,pack_seconds=1460,
+            walltime_scope='Complete unchanged original unit grant + outer gate/cleanup/setup; no new measured performance assertion')
+    require(all(p.read_bytes()==raw for p,raw in snapshot),'Shared occupancy changed before final sealing')
+    return metrics
+
+
+def finish(metrics):
+    path=ROOT/'results'/(NAME+'.json')
+    with path.open('x') as stream:
+        json.dump({'metrics':metrics,'config':{'name':NAME,'write_configs':WRITE,'selection_reference':SELECTION},
+            'sources':list(SOURCES.values()),'artifact_references':ARTIFACTS},stream,indent=2,allow_nan=False)
+        stream.write('\n')
+    print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+
+if __name__=='__main__':
+    def expired(*_):raise TimeoutError('120-second bounded metadata-only selected05 preparation')
+    signal.signal(signal.SIGALRM,expired);signal.alarm(120)
+    try:
+        metrics=main()
+    except BaseException as error:
+        signal.alarm(0)
+        if not (ROOT/'results'/(NAME+'.json')).exists():
+            finish({'prepared':False,'producer_exit_code':1,'errors':[{'type':type(error).__name__,'message':str(error)}],
+                'configuration_files_written':WRITE,'partial_artifacts_preserved':True,
+                'gpu_submission_performed':False,'downstream_allowed':False})
+        raise
+    else:
+        finish(metrics)
+    finally:
+        signal.alarm(0)
+ --validate
+# start: 2026-11-10T23:08:06
+FINAL_METRICS_JSON: {"configuration_files_written": false, "downstream_allowed": false, "errors": [{"message": "Existing evidence with planned run name: diag_test_selected05_export_validate_01", "type": "ValueError"}], "gpu_submission_performed": false, "partial_artifacts_preserved": true, "prepared": false, "producer_exit_code": 1}
+Traceback (most recent call last):
+  File "<string>", line 282, in <module>
+  File "<string>", line 195, in main
+  File "<string>", line 90, in absent
+  File "<string>", line 46, in require
+ValueError: Existing evidence with planned run name: diag_test_selected05_export_validate_01
+# exit_code: 1

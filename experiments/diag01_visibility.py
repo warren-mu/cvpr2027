@@ -177,7 +177,7 @@ def recompute_episode(episode,traces,index,*,arm,phase,update,journal):
         marked_hashes[current]=t['after']['capture']['marked_rgb_sha256']
         actions.append({'decision_index':i,'action_number':i+1,'raw_response':t['response'],'parsed_action':action,
             'action_kind':parsed.kind if parsed else 'invalid','before_state_id':before,'after_state_id':current,
-            'transition_performed':current!=before,'saved_action_valid':t['action_valid'],
+            'transition_performed':current!=before,'saved_action_valid':t['action_valid'],'saved_action_kind':t['action_kind'],
             'saved_action_success':t['after'].get('action_success'),
             'before_marked_rgb_sha256':t['before']['capture']['marked_rgb_sha256'],
             'after_marked_rgb_sha256':t['after']['capture']['marked_rgb_sha256'],
@@ -214,8 +214,14 @@ def recompute_episode(episode,traces,index,*,arm,phase,update,journal):
 def summarize(rows):
     n=len(rows)
     fields=('seen_before_select','ever_250','ever_positive','seen_count_mismatch','x_seen_step_mismatch')
+    observed=[r['states'][a['decision_index']+1]['own_anchor_pixels'] for r in rows for a in r['actions']
+              if a['saved_action_kind']=='observe' and a['saved_action_valid']]
     return {'episodes':n,**{field:sum(r[field] for r in rows) for field in fields},
         'logged_seen_before_select':sum(r['logged_seen_before_select'] is True for r in rows),
+        'valid_observation_actions':len(observed),
+        'observation_after_state_masks':{'zero':sum(p==0 for p in observed),
+            'positive_below250':sum(0<p<250 for p in observed),'at_least250':sum(p>=250 for p in observed),
+            'denominator':'all original valid observation actions in these Look episodes; count actual own-world mask immediately after each action'},
         'literal_formula_matches_logged':sum(r['literal_formula_matches_logged'] for r in rows),
         'denominator':'all Look episodes in the stated phase/window, including episodes without parsed select'}
 
@@ -374,7 +380,9 @@ def main():
         report={'version':VERSION,'code_comparisons':comparisons,'example_preprocessing':preprocessing,'population_manifest':manifest_ref,'original_sources':sources,
             'independent_seen_definition':'Some actual own-world input/state before parsed select action has mask>=250; observation state index k precedes action number k+1. No select => false.',
             'logged_comparison_definition':'Original metric uses first observed state index < zero-based select decision_index; retained only as a comparison, not used to derive masks or seen.',
-            'episodes':episodes,'summaries':grouped,'first_observation_directions':directions,'correct_s0_actions':correct,
+            'episodes':episodes,'summaries':grouped,
+            'totals_by_arm_phase':[{'arm':arm,'phase':phase,**summarize([r for r in episodes if r['arm']==arm and r['phase']==phase])}
+                for arm in parents for phase in ('train','holdout')],'first_observation_directions':directions,'correct_s0_actions':correct,
             'look_s0':s0,'visited_state_index':list(index.state_index.values()),'examples':examples,
             'payload_scope':'All Look s0 and reached/one-step own-X masks; s0 RGB/candidate masks and three example frames only. No new native/cache acceptance.',
             'source_files_read':list(reads.refs.values()),'elapsed_seconds':time.monotonic()-started}
