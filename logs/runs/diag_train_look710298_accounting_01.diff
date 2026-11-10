@@ -1,0 +1,26 @@
+diff --git a/STATUS.md b/STATUS.md
+index 507a738f..2faf33f2 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1837,3 +1837,9 @@ diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项C
+ ### 2026-11-10 06:58 ET — 训练补数已开始；导出同批无host预检完成
+ 710213→710298 无host同参数重提成功（gen_train_look_first_unit_01_retry2，27:10），原开头gate已于11:55:02–11:55:10 UTC在hopper-24通过、无黑帧，parent仍运行/未封口，尚未增加任何正式合格数量。该节点本日有其他黑帧GPU，不因此重新加入指定节点名单。
+ 710282满20分钟后的原fresh Q快照/身份/noalloc验证通过，1232秒时执行取消；原canonical证明F且0GPU小时，未取消任何R作业。无host gpu_pack_train_raw10_smoke_single_01_retry2原same_retry_command/mixed/fresh预算preflight已通过，仍只含six20、1825秒parent/PBS1855秒，同科学参数；尚未qsub。新旧映射待receipt记录。FIG01完整5对已推ec3c263d并在Mac核SHA复制完成。
++
++
++### 2026-11-10 07:17 ET — six20单卡导出完成，正式cache尚待复核
++710282→710308的无host同参数重提已完成；原提交receipt位于logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry2-20261110T120146Z-ec1b40e0。710308开头gate在hopper-23/GPU-498d9ab2-aa77-5311-2764-a76269bd601a通过，仅领取原six20一个单元，PACK和所有children正常exit0、errors/cleanup为空，claim/release闭环后队列为空立即退出。原canonical diag_raw10_shared710308_accounting_01记录排队11秒、实际0.10055555555555555 GPU小时；原mixed账本全部归T02，无重复计费。
++原工程汇总diag_t02_train_six20_raw10_completion_01：6 attempts/6 exported，均DirectFlip，原native evidence/pair checks/table完整；accepted raw全部保留、omitted为0，无scientific rejected，未声称实际覆盖拒绝抽样分支。cache_matches_live仍null、downstream_allowed=false，这6对尚未增加正式训练池。其余六批尚未迁移到新不可变队列，也未重复向旧队列提交consumer。
++710298的12:05:19UTC原live01仅为运行快照：69次尝试、source-reported合格数0，一动作证据不可用30、起点锚点可见但直接证据失败17、w1物理13、w0物理6、目标唯一性/距离比3；当时parent/child尚未封口，未将这些源报告数字作独立验收。后续终态另记。
+diff --git a/tasks/E2E.report.md b/tasks/E2E.report.md
+index cf301bb1..d3de2644 100644
+--- a/tasks/E2E.report.md
++++ b/tasks/E2E.report.md
+@@ -129,7 +129,7 @@ S01–S07 的原 40 场景来源均已终态，独立 checkpoint 与日志覆盖
+ 
+ 预算来源为[原预算快照](../logs/review/diag_train_look_first_unit_retry1_review_plan_01/budget_state.json)，最终两臂费用见[原 canonical](../results/diag_pilot710029_710037_accounting_01.json)。本次[原审计](../results/diag_e2e_final_report_audit_01.json)覆盖20个新封口或报告引用结果、0 FAIL，保留 P5/P7 警告；本次新封口结果及报告引用范围的原审计无 FAIL；旧未封口配额记录和 `accounting01` 缺结果日志的失败记录继续保留，不声称全仓历史问题已清零。
+ 
+-最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。本报告首推时 FIG01 保持暂停；此后已完成五对原帧导出并复制到 Mac，见[FIG01 原结果](../results/diag_fig01_firststep_frames_01.json)与 STATUS 的后续记录。这不改变本节试跑结果。trainLook 补数当前新提交 **710213（hopper30，同参数 FP315）**，仍遵循指定节点 20 分钟未启动才取消回退的规则；它不是本试跑通过记录，也未据此增加正式训练库存。
++最新已核 scratch 快照为 **588.3 GiB / 1 TiB、3,116,252 个文件**；这是已核查询快照，不是未来写入峰值或容量保证。本报告首推时 FIG01 保持暂停；此后已完成五对原帧导出并复制到 Mac，见[FIG01 原结果](../results/diag_fig01_firststep_frames_01.json)与 STATUS 的后续记录。这不改变本节试跑结果。本报告首推时 trainLook 补数已提交 **710213（hopper30，同参数 FP315）**；此后按实际 qtime 与 fresh Q/noallocation 证据作零用量取消，并同参数无 host 重提为 **710298**，后续数据作业状态以 STATUS 为准。这条数据线不是本试跑通过记录，也未据此增加正式训练库存。
+ 
+ ---

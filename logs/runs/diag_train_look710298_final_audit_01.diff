@@ -1,0 +1,13 @@
+diff --git a/STATUS.md b/STATUS.md
+index 2faf33f2..89ff9ad6 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1843,3 +1843,8 @@ diag_fig01_firststep_frames_01 原CPU导出47.10808789898874秒，0 GPU；17项C
+ 710282→710308的无host同参数重提已完成；原提交receipt位于logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry2-20261110T120146Z-ec1b40e0。710308开头gate在hopper-23/GPU-498d9ab2-aa77-5311-2764-a76269bd601a通过，仅领取原six20一个单元，PACK和所有children正常exit0、errors/cleanup为空，claim/release闭环后队列为空立即退出。原canonical diag_raw10_shared710308_accounting_01记录排队11秒、实际0.10055555555555555 GPU小时；原mixed账本全部归T02，无重复计费。
+ 原工程汇总diag_t02_train_six20_raw10_completion_01：6 attempts/6 exported，均DirectFlip，原native evidence/pair checks/table完整；accepted raw全部保留、omitted为0，无scientific rejected，未声称实际覆盖拒绝抽样分支。cache_matches_live仍null、downstream_allowed=false，这6对尚未增加正式训练池。其余六批尚未迁移到新不可变队列，也未重复向旧队列提交consumer。
+ 710298的12:05:19UTC原live01仅为运行快照：69次尝试、source-reported合格数0，一动作证据不可用30、起点锚点可见但直接证据失败17、w1物理13、w0物理6、目标唯一性/距离比3；当时parent/child尚未封口，未将这些源报告数字作独立验收。后续终态另记。
++
++
++### 2026-11-10 07:22 ET — FP315首单元终态保留，不扩大
++710298的原child于12:14:31UTC封口exit1/status=incomplete，原错误为TimeoutError: Insufficient reserved time for fresh witness；parent于12:14:32UTC封口exit1，cleanup为空，未发生开头黑帧。diag_train_look710298_live_02及原terminal字段核对记录123次尝试、四类合格数均0；另有evidence_incomplete_storage_cap一次与terminal_interruption一次，均保留，未剔除失败尝试。原物理记录中两world新规通过88次，其中67次不满足旧规，但这些不是最终合格世界对，不据此宣称冒烟PASS或扩大采集。
++原canonical diag_train_look710298_accounting_01记录PBS F/exit1、排队12秒、实际00:20:05即0.3347222222222222 GPU小时。该首单元及此前黑帧、排队取消与重提证据原样保留；没有新训练合格数量、没有提交后继扩展。E2E试跑和FIG01已独立完成并推送，主实验未提交、研究阈值未改。

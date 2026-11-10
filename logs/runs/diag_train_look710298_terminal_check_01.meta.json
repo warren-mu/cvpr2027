@@ -1,0 +1,28 @@
+{
+  "name": "diag_train_look710298_terminal_check_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_train_look710298_terminal_check_01",
+    "--",
+    "python3",
+    "-c",
+    "import json\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nfrom src.envs import pair_v2_terminal as terminal\nfrom src.envs import pair_v2_raw_sampling as sampling\nr=Path.cwd().resolve();n='gen_train_look_first_unit_01_retry2'\nparent,pref=audited_result(r/'results'/(n+'.json'))\nchild,cref=audited_result(r/'results'/(n+'_c6_floorplan315.json'))\naccount,aref=audited_result(r/'results/diag_train_look710298_accounting_01.json')\nm=child['metrics'];c=child['config']\nassert child['_meta']['exit_code']==parent['_meta']['exit_code']==1 and account['_meta']['exit_code']==0\nassert c['scene']=='FloorPlan315' and c['shard']['pbs_jobid']=='710298.hopper-m-02'\nassert parent['config']['scene_timeout_seconds']==1200 and parent['config']['timeout_seconds']==1600\nassert len(parent['metrics']['scene_runs'])==1 and parent['metrics']['scene_runs'][0]['granted_timeout_seconds']==1200\nassert all(parent['metrics']['scene_runs'][0]['source'][k]==cref[k] for k in ['file','sha256','metrics_sha256'])\nsampling.validate_fields(c);sampling.validate_fields(m)\njournal=terminal.checked_journal(m,c,r)\nassert journal==m['terminal_receipt']['journal'] and m['terminal_receipt']['generator_returned_after_cleanup'] is True\nassert m['final_metrics_verified'] is True and m['terminal_verified_after_cleanup'] is True\nassert m['cleanup_errors']==parent['metrics']['cleanup_errors']==[]\nadmission=m['g01_witness_admission']\nassert admission['cleanup_confirmed'] is True and admission['active_leases']==admission['errors']==[]\nassert all(v['release_confirmed'] is True and v['remaining_owned_group'] is False and v['cleanup_errors']==[] for v in admission['lease_records'])\nprint('ORIGINAL_TERMINAL_FIELDS_JSON: '+json.dumps({'sources':[pref,cref,aref],'parent_status':parent['metrics']['status'],'parent_exit_code':parent['_meta']['exit_code'],'child_status':m['status'],'child_exit_code':child['_meta']['exit_code'],'original_error':m.get('error'),'reported_counts':{k:m[k] for k in ['attempts','passed_by_class','discard_reason_counts','nearby_physics_counts']},'checked_journal':journal,'cleanup_errors':m['cleanup_errors'],'worker_failed':m['status']=='worker_failed','final_metrics_verified':m['final_metrics_verified'],'terminal_verified_after_cleanup':m['terminal_verified_after_cleanup'],'raw_sampling_version':m['raw_sampling_version'],'raw_sampling_policy':m['raw_sampling_policy'],'raw_saving_stopped':m['search_raw_storage']['raw_saving_stopped'],'raw_cap_events':m['search_raw_storage']['cap_events'],'allocation':account['metrics'],'engineering_pass_claimed':False,'scope':'Original formal1200-second source remains exit1/incomplete; not relabeled as the distinct600-second smoke or independent pair acceptance'},sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T20:20:48",
+  "log_path": "logs/runs/diag_train_look710298_terminal_check_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "6a3df1c7147a3802794714eadbe2eb3f36116607",
+  "git_dirty": false,
+  "end": "2026-11-10T20:20:54",
+  "duration_sec": 1.2,
+  "exit_code": 0,
+  "metrics_sha256": "65525f096ac2dba1b3e0648c717acc30c3eb9489caedcdc7ffbc372eb3322796"
+}
