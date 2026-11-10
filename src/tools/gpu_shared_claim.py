@@ -146,7 +146,7 @@ def t02_identity(unit, root):
 def validate_unit(unit, root=ROOT, *, external=False):
     require(isinstance(unit, dict) and SAFE.fullmatch(str(unit.get('name', ''))), 'Unsafe shared unit name')
     group = unit.get('budget_group')
-    require(group in PRIORITIES and unit.get('priority') == PRIORITIES[group]
+    require(group in PRIORITIES
             and unit.get('gpus') == 1 and type(unit.get('gpus')) is int
             and unit.get('cpu_cores') == 12 and type(unit.get('cpu_cores')) is int,
             'Each shared unit needs its original group, one GPU and twelve CPUs')
@@ -167,6 +167,10 @@ def validate_unit(unit, root=ROOT, *, external=False):
         identity, keys = validate_g01(unit, Path(root), external=external)
     else:
         raise ValueError('Shared producer is not implemented/authorized; no implicit E2E qualification')
+    # Fixed group accounting remains G01. Only the explicitly authenticated
+    # training bank is scheduled between test generation(300) and exports(200).
+    priority = 250 if group == 'G01' and identity.get('partition') == 'train' else PRIORITIES[group]
+    require(unit.get('priority') == priority, 'Shared workload priority differs from its authenticated partition')
     require(unit.get('identity') == identity and unit.get('claim_keys') == sorted(keys)
             and len(keys) == len(set(keys)) and bool(keys)
             and all(re.fullmatch(r'[0-9a-f]{64}', key) for key in keys)

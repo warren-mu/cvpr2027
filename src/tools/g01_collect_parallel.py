@@ -350,6 +350,8 @@ def main(argv=None):
                 if (plan['parent_run_name'] != args.name or plan['partition'] != partition
                         or [row['scene'] for row in plan['assignments']] != list(scenes)):
                     raise ValueError('Submission differs from its immutable quota parent/scenes/partition')
+                if plan['version'] == quota_plan.TRAIN_VERSION and not args.nearby_physics:
+                    raise ValueError('New training Look tickets require explicit validated nearby physics')
                 quota = {'plan': plan, 'reference': ref, 'arithmetic': arithmetic, 'count_basis_proof': count_proof}
             proof = benchmark_stage(args.benchmark_source, args.concurrency)
         finally:

@@ -13,6 +13,7 @@ import re
 from src.tools import g01_quota_plan as quota
 
 VERSION = 'g01_fixed40_disjoint_ticket_bank_v1'
+TRAIN_VERSION = 'g01_train_look_disjoint_ticket_bank_v1'
 RESERVATION_SCOPE = 'preallocated_disjoint_ticket_upper_bound'
 SIZES = (6, 6, 6, 6, 6, 6, 4)
 
@@ -41,10 +42,26 @@ def base_identity(plan):
 
 def validate_bank(bank, *, root):
     if (not isinstance(bank, dict) or set(bank) != {'version', 'base_plan_reference', 'units'}
-            or bank['version'] != VERSION):
+            or bank['version'] not in (VERSION, TRAIN_VERSION)):
         raise ValueError('Unknown or incomplete disjoint test ticket bank')
     base = read_reference(bank['base_plan_reference'], root)
     quota.validate_structure(base)
+    if bank['version'] == TRAIN_VERSION:
+        if base['version'] != quota.TRAIN_VERSION or base['partition'] != 'train' or 'shared_ticket_bank' in base:
+            raise ValueError('Training bank requires the original fixed-holdout quota plan')
+        expected = [row['scene'] for row in base['assignments']]
+        seen_names, actual_scenes = set(), []
+        for index, unit in enumerate(bank['units'], 1):
+            if (set(unit) != {'slice_id', 'parent_run_name', 'scenes'}
+                    or unit['slice_id'] != f's{index:02d}'
+                    or not re.fullmatch(r'gen_train_[A-Za-z0-9_]+', unit['parent_run_name'])
+                    or unit['parent_run_name'] in seen_names
+                    or not isinstance(unit['scenes'], list) or not 1 <= len(unit['scenes']) <= 6):
+                raise ValueError('Training bank requires explicit ordered at-most6-scene units')
+            seen_names.add(unit['parent_run_name']); actual_scenes.extend(unit['scenes'])
+        if not bank['units'] or actual_scenes != expected:
+            raise ValueError('Training bank slices must cover every original scene exactly once in order')
+        return base
     expected_scenes = [f'FloorPlan{offset + number}' for number in range(21, 31)
                        for offset in (0, 200, 300, 400)]
     if (base['version'] != quota.CONFIG_VERSION or base['partition'] != 'test'
@@ -76,10 +93,10 @@ def expected_member(bank, bank_ref, slice_id, *, root):
     result = copy.deepcopy(base)
     result.update(parent_run_name=unit['parent_run_name'],
         assignments=[copy.deepcopy(by_scene[scene]) for scene in unit['scenes']],
-        outstanding_reservations=[{'reservation_id': base_identity(base) + ':other_slices:' + slice_id,
+        outstanding_reservations=copy.deepcopy(base['outstanding_reservations']) + [{'reservation_id': base_identity(base) + ':other_slices:' + slice_id,
             'source': quota.reference(bank_ref), 'scope': RESERVATION_SCOPE,
             'by_scene': other, 'by_kind': quota.summed(other.values())}],
-        shared_ticket_bank={'version': VERSION, 'reference': quota.reference(bank_ref), 'slice_id': slice_id})
+        shared_ticket_bank={'version': bank['version'], 'reference': quota.reference(bank_ref), 'slice_id': slice_id})
     quota.validate_structure(result)
     return result
 
@@ -87,15 +104,17 @@ def expected_member(bank, bank_ref, slice_id, *, root):
 def verify_member(plan, *, root, authenticate=False):
     declaration = plan.get('shared_ticket_bank')
     if (not isinstance(declaration, dict) or set(declaration) != {'version', 'reference', 'slice_id'}
-            or declaration['version'] != VERSION):
+            or declaration['version'] not in (VERSION, TRAIN_VERSION)):
         raise ValueError('Nonempty shared reservations need the exact ticket-bank declaration')
     bank = read_reference(declaration['reference'], root)
+    if bank['version'] != declaration['version']:
+        raise ValueError('Shared bank declaration changed its version')
     expected = expected_member(bank, declaration['reference'], declaration['slice_id'], root=root)
     if plan != expected:
         raise ValueError('Slice changed original confirmed inventory, assigned tickets, or other-unit reservations')
     base = validate_bank(bank, root=root)
     proof = quota.authenticate_count_basis(base) if authenticate else None
-    return {'version': VERSION, 'bank_reference': copy.deepcopy(declaration['reference']),
+    return {'version': bank['version'], 'bank_reference': copy.deepcopy(declaration['reference']),
         'base_plan_reference': copy.deepcopy(bank['base_plan_reference']),
         'allocation_id': base_identity(base), 'slice_id': declaration['slice_id'],
         'count_basis_proof': proof,
@@ -104,8 +123,8 @@ def verify_member(plan, *, root, authenticate=False):
 
 def scientific_identity(plan, *, root):
     proof = verify_member(plan, root=root, authenticate=False)
-    identity = {'version': VERSION, 'allocation_id': proof['allocation_id'],
-        'partition': 'test', 'assignments': copy.deepcopy(plan['assignments']),
+    identity = {'version': proof['version'], 'allocation_id': proof['allocation_id'],
+        'partition': plan['partition'], 'assignments': copy.deepcopy(plan['assignments']),
         'scene_timeout_seconds': 1200, 'concurrency': 6, 'field_of_view': 60, 'seed': 0}
     keys = [canonical({'allocation_id': proof['allocation_id'], 'assignment': row})
             for row in plan['assignments']]

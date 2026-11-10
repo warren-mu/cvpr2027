@@ -46,11 +46,12 @@ def tags(config=None):
     quota_assignment = None if config is None else config.get('g01_quota_assignment')
     extra = {} if quota_assignment is None else policy.quota_plan.declared_fields(quota_assignment)
     configuration = config is not None and config.get('g01_configuration_version') is not None
+    training = quota_assignment is not None and quota_assignment.get('version') == policy.quota_plan.TRAIN_VERSION
     return {**stay.tags(), **policy.fields(partition, quota_assignment is not None, configuration,
                 config is not None and config.get('nearby_physics_version') is not None,
                 config is not None and config.get('g01_engineering_smoke') is not None,
-                config is not None and config.get('raw_sampling_version') is not None),
-            **extra, **search.fields(quota_assignment is not None, configuration), **labels.fields(),
+                config is not None and config.get('raw_sampling_version') is not None, training),
+            **extra, **search.fields(quota_assignment is not None, configuration, training), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
 
@@ -148,6 +149,7 @@ def make_quota(config):
         options = {key: config[key] for key in ('actual_output_caps', 'allowed_kinds')}
     if config is not None and config.get('g01_configuration_version') is not None:
         options.update(scene=config['scene'], seen_configurations=config['g01_seen_configurations'])
+    options['training'] = config is not None and config.get('g01_quota_version') == policy.quota_plan.TRAIN_VERSION
     return search.SceneQuota(policy.class_cap(partition), **options)
 
 
@@ -184,7 +186,7 @@ def installed(config=None):
                 raise RuntimeError('G01 geometry is only bound inside the spawned generator')
             record = search.build_pool(flip._ORIGINAL_POOLS, *args, check_deadline=check, **kwargs)
             if quota.ticketed:
-                record.update(search.fields(True, quota.configuration_enabled))
+                record.update(search.fields(True, quota.configuration_enabled, quota.training))
             return record
         def observer(sim, proposal, role, record, row, **kwargs):
             if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':
@@ -239,7 +241,7 @@ def installed(config=None):
             (marked, '_BASE_WRITE', write), (marked, 'summary', summary),
             (marked, 'export_pair', export), (marked, 'discover_view', discover),
             (marked, 'construct_observer', observer), (marked, 'run_search', cadence.run_search)]
-        if quota.configuration_enabled:
+        if quota.configuration_enabled or quota.training:
             targets.append((cadence, 'DiscoveryRound', search.ConfigurationPriorityRound))
         previous = [(module, key, getattr(module, key)) for module, key, _ in targets]
         try:

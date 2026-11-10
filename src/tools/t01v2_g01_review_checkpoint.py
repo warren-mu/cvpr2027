@@ -99,7 +99,7 @@ def verify_collection(data):
             nearby.validate_fields(raw)
         if quota.ticketed and any(raw.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
             raise ValueError('Raw journal attempt changed its immutable scene tickets')
-        if (raw.get('g01_search_version') in (search.QUOTA_VERSION, search.CONFIG_VERSION)) != quota.ticketed:
+        if (raw.get('g01_search_version') in (search.QUOTA_VERSION, search.CONFIG_VERSION, search.TRAIN_VERSION)) != quota.ticketed:
             raise ValueError('Raw journal proposal policy differs from source quota version')
         if raw.get('collection_quota_skip') is not None:
             kind = raw.get('kind')
@@ -186,7 +186,8 @@ def source_support():
                     config.get('g01_configuration_version') is not None,
                     config.get('nearby_physics_version') is not None,
                     config.get('g01_engineering_smoke') is not None,
-                    config.get('raw_sampling_version') is not None).items())
+                    config.get('raw_sampling_version') is not None,
+                    config.get('g01_quota_version') == policy.quota_plan.TRAIN_VERSION).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')

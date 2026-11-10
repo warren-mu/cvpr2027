@@ -42,14 +42,14 @@ def validate_unit(unit, root, *, external=False):
         raise ValueError('Malformed shared G01 original command') from error
     expected = ['--name', args.name, '--scenes', *args.scenes, '--concurrency', '6',
         '--benchmark-source', args.benchmark_source, '--timeout-seconds', str(args.timeout_seconds),
-        '--partition', 'test', '--quota-plan', args.quota_plan,
+        '--partition', args.partition, '--quota-plan', args.quota_plan,
         '--quota-plan-sha256', args.quota_plan_sha256]
     if args.nearby_physics:
         expected.append('--nearby-physics')
     if args.sample_rejected_raw:
         expected.append('--sample-rejected-raw')
-    if (argv != expected or args.name != unit.get('name') or args.partition != 'test'
-            or args.concurrency != 6 or args.timeout_seconds != collect.required_timeout(args.scenes, 6, 'test')
+    if (argv != expected or args.name != unit.get('name') or args.partition not in ('test', 'train')
+            or args.concurrency != 6 or args.timeout_seconds != collect.required_timeout(args.scenes, 6, args.partition)
             or unit.get('timeout_seconds') != args.timeout_seconds):
         raise ValueError('Shared G01 command changed its scene order, full grants, name or test partition')
     refs = unit.get('references')
@@ -62,6 +62,10 @@ def validate_unit(unit, root, *, external=False):
     bank_ref = quota.reference(refs.get('g01_ticket_bank'))
     ticket_bank = bank.read_reference(bank_ref, root)
     base = bank.validate_bank(ticket_bank, root=root)
+    if args.partition == 'train' and (base['version'] != quota.TRAIN_VERSION or not args.nearby_physics):
+        raise ValueError('Shared training Look requires explicit holdout tickets and current nearby physics')
+    if base['partition'] != args.partition:
+        raise ValueError('Shared unit partition differs from original bank')
     expected_member = bank.expected_member(ticket_bank, bank_ref, refs.get('g01_ticket_slice'), root=root)
     if external:
         legacy = copy.deepcopy(base)
@@ -163,6 +167,6 @@ def validate_admission(plan, *, root):
     if (plan['scenes'] != [row['scene'] for row in quota_plan['assignments']]
             or plan['parent_run_name'] != quota_plan['parent_run_name']
             or plan['stage_index'] != 0 or plan['concurrency'] != 6
-            or plan.get('g01_partition') != 'test'):
+            or plan.get('g01_partition', 'train') != quota_plan['partition']):
         raise ValueError('Shared G01 admission changed the original unit scene/lane assignment')
     return verified

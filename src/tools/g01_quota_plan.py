@@ -15,12 +15,13 @@ from src.envs.thor_common import ROOT
 
 VERSION = 'g01_static_scene_kind_tickets_v1'
 CONFIG_VERSION = 'g01_static_configuration_tickets_v2'
+TRAIN_VERSION = 'g01_train_look_fixed_holdout_tickets_v1'
 RECEIPT_AUTHORITY = 'g01_published_independent_checkpoint_receipt_v1'
 FULL_AUTHORITY = 'full_original_source_loader'
 from src.envs import pair_v2_configuration as configurations
 KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
 FIELDS = ('g01_quota_version', 'g01_quota_assignment', 'allowed_kinds', 'actual_output_caps',
-          'g01_configuration_version', 'g01_seen_configurations')
+          'g01_configuration_version', 'g01_seen_configurations', 'g01_training_holdout_reference')
 _ACTIVE_COUNT_PLANS = set()
 
 STAGES = {'test': 'independent_unique_construction_before_T02_filtering',
@@ -58,13 +59,23 @@ def summed(rows):
 
 
 def validate_structure(plan):
-    if (not isinstance(plan, dict) or plan.get('version') not in (VERSION, CONFIG_VERSION)
+    if (not isinstance(plan, dict) or plan.get('version') not in (VERSION, CONFIG_VERSION, TRAIN_VERSION)
             or plan.get('partition') not in STAGES):
         raise ValueError('Unknown static quota plan/partition')
     partition = plan['partition']
+    if plan['version'] == TRAIN_VERSION:
+        if partition != 'train':
+            raise ValueError('Training Look tickets cannot enter the test partition')
+        from src.tools.g01_train_inventory import validate_plan_bindings
+        validate_plan_bindings(plan)
+    elif partition == 'train':
+        # Historical declarations stay readable, but authenticate_count_basis still rejects them.
+        pass
     authority = plan.get('count_basis_authority', FULL_AUTHORITY)
-    if authority not in (FULL_AUTHORITY, RECEIPT_AUTHORITY):
+    if authority not in (FULL_AUTHORITY, RECEIPT_AUTHORITY, 'original_qualified_population_metadata_receipt_v1'):
         raise ValueError('Unsupported count-basis acceptance authority')
+    if authority == 'original_qualified_population_metadata_receipt_v1' and plan['version'] != TRAIN_VERSION:
+        raise ValueError('Training receipt authority requires its explicit version')
     if authority == RECEIPT_AUTHORITY and (plan['version'] != CONFIG_VERSION or partition != 'test'):
         raise ValueError('Checkpoint receipt authority is restricted to explicit test configuration tickets')
     if plan['version'] == CONFIG_VERSION:
@@ -134,8 +145,13 @@ def validate_structure(plan):
         if partition == 'train' and any(limits[kind] for kind in KINDS if kind.startswith('direct_')):
             raise ValueError('New training collection must not propose or export Direct classes')
         for kind in KINDS:
-            available = max(0, cap - scene_confirmed.get(scene, {}).get(kind, 0)
-                            - reserved_scenes.get(scene, {}).get(kind, 0))
+            occupancy = plan.get('construction_occupancy_by_scene', scene_confirmed) if plan['version'] == TRAIN_VERSION else scene_confirmed
+            pending_scene = (sum(item['by_scene'].get(scene, {}).get(kind, 0) for item in reservations
+                if item['scope'] != 'unverified_inventory_upper_bound') if plan['version'] == TRAIN_VERSION
+                else reserved_scenes.get(scene, {}).get(kind, 0))
+            # Original unverified inventory is already in construction occupancy;
+            # only additional submitted/preallocated tickets consume scene room again.
+            available = max(0, cap - occupancy.get(scene, {}).get(kind, 0) - pending_scene)
             if limits[kind] > available:
                 raise ValueError('New scene ticket exceeds the original aggregate scene/class capacity')
         assigned.append(limits)
@@ -243,12 +259,15 @@ def authenticate_count_basis(plan):
     reservations require authentic submission/inventory upper-bound certificates;
     trusting caller-supplied integers would not establish global safety.
     """
-    if plan['partition'] != 'test':
-        raise ValueError('Training scientific count-basis adapter is not implemented; production dispatch is blocked')
     if 'shared_ticket_bank' in plan:
         from src.tools.g01_ticket_bank import verify_member
         verified = verify_member(plan, root=ROOT, authenticate=True)
         return {**verified['count_basis_proof'], 'shared_ticket_bank': verified}
+    if plan['partition'] == 'train':
+        if plan['version'] != TRAIN_VERSION:
+            raise ValueError('Training scientific count-basis adapter is not implemented for legacy plans; use explicit fixed-holdout tickets')
+        from src.tools.g01_train_inventory import authenticate_plan
+        return authenticate_plan(plan)
     if plan['outstanding_reservations']:
         raise ValueError('Nonempty reservation source adapter is not implemented; production dispatch is blocked')
     proof = reconstruct_test_inventory(plan['count_basis_sources'], configuration=plan['version'] == CONFIG_VERSION,
@@ -293,7 +312,8 @@ def assignment(plan, ref, scene, child_run_name):
     rows = [row for row in plan['assignments'] if row['scene'] == scene]
     if len(rows) != 1 or not re.fullmatch(re.escape(plan['parent_run_name']) + r'_c[246]_' + re.escape(scene.lower()), child_run_name):
         raise ValueError('Child must match one explicit parent scene assignment')
-    return {'version': plan['version'], 'plan_reference': reference(ref), 'parent_run_name': plan['parent_run_name'],
+    return {**({'holdout_reference': reference(plan['holdout_reference'])} if plan['version'] == TRAIN_VERSION else {}),
+            'version': plan['version'], 'plan_reference': reference(ref), 'parent_run_name': plan['parent_run_name'],
             'partition': plan['partition'], 'scene': scene, 'child_run_name': child_run_name,
             'allowed_kinds': copy.deepcopy(rows[0]['allowed_kinds']),
             'actual_output_caps': copy.deepcopy(rows[0]['actual_output_caps']),
@@ -302,13 +322,17 @@ def assignment(plan, ref, scene, child_run_name):
 
 
 def declared_fields(value):
-    if not isinstance(value, dict) or value.get('version') not in (VERSION, CONFIG_VERSION):
+    if not isinstance(value, dict) or value.get('version') not in (VERSION, CONFIG_VERSION, TRAIN_VERSION):
         raise ValueError('Unknown quota assignment')
     reference(value.get('plan_reference'))
     limits = counts(value.get('actual_output_caps'))
     if value.get('allowed_kinds') != [kind for kind in KINDS if limits[kind] > 0] or not any(limits.values()):
         raise ValueError('Assignment proposal kinds differ from positive actual output tickets')
     extra = {}
+    if value['version'] == TRAIN_VERSION:
+        if value.get('partition') != 'train' or any(k.startswith('direct_') for k in value['allowed_kinds']):
+            raise ValueError('Training Look tickets cannot acquire Direct/test classes')
+        extra = {'g01_training_holdout_reference': reference(value.get('holdout_reference'))}
     if value['version'] == CONFIG_VERSION:
         if value.get('partition') != 'test':
             raise ValueError('Configuration occupancy is test-only')

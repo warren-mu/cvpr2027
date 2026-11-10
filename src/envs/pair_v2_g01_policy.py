@@ -18,6 +18,7 @@ TEST_VERSION = 'g01_mixed_test40_frozen_generator_selected60_v1'
 QUOTA_VERSIONS = {'train': 'g01_train_static_tickets_selected60_v1',
                   'test': 'g01_test_static_tickets_selected60_v1'}
 CONFIG_QUOTA_VERSION = 'g01_test_configuration_tickets_selected60_v2'
+TRAIN_LOOK_VERSION = 'g01_train_look_stay_priority_selected60_v1'
 from src.tools import g01_quota_plan as quota_plan
 PRODUCER = 'src.envs.pair_v2_g01_shard'
 TRAIN_SCENES = frozenset(f'FloorPlan{i}' for start in (1, 201, 301, 401) for i in range(start, start + 20))
@@ -39,7 +40,7 @@ POLICY = {
 FIELDS = ('g01_version', 'g01_policy', 'g01_partition')
 SMOKE = {'version': 'g01_s16_single_scene_600s_v1', 'scene_timeout_seconds': 600,
     'formal_collection_eligible': False, 'purpose': 'engineering smoke only; no quota occupancy'}
-BASE_VERSIONS = (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION)
+BASE_VERSIONS = (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION, TRAIN_LOOK_VERSION)
 NEARBY_VERSIONS = tuple(v + '_nearby_v1' for v in BASE_VERSIONS)
 SMOKE_VERSION = CONFIG_QUOTA_VERSION + '_nearby_v1_smoke600_v1'
 UNSAMPLED_VERSIONS = (*BASE_VERSIONS, *NEARBY_VERSIONS, SMOKE_VERSION)
@@ -60,7 +61,7 @@ def class_cap(partition):
     return 8 if partition == 'train' else 6
 
 
-def fields(partition='train', quota=False, configuration=False, nearby=False, smoke=False, sampled=False):
+def fields(partition='train', quota=False, configuration=False, nearby=False, smoke=False, sampled=False, training=False):
     split_scenes(partition)
     spec = copy.deepcopy(POLICY)
     if partition == 'test':
@@ -82,6 +83,13 @@ def fields(partition='train', quota=False, configuration=False, nearby=False, sm
             discovery_schedule_scope='base finite discovery rounds; explicit configuration search policy overrides within-round domain preference only',
             quota=quota_plan.CONFIG_VERSION, search=search.CONFIG_VERSION,
             configuration=copy.deepcopy(quota_plan.configurations.POLICY))
+    if training:
+        if partition != 'train' or not quota or configuration or smoke:
+            raise ValueError('Training Look policy requires formal train tickets')
+        spec.update(version=TRAIN_LOOK_VERSION, search=search.TRAIN_VERSION, quota=quota_plan.TRAIN_VERSION,
+            proposal_priority=list(search.TRAIN_PRIORITY), approval='1861b83a and629d4a03',
+            classes=list(search.TRAIN_PRIORITY), holdout='fixed authenticated T04 scene list; no scene redraw',
+            look_attempt_mix='no forced Flip balance; stop each class at its confirmed postfilter target')
     extra = {}
     if nearby:
         spec.update(version=spec['version'] + '_nearby_v1', physics=copy.deepcopy(nearby_physics.POLICY),
@@ -102,12 +110,13 @@ def declared(scene, partition='train', quota_assignment=None, nearby=False, smok
     if scene not in split_scenes(partition):
         raise ValueError('G01 scene is outside its explicitly declared train/test partition')
     configuration = quota_assignment is not None and quota_assignment.get('version') == quota_plan.CONFIG_VERSION
-    values = fields(partition, quota_assignment is not None, configuration, nearby, smoke, sampled)
+    training = quota_assignment is not None and quota_assignment.get('version') == quota_plan.TRAIN_VERSION
+    values = fields(partition, quota_assignment is not None, configuration, nearby, smoke, sampled, training)
     quota_fields = {} if quota_assignment is None else quota_plan.declared_fields(quota_assignment)
     return {'field_of_view': 60, 'fov_contrast_version': values['g01_version'],
         'fov_contrast_policy': copy.deepcopy(values['g01_policy']), 'fov_contrast_group': 'g01_selected60',
         **values,
-        **quota_fields, **search.fields(quota_assignment is not None, configuration), **labels.fields(), **cadence.fields(),
+        **quota_fields, **search.fields(quota_assignment is not None, configuration, training), **labels.fields(), **cadence.fields(),
         **sharing.fields(), **rank.fields(), **geometry.fields()}
 
 
