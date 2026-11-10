@@ -1,0 +1,32 @@
+# run_logged: python3 -m src.tools.record_command --name diag_diag01_submit_d3_01 -- python3 -c import json,subprocess
+from pathlib import Path
+from src.tools.t01_partition import audited_result
+expected={'T0':'17188af3dff53d6bb07be4b682fdcc4f3f9a3b8f369d12d93d32c3cb195698f2','T4':'994e3a7ba47ec29c06891a2ff1b1449439b0b337fc7ea2eef4118e23d2dc8717'}
+values={}
+for arm,sha in expected.items():
+ data,ref=audited_result(Path('results')/('smoke_e2e_pilot_'+arm+'_s0_01_retry4.json'))
+ assert ref['sha256']==sha and data['_meta']['exit_code']==0 and data['metrics']['pilot_completed']
+ values[arm]=data
+for field in ('manifest_reference','holdout_reference','model_snapshot_reference'):
+ assert values['T0']['config'][field]==values['T4']['config'][field]
+c=values['T0']['config'];name='diag_diag01_baselines_s0_01'
+assert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()
+command=['python3','scripts/pbs/submit_phase.py','--task','T01','--name',name,'--gpus','1','--walltime','00:55:00','--',
+ 'python3','-u','-m','src.tools.diag01_baselines','--name',name,
+ '--manifest',json.dumps(c['manifest_reference'],sort_keys=True),
+ '--holdout-reference',json.dumps(c['holdout_reference'],sort_keys=True),
+ '--model-source',json.dumps(c['model_snapshot_reference']['source_result'],sort_keys=True),
+ '--timeout-seconds','3240','--gate-timeout-seconds','180']
+raise SystemExit(subprocess.call(command))
+
+# start: 2026-11-10T23:11:08
+usage: submit_phase.py [-h] --name NAME --task {T00b,T01} --gpus {1,2,3,4,8}
+                       --walltime WALLTIME [--host HOST]
+                       [--black-retry-evidence BLACK_RETRY_EVIDENCE]
+                       [--black-retry-evidence-sha256 BLACK_RETRY_EVIDENCE_SHA256]
+                       [--retry-of RETRY_OF]
+                       [--budget-group {E2E,E2Epilot,E2EpilotT2,G01,PACK,T01v2,T02}]
+                       [--repo REPO] [--scratch SCRATCH] [--dry-run]
+submit_phase.py: error: Run name must identify the selected task
+FINAL_METRICS_JSON: {"command_exit_code": 2, "elapsed_seconds": 80.64763386099366}
+# exit_code: 2

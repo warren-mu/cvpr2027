@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 2,
+    "elapsed_seconds": 80.64763386099366
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import json,subprocess\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nexpected={'T0':'17188af3dff53d6bb07be4b682fdcc4f3f9a3b8f369d12d93d32c3cb195698f2','T4':'994e3a7ba47ec29c06891a2ff1b1449439b0b337fc7ea2eef4118e23d2dc8717'}\nvalues={}\nfor arm,sha in expected.items():\n data,ref=audited_result(Path('results')/('smoke_e2e_pilot_'+arm+'_s0_01_retry4.json'))\n assert ref['sha256']==sha and data['_meta']['exit_code']==0 and data['metrics']['pilot_completed']\n values[arm]=data\nfor field in ('manifest_reference','holdout_reference','model_snapshot_reference'):\n assert values['T0']['config'][field]==values['T4']['config'][field]\nc=values['T0']['config'];name='diag_diag01_baselines_s0_01'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\ncommand=['python3','scripts/pbs/submit_phase.py','--task','T01','--name',name,'--gpus','1','--walltime','00:55:00','--',\n 'python3','-u','-m','src.tools.diag01_baselines','--name',name,\n '--manifest',json.dumps(c['manifest_reference'],sort_keys=True),\n '--holdout-reference',json.dumps(c['holdout_reference'],sort_keys=True),\n '--model-source',json.dumps(c['model_snapshot_reference']['source_result'],sort_keys=True),\n '--timeout-seconds','3240','--gate-timeout-seconds','180']\nraise SystemExit(subprocess.call(command))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_diag01_submit_d3_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_diag01_submit_d3_01",
+      "--",
+      "python3",
+      "-c",
+      "import json,subprocess\nfrom pathlib import Path\nfrom src.tools.t01_partition import audited_result\nexpected={'T0':'17188af3dff53d6bb07be4b682fdcc4f3f9a3b8f369d12d93d32c3cb195698f2','T4':'994e3a7ba47ec29c06891a2ff1b1449439b0b337fc7ea2eef4118e23d2dc8717'}\nvalues={}\nfor arm,sha in expected.items():\n data,ref=audited_result(Path('results')/('smoke_e2e_pilot_'+arm+'_s0_01_retry4.json'))\n assert ref['sha256']==sha and data['_meta']['exit_code']==0 and data['metrics']['pilot_completed']\n values[arm]=data\nfor field in ('manifest_reference','holdout_reference','model_snapshot_reference'):\n assert values['T0']['config'][field]==values['T4']['config'][field]\nc=values['T0']['config'];name='diag_diag01_baselines_s0_01'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\ncommand=['python3','scripts/pbs/submit_phase.py','--task','T01','--name',name,'--gpus','1','--walltime','00:55:00','--',\n 'python3','-u','-m','src.tools.diag01_baselines','--name',name,\n '--manifest',json.dumps(c['manifest_reference'],sort_keys=True),\n '--holdout-reference',json.dumps(c['holdout_reference'],sort_keys=True),\n '--model-source',json.dumps(c['model_snapshot_reference']['source_result'],sort_keys=True),\n '--timeout-seconds','3240','--gate-timeout-seconds','180']\nraise SystemExit(subprocess.call(command))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T23:11:08",
+    "log_path": "logs/runs/diag_diag01_submit_d3_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "3d47bf84b55415ecf6e2264fdd2b4ec3c0523846",
+    "git_dirty": false,
+    "end": "2026-11-10T23:12:29",
+    "duration_sec": 80.9,
+    "exit_code": 2,
+    "metrics_sha256": "b6453dea120e7dd07ebea5fc7cc674aec5c6830467eceda75215a4bd0e60fa9b"
+  }
+}
