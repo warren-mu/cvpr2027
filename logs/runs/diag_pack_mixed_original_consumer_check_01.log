@@ -1,0 +1,20 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pack_mixed_original_consumer_check_01 -- python3 -c from pathlib import Path
+import json,importlib.util
+from src.tools import pbs_mixed_accounting as mixed
+repo=Path.cwd().resolve()
+spec=importlib.util.spec_from_file_location('original_final_account',repo/'scripts/pbs/submit_phase.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+for suffix in ['04','05','06','07']:
+ name='gpu_pack_training_single_'+suffix
+ path=repo/'results'/(name+'_mixed_accounting.json');d=json.loads(path.read_text());c=d['config'];m=d['metrics']
+ account=repo/c['account_reference']['file'];canonical=module._final_accounting(repo,{m['job_id']},paths=[account])[m['job_id']]
+ actual=mixed.finalized_split(repo,{'name':name,'payload':c['payload_reference']['file'],'job_id':m['job_id']},canonical)
+ assert actual==m
+ print('ORIGINAL_FINALIZED_SPLIT_ACCEPTED '+name+' '+json.dumps({'job_id':m['job_id'],'total_charged_gpu_hours':m['total_charged_gpu_hours'],'charged_gpu_hours_by_group':m['charged_gpu_hours_by_group']}),flush=True)
+
+# start: 2026-11-10T08:31:58
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED gpu_pack_training_single_04 {"job_id": "709385.hopper-m-02", "total_charged_gpu_hours": 0.10361111111111111, "charged_gpu_hours_by_group": {"T02": 0.10361111111111111}}
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED gpu_pack_training_single_05 {"job_id": "709387.hopper-m-02", "total_charged_gpu_hours": 0.10805555555555556, "charged_gpu_hours_by_group": {"T02": 0.10805555555555556}}
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED gpu_pack_training_single_06 {"job_id": "709412.hopper-m-02", "total_charged_gpu_hours": 0.10166666666666667, "charged_gpu_hours_by_group": {"T02": 0.10166666666666667}}
+ORIGINAL_FINALIZED_SPLIT_ACCEPTED gpu_pack_training_single_07 {"job_id": "709430.hopper-m-02", "total_charged_gpu_hours": 0.10388888888888889, "charged_gpu_hours_by_group": {"T02": 0.10388888888888889}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.5773237510002218}
+# exit_code: 0

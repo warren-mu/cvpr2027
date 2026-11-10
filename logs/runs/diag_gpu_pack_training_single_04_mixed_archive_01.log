@@ -1,0 +1,24 @@
+# run_logged: python3 -m src.tools.record_command --name diag_gpu_pack_training_single_04_mixed_archive_01 -- python3 -c from pathlib import Path
+import hashlib,json
+name='gpu_pack_training_single_04_mixed_accounting'
+root=Path('logs/review/diag_gpu_pack_training_single_04_mixed_archive_01')
+root.mkdir(parents=True,exist_ok=False)
+meta=Path('logs/runs')/(name+'.meta.json')
+d=json.loads(meta.read_text())
+assert d['exit_code']==1 and d['results_missing'] is True and d.get('end')
+assert not (Path('results')/(name+'.json')).exists()
+manifest={'scope':'Exact original failed mixed-accounting bytes preserved before the required unique-name rerun; no scientific or fee records changed.','artifacts':[]}
+for suffix in ['.log','.meta.json','.diff']:
+ p=Path('logs/runs')/(name+suffix)
+ if not p.exists():continue
+ b=p.read_bytes();q=root/p.name
+ with q.open('xb') as f:f.write(b)
+ assert q.read_bytes()==b
+ manifest['artifacts'].append({'original_file':str(p),'archive_file':str(q),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})
+with (root/'manifest.json').open('x') as f:json.dump(manifest,f,indent=2);f.write('\n')
+print('PRESERVED_FAILED_MIXED_BYTES: '+json.dumps(manifest),flush=True)
+
+# start: 2026-11-10T08:22:54
+PRESERVED_FAILED_MIXED_BYTES: {"scope": "Exact original failed mixed-accounting bytes preserved before the required unique-name rerun; no scientific or fee records changed.", "artifacts": [{"original_file": "logs/runs/gpu_pack_training_single_04_mixed_accounting.log", "archive_file": "logs/review/diag_gpu_pack_training_single_04_mixed_archive_01/gpu_pack_training_single_04_mixed_accounting.log", "sha256": "2bdd9d07bb4a5712b5294053146039d898e841fa7afd26871d0614daad02d884", "bytes": 1613}, {"original_file": "logs/runs/gpu_pack_training_single_04_mixed_accounting.meta.json", "archive_file": "logs/review/diag_gpu_pack_training_single_04_mixed_archive_01/gpu_pack_training_single_04_mixed_accounting.meta.json", "sha256": "e46ef5e7da4f8f0d6fd853912a702116aa78fdb23b15c7eb28af24f26dd2ab4b", "bytes": 1217}]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.11142416496295482}
+# exit_code: 0

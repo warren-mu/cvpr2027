@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.11142416496295482
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\nname='gpu_pack_training_single_04_mixed_accounting'\nroot=Path('logs/review/diag_gpu_pack_training_single_04_mixed_archive_01')\nroot.mkdir(parents=True,exist_ok=False)\nmeta=Path('logs/runs')/(name+'.meta.json')\nd=json.loads(meta.read_text())\nassert d['exit_code']==1 and d['results_missing'] is True and d.get('end')\nassert not (Path('results')/(name+'.json')).exists()\nmanifest={'scope':'Exact original failed mixed-accounting bytes preserved before the required unique-name rerun; no scientific or fee records changed.','artifacts':[]}\nfor suffix in ['.log','.meta.json','.diff']:\n p=Path('logs/runs')/(name+suffix)\n if not p.exists():continue\n b=p.read_bytes();q=root/p.name\n with q.open('xb') as f:f.write(b)\n assert q.read_bytes()==b\n manifest['artifacts'].append({'original_file':str(p),'archive_file':str(q),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})\nwith (root/'manifest.json').open('x') as f:json.dump(manifest,f,indent=2);f.write('\\n')\nprint('PRESERVED_FAILED_MIXED_BYTES: '+json.dumps(manifest),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_gpu_pack_training_single_04_mixed_archive_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_gpu_pack_training_single_04_mixed_archive_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\nname='gpu_pack_training_single_04_mixed_accounting'\nroot=Path('logs/review/diag_gpu_pack_training_single_04_mixed_archive_01')\nroot.mkdir(parents=True,exist_ok=False)\nmeta=Path('logs/runs')/(name+'.meta.json')\nd=json.loads(meta.read_text())\nassert d['exit_code']==1 and d['results_missing'] is True and d.get('end')\nassert not (Path('results')/(name+'.json')).exists()\nmanifest={'scope':'Exact original failed mixed-accounting bytes preserved before the required unique-name rerun; no scientific or fee records changed.','artifacts':[]}\nfor suffix in ['.log','.meta.json','.diff']:\n p=Path('logs/runs')/(name+suffix)\n if not p.exists():continue\n b=p.read_bytes();q=root/p.name\n with q.open('xb') as f:f.write(b)\n assert q.read_bytes()==b\n manifest['artifacts'].append({'original_file':str(p),'archive_file':str(q),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})\nwith (root/'manifest.json').open('x') as f:json.dump(manifest,f,indent=2);f.write('\\n')\nprint('PRESERVED_FAILED_MIXED_BYTES: '+json.dumps(manifest),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T08:22:54",
+    "log_path": "logs/runs/diag_gpu_pack_training_single_04_mixed_archive_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "7babc169a208a3ca7adf01cc3fbae53055766598",
+    "git_dirty": false,
+    "end": "2026-11-10T08:22:57",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "c1f2e62a10b3ddb456cf967a27a5139afae4d30c7e4a8682290181605869ef54"
+  }
+}

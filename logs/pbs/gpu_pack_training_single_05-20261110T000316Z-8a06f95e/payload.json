@@ -1,0 +1,55 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "gpu_pack_training_single_05",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.gpu_pack",
+    "--name",
+    "gpu_pack_training_single_05",
+    "--queue-plan",
+    "configs/shared_training_queue_01.json",
+    "--queue-plan-sha256",
+    "442059b4b89830f43c6499691289706a42cb9754cb8aa5112bb68c0fd2572d07",
+    "--queue-root",
+    "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01",
+    "--gpus",
+    "1",
+    "--timeout-seconds",
+    "1425",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1455,
+  "requested_host": null,
+  "dry_run": false,
+  "budget_revision": "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40_shared_gpu_units_v1",
+  "queue": "autox",
+  "retry_of": null,
+  "budget_group": "PACK",
+  "requested_queue_charge_rate": 1.0,
+  "mixed_budget_authorization": {
+    "version": "shared_gpu_units_budget_v1",
+    "plan_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_training_queue_01.json",
+      "sha256": "442059b4b89830f43c6499691289706a42cb9754cb8aa5112bb68c0fd2572d07",
+      "bytes": 46740
+    },
+    "possible_groups": [
+      "T02"
+    ],
+    "residual_priority": [
+      "T02"
+    ],
+    "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget",
+    "total_rule": "one_allocation_once_in_T01_and_shared",
+    "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business"
+  }
+}

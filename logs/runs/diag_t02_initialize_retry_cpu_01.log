@@ -1,0 +1,13 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_initialize_retry_cpu_01 -- python3 -c import unittest,sys
+loader=unittest.TestLoader()
+suite=unittest.TestSuite([loader.discover('tests',pattern=p) for p in ['test_t02_initialize_retry.py','test_t02_cache_check.py','test_pair_table_cache.py','test_t02_evidence_read_session.py','test_smoke_e2e_pilot_dataset.py']])
+r=unittest.TextTestRunner(verbosity=1).run(suite)
+sys.exit(not r.wasSuccessful())
+# start: 2026-11-10T08:42:51
+...............................................................
+----------------------------------------------------------------------
+Ran 63 tests in 8.419s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 9.012557671987452}
+# exit_code: 0

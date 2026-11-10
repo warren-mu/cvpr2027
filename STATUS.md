@@ -1345,3 +1345,15 @@ Git切换曾将已提交PBS payload的文件模式从0444改成0644，字节未�
 固定23对缓存709356通过原200状态完整复核：cache_matches_live、sample_complete、downstream_allowed均true，errors/cleanup为空；原任务状态仍为cache_checks_passed_task_review_pending，不代替人审。PBS wall00:50:44、排队56秒，实扣0.8455555555555555 GPU·小时。沿原轻量模板按dataset_key去重的diag_t02_checked_training_52_02确认：direct_flip9、direct_stay22、look_flip14、look_stay7，共52对；尚未做既定Stay平衡/训练池冻结，未满足80对门槛。初次52_01因缺少原模板CVPR_RUN_NAME环境变量在写出前失败，原日志/meta保留；52_02只补实际运行名后重跑，没有改原证书或计数口径。
 
 31对缓存709362继续原fresh sampling。共享训练第15批由709383在hopper-28完成：4对DirectStay完整导出，另2对LookFlip在TeleportFull遇到Box碰撞，保持未知，不当黑帧重试；完整日志和失败输出保留。709385已通过出图检查，继续共享领取；709383空槽正在提交下一同参数单卡worker，仍与4卡709345共用原领取锁。
+
+### 2026-11-09 19:45 ET：按7babc169测试优先，缓存初始化保护已落地
+
+已拉取7babc169。试跑只要求≥80个通过原T02与缓存检查的训练对、四类都有；Stay A/B下采样不再作为试跑门槛，原Flip seed0交换保留，T04正式池平衡不改。one-update工程与正式50/50/5边界不变；spec保留6GPU·小时名义预算及人类批准的条件上限9，尚未依据未测速度扩额。keep-all和共享物理声明绑定已推送765ecefc，正式46项CPU测试通过。
+
+709362并未通过：第pair_0024（FloorPlan203_00038）在Initialize超时，完整样本只到163/200，后续未知，不能把31对加入52。实际PBS用量0.9280555555555555GPU·小时、排队264秒。已保留整批、原worker与无授权结果，不删除任何世界对。预算提交最初又被不兼容的mixed记账producer参数拒绝，没有形成新GPU作业；原错误记录保留，随后按原精确命令修复并由原consumer实际验证，未放松validator。
+
+按人类20分钟时限，Initialize重试保护已于00:41UTC前完成，334bdae9已推送；Hopper正式CPU回归63项通过。仅进入Controller body之前、尚无任何采样证据的明确Initialize Timeout，在原进程组严格确认清理后，重建fresh worker/controller，最多再试2次；同一pair/state序列、seed0、200样本、原pair deadline及所有掩码/IoU/共享分叉检查不变。每次失败初始化有独立报告与Player日志，不覆盖、不删除；其他错误和真实比较不一致不重试。原31对整批重提正在原预算入口执行，新代码先用于这一个单卡批次。
+
+原训练-only 4卡709345经原Q→qdel→F证据确认从未启动，canonical确认用量0，现已取消以更换测试优先队列；旧所有single均自然结束，已领取13–19批（含失败项）不会重领。新队列准备严格核对全部原PBS终态、claim/release并冻结剩余20–26批；先放测试S02–S07，再放这些未领训练批次。原S01独立占位，40场景固定票额和seen configurations不变。因新增共享声明校验，先用只含原S02的单卡首单元plan验证；它保持完整1200秒场景窗口/1600秒unit，不截短科学参数。此后主4卡和single使用同一active plan并明确排除已领取S02，避免靠时限猜测是否只运行一单元；旧准备全plan不会被直接提交。
+
+测试S01=709432（hopper-26）已运行完六场景。原生成报告出现FP22、FP222各1对LookStay，尚在独立验收，不先计入配额或两列产量。已有工程冒烟的FloorPlan21新增放行0不代表总体效果；正式批次按独立通过对的passes_original_physics_rule true/false两列报告。新4卡替换提交后仍保留美东22:00从未启动则取消、空队列立即退出的保护。

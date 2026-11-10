@@ -1,0 +1,473 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794270781.5828304,
+    "cpu_affinity": [
+      48,
+      50,
+      52,
+      54,
+      56,
+      58,
+      60,
+      62,
+      64,
+      66,
+      68,
+      70
+    ],
+    "cuda_visible_devices": "GPU-5fb079a5-d7e3-4b5b-d109-11178a37584c",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_export_train_six_19_u0003",
+    "node": "hopper-26",
+    "pair_file": "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan218/floorplan218_00039/pair.json",
+    "pair_id": [
+      "floorplan218_00039"
+    ],
+    "pair_timeout_seconds": 660.0,
+    "pbs_jobid": "709430.hopper-m-02",
+    "resolution": 255,
+    "runtime": {
+      "ai2thor_version": "5.0.0",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        48,
+        50,
+        52,
+        54,
+        56,
+        58,
+        60,
+        62,
+        64,
+        66,
+        68,
+        70
+      ],
+      "cuda_visible_devices": "GPU-5fb079a5-d7e3-4b5b-d109-11178a37584c",
+      "gpu_index": 0,
+      "gpu_name": "NVIDIA H200",
+      "gpu_uuid": "GPU-5fb079a5-d7e3-4b5b-d109-11178a37584c",
+      "log_dir": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/unity_logs",
+      "logical_index": 0,
+      "mig_mode": "Disabled",
+      "pbs_jobid": "709430.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "vulkan_device_index": 0
+    },
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02",
+    "shared_queue_claim": {
+      "budget_group": "T02",
+      "claim_reference": {
+        "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01/claims/ef006ca78a86dbf9c3ffde360a8e319b0fdcef98c71b133c3088e43ca27bbd0a.json",
+        "sha256": "8fde2f77d8f321b24f308dd779bc86d544b67ace4fac84b4017ecdf253cc5979"
+      },
+      "command": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.t02_export_parallel",
+        "--name",
+        "t02_export_train_six_19",
+        "--manifest",
+        "configs/t02_export_train_six_19.json",
+        "--manifest-sha256",
+        "8e2f39405bbc5bf2d7375a8c2cea6c432df4839681ea448a48d3f14657845cca",
+        "--concurrency",
+        "6",
+        "--timeout-seconds",
+        "1200",
+        "--unit-timeout-seconds",
+        "900",
+        "--pair-timeout-seconds",
+        "660",
+        "--gate-timeout-seconds",
+        "180"
+      ],
+      "cpu_affinity": [
+        48,
+        50,
+        52,
+        54,
+        56,
+        58,
+        60,
+        62,
+        64,
+        66,
+        68,
+        70
+      ],
+      "gpu_uuid": "GPU-5fb079a5-d7e3-4b5b-d109-11178a37584c",
+      "name": "t02_export_train_six_19",
+      "node": "hopper-26",
+      "owner_identity": {
+        "pgid": 3572199,
+        "pid": 3574917,
+        "sid": 3572199,
+        "start_ticks": 84328956
+      },
+      "parent_cuda_visible_devices": "GPU-5fb079a5-d7e3-4b5b-d109-11178a37584c",
+      "parent_payload_reference": {
+        "bytes": 1691,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_training_single_07-20261110T001502Z-a10225f3/payload.json",
+        "sha256": "4ed3a4fd317aa96758cc55c2dfad706f509bae4d7bcd37f2c314cc84d0e0b420"
+      },
+      "parent_receipt_reference": {
+        "bytes": 421,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_training_single_07-20261110T001502Z-a10225f3/submission.json",
+        "sha256": "b39115b2faca227d902c9be99f3673478f8b069c6cc84776aae587080fefcef1"
+      },
+      "pbs_jobid": "709430.hopper-m-02",
+      "plan_reference": {
+        "bytes": 46740,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_training_queue_01.json",
+        "sha256": "442059b4b89830f43c6499691289706a42cb9754cb8aa5112bb68c0fd2572d07"
+      },
+      "queue_root": "/scratch/e1583364/cvpr2027/shared_gpu_queue/training_exports_01",
+      "started_epoch": 1794269874.5396745,
+      "started_monotonic": 843296.836703606,
+      "t02_child_entry": {
+        "cache_or_training_authorized": false,
+        "cohort": "inventory05",
+        "dataset_key": "pair_eaa70aa6b3858b6228c561131b531d324583d7711672f35606cc0818635ee78e",
+        "field_of_view": 60,
+        "full_T02_acceptance": null,
+        "historical_table_diagnostic_classification": "triggered_non_anchor_divergent",
+        "journal_index": 39,
+        "kind": "look_flip",
+        "label_scope": "current fixed object labels; original scientific checks will run again in exporter",
+        "original_id": "floorplan218_00039",
+        "pair": {
+          "file": "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan218/floorplan218_00039/pair.json",
+          "sha256": "faad16c1841a0711a3cd0036873f1311a43f0685e15aa42ef6af1eefd9a96bcb"
+        },
+        "pair_id": "floorplan218_00039",
+        "proposal_identity": "01a1433d86715a096088a149b0ca9c84acea3c35b22ffaad3958dac8b2eb0a50",
+        "scene": "FloorPlan218",
+        "source": {
+          "file": "results/t01v2_checkpoint_g01_next12_03.json",
+          "sha256": "7d734365bae3201400af7a9138477ecbb6b9478ccf127d60180addafe19c3972"
+        },
+        "source_file": "results/gen_train_next12_60_03_retry1_c6_floorplan218.json",
+        "target_w0": "Pillow_49619829",
+        "target_w1": "Statue_b48745b1"
+      },
+      "t02_child_index": 3,
+      "unit": {
+        "budget_group": "T02",
+        "claim_keys": [
+          "4aa1e5a7d80e358a91146973ef3d996676a1d12af1afddf8d7b3d0dd2be98d8c",
+          "6287bedd9f09509e9404cefa3701ef64785daaa929e668bd8d1a7235fd011ae8",
+          "a1657800354e2516ba17364b1c8872a593d857a91a1aa97fa99ef85f15ae82ab",
+          "d061abcf6e030094c6b226ccc635c56100ba6ea0967657641c7a3aad3015e80c",
+          "e82c8a6ec8c538cc01f05be865dc5fb7bf22451df847547469fe8029c57334c0",
+          "f7a4e310a7beb8c41a7465e0d8747d3ed0d30649e272899c4976fb88c9f812a9"
+        ],
+        "command": [
+          "python3",
+          "-u",
+          "-m",
+          "src.tools.t02_export_parallel",
+          "--name",
+          "t02_export_train_six_19",
+          "--manifest",
+          "configs/t02_export_train_six_19.json",
+          "--manifest-sha256",
+          "8e2f39405bbc5bf2d7375a8c2cea6c432df4839681ea448a48d3f14657845cca",
+          "--concurrency",
+          "6",
+          "--timeout-seconds",
+          "1200",
+          "--unit-timeout-seconds",
+          "900",
+          "--pair-timeout-seconds",
+          "660",
+          "--gate-timeout-seconds",
+          "180"
+        ],
+        "cpu_cores": 12,
+        "gpus": 1,
+        "identity": {
+          "kind": "t02_export_batch",
+          "manifest": {
+            "file": "configs/t02_export_train_six_19.json",
+            "sha256": "8e2f39405bbc5bf2d7375a8c2cea6c432df4839681ea448a48d3f14657845cca"
+          },
+          "original_pair_keys": [
+            "4aa1e5a7d80e358a91146973ef3d996676a1d12af1afddf8d7b3d0dd2be98d8c",
+            "6287bedd9f09509e9404cefa3701ef64785daaa929e668bd8d1a7235fd011ae8",
+            "a1657800354e2516ba17364b1c8872a593d857a91a1aa97fa99ef85f15ae82ab",
+            "e82c8a6ec8c538cc01f05be865dc5fb7bf22451df847547469fe8029c57334c0",
+            "d061abcf6e030094c6b226ccc635c56100ba6ea0967657641c7a3aad3015e80c",
+            "f7a4e310a7beb8c41a7465e0d8747d3ed0d30649e272899c4976fb88c9f812a9"
+          ],
+          "parameters": {
+            "concurrency": "6",
+            "gate-timeout-seconds": "180",
+            "pair-timeout-seconds": "660",
+            "timeout-seconds": "1200",
+            "unit-timeout-seconds": "900"
+          },
+          "partition": "train"
+        },
+        "name": "t02_export_train_six_19",
+        "priority": 200,
+        "producer_module": "src.tools.t02_export_parallel",
+        "references": {
+          "manifest": {
+            "bytes": 7844,
+            "file": "configs/t02_export_train_six_19.json",
+            "sha256": "8e2f39405bbc5bf2d7375a8c2cea6c432df4839681ea448a48d3f14657845cca"
+          }
+        },
+        "timeout_seconds": 1200,
+        "unit_id": "ef006ca78a86dbf9c3ffde360a8e319b0fdcef98c71b133c3088e43ca27bbd0a"
+      },
+      "unit_id": "ef006ca78a86dbf9c3ffde360a8e319b0fdcef98c71b133c3088e43ca27bbd0a",
+      "version": "shared_gpu_claim_v1"
+    },
+    "source": "results/t01v2_checkpoint_g01_next12_03.json",
+    "timeout_seconds": 900.0,
+    "version": "t02_single_gpu_export_shadow_v2"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": true,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_train_six_19_u0003_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_train_six_19_u0003_gate.json",
+      "git_commit": "7babc169a208a3ca7adf01cc3fbae53055766598",
+      "metrics_sha256": "031c17f1cafe51b2f390557a89cbd420f9ab0b6ebc0e84249e4ae32a057cff34",
+      "sha256": "ac1ef028ae0c460fb64b7642b1822e636c6bce561f5ee10ff460e528b7a289f3"
+    },
+    "kind": "t02_table_export",
+    "pairs": [
+      {
+        "actual_action_records": 1722,
+        "actual_frame_records": 1723,
+        "black_frame_reference": null,
+        "cache_matches_live": null,
+        "cleanup_errors": [],
+        "detail": {
+          "bytes": 415181,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/checks.json",
+          "sha256": "b0808acf13f7b60455e6389a9f9717d1841ad70848a1b096439d168c6ec0497f"
+        },
+        "downstream_allowed": false,
+        "error": null,
+        "export_measurements": {
+          "elapsed_seconds": 193.6162708150223,
+          "frozen_pose_readbacks": {
+            "actual_w0_vs_w1_nonanchor": {
+              "max_position_delta_m": 0.0,
+              "max_raw_rotation_component_delta_degrees": 0.0,
+              "positions_all_exact": true,
+              "readbacks": 76,
+              "rotations_all_exact": true,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            },
+            "requested_vs_actual": {
+              "max_position_delta_m": 0.0,
+              "max_raw_rotation_component_delta_degrees": 1.7881393432617188e-07,
+              "positions_all_exact": true,
+              "readbacks": 380,
+              "rotations_all_exact": false,
+              "scope": "read-only diagnostics; existing physical/restore/image thresholds unchanged"
+            }
+          },
+          "in_clean_subset": false,
+          "includes": "native graph queries and paired capture construction; excludes caller startup and serialization",
+          "non_anchor_divergent_states": 6,
+          "shadow_divergent_states": 6,
+          "state_count": 76,
+          "synthetic_only": false
+        },
+        "in_clean_subset": false,
+        "kind": "look_flip",
+        "native_evidence_verified": true,
+        "non_anchor_divergent_states": 6,
+        "pair_checks_passed": true,
+        "pair_id": "floorplan218_00039",
+        "raw_incremental_index": {
+          "bytes": 1637054,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/raw/evidence_index.jsonl",
+          "sha256": "ef40e73abb98e515e3eff57ca26fd7378a943d9e37561bb5b806813fdeb2ce00"
+        },
+        "raw_index": {
+          "bytes": 1644046,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/raw/evidence_index.json",
+          "sha256": "0ec9d1cdeff0af2a8e879da014442b4c2e52fc91742a0a7aa9fe0b3bf1af7cf5"
+        },
+        "rejection_reasons": [],
+        "report_reference": {
+          "bytes": 2734,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/pair_report.json",
+          "sha256": "a7590f0a40905acf79aa5a2ca3283c844698dab1d6791873be3755050145610e"
+        },
+        "scene": "FloorPlan218",
+        "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000",
+        "shadow_divergent_states": 6,
+        "source_package": {
+          "bytes": 12073263,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/authenticated_source.json",
+          "sha256": "7cb8b9edf9a750d44aa9df488a57c761a70ae373141f6bb9764f56c01bd0e968"
+        },
+        "status": "exported",
+        "table_complete": true,
+        "table_manifest": {
+          "bytes": 5144435,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_19_u0003/709430.hopper-m-02/pair_0000/table/table.json",
+          "payload_bytes": 36934200,
+          "sha256": "aad51d0985945a0e6bcfdb078427e0d681c9925490f9c96f8f42d48987656da3"
+        },
+        "task_acceptance": null,
+        "unity_identity": {
+          "pgid": 3592608,
+          "pid": 3592622,
+          "sid": 3592608,
+          "start_ticks": 84332794
+        },
+        "worker_elapsed_seconds": 220.33812021592166,
+        "worker_identity": {
+          "pgid": 3584028,
+          "pid": 3592608,
+          "sid": 3584028,
+          "start_ticks": 84332728
+        }
+      }
+    ],
+    "producer_exit_code": 0,
+    "status": "export_checks_completed_cache_pending",
+    "task_acceptance": null,
+    "unstarted_pair_ids": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_train_six_19_u0003_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_train_six_19_u0003_gate.json",
+      "git_commit": "7babc169a208a3ca7adf01cc3fbae53055766598",
+      "metrics_sha256": "031c17f1cafe51b2f390557a89cbd420f9ab0b6ebc0e84249e4ae32a057cff34",
+      "sha256": "ac1ef028ae0c460fb64b7642b1822e636c6bce561f5ee10ff460e528b7a289f3"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_g01_next12_03.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/t01v2_checkpoint_g01_next12_03.diff"
+        ]
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_g01_next12_03.json",
+      "git_commit": "d2ebef109956b020ab2e597db6c8d966aa386416",
+      "metrics_sha256": "107cc7becafa963d542817db54bfbc46ca0e77b77c4cb1b13b49fdb27af6dc6c",
+      "sha256": "7d734365bae3201400af7a9138477ecbb6b9478ccf127d60180addafe19c3972"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_train_next12_60_03_retry1_c6_floorplan218.json",
+        "warn": [
+          "P5 run used uncommitted changes; see logs/runs/gen_train_next12_60_03_retry1_c6_floorplan218.diff",
+          "P7 run failed (exit_code 1); keep it, do not cite it"
+        ]
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 1,
+      "file": "results/gen_train_next12_60_03_retry1_c6_floorplan218.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.json",
+          "warn": [
+            "P5 run used uncommitted changes; see logs/runs/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.diff"
+          ]
+        },
+        "exit_code": 0,
+        "file": "results/gen_train_next12_60_03_retry1_j708409_hopper_m_02_gate.json",
+        "git_commit": "5ab3a72dc69827ab9e34edb5165b24dec68cd75a",
+        "metrics_sha256": "6b288a7289b96a77124c9d1a4b979e7b3b96efc961d78b7e16f90e0323eb28da",
+        "sha256": "f15d1fbb8d06431fda392a24b2963b4ee486d2ce5d21b831c595f41efbf0c9c5"
+      },
+      "git_commit": "5ab3a72dc69827ab9e34edb5165b24dec68cd75a",
+      "log_file": "logs/runs/gen_train_next12_60_03_retry1_c6_floorplan218.log",
+      "log_sha256": "e8db817cc1eed7b043408e93f8d7590263f454c30d46b7d9a21e6d5cb93759d8",
+      "meta_file": "logs/runs/gen_train_next12_60_03_retry1_c6_floorplan218.meta.json",
+      "meta_sha256": "a7af00bec30ada98681035bbad7bfb2742de0159eb447384cae8c03e7047e63a",
+      "metrics_sha256": "9de1507cdcd6ec3596fb1f9d14feda3f1c9086c2f6abb36760464a5e179c97ad",
+      "metrics_specification": {
+        "actual_document_sha256": "345149801ebba3a5e6948caf381e46bf9ef8bb9fd1714c961b9f98a3ac1565a3",
+        "compatible_references": [
+          "4e010a3"
+        ],
+        "historical_spec": true,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "5ab3a72dc69827ab9e34edb5165b24dec68cd75a"
+      },
+      "sha256": "55edbb418dbb4a395b03dc7349c25492d0b668714ea2dfa1003462c34c876079",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_train_next12_60_03_retry1/708409_hopper_m_02/c6/FloorPlan218/shard_config.json",
+      "shard_config_sha256": "6e158a7734fa16527c6588cdc6e1b8dba8b2916fdbe5a905ea64475e7798061b"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_train_six_19_u0003",
+    "command": [
+      "/scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_export_train_six_19_u0003",
+      "--source",
+      "results/t01v2_checkpoint_g01_next12_03.json",
+      "--pair-id",
+      "floorplan218_00039",
+      "--pair-file",
+      "data/world_pairs/v2/gen_train_next12_60_03_retry1_c6_floorplan218/floorplan218_00039/pair.json",
+      "--timeout-seconds",
+      "900.0",
+      "--pair-timeout-seconds",
+      "660.0",
+      "--gate-timeout-seconds",
+      "180.0"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-26",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-10T08:18:01",
+    "log_path": "logs/runs/t02_export_train_six_19_u0003.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "7babc169a208a3ca7adf01cc3fbae53055766598",
+    "git_dirty": false,
+    "end": "2026-11-10T08:22:07",
+    "duration_sec": 246.3,
+    "exit_code": 0,
+    "metrics_sha256": "c1575844b3a947195d199670458842cff7e453ceb2bd7fe75e4ae7e13d386a91"
+  }
+}

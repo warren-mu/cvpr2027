@@ -1,0 +1,16 @@
+# run_logged: python3 -m src.tools.record_command --name diag_test_priority_first_unit_plan_01 -- python3 -c import copy,json,pathlib,subprocess
+from src.tools.gpu_shared_claim import load_plan,write_immutable,validate_plan
+p='configs/shared_test_priority_queue_01.json';sha='0830764a3954847c66a27862ffbe58d54bf093c0d726b128b8d04e1f16b19109'
+full,original=load_plan(p,sha)
+unit=next(u for u in full['units'] if u['name']=='gen_test_s16_round2_s02')
+assert unit['budget_group']=='G01' and unit['timeout_seconds']==1600
+trial=copy.deepcopy(full);trial['queue_id']='test_priority_first_unit_01';trial['units']=[unit]
+trial['first_unit_gate']={'source_prepared_plan':original,'scope':'Exactly one original full scientific unit; no shortened grants or thresholds. Prepared all-unit plan is not submitted. After this unit ends and checks pass, the active common queue excludes this claimed unit and binds its real terminal proof.','maximum_business_units':1}
+validate_plan(trial)
+ref=write_immutable('configs/shared_test_priority_first_unit_01.json',trial)
+print('FIRST_SHARED_TEST_UNIT_JSON: '+json.dumps({'plan_reference':ref,'unit_id':unit['unit_id'],'unit_name':unit['name'],'parent_timeout_seconds':1825,'pbs_walltime':'00:30:55','gpu_submission_performed':False},sort_keys=True))
+
+# start: 2026-11-10T08:40:51
+FIRST_SHARED_TEST_UNIT_JSON: {"gpu_submission_performed": false, "parent_timeout_seconds": 1825, "pbs_walltime": "00:30:55", "plan_reference": {"bytes": 51338, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_priority_first_unit_01.json", "sha256": "3bb94a7e3af05dfd6c2e52a9db629e82a0617990bf82d359b7f5a041fe90e375"}, "unit_id": "5b2db5ec33e6b3d8162b785a3d23b9d056ad4069adfcdd68ec1a8ac78738a1c0", "unit_name": "gen_test_s16_round2_s02"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 1.1551494870218448}
+# exit_code: 0

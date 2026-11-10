@@ -1,0 +1,28 @@
+{
+  "name": "diag_t02_initialize_retry_cpu_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_t02_initialize_retry_cpu_01",
+    "--",
+    "python3",
+    "-c",
+    "import unittest,sys\nloader=unittest.TestLoader()\nsuite=unittest.TestSuite([loader.discover('tests',pattern=p) for p in ['test_t02_initialize_retry.py','test_t02_cache_check.py','test_pair_table_cache.py','test_t02_evidence_read_session.py','test_smoke_e2e_pilot_dataset.py']])\nr=unittest.TextTestRunner(verbosity=1).run(suite)\nsys.exit(not r.wasSuccessful())"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T08:42:51",
+  "log_path": "logs/runs/diag_t02_initialize_retry_cpu_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "334bdae9de584ccf476bc0e1cfe4d41df75b55c2",
+  "git_dirty": false,
+  "end": "2026-11-10T08:43:01",
+  "duration_sec": 9.3,
+  "exit_code": 0,
+  "metrics_sha256": "79e07b7ec461851ed1387986e22e5f56afdd67d2b960346d52d61fdc1fa58e98"
+}

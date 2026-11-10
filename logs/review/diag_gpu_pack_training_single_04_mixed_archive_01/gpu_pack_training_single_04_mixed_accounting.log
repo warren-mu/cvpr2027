@@ -1,0 +1,17 @@
+# run_logged: python3 -u -m src.tools.pbs_mixed_accounting --name gpu_pack_training_single_04_mixed_accounting --payload logs/pbs/gpu_pack_training_single_04-20261109T235838Z-ddaf81ee/payload.json --payload-sha256 f9c7e3131c7caac91376bb8617eb828869471779f9e6c6d33abdf643db6a9ab8 --pack-result results/gpu_pack_training_single_04.json --pack-sha256 a90ea3f991ee256fd2a10b393a79af176f3b39597ea8b8c0df6f770b64de1811 --accounting-result results/gpu_pack_training_single_04_accounting.json --accounting-sha256 84144e31a732e3a44792b254462f00afa1672dc9d6187bbfbad365c6b95b6e24
+# start: 2026-11-10T08:11:24
+Traceback (most recent call last):
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 318, in <module>
+    raise SystemExit(main())
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 306, in main
+    metrics = compute_split(repo, *refs)
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 183, in compute_split
+    require(observed is not None, 'Original canonical PBS allocation/rate is unavailable')
+  File "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/src/tools/pbs_mixed_accounting.py", line 29, in require
+    raise ValueError(message)
+ValueError: Original canonical PBS allocation/rate is unavailable
+# exit_code: 1

@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.1189646190032363
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json,hashlib\nnames=['gpu_pack_training_single_'+x+'_mixed_accounting' for x in ['04','05','06','07']]\nroot=Path('logs/review/diag_pack_mixed_command_archive_01');root.mkdir(parents=True,exist_ok=False)\nmanifest={'scope':'Preserve original completed accounting with incompatible producer argv before exact original-producer rerun. No fees/physics rewritten.','artifacts':[]}\nfor name in names:\n result=Path('results')/(name+'.json');data=json.loads(result.read_text())\n assert data['_meta']['end'] and data['_meta']['exit_code']==0\n assert data['_meta']['command'][:4]==['python3','-u','-m','src.tools.pbs_mixed_accounting']\n for original in [result,Path('logs/runs')/(name+'.log'),Path('logs/runs')/(name+'.meta.json'),Path('logs/runs')/(name+'.diff')]:\n  if not original.exists():continue\n  b=original.read_bytes();saved=root/original.parent.name/original.name;saved.parent.mkdir(exist_ok=True)\n  with saved.open('xb') as stream:stream.write(b)\n  assert saved.read_bytes()==b\n  manifest['artifacts'].append({'original_file':str(original),'archive_file':str(saved),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})\nwith (root/'manifest.json').open('x') as stream:json.dump(manifest,stream,indent=2);stream.write('\\n')\nprint('PRESERVED_ACCOUNTING_COMMAND_RECORDS: '+json.dumps(manifest),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pack_mixed_command_archive_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pack_mixed_command_archive_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json,hashlib\nnames=['gpu_pack_training_single_'+x+'_mixed_accounting' for x in ['04','05','06','07']]\nroot=Path('logs/review/diag_pack_mixed_command_archive_01');root.mkdir(parents=True,exist_ok=False)\nmanifest={'scope':'Preserve original completed accounting with incompatible producer argv before exact original-producer rerun. No fees/physics rewritten.','artifacts':[]}\nfor name in names:\n result=Path('results')/(name+'.json');data=json.loads(result.read_text())\n assert data['_meta']['end'] and data['_meta']['exit_code']==0\n assert data['_meta']['command'][:4]==['python3','-u','-m','src.tools.pbs_mixed_accounting']\n for original in [result,Path('logs/runs')/(name+'.log'),Path('logs/runs')/(name+'.meta.json'),Path('logs/runs')/(name+'.diff')]:\n  if not original.exists():continue\n  b=original.read_bytes();saved=root/original.parent.name/original.name;saved.parent.mkdir(exist_ok=True)\n  with saved.open('xb') as stream:stream.write(b)\n  assert saved.read_bytes()==b\n  manifest['artifacts'].append({'original_file':str(original),'archive_file':str(saved),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})\nwith (root/'manifest.json').open('x') as stream:json.dump(manifest,stream,indent=2);stream.write('\\n')\nprint('PRESERVED_ACCOUNTING_COMMAND_RECORDS: '+json.dumps(manifest),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T08:31:51",
+    "log_path": "logs/runs/diag_pack_mixed_command_archive_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "765ecefc1f30a082a3f62a2aacdfdfbc4d7d4700",
+    "git_dirty": false,
+    "end": "2026-11-10T08:31:54",
+    "duration_sec": 0.4,
+    "exit_code": 0,
+    "metrics_sha256": "bfb664493d7164b51d60c874b2107d82ce66ffbaffee25c5439cba1b8ea92fe2"
+  }
+}
