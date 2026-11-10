@@ -262,14 +262,24 @@ def keep_all_with_flip_order(rows):
         'full_T02_acceptance': None}
 
 
-def build_pool(cache_sources, split_policy, *, deadline_fallback52=False):
+def build_pool(cache_sources, split_policy, *, deadline_fallback52=False,
+               certificates_after02=False, _frozen_certificate_activation=None):
     from src.envs.pair_table_balance import normalize_table
     require(isinstance(cache_sources, list) and cache_sources, 'Explicit original cache certificate sources required')
     require(type(deadline_fallback52) is bool, 'Fixed52 mode must be an explicit boolean opt-in')
+    require(type(certificates_after02) is bool and not (deadline_fallback52 and certificates_after02),
+            'Certificate83 and fixed52 are separate explicit modes')
     qualification = fallback52_qualification(cache_sources) if deadline_fallback52 else None
+    authenticate = authenticate_cache_batch
+    if certificates_after02:
+        from src.tools import smoke_e2e_pilot_certificates as certificates
+        activation = (_frozen_certificate_activation if _frozen_certificate_activation is not None
+                      else certificates.activate(cache_sources, root=ROOT))
+        qualification = certificates.qualification(activation, cache_sources, root=ROOT)
+        authenticate = lambda ref: certificates.load_certificate_batch(ref, root=ROOT)
     tables, packages, cache_proofs, seen_proposals = {}, {}, [], {}
     for ref in cache_sources:
-        batch, source_packages, proof = authenticate_cache_batch(ref)
+        batch, source_packages, proof = authenticate(ref)
         cache_proofs.append(proof)
         for key, table in batch.items():
             package = source_packages[key]
@@ -286,6 +296,9 @@ def build_pool(cache_sources, split_policy, *, deadline_fallback52=False):
     if deadline_fallback52:
         require(len(selected) == 52 and set(selected) == set(tables) and all(counts.values()),
                 'Fixed52 fallback needs exactly52 unique cache-verified pairs, all retained, and all four classes')
+    elif certificates_after02:
+        require(len(selected) == 83 and set(selected) == set(tables) and all(counts.values()),
+                'Certificate mode requires every original83 unique pair and all four classes')
     else:
         require(len(selected) >= 80 and all(counts.values()), 'Pilot needs at least 80 unique cache-verified pairs and all four classes')
     entries = []
@@ -321,6 +334,18 @@ def build_pool(cache_sources, split_policy, *, deadline_fallback52=False):
 def load_pilot_pool(manifest_reference):
     recorded = read_repo_ref(manifest_reference)
     require(recorded.get('version') == VERSION and recorded.get('partition') == 'train', 'Unknown pilot dataset schema')
+    from src.tools import smoke_e2e_pilot_certificates as certificates
+    if recorded.get('qualification', {}).get('mode') == certificates.MODE:
+        path = ROOT / certificates.RESULT_FILE
+        ref = {'file': certificates.RESULT_FILE, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+        authenticated, _, _, actual_manifest_ref = certificates.authenticate_certificate_qualification(ref, root=ROOT)
+        require(authenticated == recorded and actual_manifest_ref == ref_identity(manifest_reference),
+                'Certificate manifest is not its successful original population receipt')
+        manifest, tables, packages, proof = build_pool(recorded['cache_sources'], recorded['split']['policy'],
+            certificates_after02=True, _frozen_certificate_activation=recorded['qualification']['activation'])
+        require(manifest == recorded, 'Certificate83 cached tables or original frozen split changed')
+        proof['manifest_reference'] = ref_identity(manifest_reference)
+        return tables, packages, proof
     if 'qualification' in recorded:
         require(recorded['qualification'] == fallback52_qualification(recorded['cache_sources']),
                 'Frozen fixed52 qualification differs from the exact approved deadline policy')
@@ -351,7 +376,7 @@ def authenticate_pilot_holdout(manifest_reference, dataset_proof, holdout_refere
         and dataset_proof.get('split') == manifest.get('split')
         and dataset_proof.get('train_keys') == manifest['split']['train_keys']
         and dataset_proof.get('eval_keys') == manifest['split']['eval_keys'],
-        'Frozen holdout requires the exact fully reauthenticated pilot manifest')
+        'Frozen holdout requires the exact authorized pilot manifest')
     assert_pilot_split(manifest['entries'], manifest['split'], frozen)
     return {'reference': expected, 'pilot_population_and_split_verified': True,
         'selected_scenes': list(manifest['split']['selected_scenes']),
@@ -367,6 +392,8 @@ def main():
     parser.add_argument('--timeout-seconds', type=float, required=True)
     parser.add_argument('--deadline-fallback-52', action='store_true',
                         help='Explicit root choice after03:30UTC: only the exact approved52 sources; no adjustable minimum')
+    parser.add_argument('--certificates-after-02', action='store_true',
+                        help='55753931: fixed83 original certificates after07UTC if709593 not PASS; no repeated native-source scan')
     args = parser.parse_args()
     require(re.fullmatch(r'smoke_e2e_pilot_[A-Za-z0-9_]+', args.name)
             and math.isfinite(args.timeout_seconds) and args.timeout_seconds > 0, 'Unique bounded pilot preflight required')
@@ -374,6 +401,11 @@ def main():
     require(not output.exists(), 'Preserve previous preflights')
     destination = (ROOT / args.out).resolve(); destination.relative_to(ROOT / 'data/world_pairs')
     require(not destination.exists(), 'Pilot dataset manifest must not be overwritten')
+    require(not (args.deadline_fallback_52 and args.certificates_after_02), 'Population exception modes cannot be combined')
+    if args.certificates_after_02:
+        from src.tools import smoke_e2e_pilot_certificates as certificates
+        require(args.name == certificates.NAME and args.out.as_posix() == certificates.MANIFEST_FILE,
+                'Certificate83 needs its distinct immutable population namespace')
     config = {**vars(args), 'out': str(args.out), 'version': VERSION,
               'cache_source': [json.loads(value) for value in args.cache_source], 'gpus': 0}
     metrics = {'kind': 'smoke_e2e_pilot_dataset_preflight', 'passed': False, 'errors': [],
@@ -388,7 +420,9 @@ def main():
         config['pbs_jobid'] = os.environ['PBS_JOBID']
         config['cpu_affinity'] = sorted(os.sched_getaffinity(0))
         signal.setitimer(signal.ITIMER_REAL, args.timeout_seconds)
-        if args.deadline_fallback_52:
+        if args.certificates_after_02:
+            manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy, certificates_after02=True)
+        elif args.deadline_fallback_52:
             manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy, deadline_fallback52=True)
         else:
             manifest, _, _, proof = build_pool(config['cache_source'], args.split_policy)

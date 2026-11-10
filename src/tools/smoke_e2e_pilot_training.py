@@ -3,6 +3,7 @@
 No model or Ray import occurs before the driver render gate and this worker's
 formal dataset reauthentication. Original 5-step entry points remain unchanged.
 """
+import copy
 import hashlib
 import importlib.metadata
 import json
@@ -105,6 +106,9 @@ def pilot_train_worker(config, connection):
             actor_kl_loss_coefficient=actual.actor_rollout_ref.actor.kl_loss_coef,
             critic_offload=config['critic_offload'], reward_policy='explicit_task_zero',
             sources=[*proof['sources'], model_ref['source_result']])
+        if proof.get('qualification', {}).get('mode') == 'approved_original_certificates83_after02_v1':
+            result['extra_source_reauthentication'] = copy.deepcopy(proof['qualification']['extra_source_reauthentication'])
+            result['qualification_mode'] = proof['qualification']['mode']
         return result
     finally:
         ray.shutdown()

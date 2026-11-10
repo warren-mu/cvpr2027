@@ -20,6 +20,9 @@ from src.tools.merge_pair_v2 import producer_arguments
 from src.tools.t02_export import save_json
 
 VERSION = 'train_holdout_scenes_v1'
+CERTIFICATE_VERSION = 'train_holdout_scenes_v2_original_certificates83'
+CERTIFICATE_MODE = 'approved_original_certificates83_after02_v1'
+CERTIFICATE_RESULT = 'results/smoke_e2e_pilot_pool_83_certificates_01.json'
 POLICY = 'room_stratified_scene_hash_seed0_ten_percent_v1'
 NAME = 'train_holdout_freeze'
 DESTINATION = 'data/world_pairs/train_holdout_scenes.json'
@@ -166,14 +169,42 @@ def authenticate_qualification(reference, *, root=ROOT):
     return manifest, proof, source, manifest_ref
 
 
-def frozen_document(manifest, source, manifest_ref):
-    """Called only after authenticate_qualification; stores actual original split."""
+def authenticate_population(reference, *, certificates_after_02=False, root=ROOT):
+    """Dispatch authority without relabeling certificate-only data as rechecked.
+
+    The certificate loader authenticates its original successful activation
+    receipt. It does not re-evaluate a later clock or the later 709593 outcome.
+    """
+    require(type(certificates_after_02) is bool, 'Explicit population authority required')
+    if not certificates_after_02:
+        return authenticate_qualification(reference, root=root)
+    from src.tools.smoke_e2e_pilot_certificates import authenticate_certificate_qualification
+    require(ref_identity(reference)['file'] == CERTIFICATE_RESULT,
+            'Certificate mode requires its explicit original population result')
+    manifest, proof, source, manifest_ref = authenticate_certificate_qualification(reference, root=root)
+    authority = manifest.get('qualification')
+    require(isinstance(authority, dict) and authority.get('mode') == CERTIFICATE_MODE
+            and authority.get('extra_source_reauthentication') == {'status': 'not_awaited', 'passed': None}
+            and proof.get('qualification') == authority,
+            'Certificate authority must not claim an additional source reauthentication PASS')
+    from src.tools.smoke_e2e_pilot_dataset import split_entries
+    population = compact_population(manifest['entries'])
+    require(len(population) == 83 and manifest.get('partition') == 'train'
+            and manifest.get('field_of_view') == 60 and type(manifest.get('seed')) is int
+            and manifest['seed'] == 0 and manifest.get('split') == split_entries(manifest['entries'], POLICY)
+            and manifest.get('counts_by_kind') == counts(population) and all(counts(population).values()),
+            'Certificate population must preserve all original83 and the approved initial scene selection')
+    return manifest, proof, source, manifest_ref
+
+
+def frozen_document(manifest, source, manifest_ref, *, certificates_after_02=False):
+    """Called after explicit population authentication; stores the original split."""
     population = compact_population(manifest['entries'])
     split = copy.deepcopy(manifest['split'])
     held = split['selected_scenes']
     train = [row for row in population if row['scene'] not in held]
     evaluation = [row for row in population if row['scene'] in held]
-    return {'version': VERSION, 'approved_revision': '629d4a03', 'policy': POLICY, 'seed': 0,
+    document = {'version': VERSION, 'approved_revision': '629d4a03', 'policy': POLICY, 'seed': 0,
         'frozen_once': True, 'selected_scenes': held,
         'scenes': [{'scene_id': scene, 'room_type': room_type(scene)} for scene in held],
         'population': {'dataset_keys': [row['dataset_key'] for row in population],
@@ -183,12 +214,25 @@ def frozen_document(manifest, source, manifest_ref):
         'split': split, 'counts_by_partition': {'train': counts(train), 'holdout': counts(evaluation)},
         'missing_room_types': [room for room in ROOMS if room not in {room_type(r['scene']) for r in population}],
         'scope': 'Fixed scene exclusion for all future training and fixed pilot evaluation; not a final main-pool or test approval'}
+    if certificates_after_02:
+        document.update(version=CERTIFICATE_VERSION, authorization_revision='55753931',
+                        population_authority=copy.deepcopy(manifest['qualification']))
+    return document
 
 
 def validate_frozen(frozen):
-    require(frozen.get('version') == VERSION and frozen.get('approved_revision') == '629d4a03'
+    require(frozen.get('version') in (VERSION, CERTIFICATE_VERSION) and frozen.get('approved_revision') == '629d4a03'
             and frozen.get('policy') == POLICY and type(frozen.get('seed')) is int and frozen['seed'] == 0
             and frozen.get('frozen_once') is True, 'Unknown frozen holdout policy')
+    if frozen['version'] == CERTIFICATE_VERSION:
+        authority = frozen.get('population_authority', {})
+        require(frozen.get('authorization_revision') == '55753931'
+                and authority.get('mode') == CERTIFICATE_MODE
+                and authority.get('extra_source_reauthentication') == {'status': 'not_awaited', 'passed': None},
+                'Certificate freeze must preserve its explicit non-reauthenticated authority')
+    else:
+        require('population_authority' not in frozen and 'authorization_revision' not in frozen,
+                'Original successful-qualification freeze cannot claim certificate-only authority')
     population = frozen['population']
     entries = compact_population(population['entries'])
     keys = [row['dataset_key'] for row in entries]
@@ -238,11 +282,11 @@ def assert_pilot_split(entries, split, frozen):
             'Pilot train/evaluation contains a frozen-scene leak')
 
 
-def freeze(reference, *, root=ROOT):
+def freeze(reference, *, certificates_after_02=False, root=ROOT):
     destination = Path(root) / DESTINATION
     require(not destination.exists(), 'The permanent holdout already exists; never recompute or overwrite it')
-    manifest, _, source, manifest_ref = authenticate_qualification(reference, root=root)
-    document = frozen_document(manifest, source, manifest_ref)
+    manifest, _, source, manifest_ref = authenticate_population(reference, certificates_after_02=certificates_after_02, root=root)
+    document = frozen_document(manifest, source, manifest_ref, certificates_after_02=certificates_after_02)
     validate_frozen(document)
     destination.parent.mkdir(parents=True, exist_ok=True)
     written = save_json(destination, document)  # xb; racing writers cannot overwrite.
@@ -259,8 +303,11 @@ def load_frozen_holdout(reference, *, root=ROOT):
     meta, cfg, metrics = receipt['_meta'], receipt['config'], receipt['metrics']
     argv = producer_arguments(meta['command'], 'src.tools.train_holdout_freeze')
     qualification = ref_identity(frozen['population']['qualification_result'])
+    certificates = frozen['version'] == CERTIFICATE_VERSION
     require(meta.get('end') and meta.get('exit_code') == 0 and meta.get('name') == NAME
-            and cfg.get('name') == NAME and cfg.get('version') == VERSION
+            and cfg.get('name') == NAME and cfg.get('version') == frozen['version']
+            and cfg.get('certificates_after_02', False) is certificates
+            and argv.count('--certificates-after-02') == int(certificates)
             and cfg.get('qualification_result') == qualification
             and values(argv, '--name') == [NAME]
             and [json.loads(v) for v in values(argv, '--qualification-result')] == [qualification]
@@ -268,10 +315,13 @@ def load_frozen_holdout(reference, *, root=ROOT):
             and metrics.get('producer_exit_code') == 0 and metrics.get('errors') == []
             and ref_identity(metrics['frozen_holdout']) == ref_identity(reference)
             and metrics.get('counts_by_partition') == frozen['counts_by_partition']
+            and (not certificates or (metrics.get('population_authority') == frozen['population_authority']
+                 and 'extra_source_reauthentication_passed' in metrics
+                 and metrics['extra_source_reauthentication_passed'] is None))
             and [ref_identity(r) for r in receipt.get('sources', [])] == [qualification],
             'Frozen file has no matching successful original logged freeze')
-    manifest, _, source, manifest_ref = authenticate_qualification(qualification, root=root)
-    expected = frozen_document(manifest, frozen['population']['qualification_result'], manifest_ref)
+    manifest, _, source, manifest_ref = authenticate_population(qualification, certificates_after_02=certificates, root=root)
+    expected = frozen_document(manifest, frozen['population']['qualification_result'], manifest_ref, certificates_after_02=certificates)
     require(frozen == expected and ref_identity(source) == qualification,
             'Permanent freeze differs from actual original qualification')
     return frozen, ref_identity(reference)
@@ -280,20 +330,27 @@ def load_frozen_holdout(reference, *, root=ROOT):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--name', required=True, choices=(NAME,))
-    parser.add_argument('--qualification-result', required=True, help='Actual successful original {file,sha256}')
+    parser.add_argument('--qualification-result', required=True, help='Actual completed original population {file,sha256}')
+    parser.add_argument('--certificates-after-02', action='store_true',
+                        help='55753931 original83 certificate authority; never an extra source reauthentication PASS')
     args = parser.parse_args(argv)
     output = ROOT / 'results' / (NAME + '.json')
     require(not output.exists(), 'Preserve the previous freeze result')
-    cfg = {'name': args.name, 'version': VERSION, 'qualification_result': json.loads(args.qualification_result), 'gpus': 0}
+    cfg = {'name': args.name, 'version': CERTIFICATE_VERSION if args.certificates_after_02 else VERSION,
+           'certificates_after_02': args.certificates_after_02,
+           'qualification_result': json.loads(args.qualification_result), 'gpus': 0}
     metrics = {'kind': 'train_holdout_freeze', 'passed': False, 'errors': [], 'frozen_holdout': None,
                'scope': 'Metadata-only fixed scene holdout; original native/cache qualification remains authoritative'}
     code, sources = 1, []
     try:
-        frozen, written, source = freeze(cfg['qualification_result'])
+        frozen, written, source = freeze(cfg['qualification_result'], certificates_after_02=args.certificates_after_02)
         sources = [source]
         metrics.update(passed=True, frozen_holdout=written, counts_by_partition=frozen['counts_by_partition'],
                        missing_room_types=frozen['missing_room_types'], selected_scenes=frozen['selected_scenes'],
                        population_dataset_keys_sha256=frozen['population']['dataset_keys_sha256'])
+        if args.certificates_after_02:
+            metrics['population_authority'] = frozen['population_authority']
+            metrics['extra_source_reauthentication_passed'] = None
         code = 0
     except Exception as error:
         traceback.print_exc()

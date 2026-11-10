@@ -5,8 +5,10 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+import sys
+import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.tools import train_holdout_freeze as holdout
 from src.tools import smoke_e2e_pilot_dataset as dataset
@@ -216,6 +218,119 @@ class HoldoutFreezeTests(unittest.TestCase):
         elsewhere = write(self.root / 'data/world_pairs/not_frozen.json', frozen)
         with self.assertRaisesRegex(ValueError, 'fixed artifact path'):
             holdout.load_frozen_holdout(elsewhere, root=self.root)
+
+
+class CertificateAuthorityTests(unittest.TestCase):
+    setUp = HoldoutFreezeTests.setUp
+    audit_fixture = HoldoutFreezeTests.audit_fixture
+
+    def certificate(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest['qualification'] = {'mode': holdout.CERTIFICATE_MODE,
+            'activation': {'decision_utc': '2026-11-10T07:00:00+00:00',
+                'original_qualification_snapshot': {'status': 'not_passed_at_activation'}},
+            'extra_source_reauthentication': {'status': 'not_awaited', 'passed': None}}
+        manifest.pop('common_pool_hash')
+        manifest['common_pool_hash'] = holdout.canonical_hash(manifest)
+        manifest_ref = write(self.root / 'data/world_pairs/e2e_pilot_pool_83_certificates_01.json', manifest)
+        proof = copy.deepcopy(self.data['metrics']['dataset_proof'])
+        proof.update(qualification=copy.deepcopy(manifest['qualification']), common_pool_hash=manifest['common_pool_hash'])
+        source = {'file': holdout.CERTIFICATE_RESULT, 'sha256': 'b' * 64, 'metrics_sha256': 'c' * 64}
+        expected = holdout.ref_identity(source)
+        module = types.ModuleType('src.tools.smoke_e2e_pilot_certificates')
+        # Actual original cert/PBS/deadline authentication is the adapter's
+        # independently tested boundary; this suite never certifies fixtures.
+        module.authenticate_certificate_qualification = Mock(return_value=(manifest, proof, source, manifest_ref))
+        self.stack.enter_context(patch.dict(sys.modules, {module.__name__: module}))
+        return manifest, proof, source, expected, module.authenticate_certificate_qualification
+
+    def receipt(self, frozen, written, qualification):
+        data = {'_meta': {'name': holdout.NAME, 'end': 'ended', 'exit_code': 0,
+            'command': ['python3', '-m', 'src.tools.train_holdout_freeze', '--name', holdout.NAME,
+                        '--qualification-result', json.dumps(qualification), '--certificates-after-02']},
+            'config': {'name': holdout.NAME, 'version': holdout.CERTIFICATE_VERSION,
+                       'qualification_result': qualification, 'certificates_after_02': True},
+            'metrics': {'kind': 'train_holdout_freeze', 'passed': True, 'producer_exit_code': 0,
+                        'errors': [], 'frozen_holdout': written, 'counts_by_partition': frozen['counts_by_partition'],
+                        'population_authority': frozen['population_authority'], 'extra_source_reauthentication_passed': None},
+            'sources': [frozen['population']['qualification_result']]}
+        return write(self.root / 'results' / (holdout.NAME + '.json'), data)
+
+    def test_certificates_use_the_same_original83_scene_selection_with_explicit_authority(self):
+        manifest, proof, source, expected, loader = self.certificate()
+        with patch.object(holdout, 'authenticate_qualification', side_effect=AssertionError('Not a source reauthentication PASS')):
+            frozen, written, returned = holdout.freeze(expected, certificates_after_02=True, root=self.root)
+        loader.assert_called_once_with(expected, root=self.root)
+        self.assertEqual(returned, source)
+        self.assertEqual(frozen['version'], holdout.CERTIFICATE_VERSION)
+        self.assertEqual(frozen['population_authority'], manifest['qualification'])
+        self.assertEqual(frozen['split'], self.manifest['split'])
+        self.assertEqual(frozen['population']['dataset_keys'], sorted(row['dataset_key'] for row in self.manifest['entries']))
+        self.assertIsNone(frozen['population_authority']['extra_source_reauthentication']['passed'])
+        holdout.assert_pilot_split(manifest['entries'], manifest['split'], frozen)
+        self.receipt(frozen, written, expected)
+        with patch.object(holdout, 'authenticate_qualification', side_effect=AssertionError('No later qualification reselection')):
+            self.assertEqual(holdout.load_frozen_holdout(written, root=self.root)[0], frozen)
+        with self.assertRaisesRegex(ValueError, 'never recompute'):
+            holdout.freeze(expected, certificates_after_02=True, root=self.root)
+
+    def test_first_activation_failure_propagates_without_creating_freeze(self):
+        _, _, _, expected, loader = self.certificate()
+        for message in ('before approved07UTC', '709593 already PASS', 'original certificate SHA changed'):
+            loader.side_effect = ValueError(message)
+            with self.assertRaisesRegex(ValueError, message):
+                holdout.freeze(expected, certificates_after_02=True, root=self.root)
+            self.assertFalse((self.root / holdout.DESTINATION).exists())
+
+    def test_late_original_pass_or_failure_does_not_mutate_or_invalidate_authorized_freeze(self):
+        _, _, _, expected, loader = self.certificate()
+        frozen, written, _ = holdout.freeze(expected, certificates_after_02=True, root=self.root)
+        self.receipt(frozen, written, expected)
+        before = (self.root / holdout.DESTINATION).read_bytes()
+        # The actual certificate loader authenticates its recorded activation.
+        # No original live result, current clock or recomputation is consulted.
+        for new_status in (True, False):
+            changed = copy.deepcopy(self.data); changed['metrics']['passed'] = new_status
+            write(self.root / holdout.QUALIFICATION_FILE, changed)
+            with patch.object(holdout, 'authenticate_qualification', side_effect=AssertionError('Do not consult later state')):
+                self.assertEqual(holdout.load_frozen_holdout(written, root=self.root)[0], frozen)
+        self.assertEqual((self.root / holdout.DESTINATION).read_bytes(), before)
+        self.assertEqual(loader.call_count, 3)
+
+    def test_certificate_mode_cannot_claim_new_reauthentication_pass_or_wrong_population(self):
+        manifest, proof, _, expected, _ = self.certificate()
+        original = copy.deepcopy(manifest)
+        manifest['qualification']['extra_source_reauthentication']['passed'] = True
+        with self.assertRaisesRegex(ValueError, 'reauthentication PASS'):
+            holdout.freeze(expected, certificates_after_02=True, root=self.root)
+        manifest.clear(); manifest.update(copy.deepcopy(original))
+        manifest['entries'].pop()
+        with self.assertRaisesRegex(ValueError, 'original83'):
+            holdout.freeze(expected, certificates_after_02=True, root=self.root)
+        self.assertFalse((self.root / holdout.DESTINATION).exists())
+
+    def test_loader_requires_explicit_certificate_command_and_original_receipt(self):
+        _, _, _, expected, _ = self.certificate()
+        frozen, written, _ = holdout.freeze(expected, certificates_after_02=True, root=self.root)
+        receipt_ref = self.receipt(frozen, written, expected)
+        receipt = json.loads(Path(receipt_ref['file']).read_text())
+        receipt['_meta']['command'].remove('--certificates-after-02')
+        write(Path(receipt_ref['file']), receipt)
+        with self.assertRaisesRegex(ValueError, 'logged freeze'):
+            holdout.load_frozen_holdout(written, root=self.root)
+        bad = copy.deepcopy(frozen); bad['version'] = holdout.VERSION
+        with self.assertRaisesRegex(ValueError, 'certificate-only'):
+            holdout.validate_frozen(bad)
+
+    def test_normal_and_certificate_inputs_cannot_be_silently_substituted(self):
+        _, _, _, expected, loader = self.certificate()
+        with self.assertRaisesRegex(ValueError, 'explicit original population'):
+            holdout.freeze(self.reference, certificates_after_02=True, root=self.root)
+        loader.assert_not_called()
+        with self.assertRaisesRegex(ValueError, 'actual original normal83'):
+            holdout.freeze(expected, root=self.root)
+        with self.assertRaisesRegex(ValueError, 'Explicit population authority'):
+            holdout.freeze(expected, certificates_after_02=1, root=self.root)
 
 
 if __name__ == '__main__':
