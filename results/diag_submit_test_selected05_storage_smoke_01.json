@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 256.9000021960237
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json,hashlib,subprocess\np=Path('results/diag_test_selected05_export_preflight_01.json');raw=p.read_bytes()\nassert hashlib.sha256(raw).hexdigest()=='648c5e0d59211ecea3a7affb22fe355ad9ff66f57b045f4147895ab4e1455cb6'\nd=json.loads(raw);assert d['_meta']['exit_code']==0\nname='gpu_pack_test_selected05_storage_smoke_01'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\nraise SystemExit(subprocess.call(d['metrics']['submit_command']))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_submit_test_selected05_storage_smoke_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_submit_test_selected05_storage_smoke_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport json,hashlib,subprocess\np=Path('results/diag_test_selected05_export_preflight_01.json');raw=p.read_bytes()\nassert hashlib.sha256(raw).hexdigest()=='648c5e0d59211ecea3a7affb22fe355ad9ff66f57b045f4147895ab4e1455cb6'\nd=json.loads(raw);assert d['_meta']['exit_code']==0\nname='gpu_pack_test_selected05_storage_smoke_01'\nassert not list(Path('logs/pbs').glob(name+'-*')) and not Path('results',name+'.json').exists()\nraise SystemExit(subprocess.call(d['metrics']['submit_command']))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T23:28:41",
+    "log_path": "logs/runs/diag_submit_test_selected05_storage_smoke_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "ef0567ba4dc057e6604d8c6fdd9c6cae78206636",
+    "git_dirty": false,
+    "end": "2026-11-10T23:33:05",
+    "duration_sec": 257.6,
+    "exit_code": 0,
+    "metrics_sha256": "34203cd13be8ff9423e9c7a463d26f1cef26f699c9a54a3efb77a6faf748e396"
+  }
+}

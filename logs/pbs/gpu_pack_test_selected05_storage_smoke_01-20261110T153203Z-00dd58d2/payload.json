@@ -1,0 +1,55 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "gpu_pack_test_selected05_storage_smoke_01",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.gpu_pack",
+    "--name",
+    "gpu_pack_test_selected05_storage_smoke_01",
+    "--queue-plan",
+    "configs/shared_test_selected05_raw10_compressed_smoke_01.json",
+    "--queue-plan-sha256",
+    "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924",
+    "--queue-root",
+    "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01",
+    "--gpus",
+    "1",
+    "--timeout-seconds",
+    "1460",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1490,
+  "requested_host": null,
+  "dry_run": false,
+  "budget_revision": "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1",
+  "queue": "autox",
+  "retry_of": null,
+  "budget_group": "PACK",
+  "requested_queue_charge_rate": 1.0,
+  "mixed_budget_authorization": {
+    "version": "shared_gpu_units_budget_v1",
+    "plan_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_selected05_raw10_compressed_smoke_01.json",
+      "sha256": "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924",
+      "bytes": 8443
+    },
+    "possible_groups": [
+      "T02"
+    ],
+    "residual_priority": [
+      "T02"
+    ],
+    "reservation_rule": "entire_allocation_upper_bound_in_each_possible_subbudget",
+    "total_rule": "one_allocation_once_in_T01_and_shared",
+    "residual_rule": "highest_priority_started_group_or_highest_planned_group_if_zero_business"
+  }
+}

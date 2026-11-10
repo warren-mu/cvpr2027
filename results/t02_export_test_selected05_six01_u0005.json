@@ -1,0 +1,550 @@
+{
+  "config": {
+    "absolute_deadline_epoch": 1794325920.2581391,
+    "compress_test_tables": true,
+    "compression_smoke_dual": false,
+    "cpu_affinity": [
+      48,
+      50,
+      52,
+      54,
+      56,
+      58,
+      60,
+      62,
+      64,
+      66,
+      68,
+      70
+    ],
+    "cuda_visible_devices": "GPU-b4f645ab-0459-741d-a216-6222c8017d9b",
+    "depth": 4,
+    "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "human_review_status": "not_inferred_from_source",
+    "max_raw_mib": 2048,
+    "max_table_mib": 512,
+    "name": "t02_export_test_selected05_six01_u0005",
+    "node": "hopper-30",
+    "pair_file": "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan227/floorplan227_00038/pair.json",
+    "pair_id": [
+      "floorplan227_00038"
+    ],
+    "pair_timeout_seconds": 660.0,
+    "pbs_jobid": "710528.hopper-m-02",
+    "raw_retention_policy": {
+      "accepted_full_raw": true,
+      "eligible_status": "rejected",
+      "error_timeout_black_or_unknown_cleanup_full_raw": true,
+      "metadata_indices_logs_results_retained": true,
+      "seed": 0,
+      "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+      "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+    },
+    "resolution": 255,
+    "runtime": {
+      "ai2thor_version": "5.0.0",
+      "controller_gpu_device": 0,
+      "cpu_affinity": [
+        48,
+        50,
+        52,
+        54,
+        56,
+        58,
+        60,
+        62,
+        64,
+        66,
+        68,
+        70
+      ],
+      "cuda_visible_devices": "GPU-b4f645ab-0459-741d-a216-6222c8017d9b",
+      "gpu_index": 0,
+      "gpu_name": "NVIDIA H200",
+      "gpu_uuid": "GPU-b4f645ab-0459-741d-a216-6222c8017d9b",
+      "log_dir": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/unity_logs",
+      "logical_index": 0,
+      "mig_mode": "Disabled",
+      "pbs_jobid": "710528.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027",
+      "vulkan_device_index": 0
+    },
+    "sample_rejected_raw": true,
+    "scratch": "/scratch/e1583364/cvpr2027",
+    "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02",
+    "shared_queue_claim": {
+      "budget_group": "T02",
+      "claim_reference": {
+        "file": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01/claims/104753cdf61590f2a03542be31ab79e8f97617e8123932a09078573897e1c27f.json",
+        "sha256": "0e6b82fa0b39ccce6cde875e85cf5cfcfae0015ec34439a0ed7766f3269d6458"
+      },
+      "command": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.t02_export_parallel",
+        "--name",
+        "t02_export_test_selected05_six01",
+        "--manifest",
+        "configs/t02_export_test_selected05_six01.json",
+        "--manifest-sha256",
+        "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1",
+        "--concurrency",
+        "6",
+        "--timeout-seconds",
+        "1200",
+        "--unit-timeout-seconds",
+        "900",
+        "--pair-timeout-seconds",
+        "660",
+        "--gate-timeout-seconds",
+        "180",
+        "--sample-rejected-raw",
+        "--compress-test-tables",
+        "--test-selection",
+        "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"
+      ],
+      "cpu_affinity": [
+        48,
+        50,
+        52,
+        54,
+        56,
+        58,
+        60,
+        62,
+        64,
+        66,
+        68,
+        70
+      ],
+      "gpu_uuid": "GPU-b4f645ab-0459-741d-a216-6222c8017d9b",
+      "name": "t02_export_test_selected05_six01",
+      "node": "hopper-30",
+      "owner_identity": {
+        "pgid": 3509939,
+        "pid": 3510059,
+        "sid": 3509939,
+        "start_ticks": 89748068
+      },
+      "parent_cuda_visible_devices": "GPU-b4f645ab-0459-741d-a216-6222c8017d9b",
+      "parent_payload_reference": {
+        "bytes": 1787,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_test_selected05_storage_smoke_01-20261110T153203Z-00dd58d2/payload.json",
+        "sha256": "1f66b7332510af67106aae51140ee34d1b7a493f33a232b2e3e2a336cea6fa32"
+      },
+      "parent_receipt_reference": {
+        "bytes": 449,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_test_selected05_storage_smoke_01-20261110T153203Z-00dd58d2/submission.json",
+        "sha256": "dcc43c9345258a0b2d4c66060f5612ddfa94d8ca71309a2e28295836002b36d9"
+      },
+      "pbs_jobid": "710528.hopper-m-02",
+      "plan_reference": {
+        "bytes": 8443,
+        "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/shared_test_selected05_raw10_compressed_smoke_01.json",
+        "sha256": "3aace551f9a06fe3754734d6e3494f2301ced1ac36b138f64f2c665c679af924"
+      },
+      "queue_root": "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_selected05_raw10_compressed_smoke_01",
+      "started_epoch": 1794325011.0444827,
+      "started_monotonic": 897490.900921572,
+      "t02_child_entry": {
+        "field_of_view": 60,
+        "kind": "look_stay",
+        "pair": {
+          "file": "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan227/floorplan227_00038/pair.json",
+          "sha256": "72d0ea9e043f04bd2a67f402ac9d89a0dfc3a596dbaceafe8c0d3ebb867197e1"
+        },
+        "pair_id": "floorplan227_00038",
+        "proposal_identity": "27296d6cc1e595198dbc2186c085ab449bb1f1182ad5f63189423c07710520b3",
+        "scene": "FloorPlan227",
+        "source": {
+          "file": "results/t01v2_checkpoint_test_s16_s05_01.json",
+          "sha256": "e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5"
+        }
+      },
+      "t02_child_index": 5,
+      "unit": {
+        "budget_group": "T02",
+        "claim_keys": [
+          "596d1311a231d0b2eb4e187898f19c5b68c39e189f24fdeee755d451a4b277b4",
+          "9ffac2f6193a58de1caca63068912e55b2e782050a14ec3bb41bd07563208512",
+          "ad1bb53200b1a7dc1232ec0809fd0b82d1349f1f3faaf811602e2302b385837b",
+          "e5192d25d653ded19f2055875da331d94da640ee0d0617fbf10a95fd67101b0c",
+          "e99ae3cdfd17e4374e2fbbc7114cf2903eec370a2b0a7615ea923465f5f526dc",
+          "f76dd5f22e4c04dc15b19b3b670dd75c893954df4113775279150958402e7ffc"
+        ],
+        "command": [
+          "python3",
+          "-u",
+          "-m",
+          "src.tools.t02_export_parallel",
+          "--name",
+          "t02_export_test_selected05_six01",
+          "--manifest",
+          "configs/t02_export_test_selected05_six01.json",
+          "--manifest-sha256",
+          "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1",
+          "--concurrency",
+          "6",
+          "--timeout-seconds",
+          "1200",
+          "--unit-timeout-seconds",
+          "900",
+          "--pair-timeout-seconds",
+          "660",
+          "--gate-timeout-seconds",
+          "180",
+          "--sample-rejected-raw",
+          "--compress-test-tables",
+          "--test-selection",
+          "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"
+        ],
+        "cpu_cores": 12,
+        "gpus": 1,
+        "identity": {
+          "kind": "t02_export_batch",
+          "manifest": {
+            "file": "configs/t02_export_test_selected05_six01.json",
+            "sha256": "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1"
+          },
+          "original_pair_keys": [
+            "ad1bb53200b1a7dc1232ec0809fd0b82d1349f1f3faaf811602e2302b385837b",
+            "f76dd5f22e4c04dc15b19b3b670dd75c893954df4113775279150958402e7ffc",
+            "9ffac2f6193a58de1caca63068912e55b2e782050a14ec3bb41bd07563208512",
+            "e99ae3cdfd17e4374e2fbbc7114cf2903eec370a2b0a7615ea923465f5f526dc",
+            "596d1311a231d0b2eb4e187898f19c5b68c39e189f24fdeee755d451a4b277b4",
+            "e5192d25d653ded19f2055875da331d94da640ee0d0617fbf10a95fd67101b0c"
+          ],
+          "parameters": {
+            "concurrency": "6",
+            "gate-timeout-seconds": "180",
+            "pair-timeout-seconds": "660",
+            "timeout-seconds": "1200",
+            "unit-timeout-seconds": "900"
+          },
+          "partition": "test",
+          "raw_retention_policy": {
+            "accepted_full_raw": true,
+            "eligible_status": "rejected",
+            "error_timeout_black_or_unknown_cleanup_full_raw": true,
+            "metadata_indices_logs_results_retained": true,
+            "seed": 0,
+            "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+            "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+          },
+          "test_compression": {
+            "policy": {
+              "array_name": "payload.npy",
+              "array_order": "C",
+              "compression_level": 6,
+              "dtype": "uint8",
+              "encoder": "numpy_npy_zip_deflate",
+              "lossless": true,
+              "partition": "test",
+              "scope": "new selected test table arrays only; original native PNG evidence unchanged",
+              "version": "test_table_uint8_npz_deflate6_v1"
+            },
+            "selection_reference": {
+              "file": "logs/review/diag_current_test_selected_05/report.json",
+              "logged_result": {
+                "file": "results/diag_current_test_selected_05.json",
+                "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840"
+              },
+              "sha256": "e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff"
+            }
+          }
+        },
+        "name": "t02_export_test_selected05_six01",
+        "priority": 200,
+        "producer_module": "src.tools.t02_export_parallel",
+        "references": {
+          "manifest": {
+            "bytes": 3525,
+            "file": "configs/t02_export_test_selected05_six01.json",
+            "sha256": "c4e84ab03774e20edbd75da8f005c14a5656d825e04dde467b575e11ddb124e1"
+          },
+          "test_selection": {
+            "file": "logs/review/diag_current_test_selected_05/report.json",
+            "logged_result": {
+              "file": "results/diag_current_test_selected_05.json",
+              "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840"
+            },
+            "sha256": "e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff"
+          }
+        },
+        "timeout_seconds": 1200,
+        "unit_id": "104753cdf61590f2a03542be31ab79e8f97617e8123932a09078573897e1c27f"
+      },
+      "unit_id": "104753cdf61590f2a03542be31ab79e8f97617e8123932a09078573897e1c27f",
+      "version": "shared_gpu_claim_v1"
+    },
+    "source": "results/t01v2_checkpoint_test_s16_s05_01.json",
+    "test_compression_policy": {
+      "array_name": "payload.npy",
+      "array_order": "C",
+      "compression_level": 6,
+      "dtype": "uint8",
+      "encoder": "numpy_npy_zip_deflate",
+      "lossless": true,
+      "partition": "test",
+      "scope": "new selected test table arrays only; original native PNG evidence unchanged",
+      "version": "test_table_uint8_npz_deflate6_v1"
+    },
+    "test_selection": "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}",
+    "timeout_seconds": 900.0,
+    "version": "t02_single_gpu_export_shadow_v2"
+  },
+  "metrics": {
+    "black_frame_detected": false,
+    "cache_matches_live": null,
+    "cache_status": "not_run_requires_at_least_200_paired_states",
+    "cleanup_errors": [],
+    "downstream_allowed": false,
+    "errors": [],
+    "export_checks_complete": false,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_test_selected05_six01_u0005_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_test_selected05_six01_u0005_gate.json",
+      "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+      "metrics_sha256": "8a942799eec46aca804ed054c5f1f9ea52abd0230828fd762cdd6d02db9c02f4",
+      "sha256": "412e93b31ea034b2b44e116958fba900504f7fd6a8b40bf1fa21122a0c52ae89"
+    },
+    "kind": "t02_table_export",
+    "pairs": [
+      {
+        "actual_action_records": 978,
+        "actual_frame_records": 979,
+        "black_frame_reference": null,
+        "cache_matches_live": null,
+        "cleanup_errors": [],
+        "downstream_allowed": false,
+        "error": {
+          "message": "TeleportFull: InvalidOperationException: Collided with: Box|-01.83|+00.21|+05.07.. trace:   at UnityStandardAssets.Characters.FirstPerson.PhysicsRemoteFPSAgentController.TeleportFull (UnityEngine.Vector3 position, UnityEngine.Vector3 rotation, System.Single horizon, System.Boolean standing, System.Boolean forceAction) [0x0017e] in <686694aeb00e4f03b2b15637c42c1442>:0 \n  at (wrapper managed-to-native) System.Reflection.MonoMethod.InternalInvoke(System.Reflection.MonoMethod,object,object[],System.Exception&)\n  at System.Reflection.MonoMethod.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00032] in <695d1cc93cca45069c528c15c9fdd749>:0 ",
+          "type": "RuntimeError"
+        },
+        "kind": "look_stay",
+        "pair_id": "floorplan227_00038",
+        "raw_incremental_index": {
+          "bytes": 967132,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000/raw/evidence_index.jsonl",
+          "sha256": "46f7f770809a3fff24ba2353934a52443cb746b3f2c026507e240fb52fb14c38"
+        },
+        "raw_index": {
+          "bytes": 971041,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000/raw/evidence_index.json",
+          "sha256": "91b785d8435798661afeea6fff43d3c6260eb45cc47b3aa76b9de14e77ae2faa"
+        },
+        "raw_retention": {
+          "binary_payloads_retained": true,
+          "cleanup_confirmed": true,
+          "draw": {
+            "seed": 0,
+            "selected": false,
+            "sha256": "36c09282ba86f81953a85d6d8db4a366fc76844eafc1e915423bb8647250cd15"
+          },
+          "eligible_scientific_rejection": false,
+          "omitted_payload_bytes": 0,
+          "omitted_payload_count": 0,
+          "owner_reference": {
+            "bytes": 1123,
+            "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000/raw_retention_owner.json",
+            "sha256": "0eea7dd8b654492ff0b7ed305d5f48cf8882d1d7d212b179dbd3601ac3c7b16e"
+          },
+          "policy": {
+            "accepted_full_raw": true,
+            "eligible_status": "rejected",
+            "error_timeout_black_or_unknown_cleanup_full_raw": true,
+            "metadata_indices_logs_results_retained": true,
+            "seed": 0,
+            "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+            "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+          },
+          "scientific_status_unchanged": "error"
+        },
+        "rejection_reasons": [],
+        "report_reference": {
+          "bytes": 1805,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000/pair_report.json",
+          "sha256": "566de5b91582fddef7045e8f9c9a49a920cf8ee2d06e4e54ee3ef91543f2bf10"
+        },
+        "scene": "FloorPlan227",
+        "scratch_directory": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000",
+        "source_package": {
+          "bytes": 7373132,
+          "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_test_selected05_six01_u0005/710528.hopper-m-02/pair_0000/authenticated_source.json",
+          "sha256": "706f945c22c162cc84d294c7bd27ec1acee56f5a1bb080934ef0d8bfb9987ddf"
+        },
+        "status": "error",
+        "table_complete": false,
+        "task_acceptance": null,
+        "unity_identity": {
+          "pgid": 3523249,
+          "pid": 3523276,
+          "sid": 3523249,
+          "start_ticks": 89754591
+        },
+        "worker_elapsed_seconds": 135.58345534501132,
+        "worker_identity": {
+          "pgid": 3511059,
+          "pid": 3523249,
+          "sid": 3511059,
+          "start_ticks": 89754533
+        }
+      }
+    ],
+    "producer_exit_code": 1,
+    "raw_retention_counts": {
+      "attempts": 1,
+      "error_type_counts": {
+        "RuntimeError": 1
+      },
+      "omitted_rejected_attempts": 0,
+      "policy": {
+        "accepted_full_raw": true,
+        "eligible_status": "rejected",
+        "error_timeout_black_or_unknown_cleanup_full_raw": true,
+        "metadata_indices_logs_results_retained": true,
+        "seed": 0,
+        "selection": "SHA256 canonical attempt identity below floor(2**256/10)",
+        "version": "t02_scientific_reject_binary_seed0_tenth_v1"
+      },
+      "rejection_reason_counts": {},
+      "sampled_rejected_attempts": 0,
+      "scope": "Storage decisions only; original scientific results and all attempt denominators unchanged",
+      "status_counts": {
+        "error": 1
+      }
+    },
+    "status": "incomplete",
+    "task_acceptance": null,
+    "unstarted_pair_ids": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t02_export_test_selected05_six01_u0005_gate.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t02_export_test_selected05_six01_u0005_gate.json",
+      "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+      "metrics_sha256": "8a942799eec46aca804ed054c5f1f9ea52abd0230828fd762cdd6d02db9c02f4",
+      "sha256": "412e93b31ea034b2b44e116958fba900504f7fd6a8b40bf1fa21122a0c52ae89"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/diag_current_test_selected_05.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/diag_current_test_selected_05.json",
+      "git_commit": "92f451751bb6803086809b3918c62d659b84737b",
+      "metrics_sha256": "fefd109e29ccc282378596738f7ccf707655a6044accb0f4d37988fa9811cc0d",
+      "sha256": "9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/t01v2_checkpoint_test_s16_s05_01.json",
+        "warn": []
+      },
+      "exit_code": 0,
+      "file": "results/t01v2_checkpoint_test_s16_s05_01.json",
+      "git_commit": "ce56b1ac44cf890c74657577b7dae24ee9460bbb",
+      "metrics_sha256": "afc18823dbd224b80ee10d366b1488e9e402d43ab099447573689ee3bba97842",
+      "sha256": "e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5"
+    },
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/gen_test_s16_round2_s05_c6_floorplan227.json",
+        "warn": []
+      },
+      "candidate_clone_enabled": false,
+      "exit_code": 0,
+      "file": "results/gen_test_s16_round2_s05_c6_floorplan227.json",
+      "gate_source": {
+        "audit": {
+          "fail": [],
+          "file": "results/gen_test_s16_round2_s05_j709656_hopper_m_02_gate.json",
+          "warn": []
+        },
+        "exit_code": 0,
+        "file": "results/gen_test_s16_round2_s05_j709656_hopper_m_02_gate.json",
+        "git_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e",
+        "metrics_sha256": "e7a5bf76f7d3218a02b9dfe21caabe0f10b6e7cceba72a3e740aa69f244adecc",
+        "sha256": "83ad6d73f960ac76026e74451c28cd748bfec738ae0673e1e1fa7779cfad2e90"
+      },
+      "git_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e",
+      "log_file": "logs/runs/gen_test_s16_round2_s05_c6_floorplan227.log",
+      "log_sha256": "27cb0f50bdfa8c35b864a2d64e526568b4877d3f4a36a983810d6c9b0868e5f8",
+      "meta_file": "logs/runs/gen_test_s16_round2_s05_c6_floorplan227.meta.json",
+      "meta_sha256": "7101dfe543aa5909820bbaeaec613354301c88255fa71d629207ba7759d4394a",
+      "metrics_sha256": "06bdacea6e03527266d2274741a0834a66000eaa362ecb0a4dee3ba67f8d7a41",
+      "metrics_specification": {
+        "actual_document_sha256": "a8b3e4f45fb5fbccd850e0b759d4c62b2026fb373a5dcbb81f35c13a22ad8bac",
+        "compatible_references": [
+          "38b15551"
+        ],
+        "historical_spec": false,
+        "scope": "known construction-compatible specification; full METRICS compliance is not asserted",
+        "source_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e"
+      },
+      "sha256": "accbcdd9dd2b3490a9a9f74c9eefadb5919115826458dcf1d0e83da503676740",
+      "shard_config_file": "/scratch/e1583364/cvpr2027/g01_parallel/gen_test_s16_round2_s05/709656_hopper_m_02/c6/FloorPlan227/shard_config.json",
+      "shard_config_sha256": "d742cca8881e2b36d7bb341b5f7b914042f822314ffeda6885555f7ceb35fdfd"
+    }
+  ],
+  "_meta": {
+    "name": "t02_export_test_selected05_six01_u0005",
+    "command": [
+      "/scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3",
+      "-u",
+      "-m",
+      "src.tools.t02_export",
+      "--name",
+      "t02_export_test_selected05_six01_u0005",
+      "--source",
+      "results/t01v2_checkpoint_test_s16_s05_01.json",
+      "--pair-id",
+      "floorplan227_00038",
+      "--pair-file",
+      "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan227/floorplan227_00038/pair.json",
+      "--timeout-seconds",
+      "900.0",
+      "--pair-timeout-seconds",
+      "660.0",
+      "--gate-timeout-seconds",
+      "180.0",
+      "--sample-rejected-raw",
+      "--compress-test-tables",
+      "--test-selection",
+      "{\"file\":\"logs/review/diag_current_test_selected_05/report.json\",\"logged_result\":{\"file\":\"results/diag_current_test_selected_05.json\",\"sha256\":\"9b39d859f00a09d4737453a8f1a6ddf82ebffdb9b4636bccb6a44d6ae3567840\"},\"sha256\":\"e911161871714dbe92a09b9cac089aec518caa4b8e46081f23b1e2244f3cb9ff\"}"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-30",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": "0",
+    "start": "2026-11-10T23:36:59",
+    "log_path": "logs/runs/t02_export_test_selected05_six01_u0005.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "d1001ecb443502796852e032c5d17e9c1ce871d8",
+    "git_dirty": false,
+    "end": "2026-11-10T23:40:03",
+    "duration_sec": 183.3,
+    "exit_code": 1,
+    "metrics_sha256": "5c32b528905370526aaac898b858eaf1e8152684703dd2045e43fb8bc1288632"
+  }
+}
