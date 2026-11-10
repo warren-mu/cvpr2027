@@ -1990,3 +1990,8 @@ DIAG02 E1–E6 已完成，见 [任务报告](tasks/DIAG02.report.md)。固定 8
 三组论文插图预览均取自已有并通过缓存复核的非留出训练对。A：FloorPlan17 Bottle（Flip）＋FloorPlan19 Bread（Stay）；B：FloorPlan13 DishSponge＋FloorPlan7 Bread；C：FloorPlan203 Box＋FloorPlan19 Cup。每组均核对实际输入的 6 张 255×255 PNG、锚点掩码、固定标号及双世界共享起点。未生成新场景，未使用测试数据，新增 GPU 用量为 0。见[来源和验证](logs/review/diag_fig_kettle_previews_01/report.json)。等人类选组后交付对应原帧。
 
 原定测试集缓存复核继续进行，b05 首投 710922 不指定节点；此为提交记录，并非已通过验收。DIAG02 报告明确了 E1 复核范围为 Look 回合，结果数字不变。
+
+
+### 2026-11-10 16:22 ET
+
+测试集视角表的缓存复核 b04（710908）已在 hopper-22 完成。六个来源共 200/200 个抽样状态通过原检查。PBS 报告从提交到启动为 49 秒，运行 14 分 02 秒，合计 0.233889 GPU·小时。b01、b02 和 b04 已通过的来源合计 18 个。[b04 复核结果](results/t02_export_cache_test_selected05_remaining_b04.json)
