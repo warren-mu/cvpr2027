@@ -90,17 +90,17 @@ class G01BudgetTests(unittest.TestCase):
 
 
 class E2EPilotBudgetTests(unittest.TestCase):
-    def test_six_charged_hour_boundary_and_independent_old_e2e_cap(self):
+    def test_nine_charged_hour_boundary_and_independent_old_e2e_cap(self):
         submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0',
-            state(cost=4, pilot=5.5, total=119.5), 'E2Epilot')
-        for observed in (state(pilot=5.501), state(pilot=5.1, rate=2), state(total=119.501)):
+            state(cost=4, pilot=8.5, total=119.5), 'E2Epilot')
+        for observed in (state(pilot=8.501), state(pilot=8.1, rate=2), state(total=119.501)):
             with self.subTest(state=observed), self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 'smoke_e2e_pilot_T0_s0', observed, 'E2Epilot')
         # Neither independent ledger lends unused budget to the other.
         with self.assertRaises(ValueError):
             submit.validate_request('T01', 1, 300, 'smoke_e2e_old', state(cost=4, pilot=0), 'E2E')
         with self.assertRaises(ValueError):
-            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T4_s0', state(cost=0, pilot=6), 'E2Epilot')
+            submit.validate_request('T01', 1, 300, 'smoke_e2e_pilot_T4_s0', state(cost=0, pilot=9), 'E2Epilot')
 
     def test_explicit_pilot_namespace_cannot_alias_old_steps_or_other_budgets(self):
         training = ['python3', '-m', 'src.tools.smoke_e2e_train']
@@ -176,7 +176,7 @@ class T02BudgetTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 submit.validate_request('T01', 1, 1800, 't02_export_fixture', observed, 'T02')
         self.assertEqual(submit.LIMITS, {'T00b': 60.0, 'T01': 120.0})
-        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 6.0, 'G01': 40.0, 'T02': 40.0})
+        self.assertEqual(submit.SUBBUDGET_LIMITS, {'T01v2': 16.0, 'E2E': 4.0, 'E2Epilot': 9.0, 'G01': 40.0, 'T02': 40.0})
 
     def test_fresh_cache_validation_uses_t02_budget_and_exact_cache_namespace(self):
         command = ['python3', '-m', 'src.tools.t02_cache_check']

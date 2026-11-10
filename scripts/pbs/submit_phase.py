@@ -23,8 +23,8 @@ import uuid
 BATCH = "t00b_t01_20261108"
 LIMITS = {"T00b": 60.0, "T01": 120.0}
 TOTAL_LIMIT = 120.0
-BUDGET_REVISION = "20261109_human1c699718_premium_120_t01v2_16_e2e_4_e2epilot_6_g01_40_t02_40_shared_gpu_units_v1"
-SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 6.0, "G01": 40.0, "T02": 40.0}
+BUDGET_REVISION = "20261110_human7babc169_measured709803_premium_120_t01v2_16_e2e_4_e2epilot_9_g01_40_t02_40_shared_gpu_units_v1"
+SUBBUDGET_LIMITS = {"T01v2": 16.0, "E2E": 4.0, "E2Epilot": 9.0, "G01": 40.0, "T02": 40.0}
 PACK_GROUP = "PACK"  # A reservation route, never an additional budget.
 JOB_ID = re.compile(r"\b\d+\.hopper-m-\d+\b")
 EXTERNAL_FINAL_CONFIG = "configs/phase_external_final_jobs.json"
