@@ -241,6 +241,49 @@ def direct_review(inspected,entries,*,require_complete):
         'full_coverage':not missing,'same_request_different_output':sum(not r['same_output'] for r in rows),'rows':rows}
 
 
+def uncached_review(report,inspected):
+    direct={(r['dataset_key'],r['world_id']) for r in inspected['obs_never']['episodes'] if r['pair_kind'].startswith('direct_')}
+    baseline={key:ds[0]['sample'] for key,ds in inspected['obs_never']['decisions_by_identity'].items()
+        if key in direct and len(ds)==1 and not ds[0]['sample']['forced_observation']}
+    previous=None;results=[];names=set()
+    fields=('action','response','response_token_ids','finish_reason','stop_reason')
+    for probe in report['uncached_probes']:
+        name=probe['name'];need(name not in names,'Duplicate uncached probe');names.add(name)
+        if probe['status']!='completed':
+            results.append({'name':name,'status':probe['status'],'observed_completed_comparisons':0});continue
+        comparisons=probe['comparisons'];current={(r['dataset_key'],r['world_id']):r['sample'] for r in comparisons}
+        need(len(current)==len(comparisons)==probe['episodes'] and set(current)==direct,'Duplicate/missing uncached observations')
+        rows=[]
+        for row in comparisons:
+            key=(row['dataset_key'],row['world_id']);sample=current[key]
+            need(key in baseline and sample['request_descriptor']==baseline[key]['request_descriptor'],
+                 'Uncached request differs from its original strategy request')
+            descriptor_key=hashlib.sha256(json.dumps(sample['request_descriptor'],sort_keys=True,
+                separators=(',',':'),allow_nan=False).encode()).hexdigest()
+            need(descriptor_key==row['request_key'],'Uncached request SHA differs')
+            comparisons_out={}
+            for tag,other in [('mixed_origin',baseline[key]),('first_same_order',None if previous is None else previous[key])]:
+                if other is None: comparisons_out[tag]=None;continue
+                differences={field:sample[field]!=other[field] for field in fields}
+                differences['complete_output_identity']=output_identity(sample)!=output_identity(other)
+                comparisons_out[tag]=differences
+            need(row['different_from_mixed_batch_origin']==comparisons_out['mixed_origin']['complete_output_identity'] and
+                 row['different_from_prior_same_order']==(None if previous is None else comparisons_out['first_same_order']['complete_output_identity']),
+                 'Uncached raw comparison flag differs')
+            rows.append({'dataset_key':key[0],'world_id':key[1],**comparisons_out})
+        counts={tag:None if tag=='first_same_order' and previous is None else
+            {field:sum(row[tag][field] for row in rows) for field in (*fields,'complete_output_identity')}
+            for tag in ('mixed_origin','first_same_order')}
+        need(probe['mixed_batch_origin_differences']==counts['mixed_origin']['complete_output_identity'] and
+             probe['prior_same_order_differences']==(None if previous is None else counts['first_same_order']['complete_output_identity']),
+             'Official uncached summary differs')
+        results.append({'name':name,'status':'completed','observed_completed_comparisons':len(rows),
+            'differences':counts,'rows_with_any_difference':[row for row in rows if row['mixed_origin']['complete_output_identity']
+                or (row['first_same_order'] is not None and row['first_same_order']['complete_output_identity'])]})
+        if name=='direct_same_order_1':previous=current
+    return {'probes':results,'scope':'Actual uncached calls at current runtime settings; action/text/token and finish/stop differences separated. Not a causal diagnosis of historical DIAG01 runtime.'}
+
+
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--name',required=True);p.add_argument('--source',required=True)
     p.add_argument('--timeout-seconds',type=int,default=180); args=p.parse_args()
@@ -285,6 +328,7 @@ def main():
         cache=cache_review([sample for s in STRATEGIES for sample in inspected[s]['samples']],require_complete=complete)
         controls=direct_review(inspected,entries,require_complete=complete)
         need(controls['expected_controls']==86,'Fixed Direct domain differs')
+        probes=None
         if complete:
             original_e5=json.loads(read(pm['determinism_report']))
             need(original_e5['direct_control_count']==controls['observed_complete_controls'] and
@@ -295,6 +339,7 @@ def main():
                  official_cache['actual_generations']==cache['observed_unique_request_keys'] and
                  official_cache['reused_generations']==cache['observed_logical_requests']-cache['observed_unique_request_keys'],
                  'Official cache counts differ from complete strategy journals')
+            probes=uncached_review(original_e5,inspected)
         cov=inspected['obs_trigger_cov']['cov'];cov_summary={}
         for kind in ('look_flip','look_stay','look_all'):
             rows=[r for r in cov if kind=='look_all' or r['kind']==kind];n=len(rows)
@@ -307,7 +352,7 @@ def main():
             'model_size':cfg['model_size'],'E2_source':eref,'E2_report':e2['metrics']['report'],
             'strategy_summaries_from_observed_complete_episodes':summaries,'official_summary_exactly_reproduced':matched,
             'coverage':{s:r['coverage'] for s,r in inspected.items()},'cov_actual_summary':cov_summary,
-            'cov_actual_vs_E2_worlds':cov,'direct_negative_control':controls,'full_input_cache':cache,
+            'cov_actual_vs_E2_worlds':cov,'direct_negative_control':controls,'full_input_cache':cache,'uncached_probe_decomposition':probes,
             'scope':'Sealed source journal review. Look mask count/SHA and candidate marks cross-bound to independently read E2 raw bytes. No fresh GPU/native replay; incomplete runs are not promoted to complete.'}
         metrics.update(review_completed=True,source_run_completed=complete,report=save_json(folder/'report.json',report),
             cov_actual_summary=cov_summary,direct_control_summary={k:v for k,v in controls.items() if k not in ('rows','missing_identities')},

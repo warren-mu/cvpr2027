@@ -5,7 +5,7 @@ import json
 import unittest
 
 from experiments.diag02_journal_review import (STRATEGIES, cache_review,
-    cov_crosscheck, direct_review, e2_world_index, expected_forced, inspect_records)
+    cov_crosscheck, direct_review, e2_world_index, expected_forced, inspect_records, uncached_review)
 
 
 def entry():
@@ -139,6 +139,24 @@ class ReviewTests(unittest.TestCase):
         inspected['obs_trigger']['decisions_by_identity'][('dataset','w0')][0]['sample']['response']='select 2'
         with self.assertRaisesRegex(ValueError,'exactly input/output'):
             direct_review(inspected,{'dataset':entry()},require_complete=False)
+
+    def test_uncached_token_only_difference_is_not_action_difference(self):
+        inspected={'obs_never':inspect_records(direct_records(),'obs_never',{'dataset':entry()},{},require_complete=False)}
+        original=model_sample();changed=copy.deepcopy(original);changed['response_token_ids']=[11,13]
+        def probe(name,sample,changed_mixed,changed_prior):
+            return {'name':name,'status':'completed','episodes':1,
+                'mixed_batch_origin_differences':int(changed_mixed),'prior_same_order_differences':None if changed_prior is None else int(changed_prior),
+                'comparisons':[{'dataset_key':'dataset','world_id':'w0','sample':sample,'request_key':sample['exact_input_cache']['key'],
+                    'different_from_mixed_batch_origin':changed_mixed,'different_from_prior_same_order':changed_prior}]}
+        report={'uncached_probes':[probe('direct_same_order_1',original,False,None),
+            probe('direct_same_order_2',changed,True,True),{'name':'direct_reversed','status':'not_run_deadline_reserve'}]}
+        out=uncached_review(report,inspected)
+        counts=out['probes'][1]['differences']['first_same_order']
+        self.assertEqual(counts['complete_output_identity'],1)
+        self.assertEqual(counts['response_token_ids'],1)
+        self.assertEqual(counts['action'],0)
+        self.assertEqual(counts['response'],0)
+        self.assertEqual(out['probes'][2]['status'],'not_run_deadline_reserve')
 
 
 if __name__=='__main__':unittest.main()
