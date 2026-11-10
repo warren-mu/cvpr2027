@@ -1,0 +1,28 @@
+{
+  "name": "diag_active709714709717709729_0525_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_active709714709717709729_0525_01",
+    "--",
+    "python3",
+    "-c",
+    "import datetime,hashlib,json,os,signal,subprocess\nfrom pathlib import Path\nNAME='diag_active709714709717709729_0525_01'\nassert os.environ.get('CVPR_RUN_NAME')==NAME\ndef expired(*_): raise TimeoutError('40s metadata snapshot bound')\nsignal.signal(signal.SIGALRM,expired);signal.alarm(40)\nrecord={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'query':{},'original_metadata':[]}\ncommand=['/cm/shared/apps/pbspro/current/bin/qstat','-xf','-F','json','709714.hopper-m-02','709717.hopper-m-02','709729.hopper-m-02']\ntry:\n p=subprocess.run(command,capture_output=True,text=True,timeout=30)\n record['query']={'command':command,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timed_out':False}\n if p.returncode==0:\n  original=json.loads(p.stdout)\n  record['query']['selected_original_fields']={job:{key:row.get(key) for key in ('job_state','qtime','etime','stime','Exit_status','resources_used','exec_host')} for job,row in original.get('Jobs',{}).items()}\nexcept subprocess.TimeoutExpired as e:\n record['query']={'command':command,'timed_out':True,'status':'unknown','stdout':(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':(e.stderr or b'').decode() if isinstance(e.stderr,bytes) else e.stderr}\nnames=['gpu_pack_test_priority_full_single_01_retry3','gpu_pack_test_priority_full_single_01_retry3_gate0','gen_test_s16_s04_retry1_review_01','gen_test_s16_s04_retry1_review_01_gate','t01v2_checkpoint_test_s16_s04_retry1_01','gen_test_s16_s05_review_01','gen_test_s16_s05_review_01_gate','t01v2_checkpoint_test_s16_s05_01']\nfor name in names:\n for path in (Path('results')/(name+'.json'),Path('logs/runs')/(name+'.meta.json')):\n  row={'file':str(path),'exists':path.is_file()}\n  if row['exists']:\n   row['bytes']=path.stat().st_size\n   if row['bytes']>16*1024*1024: row['read']='omitted_size_bound'\n   else:\n    raw=path.read_bytes();row['sha256']=hashlib.sha256(raw).hexdigest()\n    try:\n     data=json.loads(raw);meta=data.get('_meta',data);metrics=data.get('metrics',{})\n     row['lifecycle']={key:meta.get(key) for key in ('name','start','end','exit_code')}\n     row['metrics_keys']=sorted(metrics)\n     row['observed_metrics']={key:metrics[key] for key in ('kind','producer_exit_code','passed','counts','counts_by_kind','passed_by_class','errors','cleanup_errors','black_frame_detected','all_owned_units_ended','unit_runs','gate','gates') if key in metrics}\n    except json.JSONDecodeError as e:row['unsealed_read_error']=str(e)\n  record['original_metadata'].append(row)\nout=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False);report=out/'snapshot.json'\nwith report.open('x') as f:json.dump(record,f,indent=2,sort_keys=True)\nprint('ORIGINAL_JOB_SNAPSHOT_JSON: '+json.dumps({'report':{'file':str(report),'sha256':hashlib.sha256(report.read_bytes()).hexdigest()},'query':record['query'].get('selected_original_fields',{'status':'unknown'}),'original_metadata':record['original_metadata']},sort_keys=True),flush=True)\nsignal.alarm(0)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:25:19",
+  "log_path": "logs/runs/diag_active709714709717709729_0525_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "ce56b1ac44cf890c74657577b7dae24ee9460bbb",
+  "git_dirty": false,
+  "end": "2026-11-10T13:25:54",
+  "duration_sec": 30.5,
+  "exit_code": 0,
+  "metrics_sha256": "e31b02abf19d9d1ec32867d2522f669fca277309a96d7d22c267cbf1b51e4326"
+}

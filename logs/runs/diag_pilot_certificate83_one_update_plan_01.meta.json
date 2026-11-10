@@ -1,0 +1,28 @@
+{
+  "name": "diag_pilot_certificate83_one_update_plan_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_pilot_certificate83_one_update_plan_01",
+    "--",
+    "python3",
+    "-c",
+    "import hashlib,json,subprocess\nfrom pathlib import Path\nentry=Path('experiments/e2e_certificates83_one_update.py')\nassert hashlib.sha256(entry.read_bytes()).hexdigest()=='bf8850575c39d7df6a9891965fa31a52c83c00ffe9230d5cf0bd49981761ff26'\ncommand=['python3',str(entry),'--population-seconds','900','--train-seconds','1800','--freeze-seconds','120']\nbody=subprocess.check_output(command)\nplan=json.loads(body)\nassert plan['not_executed'] is True and plan['same_gpu_job'] is True and plan['critic_offload'] is False\nassert plan['wall_seconds_stoploss']==3088 and plan['walltime']=='00:51:28'\nout=Path('/scratch/e1583364/cvpr2027/e2e_certificate83_one_update_plan_01.json')\nwith out.open('xb') as f:f.write(body)\nprint(json.dumps({'plan_file':str(out),'sha256':hashlib.sha256(body).hexdigest(),'bounds':plan['bounds'],'walltime':plan['walltime'],'not_executed':True,'scope':'Exact reviewable original submit argv; no population freeze, GPU training, or qsub executed'},sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T13:30:54",
+  "log_path": "logs/runs/diag_pilot_certificate83_one_update_plan_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "fdb7a31f2486798312853a0635bf542d8867e165",
+  "git_dirty": false,
+  "end": "2026-11-10T13:30:55",
+  "duration_sec": 0.3,
+  "exit_code": 0,
+  "metrics_sha256": "14799820e549f0dc25e23a7cf11b1905d30d609e5ff1996c27067cefc70f9c0b"
+}

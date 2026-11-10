@@ -1,0 +1,17 @@
+# run_logged: python3 -m src.tools.record_command --name diag_pilot_certificate83_one_update_plan_01 -- python3 -c import hashlib,json,subprocess
+from pathlib import Path
+entry=Path('experiments/e2e_certificates83_one_update.py')
+assert hashlib.sha256(entry.read_bytes()).hexdigest()=='bf8850575c39d7df6a9891965fa31a52c83c00ffe9230d5cf0bd49981761ff26'
+command=['python3',str(entry),'--population-seconds','900','--train-seconds','1800','--freeze-seconds','120']
+body=subprocess.check_output(command)
+plan=json.loads(body)
+assert plan['not_executed'] is True and plan['same_gpu_job'] is True and plan['critic_offload'] is False
+assert plan['wall_seconds_stoploss']==3088 and plan['walltime']=='00:51:28'
+out=Path('/scratch/e1583364/cvpr2027/e2e_certificate83_one_update_plan_01.json')
+with out.open('xb') as f:f.write(body)
+print(json.dumps({'plan_file':str(out),'sha256':hashlib.sha256(body).hexdigest(),'bounds':plan['bounds'],'walltime':plan['walltime'],'not_executed':True,'scope':'Exact reviewable original submit argv; no population freeze, GPU training, or qsub executed'},sort_keys=True),flush=True)
+
+# start: 2026-11-10T13:30:54
+{"bounds": {"freeze_kill_grace_seconds": 20, "freeze_timeout_seconds": 120, "initial_gate_cleanup_grace_seconds": 4, "initial_gate_main_seconds": 180, "population_main_seconds": 900, "recording_reserve_seconds": 60, "training_cleanup_grace_seconds": 4, "training_main_including_own_gate_seconds": 1800}, "not_executed": true, "plan_file": "/scratch/e1583364/cvpr2027/e2e_certificate83_one_update_plan_01.json", "scope": "Exact reviewable original submit argv; no population freeze, GPU training, or qsub executed", "sha256": "e4e7e7cae1d5ac89badda0f84f9a5a00b48b3d623486f55da2ae29760ad74eff", "walltime": "00:51:28"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.16995556297479197}
+# exit_code: 0
