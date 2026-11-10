@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.15074709500186145
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,hashlib,importlib.util,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01_partition import ROOT\nNAME='diag_pilot_T0T4_first_black_summary_01';assert os.environ.get('CVPR_RUN_NAME')==NAME\nsignal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('12s original black terminal summary')));signal.alarm(12)\ndef read(path):\n p=ROOT/path;b=p.read_bytes();return json.loads(b),{'file':str(path),'sha256':hashlib.sha256(b).hexdigest()}\nbase,baseref=read('logs/review/diag_pilot_budget_after709803_01/report.json');assert baseref['sha256']=='7fe4d468235da7bdec5ca0edef5b00fc2a5c829f267ce41324e7fa98675d6d8c'\naccount,accountref=read('results/diag_pilot_T0T4_first_black_accounting_01.json')\nspec=importlib.util.spec_from_file_location('original_submitter',ROOT/'scripts/pbs/submit_phase.py');submit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)\njobs={'709866.hopper-m-02','709869.hopper-m-02'};final=submit._final_accounting(ROOT,jobs,paths=[ROOT/accountref['file']]);assert set(final)==jobs\nrows=[]\nfor job,arm in [('709866.hopper-m-02','T0'),('709869.hopper-m-02','T4')]:\n name='smoke_e2e_pilot_'+arm+'_s0_01';d,r=read('results/'+name+'.json');g,gr=read('results/'+name+'_gate.json');m=d['metrics']\n assert d['_meta']['end'] and d['_meta']['exit_code']==86 and m['producer_exit_code']==86 and m['black_frame_detected'] is True and m['errors']==m['cleanup_errors']==[]\n assert g['_meta']['exit_code']==86 and g['metrics']['passed'] is False and m['gate']['sha256']==gr['sha256']\n obs=g['metrics']['devices'][0]['observation'];f=final[job]\n rows.append({'job_id':job,'arm':arm,'result_reference':r,'gate_reference':gr,'original_meta':{k:d['_meta'][k] for k in ('name','start','end','exit_code')},'original_metrics':m,'node':obs['node'],'gpu_uuid':obs['gpu_identity']['gpu_uuid'],'allocation_gpu_hours':f['gpu_hours'],'queue_charge_rate':f['queue_charge_rate'],'charged_gpu_hours':f['gpu_hours']*f['queue_charge_rate'],'queue_wait_seconds':account['metrics']['queue_wait_seconds_by_job'][job]})\nold=base['subbudgets']['E2Epilot']['actual_charged_gpu_hours'];new=sum(r['charged_gpu_hours'] for r in rows);total=old+new\nreport={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original opening-black failures and canonical fees; no training update, no resubmission, no resource validation of prospective requests.','prior_ledger_reference':baseref,'canonical_reference':accountref,'rows':rows,'pilot_actual_before_gpu_hours':old,'new_black_cost_gpu_hours':new,'pilot_actual_after_gpu_hours':total,'pilot_queued_or_running_reservations_after_these_two_ended_gpu_hours':0.0,'known_scope':'Through these two original submissions; future requests require submitter fresh budget validation','nine_hour_reservation_math':{'same_two_13175_requests_plus_actual_seconds':total*3600+2*13175,'max_equal_integer_seconds_per_new_request':int((9*3600-total*3600)//2),'scope':'Arithmetic only, not existing same-resource pinned-retry validator approval'}}\nout=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'report.json'\nwith p.open('x') as f:json.dump(report,f,sort_keys=True,indent=2)\nbrief={k:v for k,v in report.items() if k!='rows'};brief['rows']=[{k:v for k,v in r.items() if k!='original_metrics'} for r in rows];brief['report']={'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}\nprint('ORIGINAL_PILOT_BLACK_FEES: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot_T0T4_first_black_summary_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot_T0T4_first_black_summary_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,hashlib,importlib.util,json,os,signal\nfrom pathlib import Path\nfrom src.tools.t01_partition import ROOT\nNAME='diag_pilot_T0T4_first_black_summary_01';assert os.environ.get('CVPR_RUN_NAME')==NAME\nsignal.signal(signal.SIGALRM,lambda *_:(_ for _ in ()).throw(TimeoutError('12s original black terminal summary')));signal.alarm(12)\ndef read(path):\n p=ROOT/path;b=p.read_bytes();return json.loads(b),{'file':str(path),'sha256':hashlib.sha256(b).hexdigest()}\nbase,baseref=read('logs/review/diag_pilot_budget_after709803_01/report.json');assert baseref['sha256']=='7fe4d468235da7bdec5ca0edef5b00fc2a5c829f267ce41324e7fa98675d6d8c'\naccount,accountref=read('results/diag_pilot_T0T4_first_black_accounting_01.json')\nspec=importlib.util.spec_from_file_location('original_submitter',ROOT/'scripts/pbs/submit_phase.py');submit=importlib.util.module_from_spec(spec);spec.loader.exec_module(submit)\njobs={'709866.hopper-m-02','709869.hopper-m-02'};final=submit._final_accounting(ROOT,jobs,paths=[ROOT/accountref['file']]);assert set(final)==jobs\nrows=[]\nfor job,arm in [('709866.hopper-m-02','T0'),('709869.hopper-m-02','T4')]:\n name='smoke_e2e_pilot_'+arm+'_s0_01';d,r=read('results/'+name+'.json');g,gr=read('results/'+name+'_gate.json');m=d['metrics']\n assert d['_meta']['end'] and d['_meta']['exit_code']==86 and m['producer_exit_code']==86 and m['black_frame_detected'] is True and m['errors']==m['cleanup_errors']==[]\n assert g['_meta']['exit_code']==86 and g['metrics']['passed'] is False and m['gate']['sha256']==gr['sha256']\n obs=g['metrics']['devices'][0]['observation'];f=final[job]\n rows.append({'job_id':job,'arm':arm,'result_reference':r,'gate_reference':gr,'original_meta':{k:d['_meta'][k] for k in ('name','start','end','exit_code')},'original_metrics':m,'node':obs['node'],'gpu_uuid':obs['gpu_identity']['gpu_uuid'],'allocation_gpu_hours':f['gpu_hours'],'queue_charge_rate':f['queue_charge_rate'],'charged_gpu_hours':f['gpu_hours']*f['queue_charge_rate'],'queue_wait_seconds':account['metrics']['queue_wait_seconds_by_job'][job]})\nold=base['subbudgets']['E2Epilot']['actual_charged_gpu_hours'];new=sum(r['charged_gpu_hours'] for r in rows);total=old+new\nreport={'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':'Original opening-black failures and canonical fees; no training update, no resubmission, no resource validation of prospective requests.','prior_ledger_reference':baseref,'canonical_reference':accountref,'rows':rows,'pilot_actual_before_gpu_hours':old,'new_black_cost_gpu_hours':new,'pilot_actual_after_gpu_hours':total,'pilot_queued_or_running_reservations_after_these_two_ended_gpu_hours':0.0,'known_scope':'Through these two original submissions; future requests require submitter fresh budget validation','nine_hour_reservation_math':{'same_two_13175_requests_plus_actual_seconds':total*3600+2*13175,'max_equal_integer_seconds_per_new_request':int((9*3600-total*3600)//2),'scope':'Arithmetic only, not existing same-resource pinned-retry validator approval'}}\nout=ROOT/'logs/review'/NAME;out.mkdir(parents=True,exist_ok=False);p=out/'report.json'\nwith p.open('x') as f:json.dump(report,f,sort_keys=True,indent=2)\nbrief={k:v for k,v in report.items() if k!='rows'};brief['rows']=[{k:v for k,v in r.items() if k!='original_metrics'} for r in rows];brief['report']={'file':str(p.relative_to(ROOT)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}\nprint('ORIGINAL_PILOT_BLACK_FEES: '+json.dumps(brief,sort_keys=True),flush=True);signal.alarm(0)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:55:36",
+    "log_path": "logs/runs/diag_pilot_T0T4_first_black_summary_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+    "git_dirty": false,
+    "end": "2026-11-10T14:55:38",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "85a5e8859dd6453807c730f777a1debed2c76d626586bbabecfa5158fcd5db9c"
+  }
+}

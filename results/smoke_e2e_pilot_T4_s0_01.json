@@ -1,0 +1,147 @@
+{
+  "config": {
+    "arm": "T4",
+    "budget_group": "E2Epilot",
+    "checkpoint_directory": "/scratch/e1583364/cvpr2027/smoke_e2e_pilot/smoke_e2e_pilot_T4_s0_01/709869.hopper-m-02/checkpoint",
+    "common_config_reference": {
+      "bytes": 423,
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/rl_common.yaml",
+      "sha256": "cc6da05773de7f809318f7e470e109840d3783d0c3e6754b3f7afab34b327ef1"
+    },
+    "credit_pipeline": "t05_section1b",
+    "critic_offload": false,
+    "engineering_smoke": null,
+    "episodes_per_update": 64,
+    "format_policy": "explicit_task_zero",
+    "gate_timeout_seconds": 180.0,
+    "gpus": 1,
+    "holdout_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+      "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+    },
+    "identity": {
+      "cpu_affinity": [
+        72,
+        74,
+        76,
+        78,
+        80,
+        82,
+        84,
+        86,
+        88,
+        90,
+        92,
+        94
+      ],
+      "cuda_visible_devices": "GPU-d1e1ee0d-3db1-a1f2-e57e-929a37cd0e67",
+      "pbs_jobid": "709869.hopper-m-02",
+      "scratch": "/scratch/e1583364/cvpr2027"
+    },
+    "manifest": "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+    "manifest_reference": {
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+      "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+    },
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "model_source": "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+    "name": "smoke_e2e_pilot_T4_s0_01",
+    "node": "hopper-25",
+    "operation": "run",
+    "pilot_spec": "configs/smoke_e2e_pilot.json",
+    "pilot_spec_reference": {
+      "bytes": 2599,
+      "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/configs/smoke_e2e_pilot.json",
+      "sha256": "6159d67d474d3cea283fd422c6377ef91fad3d24f72ee7595292fce5592025bf"
+    },
+    "seed": 0,
+    "timeout_seconds": 13111.0,
+    "training_directory": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/runs/smoke_e2e_pilot_T4_s0_01/ppo",
+    "updates": 50,
+    "version": "smoke_e2e_pilot_driver_v1"
+  },
+  "metrics": {
+    "black_frame_detected": true,
+    "cleanup_errors": [],
+    "common_config_frozen": false,
+    "errors": [],
+    "formal_T04_T05_acceptance": null,
+    "gate": {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json",
+      "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+      "metrics_sha256": "c8b01532b0e8d76149ebd356ef4087bc7242174852133f7dcfb7d9d740904267",
+      "sha256": "40a5cfd101c36cdd0a23eaf69e310c1ac617a44eb790988334aea4417689bb6d"
+    },
+    "kind": "smoke_e2e_pilot_training",
+    "paper_result": false,
+    "pilot_completed": false,
+    "producer_exit_code": 86,
+    "training_logs": []
+  },
+  "sources": [
+    {
+      "audit": {
+        "fail": [],
+        "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json",
+        "warn": [
+          "P7 run failed (exit_code 86); keep it, do not cite it"
+        ]
+      },
+      "exit_code": 86,
+      "file": "results/smoke_e2e_pilot_T4_s0_01_gate.json",
+      "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+      "metrics_sha256": "c8b01532b0e8d76149ebd356ef4087bc7242174852133f7dcfb7d9d740904267",
+      "sha256": "40a5cfd101c36cdd0a23eaf69e310c1ac617a44eb790988334aea4417689bb6d"
+    }
+  ],
+  "_meta": {
+    "name": "smoke_e2e_pilot_T4_s0_01",
+    "command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.smoke_e2e_pilot",
+      "run",
+      "--name",
+      "smoke_e2e_pilot_T4_s0_01",
+      "--arm",
+      "T4",
+      "--manifest",
+      "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\",\"sha256\":\"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}",
+      "--holdout-reference",
+      "{\"file\":\"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\",\"sha256\":\"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}",
+      "--model-source",
+      "{\"file\":\"results/smoke_e2e_eval_03.json\",\"sha256\":\"d9658c976c4912fb6e07e6ed5debba591614a44f28664b4da9924faa9b43e4d9\"}",
+      "--pilot-spec",
+      "configs/smoke_e2e_pilot.json",
+      "--timeout-seconds",
+      "13111",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-25",
+    "gpus": [
+      "NVIDIA H200, 143771 MiB"
+    ],
+    "seed": null,
+    "start": "2026-11-10T14:51:28",
+    "log_path": "logs/runs/smoke_e2e_pilot_T4_s0_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+    "git_dirty": false,
+    "end": "2026-11-10T14:51:46",
+    "duration_sec": 17.5,
+    "exit_code": 86,
+    "metrics_sha256": "42524811b097b289065d164745e997f3d8c28d9bc1bf91262a09147972b70d61"
+  }
+}

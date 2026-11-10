@@ -1,0 +1,154 @@
+# run_logged: python3 -m src.tools.record_command --name g01_train_look_fixed_holdout_cpu_01 -- python3 -c import unittest
+patterns=['test_g01_train_look.py','test_g01_quota.py','test_g01_configuration.py','test_g01_collect_parallel.py','test_g01_shared_unit.py','test_gpu_shared_claim.py','test_pair_v2_g01.py','test_g01_geometry_checkpoint.py','test_g01_checkpoint_receipts.py','test_train_holdout_freeze.py']
+suite=unittest.TestSuite(unittest.defaultTestLoader.discover('tests',pattern=p) for p in patterns)
+r=unittest.TextTestRunner(verbosity=2).run(suite)
+assert not r.skipped, 'Zero-skip formal regression required: '+repr(r.skipped)
+raise SystemExit(not r.wasSuccessful())
+
+# start: 2026-11-10T14:50:47
+test_class40_stops_that_class_even_when_other_class_is_missing (test_g01_train_look.TrainingLookCounts) ... ok
+test_holdout_then_exact_stay_cutoff_then_original_balance (test_g01_train_look.TrainingLookCounts) ... ok
+test_missing_stage_holdout_or_source_cannot_grant_tickets (test_g01_train_look.TrainingLookCounts) ... ok
+test_original_scene_occupancy_cannot_be_released_by_postfiltering (test_g01_train_look.TrainingLookCounts) ... ok
+test_parent_auth_reuses_count_receipt_and_rejects_holdout_and_unknown_inventory_loss (test_g01_train_look.TrainingLookCounts) ... ok
+test_ratio_is_not_a_relabeling_or_downsampling_algorithm (test_g01_train_look.TrainingLookCounts) ... ok
+test_unqualified_original_inventory_is_reserved_globally_not_double_counted_per_scene (test_g01_train_look.TrainingLookCounts) ... ok
+test_actual_new_policy_tags_and_quota_stay_priority_restore_old_hooks (test_g01_train_look.TrainingLookRuntime) ... ok
+test_finite_round_prioritizes_available_stay_without_new_discovery (test_g01_train_look.TrainingLookRuntime) ... ok
+test_new_training_cannot_enable_direct_or_test_configuration (test_g01_train_look.TrainingLookRuntime) ... ok
+test_old_policy_bytes_and_count_authority_are_not_upgraded (test_g01_train_look.TrainingLookRuntime) ... ok
+test_one_scene_formal_smoke_reuses_complete_original_grant (test_g01_train_look.TrainingLookRuntime) ... ok
+test_train_bank_real_shared_identity_priority_and_disjoint_other_tickets (test_g01_train_look.TrainingLookRuntime) ... ok
+test_actual_inventory_releases_only_known_rejections_and_short_stays_not_scene_occupancy (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_additional_cache_uses_original_s0_masks_and_complete_receipts_only (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_complete_original_rejection_releases_pending_but_unknown_errors_do_not (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_duplicate_uncached_stay_cannot_pick_only_the_short_variant (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_explicit_pair_scientific_rejection_removes_only_that_pair_not_holdout (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_forty_balance_dropped_stays_do_not_deadlock_opposite_side_repair (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_growing_certified_count_population_preserves_frozen_split_and_stops_class40 (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_legacy_absent_diagnostic_uses_original_snapshot_but_conflicting_diagnostic_fails (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_new_dataset_key_cannot_count_the_same_original_proposal_twice (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_pilot_certificate_exception_never_becomes_formal_count_authority (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_real_pair_snapshot_shas_recompute_stay_and_bind_original_population (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_receipt_requires_exact_command_inputs_and_audited_source_ledger (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_rejection_container_binding_and_complete_paircheck_receipt_are_required (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_unknown_left_is_never_balance_or_global_ready (test_g01_train_look.TrainingMetadataReceiptTests) ... ok
+test_original_journal_is_replayed_and_actual_quotas_not_saved_flags_are_checked (test_g01_quota.IndependentJournalTests) ... ok
+test_exact_submission_command_binds_quota_manifest_and_old_default_is_unchanged (test_g01_quota.ParentWiringTests) ... ok
+test_parent_injects_only_its_scene_tickets_and_restores_after_exception (test_g01_quota.ParentWiringTests) ... ok
+test_global_and_aggregate_scene_caps_cannot_be_granted_to_each_worker (test_g01_quota.PlanTests) ... ok
+test_legacy_overreservations_do_not_become_confirmed_and_block_new_tickets (test_g01_quota.PlanTests) ... ok
+test_no_train_direct_wrong_split_duplicate_or_partial_allowed_domain (test_g01_quota.PlanTests) ... ok
+test_real_dispatch_fails_closed_without_actual_count_basis_adapter (test_g01_quota.PlanTests) ... ok
+test_train_stage_and_pending_reservations_are_not_confirmed_passes (test_g01_quota.PlanTests) ... ok
+test_new_policy_reaches_original_geometry_and_science_without_old_version_spoof (test_g01_quota.QuotaSourceContextTests) ... ok
+test_filled_flip_switches_to_stay_and_class_crossover_keeps_its_real_verdict (test_g01_quota.RuntimeTests) ... ok
+test_policy_and_spawn_context_propagate_exact_plan_and_restore_hooks (test_g01_quota.RuntimeTests) ... ok
+test_real_generator_and_replay_entry_restore_ticket_hooks_and_labels (test_g01_quota.RuntimeTests) ... ok
+test_stay_only_never_spends_disabled_flip_or_direct_proposals (test_g01_quota.RuntimeTests) ... ok
+test_conflicting_duplicate_measurement_is_rejected_not_selected (test_g01_quota.TestCountBasisTests) ... ok
+test_failed_or_partial_publication_and_changed_original_source_are_not_counts (test_g01_quota.TestCountBasisTests) ... ok
+test_runtime_assignment_does_not_repeat_historical_science_but_checker_does (test_g01_quota.TestCountBasisTests) ... ok
+test_successful_publication_rechecks_every_entry_and_deduplicates_proposals (test_g01_quota.TestCountBasisTests) ... ok
+test_each_semantic_input_changes_key_and_class_does_not (test_g01_configuration.ConfigurationIdentityTests) ... ok
+test_only_exact_command_numeric_equivalence_is_normalized (test_g01_configuration.ConfigurationIdentityTests) ... ok
+test_seeded_selection_is_input_order_independent_and_per_class (test_g01_configuration.ConfigurationIdentityTests) ... ok
+test_world_order_unordered_candidates_and_anchor_placement_do_not_change_configuration (test_g01_configuration.ConfigurationIdentityTests) ... ok
+test_authenticated_complete_pool_deduplicates_before_counting_and_retains_raw (test_g01_configuration.ConfigurationInventoryTests) ... ok
+test_new_source_replays_configuration_duplicates_in_original_journal (test_g01_configuration.ConfigurationInventoryTests) ... ok
+test_actual_crossover_duplicate_is_capacity_skip_after_science (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_controller_restart_and_new_iterator_share_actual_class_occupancy (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_historical_occupancy_only_suppresses_its_actual_class_and_configuration (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_new_configuration_priority_ignores_old_attempt_balance_and_pool_request (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_new_plan_assignment_and_spawn_scope_bind_exact_configuration_policy (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_old_default_and_v1_schema_are_unchanged (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_old_ticketed_pool_alternation_and_flip_preference_stay_unchanged (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_priority_round_stable_ties_finite_visits_and_no_peek_consumption (test_g01_configuration.ConfigurationRuntimeTests) ... ok
+test_actual_runner_pre_gate_failure_preserves_collection_scope_and_benchmark_source (test_g01_collect_parallel.CollectionTests) ... ok
+test_exact_collection_payload_prevents_silent_scene_or_concurrency_change (test_g01_collect_parallel.CollectionTests) ... ok
+test_incomplete_shortened_or_unknown_cleanup_benchmark_is_rejected (test_g01_collect_parallel.CollectionTests) ... ok
+test_only_unique_training_scenes_and_whole_wave_deadlines (test_g01_collect_parallel.CollectionTests) ... ok
+test_real_plan_and_resource_checks_accept_clean_ended_partial_scenes_without_inventing_success (test_g01_collect_parallel.CollectionTests) ... ok
+test_scoped_runner_restores_hooks_on_exception_and_emits_collection_not_benchmark (test_g01_collect_parallel.CollectionTests) ... ok
+test_bank_hash_order_duplicates_and_role_names_are_checked (test_g01_shared_unit.TicketBankTests) ... ok
+test_count_authority_is_original_base_and_arbitrary_reservation_still_blocked (test_g01_shared_unit.TicketBankTests) ... ok
+test_member_cannot_remove_reservations_inflate_caps_change_cutoff_or_scene (test_g01_shared_unit.TicketBankTests) ... ok
+test_seven_units_share_one_capacity_and_do_not_duplicate_keys (test_g01_shared_unit.TicketBankTests) ... ok
+test_actual_shared_helper_binds_nearby_argv_to_source_admission (test_g01_shared_unit.UnitTests) ... ok
+test_actual_shared_helper_binds_original_pack_receipt_mask_cpu_and_scratch (test_g01_shared_unit.UnitTests) ... ok
+test_changed_command_resource_or_manifest_ref_is_rejected (test_g01_shared_unit.UnitTests) ... ok
+test_exact_unit_and_external_original_single_share_keys (test_g01_shared_unit.UnitTests) ... ok
+test_explicit_nearby_physics_changes_unit_identity_but_not_fixed_capacity_keys (test_g01_shared_unit.UnitTests) ... ok
+test_live_and_offline_claim_keep_original_allocation_and_unit (test_g01_shared_unit.UnitTests) ... ok
+test_original_parent_hooks_restored_and_claim_propagates_to_plan_shard (test_g01_shared_unit.UnitTests) ... ok
+test_shared_bank_requires_claim_legacy_standalone_does_not (test_g01_shared_unit.UnitTests) ... ok
+test_actual_live_and_saved_claim_bind_original_bytes_and_allocation (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_edited_plan_reference_fails_even_with_old_saved_identity (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_external_original_single_job_reserves_same_scientific_keys (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_new_run_name_or_manifest_cannot_duplicate_an_original_pair (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_original_single_pair_child_is_bound_to_exact_claimed_entry (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_same_queue_cannot_silently_change_plan_or_priority_population (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_short_remaining_time_never_truncates_original_unit_grant (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_two_actual_processes_can_claim_one_scientific_unit_only_once (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_uncertain_cleanup_is_not_recycled (test_gpu_shared_claim.SharedClaimTests) ... ok
+test_collection_replays_real_counted_journal_and_rejects_forged_totals (test_pair_v2_g01.G01SourceTests) ... ok
+test_direct_pair_uses_the_same_strict_controller_native_proof (test_pair_v2_g01.G01SourceTests) ... ok
+test_early_failure_stays_unknown_and_collector_bindings_restore (test_pair_v2_g01.G01SourceTests) ... ok
+test_missing_resource_report_is_only_a_zero_claim_failed_ledger (test_pair_v2_g01.G01SourceTests) ... ok
+test_new_source_or_role_cannot_bypass_authentication (test_pair_v2_g01.G01SourceTests) ... ok
+test_original_scientific_failure_and_all_arguments_are_preserved (test_pair_v2_g01.G01SourceTests) ... ok
+test_actual_quota_survives_controller_restart_and_native_failure (test_pair_v2_g01.MixedProductionTests) ... ok
+test_complete_caps_stop_discovery_without_native_call_and_hooks_restore (test_pair_v2_g01.MixedProductionTests) ... ok
+test_complete_flip_domains_with_original_stay_caps_and_native_inputs (test_pair_v2_g01.MixedProductionTests) ... ok
+test_fixed_label_context_keeps_direct_branch_and_new_spawn_replay (test_pair_v2_g01.MixedProductionTests) ... ok
+test_full_three_dimensional_role_keeps_seed0_and_independent_geometry_check (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_keeps_same_side_native_point_that_surface_role_would_drop (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_precheck_happens_before_build_and_does_not_override_measured_class (test_pair_v2_g01.MixedProductionTests) ... ok
+test_look_retry_guard_binds_real_failed_native_fallbacks_and_direct_stays_original (test_pair_v2_g01.MixedProductionTests) ... ok
+test_mixed_stream_alternates_pools_and_preserves_stay_sides (test_pair_v2_g01.MixedProductionTests) ... ok
+test_native_spawn_installs_mixed_hooks_and_keeps_no_clone_eight_cap (test_pair_v2_g01.MixedProductionTests) ... ok
+test_one_sided_look_never_backfills_unearned_stay_but_direct_continues (test_pair_v2_g01.MixedProductionTests) ... ok
+test_only_fixed_training_partition_and_no_clone (test_pair_v2_g01.MixedProductionTests) ... ok
+test_original_soft_deadline_prevents_partial_g01_pool (test_pair_v2_g01.MixedProductionTests) ... ok
+test_per_actual_class_cap_allows_balance_attempts_but_not_more_exports (test_pair_v2_g01.MixedProductionTests) ... ok
+test_proposal_pool_and_actual_output_class_remain_separate (test_pair_v2_g01.MixedProductionTests) ... ok
+test_quota_skip_preserves_scientific_verdict_in_compact_raw (test_pair_v2_g01.MixedProductionTests) ... ok
+test_authenticated_pair_matching_still_calls_full_controller_and_lease_association (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_direct_pool_cross_over_keeps_original_surface_role_without_look_claim (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_geometry_native_proof_and_original_scientific_failure_cannot_be_bypassed (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_identity_pool_and_admission_errors_fail_closed (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_look_pool_uses_center_proof_and_preserves_full_scientific_kwargs (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_shared_evidence_handles_look_pool_cross_over_without_ranked_identity_spoof (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_stay_delegates_to_original_role_and_science (test_g01_geometry_checkpoint.G01GeometryCheckpointTests) ... ok
+test_explicit_receipt_inventory_uses_shared_configuration_selection (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_failed_error_or_unpublished_checkpoint_never_becomes_authority (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_missing_or_forged_saved_independent_verification_is_rejected (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_original_source_bytes_or_incomplete_cutoff_are_rejected (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_result_and_pair_sha_changes_are_rejected (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_source_actual_producer_and_immutable_shard_are_bound (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_source_shard_hash_change_cannot_reuse_the_old_receipt (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_successful_independent_receipt_reuses_science_without_native_replay (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_world_and_published_review_hash_changes_are_rejected (test_g01_checkpoint_receipts.CheckpointReceiptTests) ... ok
+test_certificate_mode_cannot_claim_new_reauthentication_pass_or_wrong_population (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_certificates_use_the_same_original83_scene_selection_with_explicit_authority (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_first_activation_failure_propagates_without_creating_freeze (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_late_original_pass_or_failure_does_not_mutate_or_invalidate_authorized_freeze (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_loader_requires_explicit_certificate_command_and_original_receipt (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_normal_and_certificate_inputs_cannot_be_silently_substituted (test_train_holdout_freeze.CertificateAuthorityTests) ... ok
+test_absent_room_is_reported_without_supplementary_selection (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_actual_completed_metadata_freezes_exact_original_split_once (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_duplicate_test_scene_and_edited_population_hash_rejected (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_expansion_never_reselects_scenes_or_calls_original_selector (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_failed_pending_or_fallback_cannot_freeze_even_if_manifest_exists (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_hash_and_original_audit_failures_propagate (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_manifest_source_population_and_original_split_tampering_rejected (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_only_fixed_repository_destination_is_loadable (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_pilot_requires_original_population_and_every_scene_assignment (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+test_self_consistent_file_without_successful_freeze_receipt_is_not_authorized (test_train_holdout_freeze.HoldoutFreezeTests) ... ok
+
+----------------------------------------------------------------------
+Ran 139 tests in 21.952s
+
+OK
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 24.153855649987236}
+# exit_code: 0

@@ -1,0 +1,28 @@
+{
+  "name": "diag_gen_train_look_inventory_first_unit_summary_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_gen_train_look_inventory_first_unit_summary_01",
+    "--",
+    "python3",
+    "-c",
+    "from pathlib import Path\nimport json,hashlib\np=Path('results/gen_train_look_inventory_first_unit_01.json');raw=p.read_bytes();d=json.loads(raw);m=d['metrics'];i=m['inventory']\nassert d['_meta']['exit_code']==0 and m['passed'] and not m['errors']\nprint(json.dumps({'source':{'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'metrics_sha256':d['_meta']['metrics_sha256']},'duration_sec':d['_meta'].get('duration_sec'),'passed':m['passed'],'confirmed_by_kind':i['confirmed_by_kind'],'confirmed_by_scene':i['confirmed_by_scene'],'cached_by_kind':i['cached_by_kind'],'construction_occupancy_by_kind':i['construction_occupancy_by_kind'],'pending_upper_bound':i['reserved_upper_bound_by_kind'],'remaining_before_new_tickets':{k:max(0,40-i['confirmed_by_kind'][k]-i['reserved_upper_bound_by_kind'][k])for k in ['look_stay','look_flip']},'look_ratio':i['look_ratio'],'ratio_ready':i['ratio_ready'],'needs_human_ratio_decision':i['needs_human_ratio_decision'],'class_full':i['class_full'],'global_ready':i['global_ready'],'formal_pool_authorized':i['formal_pool_authorized'],'extra_source_reauthentication':i['extra_source_reauthentication'],'balance_overall':i['balance']['after']['overall'],'global_balance_within_0_4_to_0_6':i['global_balance_within_0_4_to_0_6'],'permanent_short_stay_count':len(i['permanent_short_stay_entries']),'balance_dropped_count':len(i['balance']['dropped']),'filter_omission_reasons':[r['reason'] for r in i['filter_omissions']],'native_scientific_revalidation_performed':i['native_scientific_revalidation_performed']},sort_keys=True),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": "0",
+  "start": "2026-11-10T14:53:44",
+  "log_path": "logs/runs/diag_gen_train_look_inventory_first_unit_summary_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+  "git_dirty": false,
+  "end": "2026-11-10T14:53:46",
+  "duration_sec": 0.2,
+  "exit_code": 0,
+  "metrics_sha256": "e6df7354252223612117af990fbc7761199dfc133fcc5f899fb7030da2e761be"
+}

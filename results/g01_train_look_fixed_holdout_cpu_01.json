@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 24.153855649987236
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import unittest\npatterns=['test_g01_train_look.py','test_g01_quota.py','test_g01_configuration.py','test_g01_collect_parallel.py','test_g01_shared_unit.py','test_gpu_shared_claim.py','test_pair_v2_g01.py','test_g01_geometry_checkpoint.py','test_g01_checkpoint_receipts.py','test_train_holdout_freeze.py']\nsuite=unittest.TestSuite(unittest.defaultTestLoader.discover('tests',pattern=p) for p in patterns)\nr=unittest.TextTestRunner(verbosity=2).run(suite)\nassert not r.skipped, 'Zero-skip formal regression required: '+repr(r.skipped)\nraise SystemExit(not r.wasSuccessful())\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "g01_train_look_fixed_holdout_cpu_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "g01_train_look_fixed_holdout_cpu_01",
+      "--",
+      "python3",
+      "-c",
+      "import unittest\npatterns=['test_g01_train_look.py','test_g01_quota.py','test_g01_configuration.py','test_g01_collect_parallel.py','test_g01_shared_unit.py','test_gpu_shared_claim.py','test_pair_v2_g01.py','test_g01_geometry_checkpoint.py','test_g01_checkpoint_receipts.py','test_train_holdout_freeze.py']\nsuite=unittest.TestSuite(unittest.defaultTestLoader.discover('tests',pattern=p) for p in patterns)\nr=unittest.TextTestRunner(verbosity=2).run(suite)\nassert not r.skipped, 'Zero-skip formal regression required: '+repr(r.skipped)\nraise SystemExit(not r.wasSuccessful())\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T14:50:47",
+    "log_path": "logs/runs/g01_train_look_fixed_holdout_cpu_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "aabfb6e34dedcb0b29353d83a114e189c2ed92d0",
+    "git_dirty": false,
+    "end": "2026-11-10T14:51:16",
+    "duration_sec": 24.3,
+    "exit_code": 0,
+    "metrics_sha256": "488b5c9e615665b0a31f99650aee9da217657480b4508497f588402f2211b6f9"
+  }
+}
