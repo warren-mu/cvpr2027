@@ -1,0 +1,24 @@
+# run_logged: python3 -m src.tools.record_command --name diag_t02_cache_test_selected05_b03_black_preflight_01 -- python3 -c from pathlib import Path
+import hashlib,json,shlex
+from src.tools import pbs_black_retry as b
+root=Path.cwd().resolve();job="710892.hopper-m-02";parent="t02_export_cache_test_selected05_remaining_b03";new=parent+"_retry1";guard="results/diag_t02_cache_test_selected05_b03_black_guard_01.json"
+sha=hashlib.sha256((root/guard).read_bytes()).hexdigest()
+idx,previous=b.rotation(root)
+prev_host=None
+if previous:
+ _,data=b.file_ref(root,previous["payload"],"logs/pbs");prev_host=json.loads(data)["requested_host"]
+host=b.next_host(b.VERSION,idx,prev_host)
+batch=json.loads((root/"logs/review/diag_t02_cache_remaining70_plan_01/report.json").read_text())["batches"][2]
+assert batch["name"]==parent
+cmd=[new if v==parent else v for v in batch["checker_command"]]
+proof=b.validate_request_host(root,host=host,retry_of=job,evidence_path=guard,evidence_sha256=sha,name=new,command=cmd,task="T01",group="T02",gpus=1,wall_seconds=1230)
+wrapper="diag_submit_"+new
+submit=["python3","scripts/run_logged.py","--name",wrapper,"--seed","0","--","python3","-m","src.tools.record_command","--name",wrapper,"--","python3","scripts/pbs/submit_phase.py","--name",new,"--task","T01","--budget-group","T02","--gpus","1","--walltime","00:20:30","--host",host,"--retry-of",job,"--black-retry-evidence",guard,"--black-retry-evidence-sha256",sha,"--",*cmd]
+report={"original_host_validator_pass":True,"black_retry_evidence":{"file":guard,"sha256":sha},"binding":proof,"submit_command":submit,"submit_shell":shlex.join(submit),"submitted":False,"scope":"Read-only original validator/rotation at this receipt cutoff. Submitter must revalidate under the normal lock and budget. 20-minute pin fallback unchanged."}
+out=Path("logs/review/diag_t02_cache_test_selected05_b03_black_preflight_01/report.json");out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+print(json.dumps({"report_file":str(out),"report_sha256":hashlib.sha256(out.read_bytes()).hexdigest(),"job":job,"host":host,"guard_sha256":sha,"original_host_validator_pass":True,"submitted":False},sort_keys=True))
+
+# start: 2026-11-11T04:52:43
+{"guard_sha256": "832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0", "host": "hopper-28", "job": "710892.hopper-m-02", "original_host_validator_pass": true, "report_file": "logs/review/diag_t02_cache_test_selected05_b03_black_preflight_01/report.json", "report_sha256": "a3c29ce1e057b0a921030bb88ebc83106669ac49f2582a3468a0c8e7f8283df0", "submitted": false}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.45854843797860667}
+# exit_code: 0

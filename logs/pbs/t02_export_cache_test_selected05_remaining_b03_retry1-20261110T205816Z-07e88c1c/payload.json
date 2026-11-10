@@ -1,0 +1,85 @@
+{
+  "repo": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "name": "t02_export_cache_test_selected05_remaining_b03_retry1",
+  "command": [
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.t02_cache_check",
+    "--name",
+    "t02_export_cache_test_selected05_remaining_b03_retry1",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0002.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0003.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0004.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0005.json",
+    "--source",
+    "results/t02_export_test_selected05_six05_u0000.json",
+    "--source",
+    "results/t02_export_test_selected05_six05_u0001.json",
+    "--sample-size",
+    "200",
+    "--seed",
+    "0",
+    "--timeout-seconds",
+    "1200",
+    "--pair-timeout-seconds",
+    "180",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "environment": {
+    "CVPR_SCRATCH": "/scratch/e1583364/cvpr2027"
+  },
+  "task_id": "T01",
+  "budget_batch": "t00b_t01_20261108",
+  "requested_gpu_count": 1,
+  "requested_wall_seconds": 1230,
+  "requested_host": "hopper-28",
+  "dry_run": false,
+  "budget_revision": "20261110_human16be1c57_premium_120_t01v2_16_e2e_4_e2epilot_12_e2epilotT2_0p5_g01_40_t02_40_v1",
+  "queue": "autox",
+  "retry_of": "710892.hopper-m-02",
+  "budget_group": "T02",
+  "requested_queue_charge_rate": 1.0,
+  "black_retry_host_authorization": {
+    "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293",
+    "evidence": {
+      "file": "results/diag_t02_cache_test_selected05_b03_black_guard_01.json",
+      "sha256": "832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0"
+    },
+    "retry_of": "710892.hopper-m-02",
+    "requested_host": "hopper-28",
+    "previous_requested_host": null,
+    "rotation_index": 19,
+    "rotation_previous": {
+      "payload": {
+        "file": "logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1/payload.json",
+        "sha256": "7f6eaf79ccdab2080c29dad5e3b8c10d107b7e9539e4c6d1ee057bd469e69b77"
+      },
+      "receipt": {
+        "file": "logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1/submission.json",
+        "sha256": "483854291dddad0baf8cb884dc72026e22baebac1eb600f0c6f70291ae14b8e1"
+      }
+    },
+    "original_node": "hopper-22",
+    "original_gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+    "queue_fallback_after_seconds": 1200,
+    "scope": "opening black gate retry only; no scientific acceptance",
+    "available_hosts": [
+      "hopper-28",
+      "hopper-30"
+    ],
+    "disabled_hosts": {
+      "hopper-22": {
+        "reason": "New pinned submissions excluded after authenticated opening black gate",
+        "job_id": "709293.hopper-m-02",
+        "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+        "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+      }
+    }
+  }
+}

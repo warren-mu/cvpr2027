@@ -1,0 +1,61 @@
+# run_logged: python3 -m src.tools.record_command --name diag_diag02_32b710872_nohost_preflight_01 -- python3 -c """Read-only; usable only after a future, authenticated never-started cancellation."""
+import argparse
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+
+from src.tools import pbs_black_retry as b
+
+
+ap = argparse.ArgumentParser()
+ap.add_argument('--accounting', required=True)
+args = ap.parse_args()
+repo = Path.cwd().resolve()
+job = '710872.hopper-m-02'
+original = 'diag_diag02_baselines_32b_s0_01_retry1'
+new = 'diag_diag02_baselines_32b_s0_01_retry2'
+folder = repo / 'logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1'
+for file, expected in {
+    'payload.json': '7f6eaf79ccdab2080c29dad5e3b8c10d107b7e9539e4c6d1ee057bd469e69b77',
+    'submission.json': '483854291dddad0baf8cb884dc72026e22baebac1eb600f0c6f70291ae14b8e1',
+    'job.pbs': '36a57455dd052923e5cf1bd9deac7f50e14a5c0cbc65c85ca1f5c646781aa533',
+}.items():
+    b.require(hashlib.sha256((folder / file).read_bytes()).hexdigest() == expected,
+              'Original pinned submission bytes changed: ' + file)
+old = json.loads((folder / 'payload.json').read_bytes())
+receipt = json.loads((folder / 'submission.json').read_bytes())
+b.require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],
+          'Original pinned receipt differs')
+b.require(old['name'] == original and old['requested_host'] == 'hopper-30'
+          and old['budget_group'] == 'DIAG02E4' and old['requested_gpu_count'] == 1
+          and old['requested_wall_seconds'] == 3600 and old['dry_run'] is False,
+          'Original pinned route/resources differ')
+apath = (repo / args.accounting).resolve()
+aref = {'file': str(apath.relative_to(repo)), 'sha256': hashlib.sha256(apath.read_bytes()).hexdigest()}
+account, _ = b.logged(repo, aref)
+b.require(account['_meta']['exit_code'] == 0
+          and account['metrics']['verified_never_started_cancelled_jobs'] == [job],
+          'Require original verified Q/no allocation -> qdel -> F/no allocation proof')
+spec = importlib.util.spec_from_file_location('original_phase', repo / 'scripts/pbs/submit_phase.py')
+phase = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(phase)
+final = phase._final_accounting(repo, {job}, paths=[apath])
+b.require(job in final and final[job]['gpu_hours'] == 0 and final[job]['charged_gpu_hours'] == 0,
+          'Require zero allocation and cost proved by original canonical accounting')
+cmd = list(old['command'])
+b.require(b.diag02_command(cmd) and phase.diag02_parameters(cmd, original) == ('32b', 3540, 'DIAG02E4'),
+          'Pinned native model/driver budget is not the original DIAG02E4 32B')
+cmd[cmd.index('--name') + 1] = new
+b.require(not (repo / 'results' / (new + '.json')).exists()
+          and not list((repo / 'logs/pbs').glob(new + '-*')), 'New fallback name already used')
+submit = ['python3', 'scripts/pbs/submit_phase.py', '--name', new, '--task', 'T01',
+          '--budget-group', 'DIAG02E4', '--gpus', '1', '--walltime', '01:00:00',
+          '--retry-of', job, '--', *cmd]
+print(json.dumps({'cancelled_job': job, 'canonical': aref, 'requested_host': None,
+                  'submit_command': submit, 'submitted': False}, sort_keys=True))
+ --accounting results/diag_diag02_32b710872_pin20_accounting_01.json
+# start: 2026-11-11T04:52:34
+{"cancelled_job": "710872.hopper-m-02", "canonical": {"file": "results/diag_diag02_32b710872_pin20_accounting_01.json", "sha256": "de9a72b9971f81e15a7ba50db5a29498fd5c24803ae907f0a41f9b63f79f7443"}, "requested_host": null, "submit_command": ["python3", "scripts/pbs/submit_phase.py", "--name", "diag_diag02_baselines_32b_s0_01_retry2", "--task", "T01", "--budget-group", "DIAG02E4", "--gpus", "1", "--walltime", "01:00:00", "--retry-of", "710872.hopper-m-02", "--", "python3", "-u", "-m", "src.tools.diag02_baselines", "--name", "diag_diag02_baselines_32b_s0_01_retry2", "--model-size", "32b", "--model-path", "/scratch/e1583364/cvpr2027/cache/huggingface/hub/models--Qwen--Qwen2.5-VL-32B-Instruct/snapshots/7cfb30d71a1f4f49a57592323337a4a4727301da", "--manifest", "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json\", \"sha256\": \"3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952\"}", "--holdout-reference", "{\"file\": \"/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json\", \"sha256\": \"6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa\"}", "--model-source", "{\"file\": \"results/diag_diag02_model_32b_download_01.json\", \"sha256\": \"71bd263a181d06894869b00ab388b870f9094c044346d5660974e74910c1257e\"}", "--timeout-seconds", "3540", "--gate-timeout-seconds", "180"], "submitted": false}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 0.15271083096740767}
+# exit_code: 0

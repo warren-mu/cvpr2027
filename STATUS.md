@@ -1971,3 +1971,10 @@ b02: PBS 710881.hopper-m-02.
 
 ### 2026-11-10 15:48 ET — DIAG02与测试缓存作业已提交
 T02 remaining b01 passed the unchanged live-cache check on 200/200 states for its six pairs. Job710875 queued33s, ran00:10:54 and charged0.181667 GPUh. This certificate applies only to these six. Job710892 has been submitted for fixed b03; b02 and DIAG02 32B remain separate.
+
+### 2026-11-10 16:06 ET — DIAG02与测试缓存作业已提交
+32B 指定 hopper-30 的 710872 在新鲜 PBS 快照中已排队 1,233 秒，状态仍为 Q、从未获得分配；原 qdel 返回 0，随后 F/no allocation，原 canonical 确认 0 GPU·小时。按同一模型、数据、参数和 walltime 无 host 重提为 710897，调度器分到 hopper-22 的实际卡，开卡检查通过。710897 已完成全部 498 回合：LF 的 never/trigger/cov 均为 22/44；正确的正式解释是本固定池上 LF 的观察增益不随 3B→7B→32B 单调增加。
+
+测试缓存 b02/710881 通过六对原 200 状态复核，与 b01 合计已有 12 对各自所属批次的证书。b03/710892 在 hopper-22 的另一张卡 GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56 开卡全黑，0.005278 GPU·小时，未检查任何业务状态；按原 guard 重提为 710904（hopper-28）。b04/710908 首投无 host。没有把黑帧或未测对列作科学判断。
+
+论文插图盘点已用原训练证书、现有训练提案和训练侧成功 T02 表复核：严格厨房 Kettle + 同配置 LF/LS 无匹配。人类已改为一个真实训练 LF（intro/method 共用），另配一个独立真实训练 LS，放宽锚点类别和两对配置相同的要求。只从原表按训练标号函数导出，先展示三组预览；不另造配置，不用冻结测试集。

@@ -1,0 +1,111 @@
+{
+  "binding": {
+    "available_hosts": [
+      "hopper-28",
+      "hopper-30"
+    ],
+    "disabled_hosts": {
+      "hopper-22": {
+        "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+        "job_id": "709293.hopper-m-02",
+        "reason": "New pinned submissions excluded after authenticated opening black gate",
+        "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+      }
+    },
+    "evidence": {
+      "file": "results/diag_t02_cache_test_selected05_b03_black_guard_01.json",
+      "sha256": "832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0"
+    },
+    "original_gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+    "original_node": "hopper-22",
+    "previous_requested_host": null,
+    "queue_fallback_after_seconds": 1200,
+    "requested_host": "hopper-28",
+    "retry_of": "710892.hopper-m-02",
+    "rotation_index": 19,
+    "rotation_previous": {
+      "payload": {
+        "file": "logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1/payload.json",
+        "sha256": "7f6eaf79ccdab2080c29dad5e3b8c10d107b7e9539e4c6d1ee057bd469e69b77"
+      },
+      "receipt": {
+        "file": "logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1/submission.json",
+        "sha256": "483854291dddad0baf8cb884dc72026e22baebac1eb600f0c6f70291ae14b8e1"
+      }
+    },
+    "scope": "opening black gate retry only; no scientific acceptance",
+    "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293"
+  },
+  "black_retry_evidence": {
+    "file": "results/diag_t02_cache_test_selected05_b03_black_guard_01.json",
+    "sha256": "832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0"
+  },
+  "original_host_validator_pass": true,
+  "scope": "Read-only original validator/rotation at this receipt cutoff. Submitter must revalidate under the normal lock and budget. 20-minute pin fallback unchanged.",
+  "submit_command": [
+    "python3",
+    "scripts/run_logged.py",
+    "--name",
+    "diag_submit_t02_export_cache_test_selected05_remaining_b03_retry1",
+    "--seed",
+    "0",
+    "--",
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_submit_t02_export_cache_test_selected05_remaining_b03_retry1",
+    "--",
+    "python3",
+    "scripts/pbs/submit_phase.py",
+    "--name",
+    "t02_export_cache_test_selected05_remaining_b03_retry1",
+    "--task",
+    "T01",
+    "--budget-group",
+    "T02",
+    "--gpus",
+    "1",
+    "--walltime",
+    "00:20:30",
+    "--host",
+    "hopper-28",
+    "--retry-of",
+    "710892.hopper-m-02",
+    "--black-retry-evidence",
+    "results/diag_t02_cache_test_selected05_b03_black_guard_01.json",
+    "--black-retry-evidence-sha256",
+    "832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0",
+    "--",
+    "python3",
+    "-u",
+    "-m",
+    "src.tools.t02_cache_check",
+    "--name",
+    "t02_export_cache_test_selected05_remaining_b03_retry1",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0002.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0003.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0004.json",
+    "--source",
+    "results/t02_export_test_selected05_six04_u0005.json",
+    "--source",
+    "results/t02_export_test_selected05_six05_u0000.json",
+    "--source",
+    "results/t02_export_test_selected05_six05_u0001.json",
+    "--sample-size",
+    "200",
+    "--seed",
+    "0",
+    "--timeout-seconds",
+    "1200",
+    "--pair-timeout-seconds",
+    "180",
+    "--gate-timeout-seconds",
+    "180"
+  ],
+  "submit_shell": "python3 scripts/run_logged.py --name diag_submit_t02_export_cache_test_selected05_remaining_b03_retry1 --seed 0 -- python3 -m src.tools.record_command --name diag_submit_t02_export_cache_test_selected05_remaining_b03_retry1 -- python3 scripts/pbs/submit_phase.py --name t02_export_cache_test_selected05_remaining_b03_retry1 --task T01 --budget-group T02 --gpus 1 --walltime 00:20:30 --host hopper-28 --retry-of 710892.hopper-m-02 --black-retry-evidence results/diag_t02_cache_test_selected05_b03_black_guard_01.json --black-retry-evidence-sha256 832a5aaafa4812ae438f3c4d4048f7b59d9b954757cfe608cad34d0c4ea781b0 -- python3 -u -m src.tools.t02_cache_check --name t02_export_cache_test_selected05_remaining_b03_retry1 --source results/t02_export_test_selected05_six04_u0002.json --source results/t02_export_test_selected05_six04_u0003.json --source results/t02_export_test_selected05_six04_u0004.json --source results/t02_export_test_selected05_six04_u0005.json --source results/t02_export_test_selected05_six05_u0000.json --source results/t02_export_test_selected05_six05_u0001.json --sample-size 200 --seed 0 --timeout-seconds 1200 --pair-timeout-seconds 180 --gate-timeout-seconds 180",
+  "submitted": false
+}

@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.15271083096740767
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"Read-only; usable only after a future, authenticated never-started cancellation.\"\"\"\nimport argparse\nimport hashlib\nimport importlib.util\nimport json\nfrom pathlib import Path\n\nfrom src.tools import pbs_black_retry as b\n\n\nap = argparse.ArgumentParser()\nap.add_argument('--accounting', required=True)\nargs = ap.parse_args()\nrepo = Path.cwd().resolve()\njob = '710872.hopper-m-02'\noriginal = 'diag_diag02_baselines_32b_s0_01_retry1'\nnew = 'diag_diag02_baselines_32b_s0_01_retry2'\nfolder = repo / 'logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1'\nfor file, expected in {\n    'payload.json': '7f6eaf79ccdab2080c29dad5e3b8c10d107b7e9539e4c6d1ee057bd469e69b77',\n    'submission.json': '483854291dddad0baf8cb884dc72026e22baebac1eb600f0c6f70291ae14b8e1',\n    'job.pbs': '36a57455dd052923e5cf1bd9deac7f50e14a5c0cbc65c85ca1f5c646781aa533',\n}.items():\n    b.require(hashlib.sha256((folder / file).read_bytes()).hexdigest() == expected,\n              'Original pinned submission bytes changed: ' + file)\nold = json.loads((folder / 'payload.json').read_bytes())\nreceipt = json.loads((folder / 'submission.json').read_bytes())\nb.require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],\n          'Original pinned receipt differs')\nb.require(old['name'] == original and old['requested_host'] == 'hopper-30'\n          and old['budget_group'] == 'DIAG02E4' and old['requested_gpu_count'] == 1\n          and old['requested_wall_seconds'] == 3600 and old['dry_run'] is False,\n          'Original pinned route/resources differ')\napath = (repo / args.accounting).resolve()\naref = {'file': str(apath.relative_to(repo)), 'sha256': hashlib.sha256(apath.read_bytes()).hexdigest()}\naccount, _ = b.logged(repo, aref)\nb.require(account['_meta']['exit_code'] == 0\n          and account['metrics']['verified_never_started_cancelled_jobs'] == [job],\n          'Require original verified Q/no allocation -> qdel -> F/no allocation proof')\nspec = importlib.util.spec_from_file_location('original_phase', repo / 'scripts/pbs/submit_phase.py')\nphase = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(phase)\nfinal = phase._final_accounting(repo, {job}, paths=[apath])\nb.require(job in final and final[job]['gpu_hours'] == 0 and final[job]['charged_gpu_hours'] == 0,\n          'Require zero allocation and cost proved by original canonical accounting')\ncmd = list(old['command'])\nb.require(b.diag02_command(cmd) and phase.diag02_parameters(cmd, original) == ('32b', 3540, 'DIAG02E4'),\n          'Pinned native model/driver budget is not the original DIAG02E4 32B')\ncmd[cmd.index('--name') + 1] = new\nb.require(not (repo / 'results' / (new + '.json')).exists()\n          and not list((repo / 'logs/pbs').glob(new + '-*')), 'New fallback name already used')\nsubmit = ['python3', 'scripts/pbs/submit_phase.py', '--name', new, '--task', 'T01',\n          '--budget-group', 'DIAG02E4', '--gpus', '1', '--walltime', '01:00:00',\n          '--retry-of', job, '--', *cmd]\nprint(json.dumps({'cancelled_job': job, 'canonical': aref, 'requested_host': None,\n                  'submit_command': submit, 'submitted': False}, sort_keys=True))\n",
+      "--accounting",
+      "results/diag_diag02_32b710872_pin20_accounting_01.json"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_diag02_32b710872_nohost_preflight_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_diag02_32b710872_nohost_preflight_01",
+      "--",
+      "python3",
+      "-c",
+      "\"\"\"Read-only; usable only after a future, authenticated never-started cancellation.\"\"\"\nimport argparse\nimport hashlib\nimport importlib.util\nimport json\nfrom pathlib import Path\n\nfrom src.tools import pbs_black_retry as b\n\n\nap = argparse.ArgumentParser()\nap.add_argument('--accounting', required=True)\nargs = ap.parse_args()\nrepo = Path.cwd().resolve()\njob = '710872.hopper-m-02'\noriginal = 'diag_diag02_baselines_32b_s0_01_retry1'\nnew = 'diag_diag02_baselines_32b_s0_01_retry2'\nfolder = repo / 'logs/pbs/diag_diag02_baselines_32b_s0_01_retry1-20261110T202817Z-ae6753f1'\nfor file, expected in {\n    'payload.json': '7f6eaf79ccdab2080c29dad5e3b8c10d107b7e9539e4c6d1ee057bd469e69b77',\n    'submission.json': '483854291dddad0baf8cb884dc72026e22baebac1eb600f0c6f70291ae14b8e1',\n    'job.pbs': '36a57455dd052923e5cf1bd9deac7f50e14a5c0cbc65c85ca1f5c646781aa533',\n}.items():\n    b.require(hashlib.sha256((folder / file).read_bytes()).hexdigest() == expected,\n              'Original pinned submission bytes changed: ' + file)\nold = json.loads((folder / 'payload.json').read_bytes())\nreceipt = json.loads((folder / 'submission.json').read_bytes())\nb.require(receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],\n          'Original pinned receipt differs')\nb.require(old['name'] == original and old['requested_host'] == 'hopper-30'\n          and old['budget_group'] == 'DIAG02E4' and old['requested_gpu_count'] == 1\n          and old['requested_wall_seconds'] == 3600 and old['dry_run'] is False,\n          'Original pinned route/resources differ')\napath = (repo / args.accounting).resolve()\naref = {'file': str(apath.relative_to(repo)), 'sha256': hashlib.sha256(apath.read_bytes()).hexdigest()}\naccount, _ = b.logged(repo, aref)\nb.require(account['_meta']['exit_code'] == 0\n          and account['metrics']['verified_never_started_cancelled_jobs'] == [job],\n          'Require original verified Q/no allocation -> qdel -> F/no allocation proof')\nspec = importlib.util.spec_from_file_location('original_phase', repo / 'scripts/pbs/submit_phase.py')\nphase = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(phase)\nfinal = phase._final_accounting(repo, {job}, paths=[apath])\nb.require(job in final and final[job]['gpu_hours'] == 0 and final[job]['charged_gpu_hours'] == 0,\n          'Require zero allocation and cost proved by original canonical accounting')\ncmd = list(old['command'])\nb.require(b.diag02_command(cmd) and phase.diag02_parameters(cmd, original) == ('32b', 3540, 'DIAG02E4'),\n          'Pinned native model/driver budget is not the original DIAG02E4 32B')\ncmd[cmd.index('--name') + 1] = new\nb.require(not (repo / 'results' / (new + '.json')).exists()\n          and not list((repo / 'logs/pbs').glob(new + '-*')), 'New fallback name already used')\nsubmit = ['python3', 'scripts/pbs/submit_phase.py', '--name', new, '--task', 'T01',\n          '--budget-group', 'DIAG02E4', '--gpus', '1', '--walltime', '01:00:00',\n          '--retry-of', job, '--', *cmd]\nprint(json.dumps({'cancelled_job': job, 'canonical': aref, 'requested_host': None,\n                  'submit_command': submit, 'submitted': False}, sort_keys=True))\n",
+      "--accounting",
+      "results/diag_diag02_32b710872_pin20_accounting_01.json"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-11T04:52:34",
+    "log_path": "logs/runs/diag_diag02_32b710872_nohost_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "f01175fa6fb3b604b9e4fb2d55e46cd33d7da244",
+    "git_dirty": false,
+    "end": "2026-11-11T04:52:35",
+    "duration_sec": 0.2,
+    "exit_code": 0,
+    "metrics_sha256": "0b5bf359bef8d6a0a6aed534d950f94008122eccb92b3635b820293c2cb5210d"
+  }
+}
