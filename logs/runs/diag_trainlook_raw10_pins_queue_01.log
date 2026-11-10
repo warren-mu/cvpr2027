@@ -1,0 +1,145 @@
+# run_logged: python3 -m src.tools.record_command --name diag_trainlook_raw10_pins_queue_01 -- python3 -c import datetime,json,re,subprocess,sys
+from zoneinfo import ZoneInfo
+jobs=['710213.hopper-m-02','710282.hopper-m-02']
+ok=False
+for attempt in (1,2):
+ print('QUERY_ATTEMPT',attempt,datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)
+ try:
+  p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx',*jobs],capture_output=True,text=True,timeout=30)
+ except subprocess.TimeoutExpired as error:
+  print('QUERY_TIMEOUT',str(error),flush=True)
+  for value in (error.stdout,error.stderr):
+   if value: print(value.decode(errors='replace') if isinstance(value,bytes) else value,flush=True)
+  continue
+ print(p.stdout,end='',flush=True);print(p.stderr,end='',flush=True)
+ rows=[]
+ for match in re.finditer(r'^Job Id: (\S+)\n(.*?)(?=^Job Id: |\Z)',p.stdout,re.M|re.S):
+  job,body=match.groups(); row={'job_id':job}
+  for key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):
+   m=re.search(r'^\s*'+re.escape(key)+r' = (.*)$',body,re.M);row[key]=m.group(1) if m else None
+  if row['qtime']:
+   t=datetime.datetime.strptime(row['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))
+   row['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()
+   row['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()
+  rows.append(row)
+ print('PIN_QUEUE_TIMING_JSON: '+json.dumps({'attempt':attempt,'qstat_exit':p.returncode,'rows':rows,'scope':'Read-only; no qdel/qsub; qtime timezone original Asia/Singapore'},sort_keys=True),flush=True)
+ if p.returncode==0 and {row['job_id'] for row in rows}==set(jobs):ok=True;break
+raise SystemExit(0 if ok else 1)
+
+# start: 2026-11-10T19:32:15
+QUERY_ATTEMPT 1 2026-11-10T11:32:16.395316+00:00
+QUERY_TIMEOUT Command '['/cm/shared/apps/pbspro/current/bin/qstat', '-fx', '710213.hopper-m-02', '710282.hopper-m-02']' timed out after 30 seconds
+QUERY_ATTEMPT 2 2026-11-10T11:32:46.431661+00:00
+Job Id: 710213.hopper-m-02
+    Job_Name = cvpr27_492b2ef5
+    Job_Owner = e1583364@hopper-l-01.cm.cluster
+    job_state = Q
+    queue = smallx
+    server = hopper-m-02.cm.cluster
+    Checkpoint = u
+    ctime = Tue Nov 10 18:43:34 2026
+    Error_Path = hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cv
+	pr27_492b2ef5.e710213
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = oed
+    Mail_Points = a
+    mtime = Tue Nov 10 19:24:40 2026
+    Output_Path = hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr20
+	27/logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492b2e
+	f5/pbs.out
+    Priority = 0
+    qtime = Tue Nov 10 18:43:34 2026
+    Rerunable = True
+    Resource_List.am_job_cache = {"job.ngpus": 1.0, "job.walltime": 1630,
+	 "job.ncpus": 12.0, "job.queue_charge_rate": 0,
+	 "formula_constants": "", "am_cloud_enabled": false}
+    Resource_List.mem = 225gb
+    Resource_List.ncpus = 12
+    Resource_List.ngpus = 1
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1
+    Resource_List.place = free
+    Resource_List.queue_charge_rate = 1
+    Resource_List.select = 1:ngpus=1:host=hopper-30:ncpus=12:mem=225GB
+    Resource_List.walltime = 00:27:10
+    substate = 10
+    Variable_List = PBS_O_HOME=/home/svu/e1583364,PBS_O_LANG=C.UTF-8,
+	PBS_O_LOGNAME=e1583364,
+	PBS_O_PATH=/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr20
+	27/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.
+	local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5
+	.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/pytho
+	n/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin,
+	PBS_O_SHELL=/bin/bash,PBS_O_HOST=hopper-l-01.cm.cluster,
+	PBS_O_WORKDIR=/home/svu/e1583364/CVPR2027/cvpr2027,PBS_O_SYSTEM=Linux,
+	PBS_O_QUEUE=autox
+    comment = Not Running: Insufficient amount of resource: ngpus (R: 1 A: 0 T:
+	 224)
+    etime = Tue Nov 10 18:43:34 2026
+    Submit_arguments = -N cvpr27_492b2ef5 -l walltime=00:27:10 -o /nfs/home/svu
+	/e1583364/CVPR2027/cvpr2027/logs/pbs/gen_train_look_first_unit_01_retry
+	1-20261110T104239Z-492b2ef5/pbs.out /nfs/home/svu/e1583364/CVPR2027/cvp
+	r2027/logs/pbs/gen_train_look_first_unit_01_retry1-20261110T104239Z-492
+	b2ef5/job.pbs
+    project = CFP04-SF-125
+    Submit_Host = hopper-l-01.cm.cluster
+
+Job Id: 710282.hopper-m-02
+    Job_Name = cvpr27_5933a5b2
+    Job_Owner = e1583364@hopper-l-01.cm.cluster
+    job_state = Q
+    queue = smallx
+    server = hopper-m-02.cm.cluster
+    Checkpoint = u
+    ctime = Tue Nov 10 19:30:08 2026
+    Error_Path = hopper-l-01.cm.cluster:/home/svu/e1583364/CVPR2027/cvpr2027/cv
+	pr27_5933a5b2.e710282
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = oed
+    Mail_Points = a
+    mtime = Tue Nov 10 19:30:08 2026
+    Output_Path = hopper-l-01.cm.cluster:/nfs/home/svu/e1583364/CVPR2027/cvpr20
+	27/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-20261110T112908
+	Z-5933a5b2/pbs.out
+    Priority = 0
+    qtime = Tue Nov 10 19:30:08 2026
+    Rerunable = True
+    Resource_List.am_job_cache = {"job.ngpus": 1.0, "job.walltime": 1855,
+	 "job.ncpus": 12.0, "job.queue_charge_rate": 0,
+	 "formula_constants": "", "am_cloud_enabled": false}
+    Resource_List.mem = 225gb
+    Resource_List.ncpus = 12
+    Resource_List.ngpus = 1
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1
+    Resource_List.place = free
+    Resource_List.queue_charge_rate = 1
+    Resource_List.select = 1:ngpus=1:host=hopper-28:ncpus=12:mem=225GB
+    Resource_List.walltime = 00:30:55
+    substate = 10
+    Variable_List = PBS_O_HOME=/home/svu/e1583364,PBS_O_LANG=C.UTF-8,
+	PBS_O_LOGNAME=e1583364,
+	PBS_O_PATH=/cm/shared/apps/pbspro/current/bin:/scratch/e1583364/cvpr20
+	27/envs/cvpr2027/bin:/cm/local/apps/gcc/13.1.0/bin:/home/svu/e1583364/.
+	local/bin:/home/svu/e1583364/bin:/cm/local/apps/environment-modules/4.5
+	.3//bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/am/pytho
+	n/bin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.5.3/bin,
+	PBS_O_SHELL=/bin/bash,PBS_O_HOST=hopper-l-01.cm.cluster,
+	PBS_O_WORKDIR=/home/svu/e1583364/CVPR2027/cvpr2027,PBS_O_SYSTEM=Linux,
+	PBS_O_QUEUE=autox
+    comment = Not Running: Insufficient amount of resource: ngpus (R: 1 A: 0 T:
+	 224)
+    etime = Tue Nov 10 19:30:08 2026
+    Submit_arguments = -N cvpr27_5933a5b2 -l walltime=00:30:55 -o /nfs/home/svu
+	/e1583364/CVPR2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_
+	01_retry1-20261110T112908Z-5933a5b2/pbs.out /nfs/home/svu/e1583364/CVPR
+	2027/cvpr2027/logs/pbs/gpu_pack_train_raw10_smoke_single_01_retry1-2026
+	1110T112908Z-5933a5b2/job.pbs
+    project = CFP04-SF-125
+    Submit_Host = hopper-l-01.cm.cluster
+
+PIN_QUEUE_TIMING_JSON: {"attempt": 2, "qstat_exit": 0, "rows": [{"exec_host": null, "job_id": "710213.hopper-m-02", "job_state": "Q", "q20_deadline_utc": "2026-11-10T11:03:34+00:00", "qtime": "Tue Nov 10 18:43:34 2026", "qtime_utc": "2026-11-10T10:43:34+00:00", "queue": "smallx", "resources_used.walltime": null, "run_count": null, "stime": null}, {"exec_host": null, "job_id": "710282.hopper-m-02", "job_state": "Q", "q20_deadline_utc": "2026-11-10T11:50:08+00:00", "qtime": "Tue Nov 10 19:30:08 2026", "qtime_utc": "2026-11-10T11:30:08+00:00", "queue": "smallx", "resources_used.walltime": null, "run_count": null, "stime": null}], "scope": "Read-only; no qdel/qsub; qtime timezone original Asia/Singapore"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 55.24047897901619}
+# exit_code: 0

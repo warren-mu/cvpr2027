@@ -1,0 +1,12 @@
+diff --git a/STATUS.md b/STATUS.md
+index 1d09a156..f71418e7 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1813,3 +1813,7 @@ FIG01 scoped真实单对CPU冒烟diag_fig01_scoped_smoke_01于30.732797860982828
+ 
+ ### 2026-11-10 06:31 ET — 710255 → 710282 同参数重提
+ 原strict黑帧guard、完整canonical/mixed及fresh预算preflight通过后，已提交710282.hopper-m-02（gpu_pack_train_raw10_smoke_single_01_retry1，hopper-28，1GPU，00:30:55），同一个六对smoke queue与原科学参数，未提交其余六批。新旧对应710255→710282；原所有失败/UUID/账本保留，开头逐卡检查与空队列退出不变。指定节点20分钟回退仍需实际PBS qtime和fresh Q未分配证明，不用目录时间推断。FIG真实metadata诊断确认22个LookFlip原选择见证均原验收通过，但每对至少一world的选择见证在看见ownX前选了目标，导致旧FIG额外限制挡住全部候选。FIG任务没有这个限制；仅改图用观察前缀为原first_step_visible_actions排序首项，不改原检查/训练/阈值，不将图用前缀冒充原选择见证。
++
++
++### 2026-11-10 06:38 ET — FIG01选图前缀修复已过17项CPU测试
++b3527166只修正figure-only的额外限制：每world取原first_step_visible_actions已排序列表首项，不按像素数挑动作；记录figure_only_observation_prefix，原selection witness另列且不作为可见证据。图像排名仍非留出优先、两world各该状态X像素数min降序、原tie不变。完整83证书/header、选中全表及原check_pair/缓存绑定不变；Hopper原run_logged测试17项通过，准备再次单真实对CPU冒烟，失败记录不覆盖。

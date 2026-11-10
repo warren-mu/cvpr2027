@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 55.24047897901619
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess,sys\nfrom zoneinfo import ZoneInfo\njobs=['710213.hopper-m-02','710282.hopper-m-02']\nok=False\nfor attempt in (1,2):\n print('QUERY_ATTEMPT',attempt,datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)\n try:\n  p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx',*jobs],capture_output=True,text=True,timeout=30)\n except subprocess.TimeoutExpired as error:\n  print('QUERY_TIMEOUT',str(error),flush=True)\n  for value in (error.stdout,error.stderr):\n   if value: print(value.decode(errors='replace') if isinstance(value,bytes) else value,flush=True)\n  continue\n print(p.stdout,end='',flush=True);print(p.stderr,end='',flush=True)\n rows=[]\n for match in re.finditer(r'^Job Id: (\\S+)\\n(.*?)(?=^Job Id: |\\Z)',p.stdout,re.M|re.S):\n  job,body=match.groups(); row={'job_id':job}\n  for key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n   m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',body,re.M);row[key]=m.group(1) if m else None\n  if row['qtime']:\n   t=datetime.datetime.strptime(row['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n   row['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n   row['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\n  rows.append(row)\n print('PIN_QUEUE_TIMING_JSON: '+json.dumps({'attempt':attempt,'qstat_exit':p.returncode,'rows':rows,'scope':'Read-only; no qdel/qsub; qtime timezone original Asia/Singapore'},sort_keys=True),flush=True)\n if p.returncode==0 and {row['job_id'] for row in rows}==set(jobs):ok=True;break\nraise SystemExit(0 if ok else 1)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_trainlook_raw10_pins_queue_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_trainlook_raw10_pins_queue_01",
+      "--",
+      "python3",
+      "-c",
+      "import datetime,json,re,subprocess,sys\nfrom zoneinfo import ZoneInfo\njobs=['710213.hopper-m-02','710282.hopper-m-02']\nok=False\nfor attempt in (1,2):\n print('QUERY_ATTEMPT',attempt,datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)\n try:\n  p=subprocess.run(['/cm/shared/apps/pbspro/current/bin/qstat','-fx',*jobs],capture_output=True,text=True,timeout=30)\n except subprocess.TimeoutExpired as error:\n  print('QUERY_TIMEOUT',str(error),flush=True)\n  for value in (error.stdout,error.stderr):\n   if value: print(value.decode(errors='replace') if isinstance(value,bytes) else value,flush=True)\n  continue\n print(p.stdout,end='',flush=True);print(p.stderr,end='',flush=True)\n rows=[]\n for match in re.finditer(r'^Job Id: (\\S+)\\n(.*?)(?=^Job Id: |\\Z)',p.stdout,re.M|re.S):\n  job,body=match.groups(); row={'job_id':job}\n  for key in ('job_state','qtime','stime','run_count','exec_host','queue','resources_used.walltime'):\n   m=re.search(r'^\\s*'+re.escape(key)+r' = (.*)$',body,re.M);row[key]=m.group(1) if m else None\n  if row['qtime']:\n   t=datetime.datetime.strptime(row['qtime'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=ZoneInfo('Asia/Singapore'))\n   row['qtime_utc']=t.astimezone(datetime.timezone.utc).isoformat()\n   row['q20_deadline_utc']=(t+datetime.timedelta(seconds=1200)).astimezone(datetime.timezone.utc).isoformat()\n  rows.append(row)\n print('PIN_QUEUE_TIMING_JSON: '+json.dumps({'attempt':attempt,'qstat_exit':p.returncode,'rows':rows,'scope':'Read-only; no qdel/qsub; qtime timezone original Asia/Singapore'},sort_keys=True),flush=True)\n if p.returncode==0 and {row['job_id'] for row in rows}==set(jobs):ok=True;break\nraise SystemExit(0 if ok else 1)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T19:32:15",
+    "log_path": "logs/runs/diag_trainlook_raw10_pins_queue_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "62588e4eb720b11d7cc3b70f4c892da3ad0c7ff5",
+    "git_dirty": false,
+    "end": "2026-11-10T19:33:11",
+    "duration_sec": 55.4,
+    "exit_code": 0,
+    "metrics_sha256": "59c9c9d4e8a8bfdf4e55513a85dd5f59c944a0093946f99a845837b138d4dbd7"
+  }
+}
