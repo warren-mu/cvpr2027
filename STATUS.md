@@ -1741,3 +1741,13 @@ T2 的原 guard02、preflight 和独立 0.5 GPU·小时预算检查通过，已�
 原 inventory 与固定留出校验后，diag_train_look_first_unit_plan_01 已生成并审计通过首单元 review plan。明确采用本次合法、非留出的 FloorPlan315，LookStay 优先；本次新票 LookStay8、LookFlip8、Direct0，历史 pending 和每场景上限均保留。准备 helper 的 split_scenes 返回 frozenset，不能声称推荐遍历顺序跨进程稳定；这里明确固定已封存的 FP315，不重选或改写旧计划。生成 seed 与验收阈值不变。
 
 configs/gen_train_look_first_unit_01_quota.json 按原 sealed exact text 原样保存（SHA da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2）。原单场景 1200 秒、parent1600、PBS00:27:10，启用已通过原 raw10 工程判定的 rejected-raw 抽样变体；709644 原 deadline exit1 和失败记录保留，不把它计作正式池通过。本次新 trainLook 版本仍先做这一单元冒烟，未通过前不扩大。提交还须 fresh scratch>=150GiB、原预算和试跑优先名额检查，当前未提交。
+
+## 2026-11-10 03:25 ET — 无节点限制回退与当前数据快照
+
+709979（T0）与 709996（T4）在各自真实 qtime 满 20 分钟后，均重新查询确认 Q/noallocation，再 qdel；原 post 与 pbs_usage 证明从未启动、分配用量为零。两条链原审计 8 文件无 FAIL。原参数后继分别是 T0 710029 与 T4 710037，均无 host 限制、PBS04:20:00、driver15536、各50更新。它们仍是各自最后一次允许的实际基础设施尝试；本次取消排队没有增加实际失败次数。
+
+T0 710029 的 native gate 已通过（hopper-16，GPU-1d45609c-9021-db8d-8a0f-fe6134bb236d）；此 UUID 与此前该节点黑帧的 UUID 不同，仍不把该节点加回指定名单。原 holdout_000 与 update_001 日志已开始写入，目前只确认进入第1次更新的 rollout，不宣称完整 optimizer 更新完成。T4 710037 已成功入队，尚待门检与训练日志。T2 710007 的 20 分钟边界是 08:24:08 UTC，正在执行相同 fresh-Q-only 核验流程，未取得最终零费用证据前不推定取消成功。
+
+最新全局测试配置去重快照为 diag_current_test_selected_04：87 对，DirectFlip17/DirectStay38/LookFlip14/LookStay18，对应场景11/22/8/13。原五源加正式 S04/S05 完整七源，仍是独立构造验收通过、T02前候选，非最终测试冻结；S06/S07尚未独立发布，未混入。selected03 原60秒元数据扫描超时完整保留；同一原selector/完整七源/nice单进程的唯一120秒重试selected04成功，两者均原审计无FAIL，不放宽验收或改统计口径。
+
+最新 quota 原记录 diag_scratch_quota_overnight_02：scratch565.5GiB/1TiB，文件3,115,867/无限制，满足余量>=150GiB。原 hpc 命令因 home awk 错误 exit1，scratch段完整；该原失败警告保留，scope审计无FAIL。没有删数据。

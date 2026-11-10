@@ -1,0 +1,60 @@
+# run_logged: python3 -m src.tools.record_command --name diag_current_test_selected_04 -- timeout --signal=KILL 120s nice -n 10 python3 -c """Fixed published test cutoff; original configuration selector, metadata receipts only."""
+from pathlib import Path
+import hashlib,json,os,signal
+NAME='diag_current_test_selected_04'
+REFS=[
+ ('t01v2_checkpoint_test_a_full_01','98a6f19079edfda4bdcd52d6ec213bce3755b062af4aa24dcec672eabd7e51b0'),
+ ('t01v2_checkpoint_test_b_full_01','d4e2ffacaabc11f30130539d77e51ff2dc69b44ba9db9f49c3c13af54cdfa048'),
+ ('t01v2_checkpoint_test_s16_s01_01','c8b2a178ea54e1ca9b9aaa23f4e1d9348e54eb9b2fbaa61b13eab665fa7febde'),
+ ('t01v2_checkpoint_test_s16_s02_01','dacca53bdb1222a5b64d6071a9b4860de0148d0b99e1d511d0f4dd1ef0633a2a'),
+ ('t01v2_checkpoint_test_s16_s03_01','18fcf0a4a09b14b864a2ed001716fd1ef467418736ddf3a85ebde0c5ef673e9d'),
+ ('t01v2_checkpoint_test_s16_s04_retry1_01','6ac3e99e8c7eeede81a3e6a0e54e75d5285dafc93c71d5c120709309001945ee'),
+ ('t01v2_checkpoint_test_s16_s05_01','e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5')]
+def main():
+ if os.environ.get('CVPR_RUN_NAME')!=NAME:raise ValueError('Require original logged diagnostic identity')
+ from src.tools.g01_quota_plan import reconstruct_test_inventory,RECEIPT_AUTHORITY
+ refs=[{'file':'results/'+name+'.json','sha256':sha} for name,sha in REFS]
+ proof=reconstruct_test_inventory(refs,configuration=True,authority=RECEIPT_AUTHORITY)
+ selected=proof['configuration_selection']['selected']
+ counts=proof['confirmed_by_kind']
+ scenes={kind:sorted({r['scene'] for r in selected if r['kind']==kind}) for kind in counts}
+ # A small Direct table is preferred for the single-format-equivalence smoke;
+ # this chooses from the original seed-selected inventory, never a duplicate.
+ candidate=next((r for r in selected if r['kind']=='direct_stay'),selected[0])
+ pairref=candidate['pair_reference'];body=Path(pairref['file']).read_bytes()
+ if hashlib.sha256(body).hexdigest()!=pairref['sha256']:raise ValueError('Selected pair bytes changed')
+ pair=json.loads(body)
+ if pair['status']!='passed' or pair['scene']!=candidate['scene'] or pair['kind']!=candidate['kind']:
+  raise ValueError('Selected construction receipt differs')
+ smoke={'source':{k:candidate['checkpoint_reference'][k] for k in ('file','sha256')},
+  'pair':pairref,'pair_id':pair['pair_id'],'original_id':pair['pair_id'],'scene':candidate['scene'],
+  'kind':candidate['kind'],'field_of_view':60,'proposal_identity':candidate['proposal_identity'],
+  'configuration':candidate['configuration'],'original_scene_source':candidate['source_reference'],
+  'scope':'Actually selected by the original configuration selector in this fixed cutoff; independent construction PASS only, T02 and lossless dual-format smoke still required'}
+ specs=[]
+ for fn,sha in [('tasks/T03.md','efad37124e82883bb8b06a2a883142c08aa494d6949bc7145ba83df74f73da63'),
+                ('tasks/T02.md','850e034777d5a868504d5e0b9329f9628c17516b3504561fe4cc8e146a7f5562')]:
+  if hashlib.sha256(Path(fn).read_bytes()).hexdigest()!=sha:raise ValueError('Task specification changed')
+  specs.append({'file':fn,'sha256':sha})
+ report={'proof':proof,'counts_by_kind':counts,'scenes_by_kind':scenes,
+  'scene_counts_by_kind':{k:len(v) for k,v in scenes.items()},'selected_count':len(selected),
+  'smoke_candidate':smoke,'specifications':specs,
+  'scope':'Current incremental pre-T02 export selection, not a final frozen evaluation set or training/pilot population. Original published independent construction receipts and original seed0 per-configuration/class selector only; no native revalidation performed.',
+  'excluded':'S06/S07 not yet independently published, all smoke sources, all train/pilot sources, and later unreviewed outputs',
+  'freeze_rule':'T03: 2026-11-11 20:00 America/New_York, or all four classes reach50; final T02 filtering/balance and committed manifest required before evaluation. This snapshot does not freeze or authorize evaluation.'}
+ out=Path('logs/review')/NAME;out.mkdir(parents=True,exist_ok=False)
+ b=(json.dumps(report,indent=2,sort_keys=True)+'\n').encode();(out/'report.json').write_bytes(b)
+ lines=['当前测试配置去重选中清单（构造独立通过，T02前增量；非最终冻结）','',
+ '| 类别 | 当前配置数 | 场景数 |','|---|---:|---:|']
+ lines += ['| %s | %d | %d |'%(k,counts[k],len(scenes[k])) for k in counts]
+ lines += ['',report['scope'],report['freeze_rule'],'',
+  '单pair双格式冒烟候选：%s / %s / %s，精确checkpoint、原pair、配置与proposal引用见report.json。'%(smoke['scene'],smoke['pair_id'],smoke['kind'])]
+ (out/'report.md').write_text('\n'.join(lines)+'\n')
+ print('CURRENT_TEST_SELECTED_JSON: '+json.dumps({'report':{'file':str(out/'report.json'),'sha256':hashlib.sha256(b).hexdigest()},
+  'counts_by_kind':counts,'scene_counts_by_kind':report['scene_counts_by_kind'],'selected_count':len(selected),'smoke_candidate':smoke},sort_keys=True),flush=True)
+if __name__=='__main__':main()
+
+# start: 2026-11-10T16:16:44
+CURRENT_TEST_SELECTED_JSON: {"counts_by_kind": {"direct_flip": 17, "direct_stay": 38, "look_flip": 14, "look_stay": 18}, "report": {"file": "logs/review/diag_current_test_selected_04/report.json", "sha256": "7304c0b77ae57c06a7df3941ad554b709fe8f95e9104f169aeb378d0b364fc63"}, "scene_counts_by_kind": {"direct_flip": 11, "direct_stay": 22, "look_flip": 8, "look_stay": 13}, "selected_count": 87, "smoke_candidate": {"configuration": {"configuration_id": "0213c84549315c949e71b532b129f4e0367b380475ae4ef5b62c693c214048b9", "key": {"anchor_name": "Plunger_e5282580", "candidate_names": ["TissueBox_9dc9d69d", "ToiletPaper_05788e74"], "scene": "FloorPlan427", "start_state": {"forceAction": false, "horizon": 30.0, "position": {"x": -1.0, "y": 0.9020416140556335, "z": 0.5}, "rotation": {"x": 0.0, "y": 225.0, "z": 0.0}, "standing": true}}, "version": "test_configuration_canonical_start_seed0_v1"}, "field_of_view": 60, "kind": "direct_stay", "original_id": "floorplan427_00012", "original_scene_source": {"audit": {"fail": [], "file": "results/gen_test_s16_round2_s05_c6_floorplan427.json", "warn": ["P7 run failed (exit_code 1); keep it, do not cite it"]}, "exit_code": 1, "file": "results/gen_test_s16_round2_s05_c6_floorplan427.json", "git_commit": "fe6c8a77c84cdeb7d46db9b163cb7c447f38a43e", "metrics_sha256": "eb75f20e357c6e037037356174f1cb1259166ac340f595fb2fe08e62b615a6f7", "sha256": "90202742fe217ea20ec8e4feb22ae35e4b298c80e0f75d32a47bd466858f4e18"}, "pair": {"file": "data/world_pairs/v2/gen_test_s16_round2_s05_c6_floorplan427/floorplan427_00012/pair.json", "sha256": "c463e645ec6953fd052c0a13a4fc3467fef1bf93d74cb080368d2c14b5837588"}, "pair_id": "floorplan427_00012", "proposal_identity": "5e4ea3a43bfbaa43b3196865f0cafc27551cf3a5e95d69561ea24462ee6b6e73", "scene": "FloorPlan427", "scope": "Actually selected by the original configuration selector in this fixed cutoff; independent construction PASS only, T02 and lossless dual-format smoke still required", "source": {"file": "results/t01v2_checkpoint_test_s16_s05_01.json", "sha256": "e757463f1307c7f02fe1398e2231cffd96a65d9629793daef8714bfc7a7901d5"}}}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 64.46167307300493}
+# exit_code: 0
