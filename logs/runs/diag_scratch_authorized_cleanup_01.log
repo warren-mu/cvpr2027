@@ -1,0 +1,47 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_authorized_cleanup_01 -- python3 -c import os,json,stat,hashlib,datetime,subprocess
+from pathlib import Path
+p=Path('logs/review/diag_scratch_authorized_inventory_01/manifest.json')
+assert hashlib.sha256(p.read_bytes()).hexdigest()=='d83cff6e924d089ba941ed7195ed80f65bead2b98c0d89c8454333b454734dd8'
+manifest=json.loads(p.read_text())
+assert manifest['deletion_performed'] is False and not manifest['protected_matches']
+assert str(p) in Path('STATUS.md').read_text()
+base=Path('/scratch/e1583364/cvpr2027')
+kept=[base/'smoke_e2e'/run/job/'checkpoint/actor/model_world_size_1_rank_0.pt' for run,job in [('smoke_e2e_T0_02','707612.hopper-m-02'),('smoke_e2e_T3_01','707642.hopper-m-02')]]
+kept_meta={str(f):(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in kept}
+def fs():
+ s=os.statvfs(base)
+ return {'reported_total_bytes':s.f_blocks*s.f_frsize,'reported_used_bytes':(s.f_blocks-s.f_bfree)*s.f_frsize,'reported_available_bytes':s.f_bavail*s.f_frsize,'filesystem_files_total':s.f_files,'filesystem_files_used':s.f_files-s.f_ffree,'filesystem_files_available':s.f_favail,'file_limit_scope':'filesystem-reported counts; account-specific inode quota not independently established'}
+before=fs();deleted=[];skipped=[]
+# Free large authorized B files first; the immutable list cannot grow.
+for row in sorted(manifest['files'],key=lambda r:(r['category']!='B',r['path'])):
+ f=Path(row['path'])
+ assert f.is_relative_to(base) and row['category'] in ('A','B')
+ try: s=f.lstat()
+ except FileNotFoundError: skipped.append({'path':str(f),'reason':'already_absent'});continue
+ current=(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_uid)
+ expected=(row['device'],row['inode'],row['bytes'],row['mtime_ns'],row['uid'])
+ if current!=expected or not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid():
+  skipped.append({'path':str(f),'reason':'changed_since_inventory'});continue
+ if row['category']=='B':
+  assert f.suffix=='.pt' and f.name!='model_world_size_1_rank_0.pt' or f.parent.name=='critic'
+ else: assert any(f.is_relative_to(base/'cache'/name) for name in ('pip','torch_extensions','triton','pycache'))
+ f.unlink()
+ deleted.append(row)
+after=fs()
+assert kept_meta=={str(f):(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in kept}
+report={'authority':'43bc49c5','inventory':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'before':before,'after':after,'deleted_files':len(deleted),'deleted_logical_bytes':sum(r['bytes'] for r in deleted),'deleted_allocated_bytes':sum(r['allocated_bytes'] for r in deleted),'available_bytes_change':after['reported_available_bytes']-before['reported_available_bytes'],'skipped':skipped,'last_actor_models_retained':list(kept_meta),'preserved_data_and_results':True}
+out=Path('logs/review/diag_scratch_authorized_cleanup_01');out.mkdir(parents=True,exist_ok=False)
+(out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
+Path('STATUS.md').open('a').write('\n删除完成（'+datetime.datetime.now(datetime.timezone.utc).isoformat()+'）：仅按上述固定A/B清单逐文件核对inode/mtime/大小/所有者后删除。删除'+str(report['deleted_files'])+'个文件，原分配字节'+str(report['deleted_allocated_bytes'])+'；df/statvfs可用容量从'+str(before['reported_available_bytes'])+'变为'+str(after['reported_available_bytes'])+'字节。变动/不存在跳过'+str(len(skipped))+'项。两份最后actor模型原inode/size/mtime保留；HF基础模型、环境、世界对、视角表、结果与日志未删。文件数/容量原始快照及范围见logs/review/diag_scratch_authorized_cleanup_01/report.json。\n')
+print(json.dumps(report,sort_keys=True),flush=True)
+for command in (['df','-h',str(base)],['df','-i',str(base)]):
+ subprocess.run(command,check=True,timeout=15)
+
+# start: 2026-11-10T09:32:37
+{"after": {"file_limit_scope": "filesystem-reported counts; account-specific inode quota not independently established", "filesystem_files_available": 498925865802, "filesystem_files_total": 500000000000, "filesystem_files_used": 1074134198, "reported_available_bytes": 3230362306084864, "reported_total_bytes": 4370580475215872, "reported_used_bytes": 1140218169131008}, "authority": "43bc49c5", "available_bytes_change": 155437760512, "before": {"file_limit_scope": "filesystem-reported counts; account-specific inode quota not independently established", "filesystem_files_available": 498925846143, "filesystem_files_total": 500000000000, "filesystem_files_used": 1074153857, "reported_available_bytes": 3230206868324352, "reported_total_bytes": 4370570086973440, "reported_used_bytes": 1140363218649088}, "deleted_allocated_bytes": 154839588864, "deleted_files": 28574, "deleted_logical_bytes": 154771992208, "inventory": {"file": "logs/review/diag_scratch_authorized_inventory_01/manifest.json", "sha256": "d83cff6e924d089ba941ed7195ed80f65bead2b98c0d89c8454333b454734dd8"}, "last_actor_models_retained": ["/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/model_world_size_1_rank_0.pt", "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/model_world_size_1_rank_0.pt"], "preserved_data_and_results": true, "skipped": []}
+Filesystem                  Size  Used Avail Use% Mounted on
+hpfs.nus.edu.sg:/hpfs-main  3.9P  1.1P  2.9P  27% /scratch
+Filesystem                       Inodes      IUsed        IFree IUse% Mounted on
+hpfs.nus.edu.sg:/hpfs-main 500000000000 1074134202 498925865798    1% /scratch
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 147.98159973102156}
+# exit_code: 0

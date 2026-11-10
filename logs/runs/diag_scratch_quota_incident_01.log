@@ -1,0 +1,17 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_quota_incident_01 -- python3 -c import subprocess,json
+from concurrent.futures import ThreadPoolExecutor
+commands=[['df','-h','/scratch/e1583364','/home/svu/e1583364'],['du','-h','--max-depth=1','/scratch/e1583364/cvpr2027'],['du','-h','--max-depth=1','/scratch/e1583364']]
+def run(command):
+ try:
+  p=subprocess.run(command,text=True,capture_output=True,timeout=50)
+  return {'command':command,'exit_code':p.returncode,'stdout':p.stdout,'stderr':p.stderr}
+ except subprocess.TimeoutExpired as e:
+  return {'command':command,'timed_out':True,'stdout':(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else e.stdout,'stderr':(e.stderr or b'').decode() if isinstance(e.stderr,bytes) else e.stderr}
+for result in ThreadPoolExecutor(max_workers=2).map(run,commands):print(json.dumps(result),flush=True)
+
+# start: 2026-11-10T09:23:36
+{"command": ["df", "-h", "/scratch/e1583364", "/home/svu/e1583364"], "exit_code": 0, "stdout": "Filesystem                                     Size  Used Avail Use% Mounted on\nhpfs.nus.edu.sg:/hpfs-main                     1.1T  1.1T     0 100% /scratch\nhpcnas100gsto.nus.edu.sg:/ifs/hpcnas/hpc_home   40G   18G   23G  45% /nfs/home/svu\n", "stderr": ""}
+{"command": ["du", "-h", "--max-depth=1", "/scratch/e1583364/cvpr2027"], "timed_out": true, "stdout": "32M\t/scratch/e1583364/cvpr2027/vulkan-runtime\n397M\t/scratch/e1583364/cvpr2027/miniforge3\n16K\t/scratch/e1583364/cvpr2027/diag_look_table_census_morning_01_inputs\n1.1G\t/scratch/e1583364/cvpr2027/conda\n12G\t/scratch/e1583364/cvpr2027/cache\n1.1G\t/scratch/e1583364/cvpr2027/ai2thor\n80M\t/scratch/e1583364/cvpr2027/t01_collision_probe\n", "stderr": null}
+{"command": ["du", "-h", "--max-depth=1", "/scratch/e1583364"], "timed_out": true, "stdout": "4.0K\t/scratch/e1583364/.git\n187G\t/scratch/e1583364/hf_ckpts\n36K\t/scratch/e1583364/.cache\n8.0K\t/scratch/e1583364/hf_cache\n17G\t/scratch/e1583364/qwen3vl_specialists\n2.5M\t/scratch/e1583364/.hf_cache\n", "stderr": null}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 50.139821079035755}
+# exit_code: 0

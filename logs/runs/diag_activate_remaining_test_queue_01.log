@@ -1,0 +1,111 @@
+# run_logged: python3 -m src.tools.record_command --name diag_activate_remaining_test_queue_01 -- python3 -c """One-off immutable metadata handoff; no submission, source edits, or queue mutation."""
+import copy
+import json
+import os
+from pathlib import Path
+import sys
+
+from src.tools import gpu_shared_claim as shared
+from src.tools import g01_shared_unit as g01
+from src.tools import pbs_mixed_accounting as mixed
+
+root = Path.cwd().resolve()
+prepared_ref = {'file': 'configs/shared_test_priority_queue_01.json',
+                'sha256': '0830764a3954847c66a27862ffbe58d54bf093c0d726b128b8d04e1f16b19109'}
+first_ref = {'file': 'configs/shared_test_priority_first_unit_01.json',
+             'sha256': '3bb94a7e3af05dfd6c2e52a9db629e82a0617990bf82d359b7f5a041fe90e375'}
+prepared, _ = shared.load_plan(prepared_ref['file'], prepared_ref['sha256'], root=root)
+first, _ = shared.load_plan(first_ref['file'], first_ref['sha256'], root=root)
+assert os.environ.get('CVPR_RUN_NAME')
+assert len(first['units']) == 1 and first['units'][0]['name'] == 'gen_test_s16_round2_s02'
+assert not Path('/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01').exists()
+
+def ref(path):
+    return mixed.reference(root / path, root)
+
+# The original mixed producer authenticates the exact PBS, claim, release,
+# cleanup and child-result chain. Preserve all failed/deadline records.
+mixed_ref = ref('results/gpu_pack_test_priority_first_01_mixed_accounting.json')
+report, _ = mixed.logged(root, mixed_ref)
+assert report['_meta']['exit_code'] == 0
+cfg = report['config']
+actual = mixed.compute_split(root, cfg['payload_reference'], cfg['pack_reference'], cfg['account_reference'])
+assert actual == report['metrics'] and actual['unit_count'] == 1
+pack, _ = mixed.logged(root, cfg['pack_reference'])
+owned = pack['metrics']['unit_runs']
+assert len(owned) == 1 and owned[0]['unit_id'] == first['units'][0]['unit_id']
+assert owned[0]['cleanup_errors'] == [] and owned[0]['result_reference']
+child, _ = mixed.logged(root, owned[0]['result_reference'])
+assert child['_meta']['command'] == first['units'][0]['command']
+
+# An original independently checked source is a separate science prerequisite;
+# never substitute scheduling accounting for pair validity.
+checkpoint_ref = ref(sys.argv[1])
+checkpoint, _ = mixed.logged(root, checkpoint_ref)
+assert checkpoint['_meta']['exit_code'] == 0
+expected_name = 't01v2_checkpoint_test_s16_s02_01'
+assert checkpoint_ref['file'] == 'results/'+expected_name+'.json'
+rows = child['metrics']['scene_runs']
+requested = checkpoint['config']['requested_sources']
+assert len(rows) == 6 and all(not row.get('provenance_error') and row.get('source') for row in rows)
+assert len(requested) == 6 and set(requested) == {row['result_path'] for row in rows}
+assert checkpoint['_meta']['name'] == checkpoint['config']['name'] == expected_name
+assert checkpoint['_meta']['command'] == ['python3','-m','src.tools.t01v2_g01_review_checkpoint',
+    '--name',expected_name,'--source',*requested]
+assert checkpoint['metrics']['kind'] == 't01v2_review_checkpoint' and checkpoint['metrics']['errors'] == []
+assert checkpoint['metrics']['status'] == 'checkpoint_ready_for_human_review'
+fields = lambda row: (row['file'],row['sha256'],row['metrics_sha256'])
+assert sorted(map(fields,checkpoint['sources'])) == sorted(fields(row['source']) for row in rows)
+
+# S03/S04 were actually submitted standalone and reserve their original keys.
+reservations = []
+for number in (3, 4):
+    name = f'gen_test_s16_round2_s{number:02d}'
+    payload_paths = list((root/'logs/pbs').glob(name+'-*/payload.json'))
+    assert len(payload_paths) == 1
+    payload_ref = ref(payload_paths[0])
+    receipt_ref = ref(payload_paths[0].with_name('submission.json'))
+    payload, _ = mixed.read_reference(root, payload_ref)
+    external = copy.deepcopy(next(u for u in prepared['units'] if u['name']==name))
+    external['command'] = payload['command']
+    external['references']['quota_plan'] = {'file': mixed.option(payload['command'], '--quota-plan'),
+                                          'sha256': mixed.option(payload['command'], '--quota-plan-sha256')}
+    external['identity'], external['claim_keys'] = g01.validate_unit(external, root, external=True)
+    external['unit_id'] = shared.canonical_hash(external['identity'])
+    reservation = {'unit': external, 'payload_reference': payload_ref, 'receipt_reference': receipt_ref}
+    job = shared.validate_external(reservation, root)
+    if number == 3:
+        assert job == '709438.hopper-m-02'
+    reservations.append(reservation)
+
+active = copy.deepcopy(prepared)
+removed = [u for u in active['units'] if u['name'] in tuple(f'gen_test_s16_round2_s{i:02d}' for i in (2,3,4))]
+assert len(removed) == 3
+assert next(u for u in removed if u['name']=='gen_test_s16_round2_s02') == first['units'][0]
+active['units'] = [u for u in active['units'] if u not in removed]
+active['external_reservations'].extend(reservations)
+reserved_keys = {k for u in removed for k in u['claim_keys']}
+assert not reserved_keys.intersection(k for u in active['units'] for k in u['claim_keys'])
+assert [u['name'] for u in active['units'] if u['budget_group']=='G01'] == [f'gen_test_s16_round2_s{i:02d}' for i in range(5,8)]
+assert len([u for u in active['units'] if u['budget_group']=='T02']) == 7
+active['migration_proof']['first_unit_handoff'] = {
+    'prepared_plan_reference': prepared_ref,
+    'first_unit_plan_reference': first_ref,
+    'first_unit_mixed_accounting': mixed_ref,
+    'first_unit_checkpoint_reference': checkpoint_ref,
+    'first_unit_original_claimed_interval': owned[0],
+    'excluded_unit_ids': [u['unit_id'] for u in removed],
+    'scope': 'Only never-claimed remaining units are runnable; conservative original ticket reservations remain. S02 is preserved as an ended shared child, not forged as a standalone PBS job.'}
+shared.validate_plan(active, root=root)
+target = root/'configs/shared_test_priority_active_01.json'
+with target.open('xb') as output:
+    output.write(shared.canonical(active)+b'\n')
+    output.flush()
+    os.fsync(output.fileno())
+target.chmod(0o444)
+print('ACTIVE_TEST_PRIORITY_PLAN_JSON: '+json.dumps({'plan_reference': ref(target), 'units':[u['name'] for u in active['units']], 'no_submission_performed':True},sort_keys=True))
+ results/t01v2_checkpoint_test_s16_s02_01.json
+# start: 2026-11-10T09:35:12
+ACTIVE_TEST_PRIORITY_PLAN_JSON: {"no_submission_performed": true, "plan_reference": {"bytes": 84011, "file": "configs/shared_test_priority_active_01.json", "sha256": "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a"}, "units": ["gen_test_s16_round2_s05", "gen_test_s16_round2_s06", "gen_test_s16_round2_s07", "t02_export_train_six_20", "t02_export_train_six_21", "t02_export_train_six_22", "t02_export_train_six_23", "t02_export_train_six_24", "t02_export_train_six_25", "t02_export_train_six_26"]}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 3.9724270909791812}
+# exit_code: 0

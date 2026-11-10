@@ -1,0 +1,29 @@
+{
+  "name": "diag_scratch_recovery_publish_audit_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_scratch_recovery_publish_audit_01",
+    "--",
+    "python3",
+    "-c",
+    "import pathlib,subprocess\nnames=[]\nfor raw in subprocess.check_output(['git','status','--porcelain=v1','-z','--untracked-files=all','--','results/']).split(b'\\0'):\n if not raw:continue\n p=raw[3:].decode()\n if not p.startswith('results/_archive/') and p.endswith('.json') and pathlib.Path('logs/runs',pathlib.Path(p).stem+'.meta.json').is_file():names.append(p)\nassert names\nraise SystemExit(subprocess.call(['python3','scripts/audit_provenance.py',*names]))\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T09:40:13",
+  "log_path": "logs/runs/diag_scratch_recovery_publish_audit_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "43bc49c5bb7b8710d2931ae80175538535ae9036",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_scratch_recovery_publish_audit_01.diff",
+  "end": "2026-11-10T09:40:27",
+  "duration_sec": 11.6,
+  "exit_code": 0,
+  "metrics_sha256": "5c3b8397ab928755cc364053f1cff049298471613c852d4c133828dbdd956559"
+}

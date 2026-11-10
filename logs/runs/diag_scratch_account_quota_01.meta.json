@@ -1,0 +1,29 @@
+{
+  "name": "diag_scratch_account_quota_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_scratch_account_quota_01",
+    "--",
+    "python3",
+    "-c",
+    "import json,subprocess\nfrom concurrent.futures import ThreadPoolExecutor\ncommands=[['hpc','quota'],['hpc','help'],['quota','-s']]\ndef run(cmd):\n try:\n  r=subprocess.run(cmd,text=True,capture_output=True,timeout=20)\n  return {'command':cmd,'exit_code':r.returncode,'stdout':r.stdout,'stderr':r.stderr}\n except (subprocess.TimeoutExpired,OSError) as e:return {'command':cmd,'error':str(e)}\nfor row in ThreadPoolExecutor(max_workers=3).map(run,commands):print(json.dumps(row),flush=True)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T09:37:51",
+  "log_path": "logs/runs/diag_scratch_account_quota_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "43bc49c5bb7b8710d2931ae80175538535ae9036",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_scratch_account_quota_01.diff",
+  "end": "2026-11-10T09:38:13",
+  "duration_sec": 20.3,
+  "exit_code": 0,
+  "metrics_sha256": "ada8f2e5b0320d955b7f67d8bb79a183508dffd9fb2381ee21232e5ea7df2612"
+}

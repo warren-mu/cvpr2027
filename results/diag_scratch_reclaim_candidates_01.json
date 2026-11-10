@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 43.021435261005536
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nbase=Path('/scratch/e1583364/cvpr2027')\nprint('DIRECTORIES: '+json.dumps([p.name for p in base.iterdir() if p.is_dir()]),flush=True)\ntargets=[base/'cache',base/'t02_export',base/'t02_export_parallel',base/'t01v2',base/'t00b',base/'smoke_e2e',base/'shared_gpu_queue']\ndef run(p):\n if not p.exists(): return {'path':str(p),'exists':False}\n try:\n  r=subprocess.run(['du','-h','--max-depth=1',str(p)],text=True,capture_output=True,timeout=35)\n  return {'path':str(p),'exit_code':r.returncode,'stdout':r.stdout,'stderr':r.stderr}\n except subprocess.TimeoutExpired as e:\n  return {'path':str(p),'timed_out':True,'stdout':e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout}\nfor value in ThreadPoolExecutor(max_workers=2).map(run,targets):print(json.dumps(value),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_scratch_reclaim_candidates_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_scratch_reclaim_candidates_01",
+      "--",
+      "python3",
+      "-c",
+      "import subprocess,json\nfrom pathlib import Path\nfrom concurrent.futures import ThreadPoolExecutor\nbase=Path('/scratch/e1583364/cvpr2027')\nprint('DIRECTORIES: '+json.dumps([p.name for p in base.iterdir() if p.is_dir()]),flush=True)\ntargets=[base/'cache',base/'t02_export',base/'t02_export_parallel',base/'t01v2',base/'t00b',base/'smoke_e2e',base/'shared_gpu_queue']\ndef run(p):\n if not p.exists(): return {'path':str(p),'exists':False}\n try:\n  r=subprocess.run(['du','-h','--max-depth=1',str(p)],text=True,capture_output=True,timeout=35)\n  return {'path':str(p),'exit_code':r.returncode,'stdout':r.stdout,'stderr':r.stderr}\n except subprocess.TimeoutExpired as e:\n  return {'path':str(p),'timed_out':True,'stdout':e.stdout.decode() if isinstance(e.stdout,bytes) else e.stdout}\nfor value in ThreadPoolExecutor(max_workers=2).map(run,targets):print(json.dumps(value),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:26:12",
+    "log_path": "logs/runs/diag_scratch_reclaim_candidates_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "bdc26ab89c180c95207f3acfbd713e8d08a6565d",
+    "git_dirty": false,
+    "end": "2026-11-10T09:26:59",
+    "duration_sec": 43.1,
+    "exit_code": 0,
+    "metrics_sha256": "18e4b5004d95e16419b61d1708a212fd0df49a1f495b6803aa28fc374ffcc004"
+  }
+}

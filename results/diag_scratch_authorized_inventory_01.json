@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 25.961292710970156
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "import os,json,stat,hashlib,datetime\nfrom pathlib import Path\nbase=Path('/scratch/e1583364/cvpr2027')\ncache_roots=[base/'cache'/name for name in ('pip','torch_extensions','triton','pycache')]\nweights=[]\nfor run,job in [('smoke_e2e_T0_02','707612.hopper-m-02'),('smoke_e2e_T3_01','707642.hopper-m-02')]:\n root=base/'smoke_e2e'/run/job/'checkpoint'\n weights += [root/side/(kind+'_world_size_1_rank_0.pt') for side,kind in [('actor','optim'),('actor','extra_state'),('critic','model'),('critic','optim'),('critic','extra_state')]]\ngroups=[]; files=[]\ndef entry(path,category):\n st=path.lstat()\n assert stat.S_ISREG(st.st_mode) and st.st_uid==os.getuid(),str(path)\n return {'path':str(path),'category':category,'bytes':st.st_size,'allocated_bytes':st.st_blocks*512,'device':st.st_dev,'inode':st.st_ino,'mtime_ns':st.st_mtime_ns,'uid':st.st_uid}\nfor directory in cache_roots:\n assert directory.is_dir() and not directory.is_symlink()\n selected=[]\n for parent,dirs,names in os.walk(directory,followlinks=False):\n  assert all(not (Path(parent)/name).is_symlink() for name in dirs)\n  selected += [entry(Path(parent)/name,'A') for name in names]\n files.extend(selected)\n groups.append({'path':str(directory),'category':'A','files':len(selected),'bytes':sum(r['bytes'] for r in selected),'allocated_bytes':sum(r['allocated_bytes'] for r in selected)})\nfor path in weights:\n row=entry(path,'B');files.append(row)\n groups.append({'path':str(path),'category':'B','files':1,'bytes':row['bytes'],'allocated_bytes':row['allocated_bytes']})\n# Exact existing filenames named by any result/audit are ineligible. Keep all\n# directory descriptors, original results/logs, and last actor model intact.\nprotected=[]\ncandidate_paths={r['path'] for r in files}\naudit_paths=list(Path('logs').glob('*audit*.json'))+list(Path('logs/reports').glob('*audit*.json'))\nfor source in [*Path('results').glob('*.json'),*audit_paths]:\n text=source.read_text(errors='replace')\n if not any(str(root) in text for root in [*cache_roots,*(p.parent for p in weights)]): continue\n for path in candidate_paths:\n  if path in text: protected.append({'candidate':path,'source':str(source)})\nassert not protected,'Referenced candidates: '+repr(protected)\nassert len({r['path'] for r in files})==len(files)\nout=Path('logs/review/diag_scratch_authorized_inventory_01');out.mkdir(parents=True,exist_ok=False)\nmanifest={'authority':'43bc49c5 AGENTS scratch storage and explicit human instruction','created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'groups':groups,'files':files,'protected_matches':protected,'last_actor_models_preserved':True,'deletion_performed':False}\ntarget=out/'manifest.json';target.write_text(json.dumps(manifest,indent=2)+'\\n')\nstatus=Path('STATUS.md')\nlines=['\\n### 2026-11-09 scratch授权清理：删除前清单（43bc49c5）\\n','只清理下表A缓存和B旧冒烟optimizer/critic/extra-state文件；保留最后actor模型、其配置、所有结果/日志、世界对/视角表、基础HF模型和环境。逐文件所有者、路径、inode、size/mtime清单及结果/审计引用排除检查见 '+str(target)+'。尚未执行删除。\\n','|类别|路径|文件数|文件字节|分配字节|','|---|---|---:|---:|---:|']\nfor row in groups:lines.append('|{category}|{path}|{files}|{bytes}|{allocated_bytes}|'.format(**row))\nstatus.write_text(status.read_text()+'\\n'.join(lines)+'\\n')\nprint(json.dumps({'manifest':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'groups':groups,'deletion_performed':False},sort_keys=True),flush=True)\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_scratch_authorized_inventory_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_scratch_authorized_inventory_01",
+      "--",
+      "python3",
+      "-c",
+      "import os,json,stat,hashlib,datetime\nfrom pathlib import Path\nbase=Path('/scratch/e1583364/cvpr2027')\ncache_roots=[base/'cache'/name for name in ('pip','torch_extensions','triton','pycache')]\nweights=[]\nfor run,job in [('smoke_e2e_T0_02','707612.hopper-m-02'),('smoke_e2e_T3_01','707642.hopper-m-02')]:\n root=base/'smoke_e2e'/run/job/'checkpoint'\n weights += [root/side/(kind+'_world_size_1_rank_0.pt') for side,kind in [('actor','optim'),('actor','extra_state'),('critic','model'),('critic','optim'),('critic','extra_state')]]\ngroups=[]; files=[]\ndef entry(path,category):\n st=path.lstat()\n assert stat.S_ISREG(st.st_mode) and st.st_uid==os.getuid(),str(path)\n return {'path':str(path),'category':category,'bytes':st.st_size,'allocated_bytes':st.st_blocks*512,'device':st.st_dev,'inode':st.st_ino,'mtime_ns':st.st_mtime_ns,'uid':st.st_uid}\nfor directory in cache_roots:\n assert directory.is_dir() and not directory.is_symlink()\n selected=[]\n for parent,dirs,names in os.walk(directory,followlinks=False):\n  assert all(not (Path(parent)/name).is_symlink() for name in dirs)\n  selected += [entry(Path(parent)/name,'A') for name in names]\n files.extend(selected)\n groups.append({'path':str(directory),'category':'A','files':len(selected),'bytes':sum(r['bytes'] for r in selected),'allocated_bytes':sum(r['allocated_bytes'] for r in selected)})\nfor path in weights:\n row=entry(path,'B');files.append(row)\n groups.append({'path':str(path),'category':'B','files':1,'bytes':row['bytes'],'allocated_bytes':row['allocated_bytes']})\n# Exact existing filenames named by any result/audit are ineligible. Keep all\n# directory descriptors, original results/logs, and last actor model intact.\nprotected=[]\ncandidate_paths={r['path'] for r in files}\naudit_paths=list(Path('logs').glob('*audit*.json'))+list(Path('logs/reports').glob('*audit*.json'))\nfor source in [*Path('results').glob('*.json'),*audit_paths]:\n text=source.read_text(errors='replace')\n if not any(str(root) in text for root in [*cache_roots,*(p.parent for p in weights)]): continue\n for path in candidate_paths:\n  if path in text: protected.append({'candidate':path,'source':str(source)})\nassert not protected,'Referenced candidates: '+repr(protected)\nassert len({r['path'] for r in files})==len(files)\nout=Path('logs/review/diag_scratch_authorized_inventory_01');out.mkdir(parents=True,exist_ok=False)\nmanifest={'authority':'43bc49c5 AGENTS scratch storage and explicit human instruction','created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'groups':groups,'files':files,'protected_matches':protected,'last_actor_models_preserved':True,'deletion_performed':False}\ntarget=out/'manifest.json';target.write_text(json.dumps(manifest,indent=2)+'\\n')\nstatus=Path('STATUS.md')\nlines=['\\n### 2026-11-09 scratch授权清理：删除前清单（43bc49c5）\\n','只清理下表A缓存和B旧冒烟optimizer/critic/extra-state文件；保留最后actor模型、其配置、所有结果/日志、世界对/视角表、基础HF模型和环境。逐文件所有者、路径、inode、size/mtime清单及结果/审计引用排除检查见 '+str(target)+'。尚未执行删除。\\n','|类别|路径|文件数|文件字节|分配字节|','|---|---|---:|---:|---:|']\nfor row in groups:lines.append('|{category}|{path}|{files}|{bytes}|{allocated_bytes}|'.format(**row))\nstatus.write_text(status.read_text()+'\\n'.join(lines)+'\\n')\nprint(json.dumps({'manifest':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'groups':groups,'deletion_performed':False},sort_keys=True),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T09:30:02",
+    "log_path": "logs/runs/diag_scratch_authorized_inventory_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "43bc49c5bb7b8710d2931ae80175538535ae9036",
+    "git_dirty": false,
+    "end": "2026-11-10T09:30:32",
+    "duration_sec": 26.1,
+    "exit_code": 0,
+    "metrics_sha256": "273f4e699a7b858c4d94693f3d76bf93a66d68a694ff8d432ba052468b1aebf9"
+  }
+}

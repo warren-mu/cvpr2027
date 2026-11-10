@@ -1,0 +1,16 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_account_quota_01 -- python3 -c import json,subprocess
+from concurrent.futures import ThreadPoolExecutor
+commands=[['hpc','quota'],['hpc','help'],['quota','-s']]
+def run(cmd):
+ try:
+  r=subprocess.run(cmd,text=True,capture_output=True,timeout=20)
+  return {'command':cmd,'exit_code':r.returncode,'stdout':r.stdout,'stderr':r.stderr}
+ except (subprocess.TimeoutExpired,OSError) as e:return {'command':cmd,'error':str(e)}
+for row in ThreadPoolExecutor(max_workers=3).map(run,commands):print(json.dumps(row),flush=True)
+
+# start: 2026-11-10T09:37:51
+{"command": ["hpc", "quota"], "exit_code": 1, "stdout": "\n -----------------------------------------------------------------\n  Disk space for HPC Hopper home directory\n  Report at:  2026-11-10 08:50\n -----------------------------------------------------------------\n          HPC Home Dir      Usage      Quota      Status\n    /home/svu/e1583364                                 \n =================================================================\n\n\n-------------------------------------------------------------------------\n  Disk space for Hopper /scratch/e1583364 [Report at:  2026-11-10 09:33]\n-------------------------------------------------------------------------\n        user/group  ||           size          ||    chunk files \n          username  ||    used    |    hard    ||    used   |  hard\n          e1583364  ||   1024.0GB |    1.0TB   ||  2936429  | unlimited \n=========================================================================\n Alert: Disk quota usage exceeded, Please housekeep to ensure have enough free space.\n\n", "stderr": "awk: cmd. line:1: (FILENAME=- FNR=1) fatal: division by zero attempted\n"}
+{"command": ["hpc", "help"], "exit_code": 0, "stdout": "\n  Use command as:\n\n  > hpc  option\n\n  option: \n          [AI|ai|hopper]            ==> to list instruction on AI & Deep Learning job submission and job monitor\n          [dos|win|windows]         ==> to list instruction on common problem with Windows text file/program\n          [pbs|PBS]                 ==> to list the common PBS job scheduling commands and flag options\n          [gstat|q]                 ==> to list latest status of Hopper GPU cluster nodes and batch queues\n          [project|proj] [date]     ==> to list the Name, Credits, Team Members, and End_date of Project(s)\n          [project-usage]           ==> to list the project usage by members in a fixed time window.\n          [quota|space|s]           ==> to list available disk space and quota limit\n          [space --project]         ==> to list and check disk space usage and quota of CFP Project Folders.\n          [space project=CFP04-*]   ==> to list and check disk space usage and quota of a CFP Project Folder.\n          [how many GPUs can I use] ==> to list and check how many GPUs can use to run different sized jobs.\n          [ssh access to GPU node]  ==> to list steps on ssh access to GPU node for debug/monitor of a running job.\n\n", "stderr": ""}
+{"command": ["quota", "-s"], "error": "Command '['quota', '-s']' timed out after 20 seconds"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 20.180837676045485}
+# exit_code: 0

@@ -1,0 +1,29 @@
+diff --git a/STATUS.md b/STATUS.md
+index a2581a03..6bdfeb3a 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1388,3 +1388,24 @@ S03结束后的单卡槽已补S04=709455（原固定六场景、同版本/配额
+ 14f9e512保留的两份超50MB原diff已用gzip无损归档，raw仍在Hopper，恢复指令及解压SHA校验在logs/review/diag_diff_lossless_archive_01/manifest.json；没有修改原diff/meta或删除失败证据。
+ 
+ - **2026-11-09 20:28**（人类：「你可以替我做一些决定，把之前没用的删了」；Claude 定范围）：scratch 约 1.1 TB 已满，31 对复核重跑因写配置文件失败。批准删除 A 类（可再生缓存）和 B 类（冒烟、测速、调试运行的模型权重与优化器状态，保留它们的结果和日志）；证据、世界对、视角表、训练池、测试集、results 及被引用文件一律不删。规则写进 AGENTS.md。
++
++### 2026-11-09 scratch授权清理：删除前清单（43bc49c5）
++
++只清理下表A缓存和B旧冒烟optimizer/critic/extra-state文件；保留最后actor模型、其配置、所有结果/日志、世界对/视角表、基础HF模型和环境。逐文件所有者、路径、inode、size/mtime清单及结果/审计引用排除检查见 logs/review/diag_scratch_authorized_inventory_01/manifest.json。尚未执行删除。
++
++|类别|路径|文件数|文件字节|分配字节|
++|---|---|---:|---:|---:|
++|A|/scratch/e1583364/cvpr2027/cache/pip|1363|4295304615|4298469376|
++|A|/scratch/e1583364/cvpr2027/cache/torch_extensions|8|1702340|1720320|
++|A|/scratch/e1583364/cvpr2027/cache/triton|78|1266299|1454080|
++|A|/scratch/e1583364/cvpr2027/cache/pycache|27115|287645134|351846400|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt|1|30037047602|30037049344|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt|1|15018894138|15018897408|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt|1|30037065906|30037069824|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt|1|30037047602|30037049344|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt|1|15018894138|15018897408|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt|1|30037065906|30037069824|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt|1|14632|16384|

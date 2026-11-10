@@ -1,0 +1,29 @@
+{
+  "name": "diag_scratch_authorized_cleanup_01",
+  "command": [
+    "python3",
+    "-m",
+    "src.tools.record_command",
+    "--name",
+    "diag_scratch_authorized_cleanup_01",
+    "--",
+    "python3",
+    "-c",
+    "import os,json,stat,hashlib,datetime,subprocess\nfrom pathlib import Path\np=Path('logs/review/diag_scratch_authorized_inventory_01/manifest.json')\nassert hashlib.sha256(p.read_bytes()).hexdigest()=='d83cff6e924d089ba941ed7195ed80f65bead2b98c0d89c8454333b454734dd8'\nmanifest=json.loads(p.read_text())\nassert manifest['deletion_performed'] is False and not manifest['protected_matches']\nassert str(p) in Path('STATUS.md').read_text()\nbase=Path('/scratch/e1583364/cvpr2027')\nkept=[base/'smoke_e2e'/run/job/'checkpoint/actor/model_world_size_1_rank_0.pt' for run,job in [('smoke_e2e_T0_02','707612.hopper-m-02'),('smoke_e2e_T3_01','707642.hopper-m-02')]]\nkept_meta={str(f):(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in kept}\ndef fs():\n s=os.statvfs(base)\n return {'reported_total_bytes':s.f_blocks*s.f_frsize,'reported_used_bytes':(s.f_blocks-s.f_bfree)*s.f_frsize,'reported_available_bytes':s.f_bavail*s.f_frsize,'filesystem_files_total':s.f_files,'filesystem_files_used':s.f_files-s.f_ffree,'filesystem_files_available':s.f_favail,'file_limit_scope':'filesystem-reported counts; account-specific inode quota not independently established'}\nbefore=fs();deleted=[];skipped=[]\n# Free large authorized B files first; the immutable list cannot grow.\nfor row in sorted(manifest['files'],key=lambda r:(r['category']!='B',r['path'])):\n f=Path(row['path'])\n assert f.is_relative_to(base) and row['category'] in ('A','B')\n try: s=f.lstat()\n except FileNotFoundError: skipped.append({'path':str(f),'reason':'already_absent'});continue\n current=(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_uid)\n expected=(row['device'],row['inode'],row['bytes'],row['mtime_ns'],row['uid'])\n if current!=expected or not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid():\n  skipped.append({'path':str(f),'reason':'changed_since_inventory'});continue\n if row['category']=='B':\n  assert f.suffix=='.pt' and f.name!='model_world_size_1_rank_0.pt' or f.parent.name=='critic'\n else: assert any(f.is_relative_to(base/'cache'/name) for name in ('pip','torch_extensions','triton','pycache'))\n f.unlink()\n deleted.append(row)\nafter=fs()\nassert kept_meta=={str(f):(f.stat().st_ino,f.stat().st_size,f.stat().st_mtime_ns) for f in kept}\nreport={'authority':'43bc49c5','inventory':{'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()},'before':before,'after':after,'deleted_files':len(deleted),'deleted_logical_bytes':sum(r['bytes'] for r in deleted),'deleted_allocated_bytes':sum(r['allocated_bytes'] for r in deleted),'available_bytes_change':after['reported_available_bytes']-before['reported_available_bytes'],'skipped':skipped,'last_actor_models_retained':list(kept_meta),'preserved_data_and_results':True}\nout=Path('logs/review/diag_scratch_authorized_cleanup_01');out.mkdir(parents=True,exist_ok=False)\n(out/'report.json').write_text(json.dumps(report,indent=2)+'\\n')\nPath('STATUS.md').open('a').write('\\n删除完成（'+datetime.datetime.now(datetime.timezone.utc).isoformat()+'）：仅按上述固定A/B清单逐文件核对inode/mtime/大小/所有者后删除。删除'+str(report['deleted_files'])+'个文件，原分配字节'+str(report['deleted_allocated_bytes'])+'；df/statvfs可用容量从'+str(before['reported_available_bytes'])+'变为'+str(after['reported_available_bytes'])+'字节。变动/不存在跳过'+str(len(skipped))+'项。两份最后actor模型原inode/size/mtime保留；HF基础模型、环境、世界对、视角表、结果与日志未删。文件数/容量原始快照及范围见logs/review/diag_scratch_authorized_cleanup_01/report.json。\\n')\nprint(json.dumps(report,sort_keys=True),flush=True)\nfor command in (['df','-h',str(base)],['df','-i',str(base)]):\n subprocess.run(command,check=True,timeout=15)\n"
+  ],
+  "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+  "host": "hopper-l-01",
+  "gpus": null,
+  "seed": null,
+  "start": "2026-11-10T09:32:37",
+  "log_path": "logs/runs/diag_scratch_authorized_cleanup_01.log",
+  "producer": "scripts/run_logged.py",
+  "role": null,
+  "git_commit": "43bc49c5bb7b8710d2931ae80175538535ae9036",
+  "git_dirty": true,
+  "git_diff_path": "logs/runs/diag_scratch_authorized_cleanup_01.diff",
+  "end": "2026-11-10T09:35:08",
+  "duration_sec": 148.1,
+  "exit_code": 0,
+  "metrics_sha256": "fee44493943f80d72d53c00d8b1ccbeb4ddbe2f127775135562053bfd16ec30d"
+}

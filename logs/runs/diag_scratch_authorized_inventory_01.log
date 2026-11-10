@@ -1,0 +1,49 @@
+# run_logged: python3 -m src.tools.record_command --name diag_scratch_authorized_inventory_01 -- python3 -c import os,json,stat,hashlib,datetime
+from pathlib import Path
+base=Path('/scratch/e1583364/cvpr2027')
+cache_roots=[base/'cache'/name for name in ('pip','torch_extensions','triton','pycache')]
+weights=[]
+for run,job in [('smoke_e2e_T0_02','707612.hopper-m-02'),('smoke_e2e_T3_01','707642.hopper-m-02')]:
+ root=base/'smoke_e2e'/run/job/'checkpoint'
+ weights += [root/side/(kind+'_world_size_1_rank_0.pt') for side,kind in [('actor','optim'),('actor','extra_state'),('critic','model'),('critic','optim'),('critic','extra_state')]]
+groups=[]; files=[]
+def entry(path,category):
+ st=path.lstat()
+ assert stat.S_ISREG(st.st_mode) and st.st_uid==os.getuid(),str(path)
+ return {'path':str(path),'category':category,'bytes':st.st_size,'allocated_bytes':st.st_blocks*512,'device':st.st_dev,'inode':st.st_ino,'mtime_ns':st.st_mtime_ns,'uid':st.st_uid}
+for directory in cache_roots:
+ assert directory.is_dir() and not directory.is_symlink()
+ selected=[]
+ for parent,dirs,names in os.walk(directory,followlinks=False):
+  assert all(not (Path(parent)/name).is_symlink() for name in dirs)
+  selected += [entry(Path(parent)/name,'A') for name in names]
+ files.extend(selected)
+ groups.append({'path':str(directory),'category':'A','files':len(selected),'bytes':sum(r['bytes'] for r in selected),'allocated_bytes':sum(r['allocated_bytes'] for r in selected)})
+for path in weights:
+ row=entry(path,'B');files.append(row)
+ groups.append({'path':str(path),'category':'B','files':1,'bytes':row['bytes'],'allocated_bytes':row['allocated_bytes']})
+# Exact existing filenames named by any result/audit are ineligible. Keep all
+# directory descriptors, original results/logs, and last actor model intact.
+protected=[]
+candidate_paths={r['path'] for r in files}
+audit_paths=list(Path('logs').glob('*audit*.json'))+list(Path('logs/reports').glob('*audit*.json'))
+for source in [*Path('results').glob('*.json'),*audit_paths]:
+ text=source.read_text(errors='replace')
+ if not any(str(root) in text for root in [*cache_roots,*(p.parent for p in weights)]): continue
+ for path in candidate_paths:
+  if path in text: protected.append({'candidate':path,'source':str(source)})
+assert not protected,'Referenced candidates: '+repr(protected)
+assert len({r['path'] for r in files})==len(files)
+out=Path('logs/review/diag_scratch_authorized_inventory_01');out.mkdir(parents=True,exist_ok=False)
+manifest={'authority':'43bc49c5 AGENTS scratch storage and explicit human instruction','created_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'groups':groups,'files':files,'protected_matches':protected,'last_actor_models_preserved':True,'deletion_performed':False}
+target=out/'manifest.json';target.write_text(json.dumps(manifest,indent=2)+'\n')
+status=Path('STATUS.md')
+lines=['\n### 2026-11-09 scratch授权清理：删除前清单（43bc49c5）\n','只清理下表A缓存和B旧冒烟optimizer/critic/extra-state文件；保留最后actor模型、其配置、所有结果/日志、世界对/视角表、基础HF模型和环境。逐文件所有者、路径、inode、size/mtime清单及结果/审计引用排除检查见 '+str(target)+'。尚未执行删除。\n','|类别|路径|文件数|文件字节|分配字节|','|---|---|---:|---:|---:|']
+for row in groups:lines.append('|{category}|{path}|{files}|{bytes}|{allocated_bytes}|'.format(**row))
+status.write_text(status.read_text()+'\n'.join(lines)+'\n')
+print(json.dumps({'manifest':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'groups':groups,'deletion_performed':False},sort_keys=True),flush=True)
+
+# start: 2026-11-10T09:30:02
+{"deletion_performed": false, "groups": [{"allocated_bytes": 4298469376, "bytes": 4295304615, "category": "A", "files": 1363, "path": "/scratch/e1583364/cvpr2027/cache/pip"}, {"allocated_bytes": 1720320, "bytes": 1702340, "category": "A", "files": 8, "path": "/scratch/e1583364/cvpr2027/cache/torch_extensions"}, {"allocated_bytes": 1454080, "bytes": 1266299, "category": "A", "files": 78, "path": "/scratch/e1583364/cvpr2027/cache/triton"}, {"allocated_bytes": 351846400, "bytes": 287645134, "category": "A", "files": 27115, "path": "/scratch/e1583364/cvpr2027/cache/pycache"}, {"allocated_bytes": 30037049344, "bytes": 30037047602, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt"}, {"allocated_bytes": 16384, "bytes": 14632, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt"}, {"allocated_bytes": 15018897408, "bytes": 15018894138, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt"}, {"allocated_bytes": 30037069824, "bytes": 30037065906, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt"}, {"allocated_bytes": 16384, "bytes": 14632, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt"}, {"allocated_bytes": 30037049344, "bytes": 30037047602, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt"}, {"allocated_bytes": 16384, "bytes": 14632, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt"}, {"allocated_bytes": 15018897408, "bytes": 15018894138, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt"}, {"allocated_bytes": 30037069824, "bytes": 30037065906, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt"}, {"allocated_bytes": 16384, "bytes": 14632, "category": "B", "files": 1, "path": "/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt"}], "manifest": "logs/review/diag_scratch_authorized_inventory_01/manifest.json", "sha256": "d83cff6e924d089ba941ed7195ed80f65bead2b98c0d89c8454333b454734dd8"}
+FINAL_METRICS_JSON: {"command_exit_code": 0, "elapsed_seconds": 25.961292710970156}
+# exit_code: 0

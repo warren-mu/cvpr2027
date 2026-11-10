@@ -1,0 +1,43 @@
+diff --git a/STATUS.md b/STATUS.md
+index a2581a03..88a27f70 100644
+--- a/STATUS.md
++++ b/STATUS.md
+@@ -1388,3 +1388,38 @@ S03结束后的单卡槽已补S04=709455（原固定六场景、同版本/配额
+ 14f9e512保留的两份超50MB原diff已用gzip无损归档，raw仍在Hopper，恢复指令及解压SHA校验在logs/review/diag_diff_lossless_archive_01/manifest.json；没有修改原diff/meta或删除失败证据。
+ 
+ - **2026-11-09 20:28**（人类：「你可以替我做一些决定，把之前没用的删了」；Claude 定范围）：scratch 约 1.1 TB 已满，31 对复核重跑因写配置文件失败。批准删除 A 类（可再生缓存）和 B 类（冒烟、测速、调试运行的模型权重与优化器状态，保留它们的结果和日志）；证据、世界对、视角表、训练池、测试集、results 及被引用文件一律不删。规则写进 AGENTS.md。
++
++### 2026-11-09 scratch授权清理：删除前清单（43bc49c5）
++
++只清理下表A缓存和B旧冒烟optimizer/critic/extra-state文件；保留最后actor模型、其配置、所有结果/日志、世界对/视角表、基础HF模型和环境。逐文件所有者、路径、inode、size/mtime清单及结果/审计引用排除检查见 logs/review/diag_scratch_authorized_inventory_01/manifest.json。尚未执行删除。
++
++|类别|路径|文件数|文件字节|分配字节|
++|---|---|---:|---:|---:|
++|A|/scratch/e1583364/cvpr2027/cache/pip|1363|4295304615|4298469376|
++|A|/scratch/e1583364/cvpr2027/cache/torch_extensions|8|1702340|1720320|
++|A|/scratch/e1583364/cvpr2027/cache/triton|78|1266299|1454080|
++|A|/scratch/e1583364/cvpr2027/cache/pycache|27115|287645134|351846400|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt|1|30037047602|30037049344|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt|1|15018894138|15018897408|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt|1|30037065906|30037069824|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T0_02/707612.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/optim_world_size_1_rank_0.pt|1|30037047602|30037049344|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/actor/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/model_world_size_1_rank_0.pt|1|15018894138|15018897408|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/optim_world_size_1_rank_0.pt|1|30037065906|30037069824|
++|B|/scratch/e1583364/cvpr2027/smoke_e2e/smoke_e2e_T3_01/707642.hopper-m-02/checkpoint/critic/extra_state_world_size_1_rank_0.pt|1|14632|16384|
++
++删除完成（2026-11-10T01:35:08.378929+00:00）：仅按上述固定A/B清单逐文件核对inode/mtime/大小/所有者后删除。删除28574个文件，原分配字节154839588864；df/statvfs可用容量从3230206868324352变为3230362306084864字节。变动/不存在跳过0项。两份最后actor模型原inode/size/mtime保留；HF基础模型、环境、世界对、视角表、结果与日志未删。文件数/容量原始快照及范围见logs/review/diag_scratch_authorized_cleanup_01/report.json。
++
++### 2026-11-09 20:40 ET：已清理获准A/B文件，恢复工作前记录
++
++43bc49c5允许的固定清单已执行：删除28574个文件，原分配空间154839588864字节（此值为被删文件实际block合计，不冒用共享文件系统的可用量变化）；无跳过项。旧T0/T3最后actor/model保持原inode/size/mtime，所有HF基础模型、环境、世界对、视角表、结果、日志及源认证文件保留。清理耗时147.9816秒属于存储维护，不计GPU。上条statvfs的PB级容量是整个文件系统，不是账号额度，不作为个人余量依据。hpc quota确认个人scratch hard=1.0TB、chunk files hard=unlimited；其报告时间09:33SGT仍是清理前1024.0GB/2936429文件对象的滞后快照，需等刷新后报告清理后用量。最大10目录的只读完整统计正在运行，不据此追加删除。
++
++缓存709435因scratch满在写cuda-vulkan-mapping.json时失败，尚未进入Initialize，故不触发Initialize重试；原31输入/seed0/200方案不变，前5个worker证据保存。原canonical实扣0.5097222222222222GPU·小时、排队118秒、PBS F/exit1，清理后将再次整批重跑，训练通过数仍52。源认证实测1500.0803015250713秒，不计作模型每步训练耗时。
++
++S02=709440科学/共享首单元已全部独立通过：DF true1/false0、DS3/2、LF1/0、LS3/2，总12；新规则额外通过4对。两张额外放行的LookStay图为logs/review/t01v2_checkpoint_test_s16_s02_01/00008_look_stay.png、00009_look_stay.png；LookFlip图00004_look_flip.png。原PBS实扣0.3358333333333333GPU·小时、排队57秒，原shared claim/release/physics声明检查全部通过。此前scratch console close/flush报错未破坏已经完整结束的原checkpoint；未重跑或覆盖该验收。
++
++S04=709455因配额满停止，原PBS F、实扣0.06861111111111111GPU·小时、排队18秒。四子源无完整封口，原清理身份unknown保留，不纳入通过；原JSON/log/launcher逐字节副本与SHA见diag_test_s16_s04_unsealed_archive_01，未补造_meta/end。PBS allocation结束不等于逐PID清理证明。
++
++新共享active配置为configs/shared_test_priority_active_01.json：S02已完成、S03/S04独立占位，余S05–S07和未领训练20–26，原参数/票额不变。4卡与single只用同一active plan，不使用旧prepared全plan。按原S02单元1197.4805372250266秒及近四批T02最大376.722556381952秒，保守规划每卡1测试+2导出，乘1.3后加180秒gate、45秒收尾和30秒PBS余量，取整申请47分钟（规划上界，不是运行结果），空队列或全部工作完成即退出。22:00美东从未启动取消保护仍生效。现存待提交metadata已完成原绑定验证；清理产物审计推送后再提交。
