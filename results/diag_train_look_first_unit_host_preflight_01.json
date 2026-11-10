@@ -1,0 +1,120 @@
+{
+  "metrics": {
+    "validated": true,
+    "host_authorization": {
+      "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293",
+      "evidence": {
+        "file": "results/diag_train_look_first_unit_black_guard_plan_01.json",
+        "sha256": "f6ebe611dbcebfdd2e99d4c1d025784ee1ae462c9f56fc47a8d2dbce3e1a1e08"
+      },
+      "retry_of": "710105.hopper-m-02",
+      "requested_host": "hopper-30",
+      "previous_requested_host": null,
+      "rotation_index": 14,
+      "rotation_previous": {
+        "payload": {
+          "file": "logs/pbs/smoke_e2e_pilot_T2_s0_01_retry1-20261110T080307Z-20d08849/payload.json",
+          "sha256": "367eb0db5bae81b5561791f7a5036365227423d0911ce30aef8c11f6b76cf469"
+        },
+        "receipt": {
+          "file": "logs/pbs/smoke_e2e_pilot_T2_s0_01_retry1-20261110T080307Z-20d08849/submission.json",
+          "sha256": "fa5e9cfcbaec81884600c542ab850c9178c5522c7d7255f41f029dcae53510da"
+        }
+      },
+      "original_node": "hopper-24",
+      "original_gpu_uuid": "GPU-22895217-590b-1eab-f4d7-50a7a1b3f7fd",
+      "queue_fallback_after_seconds": 1200,
+      "scope": "opening black gate retry only; no scientific acceptance",
+      "available_hosts": [
+        "hopper-28",
+        "hopper-30"
+      ],
+      "disabled_hosts": {
+        "hopper-22": {
+          "reason": "New pinned submissions excluded after authenticated opening black gate",
+          "job_id": "709293.hopper-m-02",
+          "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+          "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+        }
+      }
+    },
+    "submit_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--name",
+      "gen_train_look_first_unit_01_retry1",
+      "--task",
+      "T01",
+      "--budget-group",
+      "G01",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:27:10",
+      "--host",
+      "hopper-30",
+      "--retry-of",
+      "710105.hopper-m-02",
+      "--black-retry-evidence",
+      "results/diag_train_look_first_unit_black_guard_plan_01.json",
+      "--black-retry-evidence-sha256",
+      "f6ebe611dbcebfdd2e99d4c1d025784ee1ae462c9f56fc47a8d2dbce3e1a1e08",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_train_look_first_unit_01_retry1",
+      "--scenes",
+      "FloorPlan315",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "train",
+      "--quota-plan",
+      "configs/gen_train_look_first_unit_01_retry1_quota.json",
+      "--quota-plan-sha256",
+      "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905",
+      "--nearby-physics",
+      "--sample-rejected-raw"
+    ],
+    "scope": "Preflight only; original submitter repeats under reservation lock;20min Q fallback unchanged"
+  },
+  "config": {
+    "name": "diag_train_look_first_unit_host_preflight_01"
+  },
+  "sources": [
+    {
+      "file": "results/diag_train_look_first_unit_black_guard_plan_01.json",
+      "sha256": "f6ebe611dbcebfdd2e99d4c1d025784ee1ae462c9f56fc47a8d2dbce3e1a1e08",
+      "metrics_sha256": "76dcad04198c6850149f7dabd62e05f275b0f5929b64261982ff1c2fec1bbf20"
+    }
+  ],
+  "_meta": {
+    "name": "diag_train_look_first_unit_host_preflight_01",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib\nimport json\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\n\nr = Path.cwd().resolve()\nname = 'diag_train_look_first_unit_host_preflight_01'\nguard_file = 'results/diag_train_look_first_unit_black_guard_plan_01.json'\nreference = {'file': guard_file, 'sha256': hashlib.sha256((r / guard_file).read_bytes()).hexdigest()}\nguard, _ = b.logged(r, reference)\nproof = guard['metrics']['strict_black_gate_proof']\nb.require(guard['_meta']['exit_code'] == 0 and guard['metrics']['technical_retry_plan_ready'] is True\n          and guard['metrics']['all_other_plan_values_equal'] is True, 'Exact identity-only plan not authenticated')\nnew_name = 'gen_train_look_first_unit_01_retry1'\ncommand = guard['metrics']['producer_command']\nindex, previous = b.rotation(r)\nprevious_host = None\nif previous:\n    _, body = b.file_ref(r, previous['payload'], 'logs/pbs')\n    previous_host = json.loads(body)['requested_host']\nhost = b.next_host(b.VERSION, index, previous_host)\nbinding = b.validate_request_host(r, host=host, retry_of=proof['job_id'], evidence_path=guard_file,\n    evidence_sha256=reference['sha256'], name=new_name, command=command,\n    task='T01', group='G01', gpus=1, wall_seconds=1630)\nsubmit = ['python3', 'scripts/pbs/submit_phase.py', '--name', new_name, '--task', 'T01',\n    '--budget-group', 'G01', '--gpus', '1', '--walltime', '00:27:10', '--host', host,\n    '--retry-of', proof['job_id'], '--black-retry-evidence', guard_file,\n    '--black-retry-evidence-sha256', reference['sha256'], '--', *command]\nmetrics = {'validated': True, 'host_authorization': binding, 'submit_command': submit,\n           'scope': 'Preflight only; original submitter repeats under reservation lock;20min Q fallback unchanged'}\nwith (r / 'results' / (name + '.json')).open('x') as handle:\n    json.dump({'metrics': metrics, 'config': {'name': name},\n               'sources': [dict(reference, metrics_sha256=guard['_meta']['metrics_sha256'])]},\n              handle, indent=2, allow_nan=False)\n    handle.write('\\n')\nprint('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T18:33:01",
+    "log_path": "logs/runs/diag_train_look_first_unit_host_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "4a55ebd4f1b931bc4742b4bb25fb8247b715222d",
+    "git_dirty": false,
+    "end": "2026-11-10T18:33:06",
+    "duration_sec": 3.9,
+    "exit_code": 0,
+    "metrics_sha256": "40850124bb013b51fb5250f6f4e177c7cb7181b695af2af5f1849632d5fe646f"
+  }
+}

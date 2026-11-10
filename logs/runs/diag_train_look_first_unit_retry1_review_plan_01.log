@@ -1,0 +1,89 @@
+# run_logged: python3 -c """One-off original-budget projection for the exact prepared FP315 retry; no submit."""
+import hashlib
+import importlib.util
+import json
+import math
+from decimal import Decimal
+from pathlib import Path
+import re
+import signal
+from src.tools.t01_partition import audited_result
+
+r = Path.cwd().resolve()
+name = 'diag_train_look_first_unit_retry1_review_plan_01'
+def expired(*_):
+    raise TimeoutError('Original budget metadata preview exceeded180 seconds')
+signal.signal(signal.SIGALRM, expired)
+signal.alarm(180)
+sources = {}
+def source(file):
+    data, ref = audited_result(r / file)
+    sources[ref['file']] = ref
+    return data, ref
+preflight, preflight_ref = source('results/diag_train_look_first_unit_host_preflight_01.json')
+guard, guard_ref = source('results/diag_train_look_first_unit_black_guard_plan_01.json')
+quota, quota_ref = source('results/diag_scratch_quota_before_train_look_first_unit_retry1_01.json')
+units, units_ref = source('results/diag_current_storage_units_01.json')
+assert preflight['_meta']['exit_code'] == guard['_meta']['exit_code'] == units['_meta']['exit_code'] == 0
+assert preflight['metrics']['validated'] is True and guard['metrics']['all_other_plan_values_equal'] is True
+assert quota['config']['command'] == ['hpc', 'quota'] and quota.get('error') is None
+quota_log = (r / quota['_meta']['log_path']).read_text()
+rows = re.findall(r'^\s*e1583364\s*\|\|\s*([0-9.]+)([GT])B\s*\|\s*([0-9.]+)([GT])B\s*\|\|\s*([0-9]+)\s*\|\s*unlimited\s*$', quota_log, re.M)
+assert len(rows) == 1, 'Require the complete original scratch quota row'
+used, used_unit, hard, hard_unit, files = rows[0]
+unit = {'G': 2**30, 'T': 2**40}
+free = Decimal(hard)*unit[hard_unit] - Decimal(used)*unit[used_unit]
+assert free >= 150 * 2**30, 'Scratch below original150GiB floor'
+spec = importlib.util.spec_from_file_location('original_phase_budget_preview', r/'scripts/pbs/submit_phase.py')
+phase = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(phase)
+state = phase.budget_state(r)
+command = guard['metrics']['producer_command']
+phase.validate_request('T01', 1, 1630, 'gen_train_look_first_unit_01_retry1', state, 'G01', command=command)
+original_jobs = {'710029.hopper-m-02', '710037.hopper-m-02', '710105.hopper-m-02'}
+assert all(any(row['job_id'] == job and row['basis'] == 'final_accounting' for row in state['submissions']) for job in original_jobs)
+actual, reserved = {}, {}
+for group in ('E2Epilot', 'E2EpilotT2'):
+    measured, pending = [], []
+    for row in state['submissions']:
+        if row.get('budget_group') == group:
+            value = row['accounted_or_reserved_gpu_hours']
+            (measured if row['basis'] == 'final_accounting' else pending).append(value)
+            if row['basis'] == 'final_accounting':
+                source(row['accounting_result'])
+        elif row.get('budget_group') == 'PACK' and group in row.get('accounted_or_reserved_by_subbudget', {}):
+            value = row['accounted_or_reserved_by_subbudget'][group]
+            is_final = row.get('mixed_subbudget_basis') in ('canonical_zero_allocation', 'verified_final_unit_intervals_and_priority_remainder')
+            (measured if is_final else pending).append(value)
+            if is_final:
+                source(row['accounting_result'])
+    actual[group], reserved[group] = math.fsum(measured), math.fsum(pending)
+    assert math.isclose(actual[group]+reserved[group], state['accounted_or_reserved_by_subbudget'][group], abs_tol=1e-12)
+folder = r/'logs/review'/name
+folder.mkdir(parents=True, exist_ok=False)
+snapshot = folder/'budget_state.json'
+with snapshot.open('x') as stream:
+    json.dump(state, stream, indent=2, allow_nan=False); stream.write('\n')
+metrics = {'review_plan_ready': True, 'submit_command': preflight['metrics']['submit_command'],
+    'new_quota': guard['metrics']['new_plan'], 'scientific_parameters_unchanged': True,
+    'budget_request_validated': True, 'budget_snapshot': {'file':str(snapshot.relative_to(r)), 'sha256':hashlib.sha256(snapshot.read_bytes()).hexdigest()},
+    'pilot_actual_charged_gpu_hours': actual, 'pilot_full_request_reservations_charged_gpu_hours': reserved,
+    'accounted_or_reserved_by_subbudget': state['accounted_or_reserved_by_subbudget'],
+    'accounted_or_reserved_total': state['accounted_or_reserved_total'],
+    'total_limit_gpu_hours': state['total_limit_gpu_hours'], 'subbudget_limits_gpu_hours':state['subbudget_limits_gpu_hours'],
+    'scratch': {'original_used': used+used_unit+'B', 'original_hard': hard+hard_unit+'B', 'chunk_files':int(files),
+        'unit_interpretation': 'Original CLI G/T labels mean GiB/TiB; see authenticated unit diagnostic',
+        'units_source': units_ref, 'headroom_at_least150GiB':True, 'original_command_exit_code':quota['_meta']['exit_code']},
+    'queue_deadline_rule': {'seconds':1200, 'origin':'actual PBS qtime, with successful qsub receipt completion as fallback; never directory timestamp',
+        'required_fields':['job_state','qtime','stime','run_count','exec_host','resources_used.walltime','receipt returncode/jobid/completion time'],
+        'cancel_condition':'Still Q, no stime/run/allocation at20min; root alone decides and records original cancellation chain'},
+    'scope':'Metadata-only budget/technical retry review; no qsub; actual submitter must refresh budget and host rotation under its lock'}
+with (r/'results'/(name+'.json')).open('x') as stream:
+    json.dump({'metrics':metrics, 'config':{'name':name,'gpus':0}, 'sources':list(sources.values())},stream,indent=2,allow_nan=False)
+    stream.write('\n')
+signal.alarm(0)
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)
+
+# start: 2026-11-10T18:38:16
+FINAL_METRICS_JSON: {"accounted_or_reserved_by_subbudget": {"E2E": 1.4341666666666666, "E2Epilot": 5.416388888888889, "E2EpilotT2": 0.29194444444444445, "G01": 8.985277777777778, "T01v2": 12.983055555555556, "T02": 6.856388888888889}, "accounted_or_reserved_total": 47.65055555555554, "budget_request_validated": true, "budget_snapshot": {"file": "logs/review/diag_train_look_first_unit_retry1_review_plan_01/budget_state.json", "sha256": "a241d88191170fb3b5c1c3103280b8dc1c1fed03fa1c1e255c0d7ac233b5306b"}, "new_quota": {"file": "configs/gen_train_look_first_unit_01_retry1_quota.json", "sha256": "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905"}, "pilot_actual_charged_gpu_hours": {"E2Epilot": 5.416388888888889, "E2EpilotT2": 0.29194444444444445}, "pilot_full_request_reservations_charged_gpu_hours": {"E2Epilot": 0.0, "E2EpilotT2": 0.0}, "queue_deadline_rule": {"cancel_condition": "Still Q, no stime/run/allocation at20min; root alone decides and records original cancellation chain", "origin": "actual PBS qtime, with successful qsub receipt completion as fallback; never directory timestamp", "required_fields": ["job_state", "qtime", "stime", "run_count", "exec_host", "resources_used.walltime", "receipt returncode/jobid/completion time"], "seconds": 1200}, "review_plan_ready": true, "scientific_parameters_unchanged": true, "scope": "Metadata-only budget/technical retry review; no qsub; actual submitter must refresh budget and host rotation under its lock", "scratch": {"chunk_files": 3116252, "headroom_at_least150GiB": true, "original_command_exit_code": 1, "original_hard": "1.0TB", "original_used": "588.3GB", "unit_interpretation": "Original CLI G/T labels mean GiB/TiB; see authenticated unit diagnostic", "units_source": {"audit": {"fail": [], "file": "results/diag_current_storage_units_01.json", "warn": ["P5 run used uncommitted changes; see logs/runs/diag_current_storage_units_01.diff"]}, "exit_code": 0, "file": "results/diag_current_storage_units_01.json", "git_commit": "1aff9b9ef5d97015f74dad7d98c065b70bcfc66c", "metrics_sha256": "b74c1f258acb5abdd2ed0a6a92ed4073ae77ad944e44f367a9fb51716290a2b2", "sha256": "d64023a3b394a9730c3cfbe53941e3573aa5ae5bddd44ebba7f890933a51e5be"}}, "subbudget_limits_gpu_hours": {"E2E": 4.0, "E2Epilot": 12.0, "E2EpilotT2": 0.5, "G01": 40.0, "T01v2": 16.0, "T02": 40.0}, "submit_command": ["python3", "scripts/pbs/submit_phase.py", "--name", "gen_train_look_first_unit_01_retry1", "--task", "T01", "--budget-group", "G01", "--gpus", "1", "--walltime", "00:27:10", "--host", "hopper-30", "--retry-of", "710105.hopper-m-02", "--black-retry-evidence", "results/diag_train_look_first_unit_black_guard_plan_01.json", "--black-retry-evidence-sha256", "f6ebe611dbcebfdd2e99d4c1d025784ee1ae462c9f56fc47a8d2dbce3e1a1e08", "--", "python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_look_first_unit_01_retry1", "--scenes", "FloorPlan315", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "train", "--quota-plan", "configs/gen_train_look_first_unit_01_retry1_quota.json", "--quota-plan-sha256", "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905", "--nearby-physics", "--sample-rejected-raw"], "total_limit_gpu_hours": 120.0}
+# exit_code: 0

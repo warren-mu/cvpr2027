@@ -1,0 +1,287 @@
+# run_logged: python3 -c """One-off metadata projection, prepared only; execute through run_logged directly."""
+import copy
+import hashlib
+import json
+import math
+from pathlib import Path
+import signal
+import sys
+import traceback
+
+NAME = 'diag_pilot50_report_projection_01'
+ROOT = Path.cwd().resolve()
+OUT = ROOT / 'logs/review' / NAME
+REFS = {
+    'comparison': {'file': 'results/smoke_e2e_pilot_comparison_01.json', 'sha256': '798761b055deb533c3b955975b32d48f0922b08d542b16744fb1fe63672ef240'},
+    'T0': {'file': 'results/smoke_e2e_pilot_T0_s0_01_retry4.json', 'sha256': '17188af3dff53d6bb07be4b682fdcc4f3f9a3b8f369d12d93d32c3cb195698f2'},
+    'T4': {'file': 'results/smoke_e2e_pilot_T4_s0_01_retry4.json', 'sha256': '994e3a7ba47ec29c06891a2ff1b1449439b0b337fc7ea2eef4118e23d2dc8717'},
+    'T2': {'file': 'results/smoke_e2e_pilot_T2_s0_01_retry1.json', 'sha256': 'a27654dae932217416c9e92b29dcfc5424a242e050ba95290532ee25c154d6c1'},
+}
+IMPLEMENTATION = {'file': 'src/tools/smoke_e2e_pilot.py', 'sha256': 'fbcab1cff59cc7ad0005b0cbacc541ff3208f8c3db8b5d28d668e593a37fdc26'}
+KINDS = ('direct_flip', 'direct_stay', 'look_flip', 'look_stay')
+TIMINGS = ('total_seconds', 'generation_seconds', 'scoring_seconds', 'critic_update_seconds', 'actor_update_seconds', 'update_seconds')
+COUNTS = ('episode_count', 'success_count', 'logical_decision_count', 'unparsable_output_count',
+    'unavailable_parsed_action_count', 'valid_action_count', 'valid_observation_action_count',
+    'episodes_with_valid_observation', 'actual_terminal_selection_count', 'valid_terminal_selection_count')
+
+
+def need(value, message):
+    if not value:
+        raise ValueError(message)
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def number(value):
+    need(type(value) in (int, float) and math.isfinite(value), 'Missing/nonfinite numeric field')
+    return value
+
+
+def count(value):
+    need(type(value) is int and value >= 0, 'Missing/noninteger diagnostic count')
+    return value
+
+
+def ratio(n, d, numerator, denominator):
+    return {'numerator': n, 'denominator': d, 'numerator_definition': numerator,
+        'denominator_definition': denominator, 'value': n / d if d else None}
+
+
+def pooled(rows):
+    """Auxiliary episode/action-count pooling, never the learning decision."""
+    sums = {key: sum(count(row[key]) for row in rows) for key in COUNTS}
+    rewards = math.fsum(number(row['task_reward_sum']) for row in rows)
+    n, d, v = sums['episode_count'], sums['logical_decision_count'], sums['valid_action_count']
+    return {'aggregation': 'pooled original integer counts; auxiliary only', 'counts': sums,
+        'task_reward_sum': rewards,
+        'success_rate': ratio(sums['success_count'], n, 'successful episodes', 'all episodes'),
+        'mean_task_reward': ratio(rewards, n, 'sum of task reward', 'all episodes'),
+        'unparsable_rate': ratio(sums['unparsable_output_count'], d, 'unparsable outputs', 'logical decisions'),
+        'observation_per_decision': ratio(sums['valid_observation_action_count'], d, 'valid observation actions', 'logical decisions'),
+        'observation_per_valid_action': ratio(sums['valid_observation_action_count'], v, 'valid observation actions', 'valid actions'),
+        'observation_episode_rate': ratio(sums['episodes_with_valid_observation'], n, 'episodes with a valid observation action', 'all episodes')}
+
+
+def holdouts(metrics):
+    out = []
+    for row in metrics['holdout_evaluations']:
+        need(set(row['by_class']) == set(KINDS), 'Holdout class coverage differs')
+        totals = pooled([row['by_class'][kind] for kind in KINDS])
+        need(totals['counts']['episode_count'] == row['episodes'], 'Holdout episode totals differ')
+        out.append({'original': copy.deepcopy(row), 'overall': totals})
+    return out
+
+
+def timing(metrics):
+    updates = metrics['updates']
+    steady = updates[1:]
+    need(steady, 'No measured steady updates')
+    means = {key: math.fsum(number(row[key]) for row in steady) / len(steady) for key in TIMINGS}
+    need(all(row[key] >= 0 for row in updates for key in TIMINGS), 'Negative timing')
+    return {'measured_update_range': [2, len(updates)], 'measured_sample_count': len(steady),
+        'first_update': {key: updates[0][key] for key in TIMINGS}, 'steady_mean_seconds': means,
+        'original_per_update_seconds': [{'update': row['update'], **{key: row[key] for key in TIMINGS}}
+            for row in updates],
+        'source_authentication_seconds': number(metrics['source_authentication_seconds']),
+        'model_initialization_seconds': number(metrics['model_initialization_seconds']),
+        'measured_holdout_seconds': [{'update': row['update'], 'seconds': number(row['seconds'])}
+            for row in metrics['holdout_evaluations']],
+        'checkpoint_save_seconds': None,
+        'checkpoint_save_seconds_status': 'No separately measured checkpoint-save duration in the original parent; not inferred from residual time',
+        'update_only_scope': 'total_seconds includes rollout/scoring/critic/actor; excludes source authentication, model initialization, heldout evaluation, checkpoint persistence, gate and cleanup',
+        'update_seconds_scope': 'critic plus actor only; not the full iteration',
+        'projected_200_update_seconds': 200 * means['total_seconds'],
+        'projected_200_update_gpu_hours_at_one_gpu': 200 * means['total_seconds'] / 3600,
+        'projection_is_measured_result': False, 'projection_is_upper_bound': False}
+
+
+def arm_report(data, reference):
+    cfg, m, meta = data['config'], data['metrics'], data['_meta']
+    for row in m['updates']:
+        need(row['native_actor_optimizer_step_calls'] == row['native_actor_minibatch_steps'] > 0,
+            'Actual actor optimizer/minibatch completion differs')
+    checkpoints = m['checkpoint_records']
+    need(m['checkpoint_saved'] is True and len(checkpoints) == 1
+        and checkpoints[0]['global_step'] == cfg['updates'], 'Final checkpoint record is incomplete')
+    aux = {}
+    if cfg['arm'] in ('T0', 'T4'):
+        for label, first, last in [('early', 1, 10), ('late', 41, 50)]:
+            selected = m['updates'][first - 1:last]
+            groups = {'all_classes': KINDS, 'Look': ('look_flip', 'look_stay'), **{kind: (kind,) for kind in KINDS}}
+            aux[label] = {'updates': [first, last], 'groups': {group: pooled([
+                row['by_class'][kind] for row in selected for kind in kinds]) for group, kinds in groups.items()}}
+    return {'source': reference, 'arm': cfg['arm'], 'gpus': cfg['gpus'],
+        'runtime': copy.deepcopy(cfg['runtime']), 'identity': copy.deepcopy(cfg['identity']),
+        'original_run_meta': copy.deepcopy(meta), 'pilot_completed': m['pilot_completed'],
+        'actual_completed_updates': m['actual_completed_updates'], 'errors': m['errors'], 'cleanup_errors': m['cleanup_errors'],
+        'common_pool_hash': m['common_pool_hash'], 'common_config_sha256': m['common_config_sha256'],
+        'dataset_counts': copy.deepcopy(m['dataset_proof']['counts_by_kind']),
+        'fixed_holdout': copy.deepcopy(m['dataset_proof']['fixed_holdout']),
+        'qualification_mode': m.get('qualification_mode'), 'extra_source_reauthentication': copy.deepcopy(m.get('extra_source_reauthentication')),
+        'holdout_evaluations': holdouts(m),
+        'ten_step_original_class_snapshots': [{'update': row['update'], 'by_class': copy.deepcopy(row['by_class']),
+            'episode_log': copy.deepcopy(row['episode_log'])} for row in m['updates'] if row['update'] % 10 == 0],
+        'all_update_original_class_diagnostics': [{'update': row['update'], 'by_class': copy.deepcopy(row['by_class']),
+            'episode_log': copy.deepcopy(row['episode_log'])} for row in m['updates']],
+        'auxiliary_windows': aux, 'timing': timing(m),
+        'checkpoint_policy': m['checkpoint_policy'], 'checkpoint_records': copy.deepcopy(checkpoints),
+        'final_checkpoint_directory': m['final_checkpoint_directory'],
+        'artifact_scope': 'Original parent checkpoint records copied; actor tensors are not reread by this report',
+        'charged_gpu_hours': None, 'billing_scope': 'Use separate original canonical PBS accounting; parent duration and update-only projections are not billed allocation cost'}
+
+
+def fmt(value):
+    return 'unknown' if value is None else f'{value:.6f}' if type(value) is float else str(value)
+
+
+def table(lines, header, rows):
+    lines += ['| ' + ' | '.join(header) + ' |', '|' + '|'.join(['---'] * len(header)) + '|']
+    lines += ['| ' + ' | '.join(fmt(value) for value in row) + ' |' for row in rows]
+    lines.append('')
+
+
+def markdown(report):
+    lines = ['# Pilot50 原记录投影', '',
+        '本报告仅消费封存成功结果及原 comparison；不重跑训练/native、不授予论文结果或正式训练冻结。学习判定调用原函数并与原 summary 逐值一致；辅助计数与耗时预测不改变判据。', '',
+        f"原 decision：`{report['learning_comparison']['decision']}`；stop_and_report=`{str(report['learning_comparison']['stop_and_report']).lower()}`；common_config_frozen=`false`。", '',
+        '## 原学习判定', '', '窗口为每次更新的 Look 比率/奖励再等权平均十次，不按窗口回合数加权。', '']
+    table(lines, ['arm', 'seen 1–10', 'seen 41–50', 'reward 1–10', 'reward 41–50', 'abs Δseen', 'abs Δreward', '两项均<.05'], [
+        [arm, row['early']['seen_before_select_rate'], row['late']['seen_before_select_rate'], row['early']['task_reward_mean'],
+         row['late']['task_reward_mean'], row['absolute_seen_rate_change'], row['absolute_task_reward_change'], row['both_below_thresholds']]
+        for arm, row in report['learning_comparison']['arms'].items()])
+    if all(row[window]['seen_before_select_rate'] == 0 for row in report['learning_comparison']['arms'].values() for window in ('early', 'late')):
+        lines += ['两臂两个判定窗口的 seen 均为 0；即使奖励变化超过阈值，也不能据此宣称学会观察。', '']
+    lines += ['## Greedy holdout：0 / 50', '', '固定训练留出场景；每对两个 world 各一回合，不是最终测试集。总体成功率按所有回合汇总，未作类别宏平均。', '']
+    rows = []
+    for arm in ('T0', 'T4'):
+        for ev in report['arms'][arm]['holdout_evaluations']:
+            r = ev['original']
+            if r['update'] not in (0, 50):
+                continue
+            for kind in KINDS:
+                c = r['by_class'][kind]
+                rows.append([arm, r['update'], kind, c['episode_count'], c['success_count'], c['success_rate'], c['mean_task_reward'], c['seen_before_select_fraction_of_episodes']])
+            t = ev['overall']
+            rows.append([arm, r['update'], 'all episodes', t['counts']['episode_count'], t['counts']['success_count'], t['success_rate']['value'], t['mean_task_reward']['value'], None])
+    table(lines, ['arm', 'update', 'class', 'episodes', 'success', 'success/episodes', 'reward/episodes', 'seen/episodes'], rows)
+    lines += ['## 每 10 步四类原始快照', '', '这些是第 10/20/30/40/50 次更新本身；不是前十步累计。完整原 class 字典、每一步及日志 SHA 均保存在 JSON。', '']
+    rows = []
+    for arm in ('T0', 'T4'):
+        for update in report['arms'][arm]['ten_step_original_class_snapshots']:
+            for kind in KINDS:
+                c = update['by_class'][kind]
+                rows.append([arm, update['update'], kind, c['episode_count'], c['success_count'], c['task_reward_sum'],
+                    c['seen_before_select_count'], c['premature_commit_count'], c['premature_commit_fraction_of_episodes'],
+                    c['unparsable_output_count'], c['logical_decision_count'], c['valid_observation_action_count'], c['valid_action_count']])
+    table(lines, ['arm', 'update', 'class', 'episodes', 'success', 'reward sum', 'seen', 'premature count', 'premature/episodes', 'unparsable', 'decisions', 'valid observe', 'valid actions'], rows)
+    lines += ['## 辅助解析 / 观察率', '', '均为原整数分子/分母在窗口内相加后求比；与学习判定的更新等权平均不同。分母为 0 时保留 unknown。解析失败用逻辑决策数作分母；观察动作同时列逻辑决策与有效动作两个分母。', '']
+    rows = []
+    for arm in ('T0', 'T4'):
+        for label, window in report['arms'][arm]['auxiliary_windows'].items():
+            for group, a in window['groups'].items():
+                c = a['counts']
+                rows.append([arm, label, group, c['unparsable_output_count'], c['logical_decision_count'], a['unparsable_rate']['value'],
+                    c['valid_observation_action_count'], c['valid_action_count'], a['observation_per_decision']['value'], a['observation_per_valid_action']['value']])
+    table(lines, ['arm', 'window', 'scope', 'unparsable', 'decisions', 'unparsable/decisions', 'observe', 'valid actions', 'observe/decisions', 'observe/valid'], rows)
+    lines += ['## 实测耗时与工程预测', '', 'steady 是 T0/T4 更新 2–50 的 49 次均值；T2 仅更新 2–5 的 4 次，单列敏感性。total_seconds 是完整更新；update_seconds 只是 critic+actor。', '']
+    table(lines, ['arm', 'n', 'first total s', 'steady total s', 'generation s', 'scoring s', 'critic s', 'actor s', '200 update-only GPUh'], [
+        [arm, a['timing']['measured_sample_count'], a['timing']['first_update']['total_seconds'], *[a['timing']['steady_mean_seconds'][key] for key in TIMINGS[:5]], a['timing']['projected_200_update_gpu_hours_at_one_gpu']]
+        for arm, a in report['arms'].items()])
+    table(lines, ['arm', 'source auth s', 'model init s', 'holdout (update:seconds)', 'original parent duration s', 'checkpoint save s'], [
+        [arm, a['timing']['source_authentication_seconds'], a['timing']['model_initialization_seconds'],
+         ', '.join(f"{e['update']}:{e['seconds']:.6f}" for e in a['timing']['measured_holdout_seconds']), a['original_run_meta']['duration_sec'], None]
+        for arm, a in report['arms'].items()])
+    p = report['planning']
+    lines += [f"200-step、T0/T2/T3/T4 × 3 seeds 的 update-only 情景：**{p['twelve_runs_proxy_gpu_hours']:.6f} GPUh**。假设 T2:=T0、T3:=T4；不是 12 次实跑、不是资源上界。", '',
+        f"仅将 T2 换成其 4 次 steady 更新的敏感性情景：**{p['twelve_runs_with_short_T2_sensitivity_gpu_hours']:.6f} GPUh**；T3 仍用 T4 proxy。", '',
+        '两种情景均不含启动、额外评测、保存、gate、清理、失败重试或计费倍率；未假定未来评测频率。actor 保存没有独立计时，不能用剩余时长冒充。实际占卡和扣费以原 canonical PBS 记录为准。', '',
+        '## 原证据', '']
+    lines += [f"- `{ref['file']}`" for ref in report['sources']]
+    return '\n'.join(lines) + '\n'
+
+
+sources = []
+metrics = {'kind': 'pilot50_terminal_report_projection', 'paper_result': False, 'errors': [], 'producer_exit_code': 1}
+code = 1
+need(not OUT.exists() and not (ROOT / 'results' / (NAME + '.json')).exists(), 'Preserve prior report attempts')
+try:
+    def expired(signum, frame):
+        raise TimeoutError('Metadata-only projection exceeded 120 seconds')
+    signal.signal(signal.SIGALRM, expired)
+    signal.alarm(120)
+    need(sha(ROOT / IMPLEMENTATION['file']) == IMPLEMENTATION['sha256'], 'Original comparison implementation changed')
+    from src.tools import smoke_e2e_pilot as original
+    need(original.ROOT.resolve() == ROOT, 'Wrong repository root')
+    data = {}
+    for key, expected in REFS.items():
+        value, ref = original.audited_result(ROOT / expected['file'])
+        need(original.ref_identity(ref) == expected, 'Original result bytes changed: ' + key)
+        need(value['_meta'].get('end') and value['_meta'].get('exit_code') == 0
+            and value['metrics'].get('producer_exit_code') == 0 and value['metrics'].get('errors') == [], 'Unsuccessful original result: ' + key)
+        data[key] = value
+        sources.append(ref)
+    summary = data['comparison']
+    need(summary['metrics']['kind'] == 'smoke_e2e_pilot_comparison', 'Wrong original summary producer')
+    expected_argv = ['summarize', '--name', 'smoke_e2e_pilot_comparison_01', '--t0', summary['config']['t0'], '--t4', summary['config']['t4']]
+    need(original.producer_arguments(summary['_meta']['command'], 'src.tools.smoke_e2e_pilot') == expected_argv,
+        'Summary command differs from original summarize')
+    need([original.ref_identity(ref) for ref in summary['sources']] == [REFS['T0'], REFS['T4']], 'Summary source order/identity differs')
+    for arm in ('T0', 'T4'):
+        need(original.ref_identity(json.loads(summary['config'][arm.lower()])) == REFS[arm], 'Summary input differs')
+    for arm in ('T0', 'T4', 'T2'):
+        value = data[arm]
+        cfg, m = value['config'], value['metrics']
+        argv = original.producer_arguments(value['_meta']['command'], 'src.tools.smoke_e2e_pilot')
+        need(m['kind'] == 'smoke_e2e_pilot_training' and m['pilot_completed'] is True and m['cleanup_errors'] == []
+            and cfg['arm'] == arm and cfg['gpus'] == 1 and cfg.get('engineering_smoke') is None
+            and cfg['updates'] == (5 if arm == 'T2' else 50) and cfg['seed'] == 0
+            and argv[:1] == ['run'] and original.argv_values(argv, '--arm') == [arm]
+            and original.argv_values(argv, '--name') == [cfg['name']]
+            and original.argv_values(argv, '--engineering-smoke') == [], 'Wrong formal arm: ' + arm)
+        original.completed_worker(m, cfg)
+        for key in ('manifest_reference', 'pilot_spec_reference', 'common_config_reference', 'critic_offload', 'model_snapshot_reference', 'holdout_reference'):
+            need(cfg.get(key) == data['T0']['config'].get(key), 'T2/T0/T4 common input differs: ' + key)
+        need(m['common_pool_hash'] == data['T0']['metrics']['common_pool_hash']
+            and m['common_config_sha256'] == data['T0']['metrics']['common_config_sha256'], 'Common execution differs')
+    decision = original.learning_comparison({arm: data[arm] for arm in ('T0', 'T4')})
+    need(all(summary['metrics'].get(key) == value for key, value in decision.items()), 'Original decision was not reproduced exactly')
+    report = {'scope': 'metadata-only projection of complete pilot evidence; no scientific protocol or configuration changes',
+        'sources': sources, 'comparison_implementation': IMPLEMENTATION, 'learning_comparison': decision,
+        'arms': {arm: arm_report(data[arm], sources[list(REFS).index(arm)]) for arm in ('T0', 'T4', 'T2')}}
+    t0, t4, t2 = [report['arms'][arm]['timing']['steady_mean_seconds']['total_seconds'] for arm in ('T0', 'T4', 'T2')]
+    report['planning'] = {'updates_per_run': 200, 'seeds_per_arm': 3, 'arms': ['T0', 'T2', 'T3', 'T4'],
+        'gpus_per_run': 1, 'T2_proxy': 'T0 measured mean over updates2..50', 'T3_proxy': 'T4 measured mean over updates2..50',
+        'twelve_runs_proxy_gpu_hours': 3 * 200 * (2 * t0 + 2 * t4) / 3600,
+        'twelve_runs_with_short_T2_sensitivity_gpu_hours': 3 * 200 * (t0 + t2 + 2 * t4) / 3600,
+        'short_T2_sample_count': 4, 'measured_200_step_result': False, 'measured_twelve_runs': False,
+        'guaranteed_upper_bound': False, 'billed_gpu_hours': None,
+        'excluded': ['source authentication', 'model initialization', 'evaluation cadence', 'checkpoint save', 'gate', 'cleanup', 'failed retries', 'PBS billing multiplier']}
+    text = markdown(report)
+    for key, expected in REFS.items():
+        need(sha(ROOT / expected['file']) == expected['sha256'], 'Input changed during projection: ' + key)
+    need(sha(ROOT / IMPLEMENTATION['file']) == IMPLEMENTATION['sha256'], 'Comparison source changed during projection')
+    OUT.mkdir(parents=True, exist_ok=False)
+    original.save_json(OUT / 'report.json', report)
+    (OUT / 'report.md').write_text(text, encoding='utf-8')
+    metrics.update({'report': original.file_ref(OUT / 'report.json', ROOT), 'markdown': original.file_ref(OUT / 'report.md', ROOT),
+        'stop_and_report': decision['stop_and_report'], 'decision': decision['decision'],
+        'common_config_frozen': False, 'actual_updates': {arm: report['arms'][arm]['actual_completed_updates'] for arm in report['arms']},
+        'planning': report['planning'], 'producer_exit_code': 0})
+    code = 0
+except BaseException as error:
+    traceback.print_exc()
+    metrics['errors'].append(type(error).__name__ + ': ' + str(error))
+finally:
+    signal.alarm(0)
+    from src.tools.t02_export import save_json
+    save_json(ROOT / 'results' / (NAME + '.json'), {'config': {'name': NAME, 'gpus': 0, 'seed': 0,
+        'expected_results': REFS, 'original_comparison_implementation': IMPLEMENTATION,
+        'scope': 'one-off metadata projection; no native tensors/frames or training re-executed'}, 'metrics': metrics, 'sources': sources})
+    print('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)
+sys.exit(code)
+
+# start: 2026-11-10T18:39:57
+FINAL_METRICS_JSON: {"actual_updates": {"T0": 50, "T2": 5, "T4": 50}, "common_config_frozen": false, "decision": "learning_change_detected_review_common_config_freeze", "errors": [], "kind": "pilot50_terminal_report_projection", "markdown": {"bytes": 10659, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/diag_pilot50_report_projection_01/report.md", "sha256": "3f35735331d9a6c3a82eb6a9047b6638a42c4635c9e605fff2adf469a406cef9"}, "paper_result": false, "planning": {"T2_proxy": "T0 measured mean over updates2..50", "T3_proxy": "T4 measured mean over updates2..50", "arms": ["T0", "T2", "T3", "T4"], "billed_gpu_hours": null, "excluded": ["source authentication", "model initialization", "evaluation cadence", "checkpoint save", "gate", "cleanup", "failed retries", "PBS billing multiplier"], "gpus_per_run": 1, "guaranteed_upper_bound": false, "measured_200_step_result": false, "measured_twelve_runs": false, "seeds_per_arm": 3, "short_T2_sample_count": 4, "twelve_runs_proxy_gpu_hours": 82.4752089622459, "twelve_runs_with_short_T2_sensitivity_gpu_hours": 84.00975041155321, "updates_per_run": 200}, "producer_exit_code": 0, "report": {"bytes": 890917, "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/logs/review/diag_pilot50_report_projection_01/report.json", "sha256": "5aecd1ca76702799c778cac730f4c67fcd21692e3b4703df04921b4c6c9da899"}, "stop_and_report": false}
+# exit_code: 0

@@ -1779,3 +1779,9 @@ FIG01最小两文件已提交，并在Hopper完成6项CPU测试、0skip、原审
 T4 710037在10:27:36UTC原parent正常封口，50次更新、最终bf16 actor、0/20/40/50留出各40回合均完整，errors/cleanup为空。T0同样完整50步。原smoke_e2e_pilot_comparison_01成功：T0 Look看到锚点率0→0、任务奖励0.5584485502277218→0.7407158769121855；T4为0→0、0.5626574283559578→0.719140866873065。窗口按每更新等权1–10和41–50，原stop_and_report=false（奖励变化超过0.05）。这不表明学会了观察：看到锚点率仍为零，不据此改超参或冻结科学配置。
 
 原diag_pilot710029_710037_accounting_01完成：T0分配1.6630555555555555 GPU·小时、排队43秒；T4分配2.057777777777778、排队21秒；两次共3.720833333333333，Express rate1。总试跑费用仍需原预算器按全部前序canonical去重汇总，不能只把这两次当全部。原新封口源审计diag_night_restored_sources_audit_01为23文件0FAIL，失败警告保留；现补推完整50步原结果与journals，耗时/留出/候选漏斗完整报告随后提交。
+
+## 2026-11-10 05:41 ET — trainLook同参黑帧重提准备通过
+
+原710105完整记账02与终态审计通过：实际54秒/0.015 GPU·小时、排队67秒。黑卡UUID与原gate绑定；缺PATH的accounting01失败原log/meta保留。原guard与host preflight通过，新quota与旧quota唯一差异为parent_run_name；仍仅FloorPlan315、1200秒场景、1600秒parent、PBS00:27:10、LookStay优先、两类cap各8、Direct0，固定留出与阈值不变。原轮换本次为hopper-30，20分钟仍Q/未分配才取消并改无host。首新版本GPU冒烟仍未通过，不能扩大。
+
+fresh scratch原查询为588.3GiB/1TiB、3,116,252文件（无限制），满足余量150GiB要求；原CLI的home awk exit1警告保留。提交先经原预算器锁内检查；这里尚未宣称新作业已入队。T0/T4均已完成，不再占用训练优先名额；正式试跑报告和测试40场景漏斗并行生成，FIG继续暂放。

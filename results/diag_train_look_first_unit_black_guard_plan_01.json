@@ -1,0 +1,155 @@
+{
+  "metrics": {
+    "strict_black_gate_proof": {
+      "eligible_proven_black_gate_retry": true,
+      "job_id": "710105.hopper-m-02",
+      "native_kind": "g01_parallel_collection",
+      "original_payload": {
+        "file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/payload.json",
+        "sha256": "db5a8d3efd59d9dd6dee02701a5236cce3911a714465991f343644f404f255c9"
+      },
+      "original_job_script": {
+        "file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/job.pbs",
+        "sha256": "e3185c8b42f9272c7c7e2d1fba4efb5e0b0c2b33562309d844e5acf2661fecff"
+      },
+      "original_receipt": {
+        "file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/submission.json",
+        "sha256": "8bac354090e2d3945b6cf1b1be32b444994b0f93e9f7f0b523ee6876a3c4bc9a"
+      },
+      "original_command_unchanged": [
+        "python3",
+        "-u",
+        "-m",
+        "src.tools.g01_collect_parallel",
+        "--name",
+        "gen_train_look_first_unit_01",
+        "--scenes",
+        "FloorPlan315",
+        "--concurrency",
+        "6",
+        "--benchmark-source",
+        "results/gen_train_concurrency_s15_02.json",
+        "--timeout-seconds",
+        "1600",
+        "--partition",
+        "train",
+        "--quota-plan",
+        "configs/gen_train_look_first_unit_01_quota.json",
+        "--quota-plan-sha256",
+        "da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2",
+        "--nearby-physics",
+        "--sample-rejected-raw"
+      ],
+      "pbs_accounting": {
+        "file": "results/g01_train_look_first_unit_final_accounting_02.json",
+        "sha256": "4c22b5ec37293bca381ab7a2efd5d4e1164cbd6414f0d65a7ac3970be285eb16",
+        "metrics_sha256": "6747043282aba7bbf1c73f6a12038f6ecfb5dcba817e2e00336a4bd18cf2f248"
+      },
+      "source_results": [
+        {
+          "file": "results/gen_train_look_first_unit_01.json",
+          "sha256": "f1e5adb0d870c1f031153c7363bf2827b68be077bff80861aadf8f203cd8897e",
+          "metrics_sha256": "cd18d953e3971352b65557dd1a070a7f865ee7bc43d9f5e683248c98e76d6d7c"
+        },
+        {
+          "file": "results/gen_train_look_first_unit_01_j710105_hopper_m_02_gate.json",
+          "sha256": "01ad405fddbfe665df31c03e752f010feb3dc0e787252606dc96351708700194",
+          "metrics_sha256": "e24235d448facab28608a6d652fb375c489a16ff2dae2f7ac0ab61972f73af1e"
+        }
+      ],
+      "node": "hopper-24",
+      "gpu_uuid": "GPU-22895217-590b-1eab-f4d7-50a7a1b3f7fd",
+      "captures": [
+        {
+          "file": "logs/runs/gen_train_look_first_unit_01_j710105_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        },
+        {
+          "file": "logs/runs/gen_train_look_first_unit_01_j710105_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png",
+          "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"
+        }
+      ]
+    },
+    "technical_retry_plan_ready": true,
+    "original_plan": {
+      "file": "configs/gen_train_look_first_unit_01_quota.json",
+      "sha256": "da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2"
+    },
+    "new_plan": {
+      "file": "configs/gen_train_look_first_unit_01_retry1_quota.json",
+      "sha256": "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905"
+    },
+    "only_plan_value_changed": "parent_run_name",
+    "all_other_plan_values_equal": true,
+    "producer_command": [
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.g01_collect_parallel",
+      "--name",
+      "gen_train_look_first_unit_01_retry1",
+      "--scenes",
+      "FloorPlan315",
+      "--concurrency",
+      "6",
+      "--benchmark-source",
+      "results/gen_train_concurrency_s15_02.json",
+      "--timeout-seconds",
+      "1600",
+      "--partition",
+      "train",
+      "--quota-plan",
+      "configs/gen_train_look_first_unit_01_retry1_quota.json",
+      "--quota-plan-sha256",
+      "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905",
+      "--nearby-physics",
+      "--sample-rejected-raw"
+    ],
+    "requested_wall_seconds": 1630,
+    "retry_of": "710105.hopper-m-02",
+    "scope": "Exact original FP315 scientific/quota settings; opening native black; no submission"
+  },
+  "config": {
+    "name": "diag_train_look_first_unit_black_guard_plan_01"
+  },
+  "sources": [
+    {
+      "file": "results/gen_train_look_first_unit_01.json",
+      "sha256": "f1e5adb0d870c1f031153c7363bf2827b68be077bff80861aadf8f203cd8897e",
+      "metrics_sha256": "cd18d953e3971352b65557dd1a070a7f865ee7bc43d9f5e683248c98e76d6d7c"
+    },
+    {
+      "file": "results/gen_train_look_first_unit_01_j710105_hopper_m_02_gate.json",
+      "sha256": "01ad405fddbfe665df31c03e752f010feb3dc0e787252606dc96351708700194",
+      "metrics_sha256": "e24235d448facab28608a6d652fb375c489a16ff2dae2f7ac0ab61972f73af1e"
+    },
+    {
+      "file": "results/g01_train_look_first_unit_final_accounting_02.json",
+      "sha256": "4c22b5ec37293bca381ab7a2efd5d4e1164cbd6414f0d65a7ac3970be285eb16",
+      "metrics_sha256": "6747043282aba7bbf1c73f6a12038f6ecfb5dcba817e2e00336a4bd18cf2f248"
+    }
+  ],
+  "_meta": {
+    "name": "diag_train_look_first_unit_black_guard_plan_01",
+    "command": [
+      "python3",
+      "-c",
+      "\"\"\"One exact G01 opening-black proof and identity-only retry plan; no submit.\n\nExecute this self-recording inline producer directly via original run_logged,\nonly after canonical710105 accounting has sealed. Uses the reviewed native PNG chain.\n\"\"\"\nimport hashlib\nimport importlib.util\nimport io\nimport json\nimport shlex\nfrom pathlib import Path\nfrom PIL import Image\nfrom src.tools import pbs_black_retry as b\n\nr = Path.cwd().resolve()\nrequire = b.require\nname = 'diag_train_look_first_unit_black_guard_plan_01'\njob = '710105.hopper-m-02'\nparent_name = 'gen_train_look_first_unit_01'\nnext_name = 'gen_train_look_first_unit_01_retry1'\nfolder = r / 'logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a'\naccount_name = 'g01_train_look_first_unit_final_accounting_02'\nold_plan = {'file': 'configs/gen_train_look_first_unit_01_quota.json',\n            'sha256': 'da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2'}\n\n\ndef ref(path):\n    path = Path(path).resolve()\n    return {'file': str(path.relative_to(r)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}\n\n\ndef load(filename):\n    rr = ref(r / filename)\n    data, _ = b.logged(r, rr)\n    return data, dict(rr, metrics_sha256=data['_meta']['metrics_sha256'])\n\n\nparent, pref = load('results/' + parent_name + '.json')\ngate_name = parent_name + '_j710105_hopper_m_02_gate'\ngate, gref = load('results/' + gate_name + '.json')\naccount, aref = load('results/' + account_name + '.json')\npp, sp, rp = (folder / p for p in ('payload.json', 'job.pbs', 'submission.json'))\npayload, receipt = json.loads(pp.read_bytes()), json.loads(rp.read_bytes())\nexpected = ['python3', '-u', '-m', 'src.tools.g01_collect_parallel', '--name', parent_name,\n    '--scenes', 'FloorPlan315', '--concurrency', '6', '--benchmark-source',\n    'results/gen_train_concurrency_s15_02.json', '--timeout-seconds', '1600', '--partition', 'train',\n    '--quota-plan', old_plan['file'], '--quota-plan-sha256', old_plan['sha256'],\n    '--nearby-physics', '--sample-rejected-raw']\nrequire(payload['repo'] == str(r) and payload['name'] == parent_name and payload['command'] == expected\n    and payload['dry_run'] is False and payload['task_id'] == 'T01' and payload['budget_group'] == 'G01'\n    and payload['budget_batch'] == 't00b_t01_20261108' and payload['queue'] == 'autox'\n    and payload['requested_host'] is None and payload['requested_gpu_count'] == 1\n    and payload['requested_wall_seconds'] == 1630, 'Original exact G01 payload differs')\nrequire(pp.stat().st_mode & 0o222 == sp.stat().st_mode & 0o222 == 0\n    and receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],\n    'Original immutable submission or receipt differs')\nspec = importlib.util.spec_from_file_location('original_submit_for_train_look_guard', r / 'scripts/pbs/submit_phase.py')\nphase = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(phase)\nrequire(sp.read_text() == phase.render_job_script((r / 'scripts/pbs/job_1gpu.pbs').read_text(), 1, pp, None),\n        'Original PBS script differs from original one-GPU template')\nrequire(account['_meta']['command'] == ['python3', 'src/tools/pbs_usage.py', '--name', account_name, job],\n        'Canonical accounting was not the exact original script')\nfinal = phase._final_accounting(r, {job}, paths=[r / aref['file']])\nrequire(job in final, 'Original canonical accounting missing')\nrows = [v for v in account['config']['jobs'] if v['job_id'] == job]\nrequire(len(rows) == 1 and rows[0]['qstat_exit'] == 0, 'Canonical job ambiguous')\nf = rows[0]['fields']\nrequire(f.get('job_state') == 'F' and f.get('Exit_status') == '86' and f.get('run_count') == '1'\n    and f.get('project') == 'CFP04-SF-125' and f.get('Job_Owner', '').split('@')[0] == 'e1583364'\n    and f.get('Resource_List.ngpus') == '1' and f.get('Resource_List.ncpus') == '12'\n    and f.get('Resource_List.walltime') == '00:27:10' and f.get('queue') == 'smallx'\n    and 'PBS_O_QUEUE=autox' in f.get('Variable_List', '')\n    and shlex.split(f['Submit_arguments']) == receipt['command'][1:]\n    and f['Output_Path'].split(':', 1)[1] == str(folder / 'pbs.out'), 'Canonical allocation differs')\nc, pm = parent['config'], parent['metrics']\ngc, gm = gate['config'], gate['metrics']\na = gc['allocation']\nnode, gpu = gc['node'], a['cuda_visible_devices']\nrequire(parent['_meta']['command'] == expected and parent['_meta']['exit_code'] == 86\n    and c['name'] == parent_name and c['pbs_jobid'] == job and c['scenes'] == ['FloorPlan315']\n    and c['concurrencies'] == [6] and c['timeout_seconds'] == 1600 and c['g01_partition'] == 'train'\n    and c['quota_plan_reference'] == old_plan and c['seed'] == 0 and c['field_of_view'] == 60\n    and pm.get('kind') == 'g01_parallel_collection' and pm.get('status') == 'blocked_by_render_gate'\n    and pm.get('exit_code') == 86 and pm.get('black_frame_detected') is True\n    and not pm.get('error') and not pm.get('errors') and pm.get('cleanup_errors') == []\n    and all(pm.get(k) == [] for k in ('scene_runs', 'started_shards', 'stages', 'admission_final',\n                                    'unfinished_run_names', 'stop_reasons'))\n    and pm.get('acceptance_passed') is False, 'Parent has business work, nonblack error or uncertain cleanup')\nrequire(pm['gate']['run_name'] == gate_name and pm['gate']['source']['sha256'] == gref['sha256']\n    and pm['gate']['source']['metrics_sha256'] == gref['metrics_sha256'] and pm['gate']['exit_code'] == 86,\n    'Parent gate binding changed')\nrequire({part.split('/')[0] for part in f['exec_host'].split('+')} == {node}\n    and parent['_meta']['host'] == gate['_meta']['host'] == c['node'] == node\n    and gc['pbs_jobid'] == a['pbs_jobid'] == job and a['cuda_driver_uuids'] == [gpu]\n    and c['parent_cuda_visible_devices'] == gpu and a['cpu_affinity'] == c['cpu_affinity']\n    and len(a['cpu_affinity']) == len(set(a['cpu_affinity'])) == 12\n    and gc['resolution'] == 255 and gc['segmentation'] is True\n    and gc['timeout_seconds'] == c['gate_timeout_seconds'] == 120\n    and gate['_meta']['exit_code'] == gm.get('exit_code') == 86 and gm.get('passed') is False\n    and gm.get('black_frame_detected') is True and gm.get('errors') == gm.get('cleanup_errors') == []\n    and gm.get('expected_gpu_count') == gm.get('completed_gpu_count') == 1\n    and len(gm['devices']) == len(a['devices']) == 1, 'Original native gate identity differs')\nob = gm['devices'][0]['observation']\nrequire(gm['devices'][0]['worker_error'] is None and not ob.get('error') and not ob.get('cleanup_error')\n    and ob['gpu_identity'] == a['devices'][0] and ob['gpu_identity']['gpu_uuid'] == gpu\n    and ob['node'] == node and [v['stage'] for v in ob['captures']] == ['after_constructor', 'after_Pass'],\n    'Native observations incomplete')\nfor stage in ('constructor', 'Pass'):\n    require(any(v['stage'] == stage and v['fresh_main_rgb_payloads'] > 0 and v['cached_metadata'] is False\n                for v in ob['wire_packets']), 'Missing original fresh wire payload')\ncaptures = []\nfor capture in ob['captures']:\n    path = Path(capture['png']['path']).resolve()\n    require(path.parent == r / 'logs/runs' / gate_name / 'render_gate', 'Original capture path differs')\n    rr = ref(path)\n    require(rr['sha256'] == capture['png']['sha256'] and capture['valid_shape'] is True\n        and capture['shape'] == [255, 255, 3] and capture['dtype'] == 'uint8'\n        and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True\n        and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0,\n        'Original native black capture invalid')\n    with Image.open(io.BytesIO(path.read_bytes())) as image:\n        require(image.mode == 'RGB' and image.size == (255, 255) and image.getextrema() == ((0, 0),) * 3,\n                'Decoded original capture is not completely black')\n    captures.append(rr)\nproof = {'eligible_proven_black_gate_retry': True, 'job_id': job, 'native_kind': pm['kind'],\n    'original_payload': ref(pp), 'original_job_script': ref(sp), 'original_receipt': ref(rp),\n    'original_command_unchanged': expected, 'pbs_accounting': aref, 'source_results': [pref, gref],\n    'node': node, 'gpu_uuid': gpu, 'captures': captures}\nold_path = r / old_plan['file']\nrequire(ref(old_path) == old_plan and not old_path.stat().st_mode & 0o222, 'Original quota changed')\nplan = json.loads(old_path.read_bytes())\nrequire(plan['parent_run_name'] == parent_name, 'Original quota parent changed')\nnew_plan = dict(plan, parent_run_name=next_name)\nrequire({k: v for k, v in new_plan.items() if k != 'parent_run_name'} ==\n        {k: v for k, v in plan.items() if k != 'parent_run_name'}, 'Scientific quota values changed')\nnew_path = r / 'configs/gen_train_look_first_unit_01_retry1_quota.json'\nwith new_path.open('x') as handle:\n    json.dump(new_plan, handle, ensure_ascii=False, indent=2, allow_nan=False)\n    handle.write('\\n')\nnew_path.chmod(0o444)\nnew_ref = ref(new_path)\ncommand = list(expected)\nfor flag, value in [('--name', next_name), ('--quota-plan', new_ref['file']), ('--quota-plan-sha256', new_ref['sha256'])]:\n    command[command.index(flag) + 1] = value\nb.same_retry_command(r, expected, command, parent_name, next_name)\nmetrics = {'strict_black_gate_proof': proof, 'technical_retry_plan_ready': True, 'original_plan': old_plan,\n    'new_plan': new_ref, 'only_plan_value_changed': 'parent_run_name', 'all_other_plan_values_equal': True,\n    'producer_command': command, 'requested_wall_seconds': 1630, 'retry_of': job,\n    'scope': 'Exact original FP315 scientific/quota settings; opening native black; no submission'}\nwith (r / 'results' / (name + '.json')).open('x') as handle:\n    json.dump({'metrics': metrics, 'config': {'name': name}, 'sources': [pref, gref, aref]}, handle, indent=2, allow_nan=False)\n    handle.write('\\n')\nprint('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T18:32:33",
+    "log_path": "logs/runs/diag_train_look_first_unit_black_guard_plan_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "92f451751bb6803086809b3918c62d659b84737b",
+    "git_dirty": true,
+    "git_diff_path": "logs/runs/diag_train_look_first_unit_black_guard_plan_01.diff",
+    "end": "2026-11-10T18:32:36",
+    "duration_sec": 0.6,
+    "exit_code": 0,
+    "metrics_sha256": "76dcad04198c6850149f7dabd62e05f275b0f5929b64261982ff1c2fec1bbf20"
+  }
+}

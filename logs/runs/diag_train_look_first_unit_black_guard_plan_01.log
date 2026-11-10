@@ -1,0 +1,158 @@
+# run_logged: python3 -c """One exact G01 opening-black proof and identity-only retry plan; no submit.
+
+Execute this self-recording inline producer directly via original run_logged,
+only after canonical710105 accounting has sealed. Uses the reviewed native PNG chain.
+"""
+import hashlib
+import importlib.util
+import io
+import json
+import shlex
+from pathlib import Path
+from PIL import Image
+from src.tools import pbs_black_retry as b
+
+r = Path.cwd().resolve()
+require = b.require
+name = 'diag_train_look_first_unit_black_guard_plan_01'
+job = '710105.hopper-m-02'
+parent_name = 'gen_train_look_first_unit_01'
+next_name = 'gen_train_look_first_unit_01_retry1'
+folder = r / 'logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a'
+account_name = 'g01_train_look_first_unit_final_accounting_02'
+old_plan = {'file': 'configs/gen_train_look_first_unit_01_quota.json',
+            'sha256': 'da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2'}
+
+
+def ref(path):
+    path = Path(path).resolve()
+    return {'file': str(path.relative_to(r)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def load(filename):
+    rr = ref(r / filename)
+    data, _ = b.logged(r, rr)
+    return data, dict(rr, metrics_sha256=data['_meta']['metrics_sha256'])
+
+
+parent, pref = load('results/' + parent_name + '.json')
+gate_name = parent_name + '_j710105_hopper_m_02_gate'
+gate, gref = load('results/' + gate_name + '.json')
+account, aref = load('results/' + account_name + '.json')
+pp, sp, rp = (folder / p for p in ('payload.json', 'job.pbs', 'submission.json'))
+payload, receipt = json.loads(pp.read_bytes()), json.loads(rp.read_bytes())
+expected = ['python3', '-u', '-m', 'src.tools.g01_collect_parallel', '--name', parent_name,
+    '--scenes', 'FloorPlan315', '--concurrency', '6', '--benchmark-source',
+    'results/gen_train_concurrency_s15_02.json', '--timeout-seconds', '1600', '--partition', 'train',
+    '--quota-plan', old_plan['file'], '--quota-plan-sha256', old_plan['sha256'],
+    '--nearby-physics', '--sample-rejected-raw']
+require(payload['repo'] == str(r) and payload['name'] == parent_name and payload['command'] == expected
+    and payload['dry_run'] is False and payload['task_id'] == 'T01' and payload['budget_group'] == 'G01'
+    and payload['budget_batch'] == 't00b_t01_20261108' and payload['queue'] == 'autox'
+    and payload['requested_host'] is None and payload['requested_gpu_count'] == 1
+    and payload['requested_wall_seconds'] == 1630, 'Original exact G01 payload differs')
+require(pp.stat().st_mode & 0o222 == sp.stat().st_mode & 0o222 == 0
+    and receipt['returncode'] == 0 and receipt['stdout'].strip() == job and not receipt['stderr'],
+    'Original immutable submission or receipt differs')
+spec = importlib.util.spec_from_file_location('original_submit_for_train_look_guard', r / 'scripts/pbs/submit_phase.py')
+phase = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(phase)
+require(sp.read_text() == phase.render_job_script((r / 'scripts/pbs/job_1gpu.pbs').read_text(), 1, pp, None),
+        'Original PBS script differs from original one-GPU template')
+require(account['_meta']['command'] == ['python3', 'src/tools/pbs_usage.py', '--name', account_name, job],
+        'Canonical accounting was not the exact original script')
+final = phase._final_accounting(r, {job}, paths=[r / aref['file']])
+require(job in final, 'Original canonical accounting missing')
+rows = [v for v in account['config']['jobs'] if v['job_id'] == job]
+require(len(rows) == 1 and rows[0]['qstat_exit'] == 0, 'Canonical job ambiguous')
+f = rows[0]['fields']
+require(f.get('job_state') == 'F' and f.get('Exit_status') == '86' and f.get('run_count') == '1'
+    and f.get('project') == 'CFP04-SF-125' and f.get('Job_Owner', '').split('@')[0] == 'e1583364'
+    and f.get('Resource_List.ngpus') == '1' and f.get('Resource_List.ncpus') == '12'
+    and f.get('Resource_List.walltime') == '00:27:10' and f.get('queue') == 'smallx'
+    and 'PBS_O_QUEUE=autox' in f.get('Variable_List', '')
+    and shlex.split(f['Submit_arguments']) == receipt['command'][1:]
+    and f['Output_Path'].split(':', 1)[1] == str(folder / 'pbs.out'), 'Canonical allocation differs')
+c, pm = parent['config'], parent['metrics']
+gc, gm = gate['config'], gate['metrics']
+a = gc['allocation']
+node, gpu = gc['node'], a['cuda_visible_devices']
+require(parent['_meta']['command'] == expected and parent['_meta']['exit_code'] == 86
+    and c['name'] == parent_name and c['pbs_jobid'] == job and c['scenes'] == ['FloorPlan315']
+    and c['concurrencies'] == [6] and c['timeout_seconds'] == 1600 and c['g01_partition'] == 'train'
+    and c['quota_plan_reference'] == old_plan and c['seed'] == 0 and c['field_of_view'] == 60
+    and pm.get('kind') == 'g01_parallel_collection' and pm.get('status') == 'blocked_by_render_gate'
+    and pm.get('exit_code') == 86 and pm.get('black_frame_detected') is True
+    and not pm.get('error') and not pm.get('errors') and pm.get('cleanup_errors') == []
+    and all(pm.get(k) == [] for k in ('scene_runs', 'started_shards', 'stages', 'admission_final',
+                                    'unfinished_run_names', 'stop_reasons'))
+    and pm.get('acceptance_passed') is False, 'Parent has business work, nonblack error or uncertain cleanup')
+require(pm['gate']['run_name'] == gate_name and pm['gate']['source']['sha256'] == gref['sha256']
+    and pm['gate']['source']['metrics_sha256'] == gref['metrics_sha256'] and pm['gate']['exit_code'] == 86,
+    'Parent gate binding changed')
+require({part.split('/')[0] for part in f['exec_host'].split('+')} == {node}
+    and parent['_meta']['host'] == gate['_meta']['host'] == c['node'] == node
+    and gc['pbs_jobid'] == a['pbs_jobid'] == job and a['cuda_driver_uuids'] == [gpu]
+    and c['parent_cuda_visible_devices'] == gpu and a['cpu_affinity'] == c['cpu_affinity']
+    and len(a['cpu_affinity']) == len(set(a['cpu_affinity'])) == 12
+    and gc['resolution'] == 255 and gc['segmentation'] is True
+    and gc['timeout_seconds'] == c['gate_timeout_seconds'] == 120
+    and gate['_meta']['exit_code'] == gm.get('exit_code') == 86 and gm.get('passed') is False
+    and gm.get('black_frame_detected') is True and gm.get('errors') == gm.get('cleanup_errors') == []
+    and gm.get('expected_gpu_count') == gm.get('completed_gpu_count') == 1
+    and len(gm['devices']) == len(a['devices']) == 1, 'Original native gate identity differs')
+ob = gm['devices'][0]['observation']
+require(gm['devices'][0]['worker_error'] is None and not ob.get('error') and not ob.get('cleanup_error')
+    and ob['gpu_identity'] == a['devices'][0] and ob['gpu_identity']['gpu_uuid'] == gpu
+    and ob['node'] == node and [v['stage'] for v in ob['captures']] == ['after_constructor', 'after_Pass'],
+    'Native observations incomplete')
+for stage in ('constructor', 'Pass'):
+    require(any(v['stage'] == stage and v['fresh_main_rgb_payloads'] > 0 and v['cached_metadata'] is False
+                for v in ob['wire_packets']), 'Missing original fresh wire payload')
+captures = []
+for capture in ob['captures']:
+    path = Path(capture['png']['path']).resolve()
+    require(path.parent == r / 'logs/runs' / gate_name / 'render_gate', 'Original capture path differs')
+    rr = ref(path)
+    require(rr['sha256'] == capture['png']['sha256'] and capture['valid_shape'] is True
+        and capture['shape'] == [255, 255, 3] and capture['dtype'] == 'uint8'
+        and capture['action_success'] is True and not capture['error_message'] and capture['black'] is True
+        and capture['nonzero_rgb_values'] == capture['min_rgb'] == capture['max_rgb'] == 0,
+        'Original native black capture invalid')
+    with Image.open(io.BytesIO(path.read_bytes())) as image:
+        require(image.mode == 'RGB' and image.size == (255, 255) and image.getextrema() == ((0, 0),) * 3,
+                'Decoded original capture is not completely black')
+    captures.append(rr)
+proof = {'eligible_proven_black_gate_retry': True, 'job_id': job, 'native_kind': pm['kind'],
+    'original_payload': ref(pp), 'original_job_script': ref(sp), 'original_receipt': ref(rp),
+    'original_command_unchanged': expected, 'pbs_accounting': aref, 'source_results': [pref, gref],
+    'node': node, 'gpu_uuid': gpu, 'captures': captures}
+old_path = r / old_plan['file']
+require(ref(old_path) == old_plan and not old_path.stat().st_mode & 0o222, 'Original quota changed')
+plan = json.loads(old_path.read_bytes())
+require(plan['parent_run_name'] == parent_name, 'Original quota parent changed')
+new_plan = dict(plan, parent_run_name=next_name)
+require({k: v for k, v in new_plan.items() if k != 'parent_run_name'} ==
+        {k: v for k, v in plan.items() if k != 'parent_run_name'}, 'Scientific quota values changed')
+new_path = r / 'configs/gen_train_look_first_unit_01_retry1_quota.json'
+with new_path.open('x') as handle:
+    json.dump(new_plan, handle, ensure_ascii=False, indent=2, allow_nan=False)
+    handle.write('\n')
+new_path.chmod(0o444)
+new_ref = ref(new_path)
+command = list(expected)
+for flag, value in [('--name', next_name), ('--quota-plan', new_ref['file']), ('--quota-plan-sha256', new_ref['sha256'])]:
+    command[command.index(flag) + 1] = value
+b.same_retry_command(r, expected, command, parent_name, next_name)
+metrics = {'strict_black_gate_proof': proof, 'technical_retry_plan_ready': True, 'original_plan': old_plan,
+    'new_plan': new_ref, 'only_plan_value_changed': 'parent_run_name', 'all_other_plan_values_equal': True,
+    'producer_command': command, 'requested_wall_seconds': 1630, 'retry_of': job,
+    'scope': 'Exact original FP315 scientific/quota settings; opening native black; no submission'}
+with (r / 'results' / (name + '.json')).open('x') as handle:
+    json.dump({'metrics': metrics, 'config': {'name': name}, 'sources': [pref, gref, aref]}, handle, indent=2, allow_nan=False)
+    handle.write('\n')
+print('FINAL_METRICS_JSON: ' + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)
+
+# start: 2026-11-10T18:32:33
+FINAL_METRICS_JSON: {"all_other_plan_values_equal": true, "new_plan": {"file": "configs/gen_train_look_first_unit_01_retry1_quota.json", "sha256": "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905"}, "only_plan_value_changed": "parent_run_name", "original_plan": {"file": "configs/gen_train_look_first_unit_01_quota.json", "sha256": "da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2"}, "producer_command": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_look_first_unit_01_retry1", "--scenes", "FloorPlan315", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "train", "--quota-plan", "configs/gen_train_look_first_unit_01_retry1_quota.json", "--quota-plan-sha256", "13b33c5a2054662ad63bf8f0e5cb43dcbefd39abca294fad13ba01835cdfd905", "--nearby-physics", "--sample-rejected-raw"], "requested_wall_seconds": 1630, "retry_of": "710105.hopper-m-02", "scope": "Exact original FP315 scientific/quota settings; opening native black; no submission", "strict_black_gate_proof": {"captures": [{"file": "logs/runs/gen_train_look_first_unit_01_j710105_hopper_m_02_gate/render_gate/gpu_0_after_constructor.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}, {"file": "logs/runs/gen_train_look_first_unit_01_j710105_hopper_m_02_gate/render_gate/gpu_0_after_Pass.png", "sha256": "e5bfb29c66104406931a7bbebd9b4443df980ca7902bc4ee4c75d6a672e017cb"}], "eligible_proven_black_gate_retry": true, "gpu_uuid": "GPU-22895217-590b-1eab-f4d7-50a7a1b3f7fd", "job_id": "710105.hopper-m-02", "native_kind": "g01_parallel_collection", "node": "hopper-24", "original_command_unchanged": ["python3", "-u", "-m", "src.tools.g01_collect_parallel", "--name", "gen_train_look_first_unit_01", "--scenes", "FloorPlan315", "--concurrency", "6", "--benchmark-source", "results/gen_train_concurrency_s15_02.json", "--timeout-seconds", "1600", "--partition", "train", "--quota-plan", "configs/gen_train_look_first_unit_01_quota.json", "--quota-plan-sha256", "da366045a7b5cb060f85210852e53286b80b09f4417d00f960f68ce768427cd2", "--nearby-physics", "--sample-rejected-raw"], "original_job_script": {"file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/job.pbs", "sha256": "e3185c8b42f9272c7c7e2d1fba4efb5e0b0c2b33562309d844e5acf2661fecff"}, "original_payload": {"file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/payload.json", "sha256": "db5a8d3efd59d9dd6dee02701a5236cce3911a714465991f343644f404f255c9"}, "original_receipt": {"file": "logs/pbs/gen_train_look_first_unit_01-20261110T090456Z-e9bc210a/submission.json", "sha256": "8bac354090e2d3945b6cf1b1be32b444994b0f93e9f7f0b523ee6876a3c4bc9a"}, "pbs_accounting": {"file": "results/g01_train_look_first_unit_final_accounting_02.json", "metrics_sha256": "6747043282aba7bbf1c73f6a12038f6ecfb5dcba817e2e00336a4bd18cf2f248", "sha256": "4c22b5ec37293bca381ab7a2efd5d4e1164cbd6414f0d65a7ac3970be285eb16"}, "source_results": [{"file": "results/gen_train_look_first_unit_01.json", "metrics_sha256": "cd18d953e3971352b65557dd1a070a7f865ee7bc43d9f5e683248c98e76d6d7c", "sha256": "f1e5adb0d870c1f031153c7363bf2827b68be077bff80861aadf8f203cd8897e"}, {"file": "results/gen_train_look_first_unit_01_j710105_hopper_m_02_gate.json", "metrics_sha256": "e24235d448facab28608a6d652fb375c489a16ff2dae2f7ac0ab61972f73af1e", "sha256": "01ad405fddbfe665df31c03e752f010feb3dc0e787252606dc96351708700194"}]}, "technical_retry_plan_ready": true}
+# exit_code: 0
