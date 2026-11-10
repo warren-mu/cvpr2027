@@ -91,6 +91,9 @@ def verify_collection(data):
         if raw.get('counts_as_pair_attempt') is not True or raw.get('proposed_pool') != row.get('proposed_pool'):
             raise ValueError('G01 journal contains an uncounted or different-pool raw attempt')
         search.validate_fields(raw)
+        if config.get('raw_sampling_version') is not None:
+            from src.envs import pair_v2_raw_sampling as sampling
+            sampling.validate_fields(raw); sampling.validate_decision(raw, raw_path=merge.reference_path(reference, within=config['raw_evidence_dir']))
         if config.get('nearby_physics_version') is not None:
             from src.envs import pair_v2_nearby_physics as nearby
             nearby.validate_fields(raw)
@@ -182,7 +185,8 @@ def source_support():
                     or any(row.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None,
                     config.get('g01_configuration_version') is not None,
                     config.get('nearby_physics_version') is not None,
-                    config.get('g01_engineering_smoke') is not None).items())
+                    config.get('g01_engineering_smoke') is not None,
+                    config.get('raw_sampling_version') is not None).items())
                     or any(row.get(key) is not None for key in ('flip_unit_version', 'flip_unit_policy',
                         'flip_search_version', 'flip_search_policy', 'look_unit_version', 'look_unit_policy'))):
                 raise ValueError('Pair differs from its authenticated G01 source policy')

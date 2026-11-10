@@ -34,6 +34,7 @@ def validate_unit(unit, root, *, external=False):
     parser.add_argument('--quota-plan', required=True)
     parser.add_argument('--quota-plan-sha256', required=True)
     parser.add_argument('--nearby-physics', action='store_true')
+    parser.add_argument('--sample-rejected-raw', action='store_true')
     argv = arguments(unit.get('command'))
     try:
         args = parser.parse_args(argv)
@@ -45,6 +46,8 @@ def validate_unit(unit, root, *, external=False):
         '--quota-plan-sha256', args.quota_plan_sha256]
     if args.nearby_physics:
         expected.append('--nearby-physics')
+    if args.sample_rejected_raw:
+        expected.append('--sample-rejected-raw')
     if (argv != expected or args.name != unit.get('name') or args.partition != 'test'
             or args.concurrency != 6 or args.timeout_seconds != collect.required_timeout(args.scenes, 6, 'test')
             or unit.get('timeout_seconds') != args.timeout_seconds):
@@ -79,6 +82,9 @@ def validate_unit(unit, root, *, external=False):
     if args.nearby_physics:
         from src.envs import pair_v2_nearby_physics
         identity.update(pair_v2_nearby_physics.fields())
+    if args.sample_rejected_raw:
+        from src.envs import pair_v2_raw_sampling as sampling
+        identity.update(sampling.fields())
     return identity, keys
 
 
@@ -133,6 +139,15 @@ def validate_admission(plan, *, root):
             raise ValueError('Shared G01 admission physics differs from its original unit')
     elif any(key in plan for key in ('nearby_physics_enabled', *nearby.FIELDS)):
         raise ValueError('Shared G01 legacy unit cannot acquire a different physics declaration')
+    from src.envs import pair_v2_raw_sampling as sampling
+    if '--sample-rejected-raw' in arguments(unit['command']):
+        if plan.get('sample_rejected_raw_enabled') is not True:
+            raise ValueError('Shared admission dropped raw retention opt-in')
+        sampling.validate_fields(plan)
+        if any(plan[key] != identity[key] for key in sampling.FIELDS):
+            raise ValueError('Shared admission raw policy differs from immutable unit')
+    elif any(key in plan for key in ('sample_rejected_raw_enabled', *sampling.FIELDS)):
+        raise ValueError('Legacy shared unit cannot acquire raw sampling')
     if plan.get('g01_engineering_smoke') is not None:
         raise ValueError('A formal shared G01 unit cannot become an engineering smoke source')
     allocation = {key: plan[key] for key in ('scratch', 'pbs_jobid', 'node', 'cpu_affinity')}

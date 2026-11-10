@@ -25,6 +25,7 @@ from src.envs.pair_table_export import build_table, load_table, save_table, Simu
 from src.envs.pair_table_checks import check_pair, verify_render_sources
 from src.tools.t01_partition import audited_result, cpu_shards, sha_file
 from src.tools.t01_parallel_approved import stop_logged
+from src.tools import t02_rejected_raw as rejected_raw
 
 
 VERSION = "t02_single_gpu_export_shadow_v2"
@@ -299,6 +300,8 @@ def main():
     parser.add_argument("--gate-timeout-seconds", type=float, default=180)
     parser.add_argument("--max-raw-mib", type=int, default=2048)
     parser.add_argument("--max-table-mib", type=int, default=512)
+    parser.add_argument("--sample-rejected-raw", action="store_true",
+        help="For new scientific rejections only: retain seed0 ~10% binary raw, all metadata/logs")
     args = parser.parse_args()
     if (not re.fullmatch(r"t02_[A-Za-z0-9_]+", args.name)
             or len(set(args.pair_id)) != len(args.pair_id) or (args.pair_file and len(args.pair_id) != 1)
@@ -313,6 +316,8 @@ def main():
     config = {**vars(args), "source": str(args.source), "version": VERSION, "gpus": 1, "resolution": 255,
               "depth": 4, "node": socket.gethostname(), "human_review_status": "not_inferred_from_source",
               "execution_scope": "T02 export CPU-prepared; actual GPU invocation requires prior human/Claude T01 review"}
+    if args.sample_rejected_raw:
+        config["raw_retention_policy"] = copy.deepcopy(rejected_raw.POLICY)
     metrics = {"kind": "t02_table_export", "status": "failed", "pairs": [], "unstarted_pair_ids": list(args.pair_id),
                "gate": None, "cleanup_errors": [], "errors": [], "black_frame_detected": False,
                "export_checks_complete": False, "cache_matches_live": None,
@@ -361,6 +366,8 @@ def main():
                 pair_dir = directory / f"pair_{index:04d}"
                 pair_dir.mkdir(exist_ok=False)
                 source_ref = save_json(pair_dir / "authenticated_source.json", package)
+                retention_owner = (rejected_raw.start_attempt(config, package, pair_dir, index, output)
+                                   if args.sample_rejected_raw else None)
                 child = {"name": f"{args.name}_p{index:04d}", "scene": package["scene"], "resolution": 255,
                     "runtime": pair_runtime(runtime, pair_dir), "package": package, "directory": str(pair_dir),
                     "deadline": min(deadline - 15, time.time() + args.pair_timeout_seconds),
@@ -382,8 +389,17 @@ def main():
                 row.update(source_package=source_ref, scratch_directory=str(pair_dir))
                 row["cleanup_errors"].extend(cleanup)
                 metrics["cleanup_errors"].extend(row["cleanup_errors"])
+                if args.sample_rejected_raw:
+                    try:
+                        row = rejected_raw.apply_retention(row, retention_owner,
+                            cleanup_confirmed=not row["cleanup_errors"])
+                        if row["raw_retention"].get("retention_error"):
+                            metrics["errors"].append("rejected_raw_retention_incomplete")
+                    except BaseException as error:
+                        row["raw_retention_error"] = {"type": type(error).__name__, "message": str(error)}
+                        metrics["errors"].append("rejected_raw_retention_failed: " + str(error))
                 metrics["pairs"].append(row)
-                if row["cleanup_errors"]:
+                if row["cleanup_errors"] or metrics["errors"]:
                     break
                 if row.get("black_frame_reference"):
                     row["portable_black_evidence"] = preserve_black(row["black_frame_reference"], pair_dir,
@@ -408,6 +424,8 @@ def main():
         if metrics["cleanup_errors"]:
             code = 1
         metrics["producer_exit_code"] = code
+        if args.sample_rejected_raw:
+            metrics["raw_retention_counts"] = rejected_raw.summary(metrics["pairs"])
         output.parent.mkdir(parents=True, exist_ok=True)
         save_json(output, {"metrics": metrics, "config": config, "sources": sources})
         print("FINAL_METRICS_JSON: " + json.dumps(metrics, sort_keys=True, allow_nan=False), flush=True)

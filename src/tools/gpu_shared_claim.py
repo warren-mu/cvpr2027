@@ -120,10 +120,17 @@ def t02_identity(unit, root):
                 '--manifest', manifest_path, '--manifest-sha256', manifest_sha]
     for flag in flags:
         expected += [flag, params[flag.removeprefix('--')]]
+    sample_rejected_raw = '--sample-rejected-raw' in command
+    if sample_rejected_raw:
+        expected.append('--sample-rejected-raw')
     require(command == expected and params['concurrency'] == '6', 'Shared T02 command differs from the original fixed six-way entry')
     require(float(params['timeout-seconds']) == unit['timeout_seconds'], 'Unit time grant differs')
-    return {'kind': 't02_export_batch', 'manifest': manifest_ref,
-            'partition': manifest['partition'], 'parameters': params, 'original_pair_keys': keys}, sorted(keys)
+    identity = {'kind': 't02_export_batch', 'manifest': manifest_ref,
+                'partition': manifest['partition'], 'parameters': params, 'original_pair_keys': keys}
+    if sample_rejected_raw:
+        from src.tools.t02_rejected_raw import POLICY
+        identity['raw_retention_policy'] = copy.deepcopy(POLICY)
+    return identity, sorted(keys)
 
 
 def validate_unit(unit, root=ROOT, *, external=False):
@@ -268,7 +275,8 @@ def validate_t02_child_claim(environment, identity, arguments, *, root=ROOT):
             and arguments.pair_file == entry['pair']['file']
             and arguments.timeout_seconds == float(_argument(command,'--unit-timeout-seconds'))
             and arguments.pair_timeout_seconds == float(_argument(command,'--pair-timeout-seconds'))
-            and arguments.gate_timeout_seconds == float(_argument(command,'--gate-timeout-seconds')),
+            and arguments.gate_timeout_seconds == float(_argument(command,'--gate-timeout-seconds'))
+            and getattr(arguments, 'sample_rejected_raw', False) is ('--sample-rejected-raw' in command),
             'T02 child source or complete grant differs from its claimed original batch')
     return {**proof, 't02_child_index':index, 't02_child_entry':copy.deepcopy(entry)}
 

@@ -16,6 +16,7 @@ from . import pair_v2_bbox_rank as rank
 from . import pair_v2_flip_geometry as geometry
 from . import pair_v2_flip_ranked_shard as ranked
 from . import pair_v2_nearby_physics as nearby_physics
+from . import pair_v2_raw_sampling as raw_sampling
 
 _ORIGINAL_BUILD = look._ORIGINAL_BUILD
 _ORIGINAL_EXPORT = marked.export_pair
@@ -32,6 +33,11 @@ def enable_config(config):
         scene_pairs_per_class=policy.class_cap(declared['g01_partition']),
         proposal_order='G01 mixed; complete LookFlip bbox geometry; historical Direct/Stay domains; shared native tokens; full-active-round cadence; fixed labels; actual per-class cap',
         attempt_limit_scope='infrastructure guard; collection caps and explicit scene deadline are authoritative')
+    if config.get('raw_sampling_version') is not None:
+        config['raw_evidence_policy'] = {**config['raw_evidence_policy'], **raw_sampling.fields(),
+            'version': raw_sampling.VERSION,
+            'attempt_raw': 'all accepted/non-scientific failures; fixed-seed approximately10percent scientific rejected; memory until verdict',
+            'other_rejection': 'complete compact counts/reasons; omitted raw and thumbnail not materialized'}
     return config
 
 
@@ -42,7 +48,8 @@ def tags(config=None):
     configuration = config is not None and config.get('g01_configuration_version') is not None
     return {**stay.tags(), **policy.fields(partition, quota_assignment is not None, configuration,
                 config is not None and config.get('nearby_physics_version') is not None,
-                config is not None and config.get('g01_engineering_smoke') is not None),
+                config is not None and config.get('g01_engineering_smoke') is not None,
+                config is not None and config.get('raw_sampling_version') is not None),
             **extra, **search.fields(quota_assignment is not None, configuration), **labels.fields(),
             **cadence.fields(), **sharing.fields(), **rank.fields(), **geometry.fields(),
             'producer_module': policy.PRODUCER}
@@ -52,6 +59,8 @@ def measured_build(sim, config, baseline, identities, proposal, view, pair_id, d
     row = {} if attempt_row is None else attempt_row
     fields = labels.pair_fields(pair_id, identities['candidate_names'])
     row.update(fields, mode=proposal['mode'], proposed_pool=proposal['projection_pool']['pool'])
+    if config.get('raw_sampling_version') is not None:
+        row.update(raw_sampling.fields())
     if config.get('g01_configuration_version') is not None:
         row['g01_configuration'] = search.configurations.from_inputs(config['scene'], view, identities)
     if proposal['mode'] == 'flip' and proposal['projection_pool']['pool'] == 'look':
@@ -107,6 +116,10 @@ def compact_attempt(row):
         result['identities'] = copy.deepcopy(row['identities'])
     if row.get('collection_quota_skip') is not None or row.get('collection_configuration_skip') is not None:
         result['validity'] = copy.deepcopy(row.get('validity'))
+    if row.get('raw_sampling_version') is not None:
+        result.update(raw_sampling.fields())
+        if row.get('status') != 'passed' and (row.get('evidence_retention') or {}).get('full_raw_retained') is False:
+            result = raw_sampling.compact_without_missing_references(result)
     return result
 
 
@@ -241,7 +254,7 @@ def installed(config=None):
 def generator_worker(config, connection):
     from src.tools.g01_admission import witness_bridge
     policy.validate_source(config)
-    with installed(config), witness_bridge(config) as bridge:
+    with installed(config), raw_sampling.installed(config), witness_bridge(config) as bridge:
         result = stay._ORIGINAL_GENERATOR(config, connection)
     result['g01_witness_admission'] = bridge.report()
     return result

@@ -187,7 +187,7 @@ def benchmark_stage(path, concurrency):
         'scope': 'completed workload and known resource cleanup only; no scientific pair acceptance'}
 
 
-def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False, quota_reference=None, nearby=False):
+def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchmark, partition='train', explicit_partition=False, quota_reference=None, nearby=False, sampled=False):
     expected = ['--name', name, '--scenes', *scenes, '--concurrency', str(concurrency),
                 '--benchmark-source', str(benchmark), '--timeout-seconds', str(timeout)]
     validate_selection(scenes, concurrency, partition)
@@ -202,6 +202,8 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
         expected += ['--quota-plan', quota_reference['file'], '--quota-plan-sha256', quota_reference['sha256']]
     if nearby:
         expected += ['--nearby-physics']
+    if sampled:
+        expected += ['--sample-rejected-raw']
     from src.tools.g01_shared_unit import runtime_claim
     claim = runtime_claim(root=repo, name=name, job=job, command=expected, quota_reference=quota_reference)
     if claim is not None:
@@ -229,17 +231,17 @@ def submission_identity(repo, name, job, timeout, *, scenes, concurrency, benchm
     return matches[0]
 
 
-def apply_source_policy(shard, scene, partition, assignment=None, *, nearby=False, smoke=False):
+def apply_source_policy(shard, scene, partition, assignment=None, *, nearby=False, smoke=False, sampled=False):
     """Explicit future-only opt-in; old caller defaults reproduce old fields."""
-    if type(nearby) is not bool or type(smoke) is not bool or (smoke and not nearby):
+    if type(nearby) is not bool or type(smoke) is not bool or type(sampled) is not bool or (smoke and not nearby):
         raise ValueError('Require explicit physical-policy selection')
-    if assignment is not None or nearby or smoke:
-        shard.update(parent.policy.declared(scene, partition, assignment, nearby=nearby, smoke=smoke))
+    if assignment is not None or nearby or smoke or sampled:
+        shard.update(parent.policy.declared(scene, partition, assignment, nearby=nearby, smoke=smoke, sampled=sampled))
     return shard
 
 
 @contextmanager
-def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False, quota=None, nearby=False):
+def installed(*, scenes, concurrency, benchmark, proof, partition='train', explicit_partition=False, quota=None, nearby=False, sampled=False):
     """Reuse the original scheduler; every binding is process-local and restored."""
     scenes = validate_selection(scenes, concurrency, partition)
     previous = {key: getattr(parent, key) for key in
@@ -257,7 +259,7 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
             raise ValueError('Scheduler must retain its complete full-grant deadline')
         result = submission_identity(repo, name, job, timeout + BENCHMARK_VALIDATION_SECONDS, scenes=scenes,
                                    concurrency=concurrency, benchmark=benchmark, partition=partition,
-                                   explicit_partition=explicit_partition, quota_reference=quota_reference, nearby=nearby)
+                                   explicit_partition=explicit_partition, quota_reference=quota_reference, nearby=nearby, sampled=sampled)
         shared_claim = result.get('shared_queue_claim')
         return result
     def create_plan(*args, **kwargs):
@@ -265,13 +267,15 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
             kwargs['shared_queue_claim'] = copy.deepcopy(shared_claim)
         if nearby:
             kwargs['nearby_physics'] = True
+        if sampled:
+            kwargs['sample_rejected_raw'] = True
         return previous['create_plan'](*args, **kwargs)
     def make_shard(name, scene, *args, **kwargs):
         shard = previous['make_shard'](name, scene, *args, **kwargs)
         if shared_claim is not None:
             shard['shared_queue_claim'] = copy.deepcopy(shared_claim)
         assignment = None if quota is None else quota_plan.assignment(quota['plan'], quota_reference, scene, name)
-        return apply_source_policy(shard, scene, partition, assignment, nearby=nearby)
+        return apply_source_policy(shard, scene, partition, assignment, nearby=nearby, sampled=sampled)
     def finish(running, sources):
         if proof['source'] not in sources:
             sources.append(copy.deepcopy(proof['source']))
@@ -282,6 +286,8 @@ def installed(*, scenes, concurrency, benchmark, proof, partition='train', expli
         metrics['kind'] = 'g01_parallel_collection'
         if nearby:
             config['nearby_physics_enabled'] = True
+        if sampled:
+            config['sample_rejected_raw_enabled'] = True
         config.update(collection_version=VERSION,
                       g01_partition=partition, per_scene_class_cap=parent.policy.class_cap(partition),
                       pool_scope=SCOPE if partition == 'train' else 'fixed evaluation scenes only; no training or tuning; aggregate cap6 per scene/class; freeze manifest before evaluation',
@@ -317,6 +323,7 @@ def main(argv=None):
     parser.add_argument('--quota-plan', type=Path)
     parser.add_argument('--quota-plan-sha256')
     parser.add_argument('--nearby-physics', action='store_true', help='Explicit supplement16 future-generation policy; old default unchanged')
+    parser.add_argument('--sample-rejected-raw', action='store_true', help='Explicit future seed0 ten-percent rejected raw policy')
     args = parser.parse_args(argv)
     partition = args.partition or 'train'
     scenes = validate_selection(args.scenes, args.concurrency, partition)
@@ -362,7 +369,7 @@ def main(argv=None):
     handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
     try:
         with installed(scenes=scenes, concurrency=args.concurrency, benchmark=args.benchmark_source, proof=proof,
-                       partition=partition, explicit_partition=args.partition is not None, quota=quota, nearby=args.nearby_physics):
+                       partition=partition, explicit_partition=args.partition is not None, quota=quota, nearby=args.nearby_physics, sampled=args.sample_rejected_raw):
             sys.argv = [MODULE, '--name', args.name, '--timeout-seconds', str(runner_timeout(scenes, args.concurrency, partition))]
             code = parent.main()
     finally:

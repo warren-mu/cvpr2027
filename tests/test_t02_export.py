@@ -25,7 +25,8 @@ def package(kind="look_flip"):
             "worlds": [copy.deepcopy(world), copy.deepcopy(world)], "clone_context": None,
             "reachable_positions": [{"x": .25, "y": 1, "z": 0}, {"x": -.25, "y": 1, "z": 0}],
             "reachable_reference": {"file": "/original/query.json", "sha256": "a" * 64},
-            "reachable_scope": "original", "source_provenance": {}, "source_config": {}, "t01": {"pair_id": "p"},
+            "reachable_scope": "original", "source_provenance": {"pair": {"file": "/source/pair.json",
+                "sha256": "f" * 64}}, "source_config": {}, "t01": {"pair_id": "p"},
             "evidence_roots": ["/original"]}
 
 
@@ -95,12 +96,14 @@ class ExportTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 export.gate_runtime(changed, identity, "hopper-1", Path("/scratch/logs"))
 
-    def main_order_fixture(self, *, gate_exit=0, gate_cleanup=(), fail_pair=None):
+    def main_order_fixture(self, *, gate_exit=0, gate_cleanup=(), fail_pair=None, retention_failure=False, sample_rejected_raw=False):
         # Exercise the real main sequence/result writer. GPU/PBS execution and
         # byte/science authentication are boundaries mocked by this fixture.
         from src.envs import pair_table_source, thor_common
 
         calls, children = [], []
+        cleaned = [False]
+        original_retention = export.rejected_raw.apply_retention
         gate_ref = {"file": "/fixture/gate.json", "sha256": "a" * 64}
         common_ref = {"file": "/fixture/checkpoint.json", "sha256": "b" * 64}
         with tempfile.TemporaryDirectory() as directory:
@@ -113,6 +116,9 @@ class ExportTests(unittest.TestCase):
             argv = ["t02_export", "--name", "t02_order", "--source", "source.json",
                     "--pair-id", "p0", "--pair-id", "p1", "--timeout-seconds", "600",
                     "--pair-timeout-seconds", "200", "--gate-timeout-seconds", "180"]
+
+            if sample_rejected_raw or retention_failure:
+                argv.append("--sample-rejected-raw")
 
             def run_gate(name, seconds, output, deadline, sources):
                 calls.append("gate")
@@ -135,11 +141,24 @@ class ExportTests(unittest.TestCase):
 
             def start_worker(target, config):
                 self.assertIs(target, export.pair_worker)
+                cleaned[0] = False
                 calls.append("worker:" + config["package"]["pair_id"])
                 children.append(config)
                 return SimpleNamespace(result={"pair_id": config["package"]["pair_id"],
                     "status": "exported", "cleanup_errors": []}, error=None,
                     identity={"pid": 10}, unity_identity={"pid": 11}, receive=lambda: None)
+
+            def stop_owned(workers):
+                self.assertEqual(len(workers), 1)
+                cleaned[0] = True
+                return []
+
+            def after_cleanup(row, reference, *, cleanup_confirmed):
+                self.assertTrue(cleaned[0])
+                self.assertTrue(cleanup_confirmed)
+                if retention_failure:
+                    raise OSError("retention fixture failure")
+                return original_retention(row, reference, cleanup_confirmed=cleanup_confirmed)
 
             with patch.object(export, "ROOT", root), patch.object(export.sys, "argv", argv), \
                  patch.object(export, "execution_environment", return_value=identity), \
@@ -152,7 +171,8 @@ class ExportTests(unittest.TestCase):
                  patch.object(export, "logged_gate", side_effect=run_gate), \
                  patch.object(pair_table_source, "load_reviewed_pair", side_effect=authenticate), \
                  patch.object(export, "Worker", side_effect=start_worker), \
-                 patch.object(export, "stop_workers", return_value=[]), \
+                 patch.object(export, "stop_workers", side_effect=stop_owned), \
+                 patch.object(export.rejected_raw, "apply_retention", side_effect=after_cleanup), \
                  patch.object(export.sys, "stdout", io.StringIO()), \
                  patch.object(export.sys, "stderr", io.StringIO()):
                 code = export.main()
@@ -182,6 +202,31 @@ class ExportTests(unittest.TestCase):
         self.assertTrue(all(child["deadline"] == 600 for child in children))
         self.assertTrue(all(child["runtime"]["cuda_visible_devices"] == UUID for child in children))
         self.assertTrue(all(child["field_of_view"] == 60 for child in children))
+
+    def test_retention_is_explicit_opt_in_and_runs_only_after_owned_cleanup(self):
+        code, saved, _, _, _, _ = self.main_order_fixture()
+        self.assertEqual(code, 0)
+        self.assertNotIn("raw_retention_policy", saved["config"])
+        self.assertNotIn("raw_retention_counts", saved["metrics"])
+        self.assertTrue(all("raw_retention" not in row for row in saved["metrics"]["pairs"]))
+        code, saved, _, _, _, _ = self.main_order_fixture(sample_rejected_raw=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(saved["config"]["raw_retention_policy"], export.rejected_raw.POLICY)
+        self.assertEqual(saved["metrics"]["raw_retention_counts"]["attempts"], 2)
+        self.assertTrue(all(row["raw_retention"]["cleanup_confirmed"] for row in saved["metrics"]["pairs"]))
+
+    def test_retention_failure_preserves_started_attempt_and_stops_future_launch(self):
+        code, saved, calls, children, _, _ = self.main_order_fixture(retention_failure=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(calls, ["gate", "source:p0", "source:p1", "worker:p0"])
+        self.assertEqual(len(children), 1)
+        metrics = saved["metrics"]
+        self.assertEqual(len(metrics["pairs"]), 1)
+        self.assertEqual(metrics["pairs"][0]["status"], "exported")
+        self.assertEqual(metrics["pairs"][0]["raw_retention_error"]["type"], "OSError")
+        self.assertEqual(metrics["unstarted_pair_ids"], ["p1"])
+        self.assertFalse(metrics["export_checks_complete"])
+        self.assertEqual(metrics["raw_retention_counts"]["attempts"], 1)
 
     def test_later_source_failure_prevents_even_the_first_export(self):
         code, saved, calls, children, gate_ref, common_ref = self.main_order_fixture(fail_pair="p1")

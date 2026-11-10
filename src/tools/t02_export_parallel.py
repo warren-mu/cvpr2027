@@ -86,11 +86,12 @@ def read_manifest(path, expected_sha):
     return data, {'file': str(path), 'sha256': expected_sha}
 
 
-def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds):
+def unit_command(name, entry, unit_seconds, pair_seconds, gate_seconds, sample_rejected_raw=False):
     return [sys.executable, '-u', '-m', 'src.tools.t02_export', '--name', name,
             '--source', entry['source']['file'], '--pair-id', entry['pair_id'],
             '--pair-file', entry['pair']['file'], '--timeout-seconds', str(unit_seconds),
-            '--pair-timeout-seconds', str(pair_seconds), '--gate-timeout-seconds', str(gate_seconds)]
+            '--pair-timeout-seconds', str(pair_seconds), '--gate-timeout-seconds', str(gate_seconds)] + (
+            ['--sample-rejected-raw'] if sample_rejected_raw else [])
 
 
 def child_outcome(record, data, identity, command, entry):
@@ -112,6 +113,11 @@ def child_outcome(record, data, identity, command, entry):
             or cfg.get('gpus') != 1 or cfg.get('pair_id') != [entry['pair_id']]
             or cfg.get('source') != entry['source']['file'] or cfg.get('pair_file') != entry['pair']['file']):
         raise ValueError('Original child command, source or allocation differs from its plan')
+    sampling = '--sample-rejected-raw' in command
+    if (cfg.get('sample_rejected_raw', False) is not sampling
+            or (sampling and cfg.get('raw_retention_policy') != export.rejected_raw.POLICY)
+            or (not sampling and 'raw_retention_policy' in cfg)):
+        raise ValueError('Original child raw retention differs from its explicit command')
     runtime = cfg.get('runtime')
     if runtime is not None and any(runtime.get(key) != identity[key] for key in
             ('pbs_jobid', 'cuda_visible_devices', 'cpu_affinity', 'scratch')):
@@ -155,7 +161,7 @@ def child_outcome(record, data, identity, command, entry):
 
 
 def run_units(entries, *, name, concurrency, directory, identity, deadline,
-              unit_seconds, pair_seconds, gate_seconds, sources, stopping):
+              unit_seconds, pair_seconds, gate_seconds, sources, stopping, sample_rejected_raw=False):
     if concurrency not in (1, 2, 4, 6) or len(identity['cpu_affinity']) != 12:
         raise ValueError('Require at most six single-Unity units on the shared twelve-CPU allocation')
     active, finished, errors, cleanup = {}, [], [], []
@@ -207,7 +213,8 @@ def run_units(entries, *, name, concurrency, directory, identity, deadline,
                     break
                 index = next_index
                 child_name = f'{name}_u{index:04d}'
-                command = unit_command(child_name, entries[index], unit_seconds, pair_seconds, gate_seconds)
+                command = unit_command(child_name, entries[index], unit_seconds, pair_seconds, gate_seconds,
+                                       sample_rejected_raw=sample_rejected_raw)
                 child = launch_logged(child_name, command, os.environ, directory)
                 child['producer_command'] = command
                 active[index] = child
@@ -259,6 +266,7 @@ def main(argv=None):
     parser.add_argument('--unit-timeout-seconds', type=float, required=True)
     parser.add_argument('--pair-timeout-seconds', type=float, required=True)
     parser.add_argument('--gate-timeout-seconds', type=float, default=180)
+    parser.add_argument('--sample-rejected-raw', action='store_true')
     args = parser.parse_args(argv)
     if (not re.fullmatch(r't02_export_[A-Za-z0-9_]+', args.name)
             or not all(math.isfinite(x) and x > 0 for x in (args.timeout_seconds, args.unit_timeout_seconds,
@@ -277,6 +285,8 @@ def main(argv=None):
               'unit_producer': 'src.tools.t02_export', 'unit_producer_version': export.VERSION,
               'gate_policy': 'parent gate completes first; each original child retains its own original gate',
               'scope': 'same GPU UUID and shared12CPU; independent original results; no scientific acceptance inferred'}
+    if args.sample_rejected_raw:
+        config['raw_retention_policy'] = copy.deepcopy(export.rejected_raw.POLICY)
     metrics = {'kind': 't02_parallel_export', 'status': 'failed_before_gate', 'units': [],
                'gate': None, 'cleanup_errors': [], 'errors': [], 'downstream_allowed': False,
                'black_frame_detected': False, 'cache_matches_live': None}
@@ -314,7 +324,8 @@ def main(argv=None):
             result = run_units(manifest['entries'], name=args.name, concurrency=args.concurrency,
                 directory=directory, identity=identity, deadline=deadline,
                 unit_seconds=args.unit_timeout_seconds, pair_seconds=args.pair_timeout_seconds,
-                gate_seconds=args.gate_timeout_seconds, sources=sources, stopping=stopping)
+                gate_seconds=args.gate_timeout_seconds, sources=sources, stopping=stopping,
+                sample_rejected_raw=args.sample_rejected_raw)
             metrics.update(result)
             complete = result['all_units_ended'] and all(row.get('export_checks_complete') for row in result['units'])
             code = 0 if complete else 1

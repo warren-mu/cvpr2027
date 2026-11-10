@@ -38,7 +38,9 @@ def digest(raw):
 
 def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignments,
                 pbs_jobid, node, gpu_uuid, cpu_affinity, scenes, partition='train', shared_queue_claim=None,
-                nearby_physics=False, engineering_smoke=False):
+                nearby_physics=False, engineering_smoke=False, sample_rejected_raw=False):
+    if type(sample_rejected_raw) is not bool:
+        raise ValueError('Require explicit raw sampling switch')
     if type(nearby_physics) is not bool or type(engineering_smoke) is not bool or (engineering_smoke and not nearby_physics):
         raise ValueError('Require explicit nearby physics and engineering-smoke switches')
     directory = Path(directory).resolve()
@@ -64,6 +66,9 @@ def create_plan(directory, *, parent_run_name, stage_index, concurrency, assignm
     if nearby_physics:
         from src.envs import pair_v2_nearby_physics as nearby
         plan.update(nearby_physics_enabled=True, **nearby.fields())
+    if sample_rejected_raw:
+        from src.envs import pair_v2_raw_sampling as sampling
+        plan.update(sample_rejected_raw_enabled=True, **sampling.fields())
     if engineering_smoke:
         from src.envs import pair_v2_g01_policy as policy
         plan['g01_engineering_smoke'] = copy.deepcopy(policy.SMOKE)
@@ -93,6 +98,11 @@ def validate_partition_plan(plan):
     """Old immutable train plans remain valid; test requires its explicit namespace."""
     from src.envs import pair_v2_g01_policy as policy
     from src.envs import pair_v2_nearby_physics as nearby
+    from src.envs import pair_v2_raw_sampling as sampling
+    if any(key in plan for key in ('sample_rejected_raw_enabled', *sampling.FIELDS)):
+        if plan.get('sample_rejected_raw_enabled') is not True:
+            raise ValueError('New admission raw sampling requires explicit opt-in')
+        sampling.validate_fields(plan)
     if any(key in plan for key in ('nearby_physics_enabled', *nearby.FIELDS)):
         if plan.get('nearby_physics_enabled') is not True:
             raise ValueError('New admission physics requires explicit opt-in')
@@ -160,7 +170,12 @@ def validate_source_admission(config, metrics=None):
     plan = load_plan(assignment)
     from src.envs import pair_v2_nearby_physics as nearby
     new_physics = plan.get('nearby_physics_enabled') is True
+    from src.envs import pair_v2_raw_sampling as sampling
     for value in (config, shard):
+        if plan.get('sample_rejected_raw_enabled') is True:
+            sampling.validate_fields(value)
+        elif any(key in value for key in sampling.FIELDS):
+            raise ValueError('Source raw policy differs from immutable admission')
         if new_physics:
             nearby.validate_fields(value)
         elif any(value.get(key) is not None for key in nearby.FIELDS):

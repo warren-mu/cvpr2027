@@ -42,10 +42,11 @@ def validate_quota(plan,name):
     return plan
 
 
-def submission_identity(repo,name,job,timeout,quota_reference):
+def submission_identity(repo,name,job,timeout,quota_reference,*,sampled=False):
     expected=['python3','-u','-m',MODULE,'--name',name,'--scene',SCENE,
         '--quota-plan',quota_reference['file'],'--quota-plan-sha256',quota_reference['sha256'],
         '--timeout-seconds',str(RUNNER_SECONDS)]
+    if sampled:expected += ['--sample-rejected-raw']
     require(timeout==RUNNER_SECONDS,'Smoke parent cap changed')
     matches=[]
     for folder in (repo/'logs/pbs').glob(name+'-*'):
@@ -105,7 +106,7 @@ def summarize_child(data):
 
 
 @contextmanager
-def installed(name,quota_reference):
+def installed(name,quota_reference,*,sampled=False):
     """Only parent scheduling hooks; the spawned original worker reads its flags."""
     keys=('SCENES','CONCURRENCIES','PARTITION','SCENE_SECONDS','required_timeout',
           'submission_identity','make_shard','write_result','finish_logged','create_plan')
@@ -113,7 +114,7 @@ def installed(name,quota_reference):
     state={'quota':None,'proof':None,'observations':[]}
     def reservation(repo,run_name,job,timeout):
         require(run_name==name,'Smoke parent name changed')
-        return submission_identity(repo,name,job,timeout,quota_reference)
+        return submission_identity(repo,name,job,timeout,quota_reference,sampled=sampled)
     def load_quota():
         if state['quota'] is None:
             # The parent has already passed its original render gate. Preserve
@@ -134,13 +135,13 @@ def installed(name,quota_reference):
         plan=load_quota()
         value=old['make_shard'](child_name,scene,*args,**kwargs)
         assignment=quotas.assignment(plan,quota_reference,scene,child_name)
-        apply_source_policy(value,scene,'test',assignment,nearby=True,smoke=True)
+        apply_source_policy(value,scene,'test',assignment,nearby=True,smoke=True,sampled=sampled)
         require(value['g01_engineering_smoke']['version']==VERSION
                 and value['g01_policy']['scene_timeout_seconds']==SCENE_SECONDS,
                 'Revised physics+explicit600s smoke policy is not installed')
         return value
     def create_plan(*args,**kwargs):
-        return old['create_plan'](*args,**kwargs,nearby_physics=True,engineering_smoke=True)
+        return old['create_plan'](*args,**kwargs,nearby_physics=True,engineering_smoke=True,**({'sample_rejected_raw':True} if sampled else {}))
     def finish(running,sources):
         row,data=old['finish_logged'](running,sources)
         if 'scene' in running and data is not None:
@@ -175,6 +176,7 @@ def main(argv=None):
     parser.add_argument('--quota-plan',required=True)
     parser.add_argument('--quota-plan-sha256',required=True)
     parser.add_argument('--timeout-seconds',type=int,required=True)
+    parser.add_argument('--sample-rejected-raw',action='store_true')
     args=parser.parse_args(argv)
     require(re.fullmatch(r'gen_test_s16_smoke_[A-Za-z0-9_]+',args.name) and args.timeout_seconds==RUNNER_SECONDS,
             'Require an explicit smoke name and exact bounded parent grant')
@@ -182,7 +184,7 @@ def main(argv=None):
     previous_argv=sys.argv
     handlers={sig:signal.getsignal(sig) for sig in (signal.SIGINT,signal.SIGTERM)}
     try:
-        with installed(args.name,ref):
+        with installed(args.name,ref,sampled=args.sample_rejected_raw):
             sys.argv=[MODULE,'--name',args.name,'--timeout-seconds',str(RUNNER_SECONDS)]
             return parent.main()
     finally:

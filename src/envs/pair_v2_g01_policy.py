@@ -11,6 +11,7 @@ from . import pair_v2_spawn_sharing as sharing
 from . import pair_v2_bbox_rank as rank
 from . import pair_v2_flip_geometry as geometry
 from . import pair_v2_nearby_physics as nearby_physics
+from . import pair_v2_raw_sampling as raw_sampling
 
 VERSION = 'g01_mixed_train80_complete_look_geometry_selected60_v2'
 TEST_VERSION = 'g01_mixed_test40_frozen_generator_selected60_v1'
@@ -41,7 +42,8 @@ SMOKE = {'version': 'g01_s16_single_scene_600s_v1', 'scene_timeout_seconds': 600
 BASE_VERSIONS = (VERSION, TEST_VERSION, *QUOTA_VERSIONS.values(), CONFIG_QUOTA_VERSION)
 NEARBY_VERSIONS = tuple(v + '_nearby_v1' for v in BASE_VERSIONS)
 SMOKE_VERSION = CONFIG_QUOTA_VERSION + '_nearby_v1_smoke600_v1'
-ALL_VERSIONS = (*BASE_VERSIONS, *NEARBY_VERSIONS, SMOKE_VERSION)
+UNSAMPLED_VERSIONS = (*BASE_VERSIONS, *NEARBY_VERSIONS, SMOKE_VERSION)
+ALL_VERSIONS = (*UNSAMPLED_VERSIONS, *(v + "_sampled_raw_v1" for v in UNSAMPLED_VERSIONS))
 _ORIGINAL_DECLARED = fov.declared_fields
 
 
@@ -58,7 +60,7 @@ def class_cap(partition):
     return 8 if partition == 'train' else 6
 
 
-def fields(partition='train', quota=False, configuration=False, nearby=False, smoke=False):
+def fields(partition='train', quota=False, configuration=False, nearby=False, smoke=False, sampled=False):
     split_scenes(partition)
     spec = copy.deepcopy(POLICY)
     if partition == 'test':
@@ -90,14 +92,17 @@ def fields(partition='train', quota=False, configuration=False, nearby=False, sm
             raise ValueError('Engineering smoke requires explicit test configuration tickets and supplement16')
         spec.update(version=SMOKE_VERSION, scene_timeout_seconds=600, purpose=SMOKE['purpose'])
         extra['g01_engineering_smoke'] = copy.deepcopy(SMOKE)
+    if sampled:
+        spec.update(version=spec['version'] + '_sampled_raw_v1', raw_sampling=copy.deepcopy(raw_sampling.POLICY))
+        extra.update(raw_sampling.fields())
     return {'g01_version': spec['version'], 'g01_policy': spec, 'g01_partition': partition, **extra}
 
 
-def declared(scene, partition='train', quota_assignment=None, nearby=False, smoke=False):
+def declared(scene, partition='train', quota_assignment=None, nearby=False, smoke=False, sampled=False):
     if scene not in split_scenes(partition):
         raise ValueError('G01 scene is outside its explicitly declared train/test partition')
     configuration = quota_assignment is not None and quota_assignment.get('version') == quota_plan.CONFIG_VERSION
-    values = fields(partition, quota_assignment is not None, configuration, nearby, smoke)
+    values = fields(partition, quota_assignment is not None, configuration, nearby, smoke, sampled)
     quota_fields = {} if quota_assignment is None else quota_plan.declared_fields(quota_assignment)
     return {'field_of_view': 60, 'fov_contrast_version': values['g01_version'],
         'fov_contrast_policy': copy.deepcopy(values['g01_policy']), 'fov_contrast_group': 'g01_selected60',
@@ -113,11 +118,14 @@ def declared_fields(config):
     expected = declared(config.get('scene'), config.get('g01_partition'),
                         config.get('g01_quota_assignment') if ticketed else None,
                         config.get('nearby_physics_version') is not None,
-                        config.get('g01_engineering_smoke') is not None)
+                        config.get('g01_engineering_smoke') is not None,
+                        config.get('raw_sampling_version') is not None)
     if ticketed and config.get('g01_quota_assignment') is None:
         raise ValueError('Partial quota fields cannot upgrade an old source')
     if any(key in config for key in nearby_physics.FIELDS) and config.get('nearby_physics_version') is None:
         raise ValueError('Partial nearby physics declaration cannot upgrade historical source')
+    if any(key in config for key in raw_sampling.FIELDS):
+        raw_sampling.validate_fields(config)
     if any(config.get(key) != item for key, item in expected.items()):
         raise ValueError('Missing/altered explicit G01 camera/partition/search policy')
     return expected

@@ -133,7 +133,8 @@ def verify_pair_controller(data, source_ref, journal, pair, pair_path, *, root=N
                 or any(value.get(key) != item for key, item in policy.fields(config['g01_partition'], config.get('g01_quota_version') is not None,
                     config.get('g01_configuration_version') is not None,
                     config.get('nearby_physics_version') is not None,
-                    config.get('g01_engineering_smoke') is not None).items())):
+                    config.get('g01_engineering_smoke') is not None,
+                    config.get('raw_sampling_version') is not None).items())):
             raise ValueError('Pair/raw differs from its authenticated G01 source policy')
         if config.get('g01_quota_version') is not None and any(
                 value.get(key) != config.get(key) for key in policy.quota_plan.FIELDS):
