@@ -5,6 +5,7 @@ export rejections stay in its ledger; cache failures never remove a pair from
 the population. No E2E exception, simulated live status, submission or training.
 """
 import argparse
+import ast
 import copy
 from contextlib import contextmanager
 import hashlib
@@ -20,7 +21,7 @@ import sys
 import time
 import traceback
 
-from src.envs.thor_common import ROOT, Worker, controller_session, deadline_after, install_signals, stop_workers
+from src.envs.thor_common import ROOT, Worker, controller_session, deadline_after, install_signals, stop_workers, process_identity
 from src.envs.paired_env import RGBFrame
 from src.envs.pair_table import RenderedView, eligible_names, label_assignment, verify_shadow_metadata
 from src.envs.pair_table_export import load_table, SimulatorTableRenderer
@@ -33,6 +34,9 @@ from src.tools.t02_export import (VERSION as EXPORT_VERSION, save_json, executio
                                   gate_runtime, logged_gate, preserve_black, black_only_failure, pair_runtime)
 
 VERSION = "t02_formal_fresh_cache_dataset_v3"
+INITIALIZE_RETRY_POLICY = {"version": "fresh_controller_initialize_timeout_retry_v1",
+    "maximum_retries": 2, "same_pair_and_state_sequence": True, "deadline_extension": False,
+    "cleanup_required": "original_owned_worker_stop_and_private_group_absent"}
 
 
 def exact_export_command(command, name):
@@ -236,6 +240,88 @@ def decode_view(description, roots):
                         description["process_id"], description["render_id"], description["source"], False)
 
 
+def initialize_timeout(error, scene):
+    """Recognize only THOR's explicit Initialize action timeout, not deadlines."""
+    if not isinstance(error, TimeoutError) or not isinstance(scene, str):
+        return False
+    match = re.fullmatch(r"Error encountered when running action (\{.*\}) in scene (.+)\.", str(error))
+    if match is None or match.group(2) not in (scene, scene + "_physics"):
+        return False
+    try:
+        action = ast.literal_eval(match.group(1))
+    except (ValueError, SyntaxError):
+        return False
+    return isinstance(action, dict) and action.get("action") == "Initialize"
+
+
+def initialization_cleanup_proof(worker, scope, cleanup):
+    """Retain original group identity and require observed disappearance."""
+    valid = (isinstance(scope, dict) and isinstance(worker.identity, dict)
+             and scope.get("pid") == worker.process.pid
+             and scope.get("start_ticks") == worker.identity.get("start_ticks")
+             and scope.get("pgid") == scope.get("sid") == worker.process.pid)
+    absent = False
+    if valid:
+        try:
+            os.killpg(scope["pgid"], 0)
+        except ProcessLookupError:
+            absent = True
+        except OSError:
+            pass
+    return {"scope": scope, "worker_exitcode": worker.process.exitcode,
+            "cleanup_errors": list(cleanup), "private_group_absent": absent,
+            "confirmed": valid and absent and worker.process.exitcode is not None and not cleanup}
+
+
+def capture_fresh_pair(child):
+    """At most two infra retries; every sampled state retains its original deadline."""
+    attempts = []
+    for attempt in range(INITIALIZE_RETRY_POLICY["maximum_retries"] + 1):
+        config = copy.deepcopy(child)
+        config["initialization_attempt"] = attempt
+        config["name"] = child["name"] + f"_init{attempt}"
+        config["runtime"] = pair_runtime(child["runtime"], Path(child["directory"]) / f"initialization_{attempt:02d}")
+        worker, row, cleanup = None, None, []
+        scope = None
+        try:
+            worker = Worker(fresh_worker, config)
+            while worker.result is None and worker.error is None and time.time() < config["deadline"] + 1:
+                worker.receive()
+                time.sleep(.05)
+            worker.receive()
+            row = worker.result or {**worker.latest, "pair_id": child["package"]["pair_id"],
+                "dataset_key": child["dataset_key"], "status": "error",
+                "error": worker.error or {"type": "TimeoutError", "message": "Fresh worker did not complete"},
+                "cleanup_errors": []}
+            row.update(worker_identity=worker.identity, unity_identity=worker.unity_identity,
+                       scratch_directory=child["directory"])
+        finally:
+            if worker is not None:
+                scope = process_identity(worker.process.pid)
+                cleanup = stop_workers([worker])
+        row["cleanup_errors"].extend(cleanup)
+        eligible = (row.get("initialize_timeout") is True and row.get("controller_initialized") is False
+                    and row.get("states") == [] and row.get("status") == "error"
+                    and row.get("error", {}).get("type") == "TimeoutError"
+                    and initialize_timeout(TimeoutError(row["error"]["message"]), child["scene"]))
+        proof = initialization_cleanup_proof(worker, scope, row["cleanup_errors"]) if eligible else None
+        if eligible and not proof["confirmed"]:
+            row["cleanup_errors"].append("Initialize retry stopped: owned Controller cleanup not confirmed")
+        retry = bool(eligible and proof["confirmed"] and attempt < INITIALIZE_RETRY_POLICY["maximum_retries"]
+                     and time.time() < child["deadline"] - 15)
+        attempt_record = {"attempt": attempt, "report_reference": row.get("report_reference"),
+            "worker_identity": row.get("worker_identity"), "unity_identity": row.get("unity_identity"),
+            "requested_states": list(child["state_ids"]), "status": row["status"], "error": row.get("error"),
+            "initialize_timeout": eligible, "cleanup_proof": proof, "retry_started_next": retry}
+        attempt_record["record_reference"] = save_json(Path(child["directory"]) / f"initialization_record_{attempt:02d}.json", attempt_record)
+        attempts.append(attempt_record)
+        if not retry:
+            row["initialization_attempts"] = attempts
+            row["initialization_retry_policy"] = dict(INITIALIZE_RETRY_POLICY)
+            return row
+    raise AssertionError("Unreachable retry bound")
+
+
 def fresh_worker(config, connection):
     from src.envs.pair_v2_simulator import BlackFrame, V2Simulator
     from src.envs.pair_v2_clone import V2CloneSimulator
@@ -247,12 +333,15 @@ def fresh_worker(config, connection):
     if use_dataset_key and config['dataset_key'] != table.dataset_key:
         raise ValueError('Fresh worker dataset key differs from its immutable table')
     report = {"pair_id": table.pair_id, "scene": table.scene, "status": "error", "states": [],
-              "requested_states": config["state_ids"], "error": None, "cleanup_errors": [], "black_frame_reference": None}
+              "requested_states": config["state_ids"], "error": None, "cleanup_errors": [], "black_frame_reference": None,
+              "controller_initialized": False, "initialize_timeout": False,
+              "initialization_attempt": config.get("initialization_attempt", 0)}
     if use_dataset_key:
         report.update(dataset_key=table.dataset_key, original_pair_id=table.pair_id)
     sim, body_finished = None, False
     try:
         with controller_session(config, "controller", segmentation=True, connection=connection) as controller:
+            report["controller_initialized"] = True
             try:
                 cls = V2CloneSimulator if package["clone_context"] is not None else V2Simulator
                 sim = cls(controller, config, directory / "raw")
@@ -298,6 +387,8 @@ def fresh_worker(config, connection):
                         report.update(status="error", raw_index_error=f"{type(error).__name__}: {error}")
     except BaseException as error:
         report.update(status="error", error={"type": type(error).__name__, "message": str(error)})
+        if not report["controller_initialized"]:
+            report["initialize_timeout"] = initialize_timeout(error, config.get("scene"))
         if body_finished:
             report["cleanup_errors"].append("Controller shutdown: " + str(error))
         traceback.print_exc()
@@ -305,7 +396,9 @@ def fresh_worker(config, connection):
     if incremental.is_file():
         report["raw_incremental_index"] = {"file": str(incremental), "sha256": sha_file(incremental),
                                             "bytes": incremental.stat().st_size}
-    report["report_reference"] = save_json(directory / "worker_report.json", report)
+    report_path = (directory / "worker_report.json" if report["controller_initialized"] else
+                   directory / f"initialization_attempt_{report['initialization_attempt']:02d}.json")
+    report["report_reference"] = save_json(report_path, report)
     return report
 
 
@@ -365,7 +458,7 @@ def main():
     if output.exists() or output.is_symlink():
         raise FileExistsError("Preserve prior cache checks; use a unique name")
     config = {**vars(args), "source": [str(p) for p in args.source], "version": VERSION,
-              "policy": dict(CACHE_POLICY), "gpus": 1, "resolution": 255, "node": socket.gethostname(),
+              "policy": dict(CACHE_POLICY), "initialization_retry_policy": dict(INITIALIZE_RETRY_POLICY), "gpus": 1, "resolution": 255, "node": socket.gethostname(),
               "max_raw_mib_scope": "per owned fresh pair worker, not whole job",
               "sample_count_scope": "native-authenticated complete paired captures; unverified worker diagnostics retained separately",
               "engineering_timing_scope": "perf_counter wall durations; failed phases retained; normal return is not scientific acceptance; fresh validation includes final byte rehash"}
@@ -430,17 +523,7 @@ def main():
                                "sampled_state_count": len(state_ids)}
                 metrics["engineering_timings"]["fresh_pairs"].append(pair_timing)
                 with engineering_phase(pair_timing, "worker_execution_and_cleanup"):
-                    worker = Worker(fresh_worker, child)
-                    while worker.result is None and worker.error is None and time.time() < child["deadline"] + 1:
-                        worker.receive()
-                        time.sleep(.05)
-                    worker.receive()
-                    row = worker.result or {**worker.latest, "pair_id": package['pair_id'], "dataset_key": pair_id, "status": "error",
-                        "error": worker.error or {"type": "TimeoutError", "message": "Fresh worker did not complete"}, "cleanup_errors": []}
-                    row.update(worker_identity=worker.identity, unity_identity=worker.unity_identity,
-                               scratch_directory=str(pair_dir))
-                    row["cleanup_errors"].extend(stop_workers([worker]))
-                    worker = None
+                    row = capture_fresh_pair(child)
                 metrics["worker_runs"].append(row)
                 metrics["cleanup_errors"].extend(row["cleanup_errors"])
                 if row.get("black_frame_reference"):
