@@ -1339,3 +1339,9 @@ Git切换曾将已提交PBS payload的文件模式从0444改成0644，字节未�
 依据已有五步训练记录不能期待约10分钟完成五步，将尚未GPU执行的工程入口调整为一次完整T4更新（4466e7a9；t4_one_update_engineering_v1）。相关21项正式CPU测试通过；原50/50/5正式步数、优化器50步horizon、原0步留出评测及≥80完整资格不变。先测一次完整更新和源认证的真实耗时，再检查6GPU·小时能否覆盖正式试跑，工程结果不进学习趋势或论文。
 
 补充16正式测试七个standalone分片配置已经轻量生成，精确分割原40场景和已有全局剩余票额（6/6/6/6/6/6/4），保留原A/B独立accepted去重basis，每个assignment只交一次，冒烟不计入配额。只准备配置，尚未提交新正式测试GPU。此方式使用已冒烟的原standalone入口，training_exports_01共享计划保持不变；后续若启用共享G01，先补其离线admission与原unit物理声明的严格一致性检查，再按新规单单元冒烟，当前不为它延迟主线。
+
+### 2026-11-09 19:01 ET：训练缓存检查达到52对
+
+固定23对缓存709356通过原200状态完整复核：cache_matches_live、sample_complete、downstream_allowed均true，errors/cleanup为空；原任务状态仍为cache_checks_passed_task_review_pending，不代替人审。PBS wall00:50:44、排队56秒，实扣0.8455555555555555 GPU·小时。沿原轻量模板按dataset_key去重的diag_t02_checked_training_52_02确认：direct_flip9、direct_stay22、look_flip14、look_stay7，共52对；尚未做既定Stay平衡/训练池冻结，未满足80对门槛。初次52_01因缺少原模板CVPR_RUN_NAME环境变量在写出前失败，原日志/meta保留；52_02只补实际运行名后重跑，没有改原证书或计数口径。
+
+31对缓存709362继续原fresh sampling。共享训练第15批由709383在hopper-28完成：4对DirectStay完整导出，另2对LookFlip在TeleportFull遇到Box碰撞，保持未知，不当黑帧重试；完整日志和失败输出保留。709385已通过出图检查，继续共享领取；709383空槽正在提交下一同参数单卡worker，仍与4卡709345共用原领取锁。

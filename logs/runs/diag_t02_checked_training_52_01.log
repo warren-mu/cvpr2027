@@ -1,0 +1,32 @@
+# run_logged: /scratch/e1583364/cvpr2027/envs/cvpr2027/bin/python3 -c import json,hashlib,os,signal
+from pathlib import Path
+from collections import Counter
+from src.tools.t01_partition import audited_result,canonical_hash
+signal.alarm(12)
+names=['t02_export_cache_first5_01_retry2','t02_export_cache_remaining24_01','t02_export_cache_six05_08_01_retry2']
+refs=[]; rows=[]; keys=set(); costs=[]
+for n in names:
+ d,ref=audited_result('results/'+n+'.json'); m=d['metrics']; refs.append(ref)
+ assert d['_meta']['exit_code']==0 and m['cache_matches_live'] and m['sample_complete'] and m['downstream_allowed'] and not m['stop_downstream']
+ assert not m['errors'] and not m['cleanup_errors'] and not m['missing_state_keys'] and m['observed_distinct_states']==200
+ for e in m['population_ledger']:
+  r=e['source']; b=Path(r['file']).read_bytes(); assert hashlib.sha256(b).hexdigest()==r['sha256']
+  original=json.loads(b); assert original['_meta']['metrics_sha256']==r['metrics_sha256']==canonical_hash(original['metrics'])
+  assert original['metrics']['export_checks_complete'] and original['_meta']['exit_code']==0
+  pair=original['metrics']['pairs']; assert len(pair)==1 and pair[0]['status']=='exported'
+  assert pair[0]['table_manifest']==e['table_manifest'] and pair[0]['pair_id']==e['pair_id']
+  key=e['dataset_key']; assert key not in keys; keys.add(key)
+  rows.append(dict(dataset_key=key,pair_id=e['pair_id'],kind=pair[0]['kind'],source=r,cache_result=ref))
+kinds=('direct_flip','direct_stay','look_flip','look_stay')
+metrics={'status':'completed_original_certificates_counted','pair_count':len(rows),'by_kind':{k:sum(r['kind']==k for r in rows) for k in kinds},'rows':rows,'all_four_classes_present':all(any(r['kind']==k for r in rows) for k in kinds),'human_review_pending':True,'balanced_pool_checked':False,'training_pool_frozen':False,'pilot_80_pair_threshold_met':False,'scope':'Counts of distinct pairs in completed original full-population native/pair/cache checks; not new acceptance or pilot authorization'}
+result={'metrics':metrics,'config':{'name':os.environ['CVPR_RUN_NAME'],'cache_results':names},'sources':refs}
+Path('results',os.environ['CVPR_RUN_NAME']+'.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+print('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True))
+
+# start: 2026-11-10T07:58:19
+Traceback (most recent call last):
+  File "<string>", line 22, in <module>
+  File "/scratch/e1583364/cvpr2027/envs/cvpr2027/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'CVPR_RUN_NAME'
+# exit_code: 1
