@@ -1,0 +1,116 @@
+{
+  "metrics": {
+    "validated": true,
+    "host_authorization": {
+      "version": "c912aeab_opening_black_retry_host_v2_exclude22_after709293",
+      "evidence": {
+        "file": "results/diag_gpu_pack_full_single02_black_guard_01.json",
+        "sha256": "ec188ed0548b82a00e2528f7316e7f984eb05f5f1326999a395b58fc9cfa5ac0"
+      },
+      "retry_of": "709615.hopper-m-02",
+      "requested_host": "hopper-28",
+      "previous_requested_host": null,
+      "rotation_index": 7,
+      "rotation_previous": {
+        "payload": {
+          "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry1-20261110T041853Z-bbd3551f/payload.json",
+          "sha256": "8bb6acd5ebdd3edc6666266375fb94a1c2f0ac41897f784ae26365016e028aba"
+        },
+        "receipt": {
+          "file": "logs/pbs/gpu_pack_test_priority_full_single_01_retry1-20261110T041853Z-bbd3551f/submission.json",
+          "sha256": "70216e94078d91c31c82a05e7971abb9c79c470dfe8ffbacfade0932942d3b6c"
+        }
+      },
+      "original_node": "hopper-22",
+      "original_gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+      "queue_fallback_after_seconds": 1200,
+      "scope": "opening black gate retry only; no scientific acceptance",
+      "available_hosts": [
+        "hopper-28",
+        "hopper-30"
+      ],
+      "disabled_hosts": {
+        "hopper-22": {
+          "reason": "New pinned submissions excluded after authenticated opening black gate",
+          "job_id": "709293.hopper-m-02",
+          "gpu_uuid": "GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56",
+          "strict_guard_result": "results/diag_g01_test_round2_s01_black_retry_plan_02.json"
+        }
+      }
+    },
+    "submit_command": [
+      "python3",
+      "scripts/pbs/submit_phase.py",
+      "--name",
+      "gpu_pack_test_priority_full_single_02_retry1",
+      "--task",
+      "T01",
+      "--budget-group",
+      "PACK",
+      "--gpus",
+      "1",
+      "--walltime",
+      "00:30:55",
+      "--host",
+      "hopper-28",
+      "--retry-of",
+      "709615.hopper-m-02",
+      "--black-retry-evidence",
+      "results/diag_gpu_pack_full_single02_black_guard_01.json",
+      "--black-retry-evidence-sha256",
+      "ec188ed0548b82a00e2528f7316e7f984eb05f5f1326999a395b58fc9cfa5ac0",
+      "--",
+      "python3",
+      "-u",
+      "-m",
+      "src.tools.gpu_pack",
+      "--name",
+      "gpu_pack_test_priority_full_single_02_retry1",
+      "--queue-plan",
+      "configs/shared_test_priority_active_01.json",
+      "--queue-plan-sha256",
+      "a265edb569fc005af2abd4db28cfdcbdd3983cd0ef6af015365bd37a740dff2a",
+      "--queue-root",
+      "/scratch/e1583364/cvpr2027/shared_gpu_queue/test_priority_01",
+      "--gpus",
+      "1",
+      "--timeout-seconds",
+      "1825",
+      "--gate-timeout-seconds",
+      "180"
+    ],
+    "scope": "Preflight only; original submitter must repeat under its own reservation lock"
+  },
+  "config": {
+    "name": "diag_gpu_pack_full_single02_host_preflight_01"
+  },
+  "sources": [
+    {
+      "file": "results/diag_gpu_pack_full_single02_black_guard_01.json",
+      "sha256": "ec188ed0548b82a00e2528f7316e7f984eb05f5f1326999a395b58fc9cfa5ac0",
+      "metrics_sha256": "4a315b961a3ddc5c6a6838730d6d8149590bcd8ecd28ec4ab8eebc73b25e5837"
+    }
+  ],
+  "_meta": {
+    "name": "diag_gpu_pack_full_single02_host_preflight_01",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,json\nfrom pathlib import Path\nfrom src.tools import pbs_black_retry as b\nr=Path.cwd().resolve(); name='diag_gpu_pack_full_single02_host_preflight_01';guard_file='results/diag_gpu_pack_full_single02_black_guard_01.json'\nreference={'file':guard_file,'sha256':hashlib.sha256((r/guard_file).read_bytes()).hexdigest()}\nguard,_=b.logged(r,reference); proof=guard['metrics']['strict_black_gate_proof'];_,body=b.file_ref(r,proof['original_payload'],'logs/pbs');old=json.loads(body)\nnew_name='gpu_pack_test_priority_full_single_02_retry1';command=list(old['command']);command[command.index('--name')+1]=new_name\nindex,previous=b.rotation(r);previous_host=None\nif previous:\n    _,body=b.file_ref(r,previous['payload'],'logs/pbs');previous_host=json.loads(body)['requested_host']\nhost=b.next_host(b.VERSION,index,previous_host)\nbinding=b.validate_request_host(r,host=host,retry_of=proof['job_id'],evidence_path=guard_file,evidence_sha256=reference['sha256'],name=new_name,command=command,task='T01',group='PACK',gpus=1,wall_seconds=1855)\nsubmit=['python3','scripts/pbs/submit_phase.py','--name',new_name,'--task','T01','--budget-group','PACK','--gpus','1','--walltime','00:30:55','--host',host,'--retry-of',proof['job_id'],'--black-retry-evidence',guard_file,'--black-retry-evidence-sha256',reference['sha256'],'--',*command]\nmetrics={'validated':True,'host_authorization':binding,'submit_command':submit,'scope':'Preflight only; original submitter must repeat under its own reservation lock'}\nresult={'metrics':metrics,'config':{'name':name},'sources':[dict(reference,metrics_sha256=guard['_meta']['metrics_sha256'])]}\nwith (r/'results'/f'{name}.json').open('x') as f:json.dump(result,f,indent=2,allow_nan=False);f.write('\\n')\nprint('FINAL_METRICS_JSON: '+json.dumps(metrics,sort_keys=True,allow_nan=False),flush=True)\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": null,
+    "start": "2026-11-10T12:23:23",
+    "log_path": "logs/runs/diag_gpu_pack_full_single02_host_preflight_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "30fa39b2901bbfe9902effc47136534b54d7261c",
+    "git_dirty": false,
+    "end": "2026-11-10T12:23:25",
+    "duration_sec": 2.2,
+    "exit_code": 0,
+    "metrics_sha256": "9604ebcefa0295f15f5b21f3f685451831ffee03db78640174a0bb8f4a113ced"
+  }
+}

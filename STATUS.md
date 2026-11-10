@@ -1614,3 +1614,5 @@ S04 完整保留重跑配置已由 diag_test_s16_s04_full_retry_plan_01 生成�
 709607 单真实测试对双格式冒烟 PASS：83 状态/166 世界视图，RGB/mask/标号/τ/τ_seen 读取全等；数组 30,041,550→7,597,942 B（0.252914447），含 manifest 比 0.337031890；原 native/pair 检查通过，fresh cache 尚未做，不伪称 cache PASS。费用 0.0761111111 GPU·小时，排队 534 秒。当前 72 个去重测试候选按此单 DS 已知组成外推约 55.16 GB；加最新517.8 GiB基线和既有历史预留，未调整情景约795.08 GiB/1TiB（未含新增训练Look补数/后续导出，非硬上界）。详见 tasks/T02.compression.report.md，报告失败01保留，metadata02成功。
 已合并1861b83a与629d4a03：83资格/完整更新短测通过后，T0/T4各50步并行优先两单卡，T2后排；运行中的测试不取消。正式holdout将按实际资格通过总体的原seed0整场景划分固定、单独train_holdout_freeze记录，未来补池不重算。S04同参重跑709626已提交；10%采样纯黑帧709595的原参数03重提配置已准备，科学阈值不变。
 709610与709615再次在hopper22/GPU-5ff2e10b-a949-4c82-fa91-0e22f6075d56开头黑帧，零领取，分别0.0061111111 GPU·小时；原canonical/mixed/audit保留。01重提原严格guard和preflight已通过，轮换目标hopper30，仍遵守20分钟Q回退规则。
+
+黑帧重提映射：709610 → 709638（共享 full single01 retry1，hopper30，原同参数，20分钟Q回退）；709595 → 709644（raw10 smoke03，原FP21/seed0/600s，未改变原科学配置）。FULL02 原严格guard/preflight也已完成，后续提交由原submitter再次检查全局轮换。83资格尚未封口时不生成正式holdout文件、不开始训练更新。
