@@ -1,0 +1,44 @@
+{
+  "metrics": {
+    "command_exit_code": 0,
+    "elapsed_seconds": 0.11066086799837649
+  },
+  "config": {
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\np=Path('logs/runs/smoke_e2e_pilot_T4_s0_01_retry4/ppo/update_001.jsonl')\nraw=p.read_bytes()\nrows=[json.loads(x) for x in raw.splitlines() if x.strip()]\ncomplete=[r for r in rows if r.get('record_kind')=='pilot_update_complete']\nactor=[r for r in rows if r.get('record_kind')=='actual_actor_consistency_update']\nassert len(complete)==1 and complete[0]['update']==1 and complete[0]['actual_completed_updates']==1\nassert len(actor)==1 and actor[0]['native_optimizer_step_calls']==actor[0]['native_minibatch_steps']\nassert not any(r.get('record_kind')=='pilot_update_failed' for r in rows)\nkeys=('record_kind','update','actual_completed_updates','total_seconds','generation_seconds','scoring_seconds','critic_update_seconds','actor_update_seconds','native_actor_optimizer_step_calls','native_actor_minibatch_steps','t4_consistency','by_class')\nprint(json.dumps({'original_journal':{'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},'original_complete_fields':{k:complete[0][k] for k in keys},'original_actor_fields':{k:actor[0][k] for k in ('record_kind','update','arm','version','native_optimizer_step_calls','native_minibatch_steps','auxiliary_seconds')},'scope':'original complete update1 records; parent remains active, not full pilot acceptance'},sort_keys=True,allow_nan=False))\n"
+    ],
+    "pbs_job_id": null,
+    "scope": "environment setup or diagnostic, not a research result"
+  },
+  "error": null,
+  "_meta": {
+    "name": "diag_pilot_T4_retry4_first_update_01",
+    "command": [
+      "python3",
+      "-m",
+      "src.tools.record_command",
+      "--name",
+      "diag_pilot_T4_retry4_first_update_01",
+      "--",
+      "python3",
+      "-c",
+      "from pathlib import Path\nimport hashlib,json\np=Path('logs/runs/smoke_e2e_pilot_T4_s0_01_retry4/ppo/update_001.jsonl')\nraw=p.read_bytes()\nrows=[json.loads(x) for x in raw.splitlines() if x.strip()]\ncomplete=[r for r in rows if r.get('record_kind')=='pilot_update_complete']\nactor=[r for r in rows if r.get('record_kind')=='actual_actor_consistency_update']\nassert len(complete)==1 and complete[0]['update']==1 and complete[0]['actual_completed_updates']==1\nassert len(actor)==1 and actor[0]['native_optimizer_step_calls']==actor[0]['native_minibatch_steps']\nassert not any(r.get('record_kind')=='pilot_update_failed' for r in rows)\nkeys=('record_kind','update','actual_completed_updates','total_seconds','generation_seconds','scoring_seconds','critic_update_seconds','actor_update_seconds','native_actor_optimizer_step_calls','native_actor_minibatch_steps','t4_consistency','by_class')\nprint(json.dumps({'original_journal':{'file':str(p),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)},'original_complete_fields':{k:complete[0][k] for k in keys},'original_actor_fields':{k:actor[0][k] for k in ('record_kind','update','arm','version','native_optimizer_step_calls','native_minibatch_steps','auxiliary_seconds')},'scope':'original complete update1 records; parent remains active, not full pilot acceptance'},sort_keys=True,allow_nan=False))\n"
+    ],
+    "cwd": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027",
+    "host": "hopper-l-01",
+    "gpus": null,
+    "seed": "0",
+    "start": "2026-11-10T16:33:44",
+    "log_path": "logs/runs/diag_pilot_T4_retry4_first_update_01.log",
+    "producer": "scripts/run_logged.py",
+    "role": null,
+    "git_commit": "545383a285058b5b3dcae1b9e6770fbf4cf2bd44",
+    "git_dirty": false,
+    "end": "2026-11-10T16:33:48",
+    "duration_sec": 0.3,
+    "exit_code": 0,
+    "metrics_sha256": "b25644877199b8064aa7263838d82f4e972d715f1036095b26891ad454e28d26"
+  }
+}

@@ -1751,3 +1751,11 @@ T0 710029 的 native gate 已通过（hopper-16，GPU-1d45609c-9021-db8d-8a0f-fe
 最新全局测试配置去重快照为 diag_current_test_selected_04：87 对，DirectFlip17/DirectStay38/LookFlip14/LookStay18，对应场景11/22/8/13。原五源加正式 S04/S05 完整七源，仍是独立构造验收通过、T02前候选，非最终测试冻结；S06/S07尚未独立发布，未混入。selected03 原60秒元数据扫描超时完整保留；同一原selector/完整七源/nice单进程的唯一120秒重试selected04成功，两者均原审计无FAIL，不放宽验收或改统计口径。
 
 最新 quota 原记录 diag_scratch_quota_overnight_02：scratch565.5GiB/1TiB，文件3,115,867/无限制，满足余量>=150GiB。原 hpc 命令因 home awk 错误 exit1，scratch段完整；该原失败警告保留，scope审计无FAIL。没有删数据。
+
+## 2026-11-10 03:37 ET — 三个试跑均已运行
+
+T2 710007 的 fresh pin20 查询实际为 R（stime08:19:38UTC），因此取消保护在验证步骤停止，未执行 qdel，也未生成无host重复作业。其 native gate 在 hopper-28 / GPU-17fa5f7c-8243-50c0-035f-9d311feb5952 通过。后续原日志已完成4/5次更新，第5次进行中；最终保存与cleanup尚待终态。
+
+T0 710029 与 T4 710037 都进入真实训练回合。两臂首个完整更新的原日志摘录分别为 diag_pilot_T0_retry4_first_update_01（180.10326373705175秒）和 diag_pilot_T4_retry4_first_update_01（165.8056512910407秒），均确认原optimizer2/2；两份原审计无FAIL。这里报告的是包含generation/scoring/critic/actor的total_seconds，不把update_seconds当作全步，也不将首步充当稳态。正式50步学习判定仍待全部窗口与评测完成。
+
+T4的native gate为 hopper-24 / GPU-4403df4d-fc59-7585-7f6c-4c0c695a9707。FIG01的双臂实际训练触发条件已满足，正在准备仅CPU读取原视角表的导出；仍限单次300秒、原环境标号、不渲染。GPU名额在T2终态后继续S06独立检查，不动T0/T4。
