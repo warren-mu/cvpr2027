@@ -175,7 +175,7 @@ def validate_selected_table(record, *, expected_kind='look_flip'):
     ref = evidence['certificate']['tables'][key]
     table = load_table(ref['file'], expected_sha256=ref['sha256'])
     need(table.manifest_reference == ref and table.dataset_key == key and not table.synthetic
-         and expected_kind in ('look_flip', 'look_stay') and table.kind == record['package']['kind'] == expected_kind
+         and expected_kind in ('look_flip', 'look_stay', 'direct_flip', 'direct_stay') and table.kind == record['package']['kind'] == expected_kind
          and table.pair_id == entry['pair_id']
          and table.source.get('t01') == package['source_provenance'], 'Selected full table identity differs')
     for declared in (record['row'], record['details'], record['details']['native_checks'],
