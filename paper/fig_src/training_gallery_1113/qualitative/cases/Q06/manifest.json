@@ -1,0 +1,343 @@
+{
+  "id": "Q06",
+  "title": "Observation changes a correct choice",
+  "caption": "The 3B model selected the pot at the start and the bowl after a scripted search revealed the bottle.",
+  "scene": "FloorPlan17",
+  "pair_id": "floorplan17_00027",
+  "dataset_key": "pair_915413837117b535b296c2af293fc0722a4b990723eb0ee206036ffd177469a8",
+  "kind": "look_flip",
+  "world_id": "w1",
+  "original_world_id": "w1",
+  "world_order": [
+    0,
+    1
+  ],
+  "instruction": "Select the marked object closest to the Bottle.",
+  "target": "Pot_eefa2a21",
+  "fixed_labels": {
+    "Bowl_527e65d2": 1,
+    "Pot_eefa2a21": 2
+  },
+  "anchor": "Bottle_1d1c29e1",
+  "population": "Non-held-out training scene in the fixed pilot pool",
+  "pool": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+    "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+  },
+  "holdout_certificate": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+    "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+  },
+  "excluded_scene_ids": [
+    "FloorPlan15",
+    "FloorPlan204",
+    "FloorPlan301"
+  ],
+  "table_reference": {
+    "bytes": 3837194,
+    "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_06_u0004/709195.hopper-m-02/pair_0000/table/table.json",
+    "sha256": "d8c0fa0301ca3771dc713f95ab312e845830bf5137f22f2837461bc6cfe50c47"
+  },
+  "source_snapshot": "0dea11bb",
+  "selection": "Purposive illustration by route, model, correctness, and different/agreed selection. Individual episodes, not a performance estimate.",
+  "frame_semantics": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key).",
+  "runs": [
+    {
+      "model": "3B",
+      "strategy": "obs_never",
+      "episode_id": "39d3feb88fff4f3abc2c98ee7c568289",
+      "world_id": "w1",
+      "original_world_id": "w1",
+      "actions": [
+        "select 2"
+      ],
+      "selected_object": "Pot_eefa2a21",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_3b_s0_01.json",
+        "sha256": "71ee8e50734ee9d2b28d48a271eb79b63188eb12e28c4c35de58fec57dcb4151",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_3b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl",
+        "sha256": "2fb97b21703de0adafd4f534c07840a8fd07b9b32aa109969289746d19079865",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl"
+      },
+      "episode_line": 180,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L180",
+      "producer_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_2d794f4def0ef0c6dd05:h3",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "model_image": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "action": "select 2",
+          "decision_source": "recorded model output",
+          "line": 179,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L179",
+          "response": "select 2",
+          "sample_id": "model_sample_000047",
+          "response_token_ids": [
+            1742,
+            220,
+            17,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431"
+          ],
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"back-right\"],[2,\"front-right\"],[3,\"back-left\"],[4,\"front-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[9,114],\"bounding_box\":[0,103,20,128],\"label\":1},{\"anchor_pixel\":[177,96],\"bounding_box\":[157,83,200,111],\"label\":2}]",
+          "model_request_or_input_sha256": "4a589aa475afdfc7cbbdcfb6cded02da47170097f4610b9e02c6b48c493e0d27",
+          "exact_input_cache": {
+            "key": "4a589aa475afdfc7cbbdcfb6cded02da47170097f4610b9e02c6b48c493e0d27",
+            "origin_sample_id": "model_sample_000047",
+            "reused_generation": true,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    },
+    {
+      "model": "3B",
+      "strategy": "obs_trigger",
+      "episode_id": "5a4313ff16914d899b6093733b1cf909",
+      "world_id": "w1",
+      "original_world_id": "w1",
+      "actions": [
+        "turn_left",
+        "turn_right",
+        "turn_right",
+        "turn_left",
+        "select 1"
+      ],
+      "selected_object": "Bowl_527e65d2",
+      "success": false,
+      "source": {
+        "file": "results/diag_diag02_baselines_3b_s0_01.json",
+        "sha256": "71ee8e50734ee9d2b28d48a271eb79b63188eb12e28c4c35de58fec57dcb4151",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_3b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl",
+        "sha256": "e1cb40ea6fda52f15b313213e5d9ef951b5295451c2361ce979406084ea23801",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl"
+      },
+      "episode_line": 536,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L536",
+      "producer_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_2d794f4def0ef0c6dd05:h3",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "model_image": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 146,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L146",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"back-right\"],[2,\"front-right\"],[3,\"back-left\"],[4,\"front-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[9,114],\"bounding_box\":[0,103,20,128],\"label\":1},{\"anchor_pixel\":[177,96],\"bounding_box\":[157,83,200,111],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_2d794f4def0ef0c6dd05:h2",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "03221a39f708931fd2e5098fe31b5212c15ee4aeeae5789c9b8abd11ae256615",
+            "png_sha256": "68d520915c44de80f65225d497b439f80a17ecfc0872819f5df72a570a83d5b8"
+          },
+          "model_image": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "03221a39f708931fd2e5098fe31b5212c15ee4aeeae5789c9b8abd11ae256615",
+            "png_sha256": "68d520915c44de80f65225d497b439f80a17ecfc0872819f5df72a570a83d5b8"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 296,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L296",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"back\"],[2,\"right\"],[3,\"left\"],[4,\"front\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[174,103],\"bounding_box\":[158,93,190,114],\"label\":1}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 2,
+          "state_id": "v_2d794f4def0ef0c6dd05:h3",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "model_image": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 390,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L390",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"back-right\"],[2,\"front-right\"],[3,\"back-left\"],[4,\"front-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[9,114],\"bounding_box\":[0,103,20,128],\"label\":1},{\"anchor_pixel\":[177,96],\"bounding_box\":[157,83,200,111],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 3,
+          "state_id": "v_2d794f4def0ef0c6dd05:h4",
+          "own_anchor_pixels_at_255": 649,
+          "env_public_marked": {
+            "file": "frames/b_s03_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "69cd92f3ff96e41c698a98a1841a9366cd844bd983ea8906dcd92021323595c4",
+            "png_sha256": "5c91f0d9f3329cbed710696f3faf2eb1adcb19979a7c88a52c4b17cfd0dab86c"
+          },
+          "model_image": {
+            "file": "frames/b_s03_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "69cd92f3ff96e41c698a98a1841a9366cd844bd983ea8906dcd92021323595c4",
+            "png_sha256": "5c91f0d9f3329cbed710696f3faf2eb1adcb19979a7c88a52c4b17cfd0dab86c"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 470,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L470",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"right\"],[2,\"front\"],[3,\"back\"],[4,\"left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[11,107],\"bounding_box\":[0,91,29,124],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 4,
+          "state_id": "v_2d794f4def0ef0c6dd05:h3",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s04_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "model_image": {
+            "file": "frames/b_s04_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "png_sha256": "6a84148e49fe429cc44beeda0b72e397df912b0175f57f168230155ede2ca0df"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 535,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L535",
+          "response": "select 1",
+          "sample_id": "model_sample_000191",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "03221a39f708931fd2e5098fe31b5212c15ee4aeeae5789c9b8abd11ae256615",
+            "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431",
+            "69cd92f3ff96e41c698a98a1841a9366cd844bd983ea8906dcd92021323595c4",
+            "980497fe83d3691c98d0e6ff418fc2d235a9e192e581533cba94eeaa2201d431"
+          ],
+          "public_text": "Select the marked object closest to the Bottle.\nNeighbors: [[1,\"back-right\"],[2,\"front-right\"],[3,\"back-left\"],[4,\"front-left\"]]\nAvailable actions: [\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[9,114],\"bounding_box\":[0,103,20,128],\"label\":1},{\"anchor_pixel\":[177,96],\"bounding_box\":[157,83,200,111],\"label\":2}]",
+          "model_request_or_input_sha256": "9126ee1c03460fe8788af2e6c831f9861fdb6042d0f2d0b6af54e51c5f2382c2",
+          "exact_input_cache": {
+            "key": "9126ee1c03460fe8788af2e6c831f9861fdb6042d0f2d0b6af54e51c5f2382c2",
+            "origin_sample_id": "model_sample_000191",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    }
+  ],
+  "same_first_environment_image": true
+}

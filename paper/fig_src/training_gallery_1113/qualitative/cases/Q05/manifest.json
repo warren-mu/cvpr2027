@@ -1,0 +1,306 @@
+{
+  "id": "Q05",
+  "title": "Choosing on the reveal changes the answer",
+  "caption": "Both routes revealed the pillow. The 7B model selected the box after returning and the laptop when selecting on the reveal.",
+  "scene": "FloorPlan207",
+  "pair_id": "floorplan207_00009",
+  "dataset_key": "pair_bacf7bc31fc0308c56929cead270c988d87276df80023d712f462ab47c7b09fc",
+  "kind": "look_stay",
+  "world_id": "w0",
+  "original_world_id": "w0",
+  "world_order": [
+    0,
+    1
+  ],
+  "instruction": "Select the marked object closest to the Pillow.",
+  "target": "Box_046f9ebd",
+  "fixed_labels": {
+    "Box_046f9ebd": 1,
+    "Laptop_277077f6": 2
+  },
+  "anchor": "Pillow_e654fd90",
+  "population": "Non-held-out training scene in the fixed pilot pool",
+  "pool": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+    "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+  },
+  "holdout_certificate": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+    "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+  },
+  "excluded_scene_ids": [
+    "FloorPlan15",
+    "FloorPlan204",
+    "FloorPlan301"
+  ],
+  "table_reference": {
+    "bytes": 3601104,
+    "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_first6_01_retry2_u0005/708997.hopper-m-02/pair_0000/table/table.json",
+    "sha256": "91a3060623b370641b55f8356284e15f11329f914dbce32ff75c0ddef5966351"
+  },
+  "source_snapshot": "0dea11bb",
+  "selection": "Purposive illustration by route, model, correctness, and different/agreed selection. Individual episodes, not a performance estimate.",
+  "frame_semantics": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key).",
+  "runs": [
+    {
+      "model": "7B",
+      "strategy": "obs_trigger",
+      "episode_id": "1c23934735d546de9510a4d7c1066d10",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "actions": [
+        "turn_left",
+        "turn_right",
+        "select 1"
+      ],
+      "selected_object": "Box_046f9ebd",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_7b_s0_01.json",
+        "sha256": "e5dfca984185b864ff6644294df1488b671b9a4036a106ca65d8ad5c42c9d192",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_7b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl",
+        "sha256": "49a08f62ddb270f6828cf0b11fbbd2ee73388d06f04cf01c8d3b4f7deee5dc18",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl"
+      },
+      "episode_line": 418,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L418",
+      "producer_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_30ae1521d50c155f2943:h1",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "model_image": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 197,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L197",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Pillow.\nNeighbors: [[1,\"back-left\"],[2,\"back-right\"],[3,\"front-right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[15,169],\"bounding_box\":[0,142,36,200],\"label\":1},{\"anchor_pixel\":[21,237],\"bounding_box\":[0,214,51,254],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_30ae1521d50c155f2943:h0",
+          "own_anchor_pixels_at_255": 1590,
+          "env_public_marked": {
+            "file": "frames/a_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b",
+            "png_sha256": "c05a603aeb11a0fcf811518f64c2451e0753baad0d98e9b2ebd6e765a17760c4"
+          },
+          "model_image": {
+            "file": "frames/a_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b",
+            "png_sha256": "c05a603aeb11a0fcf811518f64c2451e0753baad0d98e9b2ebd6e765a17760c4"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 315,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L315",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Pillow.\nNeighbors: [[1,\"left\"],[2,\"back\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[160,149],\"bounding_box\":[137,128,186,171],\"label\":1},{\"anchor_pixel\":[135,209],\"bounding_box\":[108,162,167,238],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 2,
+          "state_id": "v_30ae1521d50c155f2943:h1",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "model_image": {
+            "file": "frames/a_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 417,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L417",
+          "response": "select 1",
+          "sample_id": "model_sample_000143",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b",
+            "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d"
+          ],
+          "public_text": "Select the marked object closest to the Pillow.\nNeighbors: [[1,\"back-left\"],[2,\"back-right\"],[3,\"front-right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[15,169],\"bounding_box\":[0,142,36,200],\"label\":1},{\"anchor_pixel\":[21,237],\"bounding_box\":[0,214,51,254],\"label\":2}]",
+          "model_request_or_input_sha256": "9a99953c208207b6631024074ed3f7d378ec25e3b9b4b4b8893faef366bd52d4",
+          "exact_input_cache": {
+            "key": "9a99953c208207b6631024074ed3f7d378ec25e3b9b4b4b8893faef366bd52d4",
+            "origin_sample_id": "model_sample_000143",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    },
+    {
+      "model": "7B",
+      "strategy": "obs_trigger_cov",
+      "episode_id": "688f28c21f744396ba1b4cbb897a083a",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "actions": [
+        "turn_left",
+        "select 2"
+      ],
+      "selected_object": "Laptop_277077f6",
+      "success": false,
+      "source": {
+        "file": "results/diag_diag02_baselines_7b_s0_01.json",
+        "sha256": "e5dfca984185b864ff6644294df1488b671b9a4036a106ca65d8ad5c42c9d192",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_7b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl",
+        "sha256": "a607c5b298ea128cac7b009a40ad74fac3529a97d4bedf4dc8a17f5abdfa7539",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl"
+      },
+      "episode_line": 320,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl#L320",
+      "producer_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_30ae1521d50c155f2943:h1",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "model_image": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "png_sha256": "074597458dcb5ed1acb0b2b4d896d362f83ecf578b3e8d274b89857e9a15afc1"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 197,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl#L197",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Pillow.\nNeighbors: [[1,\"back-left\"],[2,\"back-right\"],[3,\"front-right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[15,169],\"bounding_box\":[0,142,36,200],\"label\":1},{\"anchor_pixel\":[21,237],\"bounding_box\":[0,214,51,254],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_30ae1521d50c155f2943:h0",
+          "own_anchor_pixels_at_255": 1590,
+          "env_public_marked": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b",
+            "png_sha256": "c05a603aeb11a0fcf811518f64c2451e0753baad0d98e9b2ebd6e765a17760c4"
+          },
+          "model_image": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b",
+            "png_sha256": "c05a603aeb11a0fcf811518f64c2451e0753baad0d98e9b2ebd6e765a17760c4"
+          },
+          "action": "select 2",
+          "decision_source": "recorded model output",
+          "line": 319,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl#L319",
+          "response": "select 2",
+          "sample_id": "model_sample_000213",
+          "response_token_ids": [
+            1742,
+            220,
+            17,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "f0678fa1fb3071d73027adec093917b4637147ddc10ac619c5f5ab1c10a0715d",
+            "650d6b558052468f0c7a854b2c30ed5744dd8d07c9d4cdd7f26b613f9d18925b"
+          ],
+          "public_text": "Select the marked object closest to the Pillow.\nNeighbors: [[1,\"left\"],[2,\"back\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[160,149],\"bounding_box\":[137,128,186,171],\"label\":1},{\"anchor_pixel\":[135,209],\"bounding_box\":[108,162,167,238],\"label\":2}]",
+          "model_request_or_input_sha256": "a4c9e6ab94e006360155df6e48822ce783b74fc721947a15cb171052a3cccf6b",
+          "exact_input_cache": {
+            "key": "a4c9e6ab94e006360155df6e48822ce783b74fc721947a15cb171052a3cccf6b",
+            "origin_sample_id": "model_sample_000213",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    }
+  ],
+  "same_first_environment_image": true
+}

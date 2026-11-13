@@ -1,0 +1,269 @@
+{
+  "id": "Q04",
+  "title": "Turning reveals the anchor before selection",
+  "caption": "The 3B model selected the plate at the start and the pan after the scripted turn and return.",
+  "scene": "FloorPlan7",
+  "pair_id": "floorplan7_00008",
+  "dataset_key": "pair_7234e9f54593195086d2c1d180339f744babae3617173e8822aca067d096e204",
+  "kind": "look_stay",
+  "world_id": "w0",
+  "original_world_id": "w0",
+  "world_order": [
+    0,
+    1
+  ],
+  "instruction": "Select the marked object closest to the Bread.",
+  "target": "Pan_d972b8ec",
+  "fixed_labels": {
+    "Pan_d972b8ec": 1,
+    "Plate_6648128f": 2
+  },
+  "anchor": "Bread_8ad171c7",
+  "population": "Non-held-out training scene in the fixed pilot pool",
+  "pool": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+    "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+  },
+  "holdout_certificate": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+    "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+  },
+  "excluded_scene_ids": [
+    "FloorPlan15",
+    "FloorPlan204",
+    "FloorPlan301"
+  ],
+  "table_reference": {
+    "bytes": 6762826,
+    "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_03_u0003/709124.hopper-m-02/pair_0000/table/table.json",
+    "sha256": "ec2e2e0349b2c30bad58d6f9548e3713861c653b78b94d7b5fe06a274495a407"
+  },
+  "source_snapshot": "0dea11bb",
+  "selection": "Purposive illustration by route, model, correctness, and different/agreed selection. Individual episodes, not a performance estimate.",
+  "frame_semantics": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key).",
+  "runs": [
+    {
+      "model": "3B",
+      "strategy": "obs_never",
+      "episode_id": "f902e8fce50f4e4f90c36f988a859725",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "actions": [
+        "select 2"
+      ],
+      "selected_object": "Plate_6648128f",
+      "success": false,
+      "source": {
+        "file": "results/diag_diag02_baselines_3b_s0_01.json",
+        "sha256": "71ee8e50734ee9d2b28d48a271eb79b63188eb12e28c4c35de58fec57dcb4151",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_3b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl",
+        "sha256": "2fb97b21703de0adafd4f534c07840a8fd07b9b32aa109969289746d19079865",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl"
+      },
+      "episode_line": 126,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L126",
+      "producer_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_10bb9a5a7de10e439b44:h4",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "model_image": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "action": "select 2",
+          "decision_source": "recorded model output",
+          "line": 125,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L125",
+          "response": "select 2",
+          "sample_id": "model_sample_000070",
+          "response_token_ids": [
+            1742,
+            220,
+            17,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4"
+          ],
+          "public_text": "Select the marked object closest to the Bread.\nNeighbors: [[1,\"right\"],[2,\"front\"],[3,\"back\"],[4,\"left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[13,113],\"bounding_box\":[0,103,31,126],\"label\":1},{\"anchor_pixel\":[144,117],\"bounding_box\":[128,109,160,124],\"label\":2}]",
+          "model_request_or_input_sha256": "803cf2b3d33bd33af7cfa5530d57ca16f45f494d01a0e6dd2713474a2d15bad1",
+          "exact_input_cache": {
+            "key": "803cf2b3d33bd33af7cfa5530d57ca16f45f494d01a0e6dd2713474a2d15bad1",
+            "origin_sample_id": "model_sample_000070",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    },
+    {
+      "model": "3B",
+      "strategy": "obs_trigger",
+      "episode_id": "169c214582a641c5b90191394630a5be",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "actions": [
+        "turn_left",
+        "turn_right",
+        "select 1"
+      ],
+      "selected_object": "Pan_d972b8ec",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_3b_s0_01.json",
+        "sha256": "71ee8e50734ee9d2b28d48a271eb79b63188eb12e28c4c35de58fec57dcb4151",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_3b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl",
+        "sha256": "e1cb40ea6fda52f15b313213e5d9ef951b5295451c2361ce979406084ea23801",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl"
+      },
+      "episode_line": 374,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L374",
+      "producer_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_10bb9a5a7de10e439b44:h4",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "model_image": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 103,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L103",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bread.\nNeighbors: [[1,\"right\"],[2,\"front\"],[3,\"back\"],[4,\"left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[13,113],\"bounding_box\":[0,103,31,126],\"label\":1},{\"anchor_pixel\":[144,117],\"bounding_box\":[128,109,160,124],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_10bb9a5a7de10e439b44:h3",
+          "own_anchor_pixels_at_255": 671,
+          "env_public_marked": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "2777c1b73fdbbf056f173870d413941aba310bf8b16c53587da9db22264c35c2",
+            "png_sha256": "52531b0f4224df01f7cff0771119a5d970b59a18edc3e8ca7c3b014c0a98ce6f"
+          },
+          "model_image": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "2777c1b73fdbbf056f173870d413941aba310bf8b16c53587da9db22264c35c2",
+            "png_sha256": "52531b0f4224df01f7cff0771119a5d970b59a18edc3e8ca7c3b014c0a98ce6f"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 285,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L285",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Bread.\nNeighbors: [[1,\"back-right\"],[2,\"front-right\"],[3,\"back-left\"],[4,\"front-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[176,103],\"bounding_box\":[156,94,197,112],\"label\":1}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 2,
+          "state_id": "v_10bb9a5a7de10e439b44:h4",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "model_image": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "png_sha256": "d75032ac24b8126e069a76f6327539412f00da22ea60f8c62c4c6fa5353656b2"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 373,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L373",
+          "response": "select 1",
+          "sample_id": "model_sample_000130",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4",
+            "2777c1b73fdbbf056f173870d413941aba310bf8b16c53587da9db22264c35c2",
+            "b2aca510d525315db7e6f904529c5e0fb4f89d2dff86531d89892dac2f649ed4"
+          ],
+          "public_text": "Select the marked object closest to the Bread.\nNeighbors: [[1,\"right\"],[2,\"front\"],[3,\"back\"],[4,\"left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 1\",\"select 2\"]\nMarks: [{\"anchor_pixel\":[13,113],\"bounding_box\":[0,103,31,126],\"label\":1},{\"anchor_pixel\":[144,117],\"bounding_box\":[128,109,160,124],\"label\":2}]",
+          "model_request_or_input_sha256": "2648b9d17e04bf2f4337930ca73670d7aabbf794abe3ed9b1abc083d9c9aca68",
+          "exact_input_cache": {
+            "key": "2648b9d17e04bf2f4337930ca73670d7aabbf794abe3ed9b1abc083d9c9aca68",
+            "origin_sample_id": "model_sample_000130",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    }
+  ],
+  "same_first_environment_image": true
+}

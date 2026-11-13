@@ -1,0 +1,174 @@
+{
+  "title": "Matched model and policy trajectories",
+  "population": "Non-held-out training worlds from the fixed pilot pool. Purposively selected cases include agreements and disagreements.",
+  "items": [
+    {
+      "id": "Q01",
+      "title": "Pilot arms choose different objects",
+      "preview": "cases/Q01/panel.png",
+      "svg": "cases/Q01/panel.svg",
+      "manifest": "cases/Q01/manifest.json",
+      "scene": "FloorPlan203",
+      "pair_id": "floorplan203_00054",
+      "world_id": "w1",
+      "original_world_id": "w1",
+      "dataset_key": "pair_b809e1e6f19940202fdb4a6ae6d04b31d0306c977bb9083f07d5e96a054e44b3",
+      "kind": "look_flip",
+      "anchor": "Laptop",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T0_s0_01_retry4/ppo/update_050.jsonl#L195",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T0_s0_01_retry4/ppo/update_050.jsonl#L195",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T4_s0_01_retry4/ppo/update_050.jsonl#L281"
+      ],
+      "caption": "T0 moved while the laptop remained hidden, then selected the book. T4 immediately selected the bowl.",
+      "input_and_actions": "Pilot training update 50, sampled pre-update actor decisions. Original 255x255 public marked observations and original 512x512 model images reconstructed losslessly from the authenticated table, checked against every full prior-image sequence in the training journal."
+    },
+    {
+      "id": "Q02",
+      "title": "Pilot arms reach the same choice",
+      "preview": "cases/Q02/panel.png",
+      "svg": "cases/Q02/panel.svg",
+      "manifest": "cases/Q02/manifest.json",
+      "scene": "FloorPlan203",
+      "pair_id": "floorplan203_00008",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "dataset_key": "pair_24cac685846dc61046554ab87ed477f69d47f3cad8c64cc55bc60360e579264b",
+      "kind": "look_stay",
+      "anchor": "Book",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T0_s0_01_retry4/ppo/update_050.jsonl#L182",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T0_s0_01_retry4/ppo/update_050.jsonl#L182",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/smoke_e2e_pilot_T4_s0_01_retry4/ppo/update_050.jsonl#L254"
+      ],
+      "caption": "A move brought the book into view for T0. T4 selected the same bowl directly from the starting view.",
+      "input_and_actions": "Pilot training update 50, sampled pre-update actor decisions. Original 255x255 public marked observations and original 512x512 model images reconstructed losslessly from the authenticated table, checked against every full prior-image sequence in the training journal."
+    },
+    {
+      "id": "Q03",
+      "title": "The same view history, different model choices",
+      "preview": "cases/Q03/panel.png",
+      "svg": "cases/Q03/panel.svg",
+      "manifest": "cases/Q03/manifest.json",
+      "scene": "FloorPlan13",
+      "pair_id": "floorplan13_00024",
+      "world_id": "w1",
+      "original_world_id": "w0",
+      "dataset_key": "pair_578c918cd426ff518567bd4859597b9a049c8aebe220aaa95bf1fb32b5626a91",
+      "kind": "look_flip",
+      "anchor": "DishSponge",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L362",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L362",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L362"
+      ],
+      "caption": "Both Qwen models received the same ordered images of the dish sponge and return. Their final labels differed.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    },
+    {
+      "id": "Q04",
+      "title": "Turning reveals the anchor before selection",
+      "preview": "cases/Q04/panel.png",
+      "svg": "cases/Q04/panel.svg",
+      "manifest": "cases/Q04/manifest.json",
+      "scene": "FloorPlan7",
+      "pair_id": "floorplan7_00008",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "dataset_key": "pair_7234e9f54593195086d2c1d180339f744babae3617173e8822aca067d096e204",
+      "kind": "look_stay",
+      "anchor": "Bread",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L126",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L126",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L374"
+      ],
+      "caption": "The 3B model selected the plate at the start and the pan after the scripted turn and return.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    },
+    {
+      "id": "Q05",
+      "title": "Choosing on the reveal changes the answer",
+      "preview": "cases/Q05/panel.png",
+      "svg": "cases/Q05/panel.svg",
+      "manifest": "cases/Q05/manifest.json",
+      "scene": "FloorPlan207",
+      "pair_id": "floorplan207_00009",
+      "world_id": "w0",
+      "original_world_id": "w0",
+      "dataset_key": "pair_bacf7bc31fc0308c56929cead270c988d87276df80023d712f462ab47c7b09fc",
+      "kind": "look_stay",
+      "anchor": "Pillow",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L418",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L418",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger_cov.jsonl#L320"
+      ],
+      "caption": "Both routes revealed the pillow. The 7B model selected the box after returning and the laptop when selecting on the reveal.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    },
+    {
+      "id": "Q06",
+      "title": "Observation changes a correct choice",
+      "preview": "cases/Q06/panel.png",
+      "svg": "cases/Q06/panel.svg",
+      "manifest": "cases/Q06/manifest.json",
+      "scene": "FloorPlan17",
+      "pair_id": "floorplan17_00027",
+      "world_id": "w1",
+      "original_world_id": "w1",
+      "dataset_key": "pair_915413837117b535b296c2af293fc0722a4b990723eb0ee206036ffd177469a8",
+      "kind": "look_flip",
+      "anchor": "Bottle",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L180",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L180",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_trigger.jsonl#L536"
+      ],
+      "caption": "The 3B model selected the pot at the start and the bowl after a scripted search revealed the bottle.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    },
+    {
+      "id": "Q07",
+      "title": "Two models choose differently at the start",
+      "preview": "cases/Q07/panel.png",
+      "svg": "cases/Q07/panel.svg",
+      "manifest": "cases/Q07/manifest.json",
+      "scene": "FloorPlan1",
+      "pair_id": "floorplan1_00016",
+      "world_id": "w0",
+      "original_world_id": "w1",
+      "dataset_key": "pair_053d2796d66a15555b771dfd245b5e7af361f4eacbbf72a089634b36da5f5a75",
+      "kind": "direct_flip",
+      "anchor": "Cup",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L6",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L6",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_never.jsonl#L6"
+      ],
+      "caption": "The same initial frame showed the cup and both labels. The 3B and 32B models selected different objects.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    },
+    {
+      "id": "Q08",
+      "title": "Two models agree on a shared view history",
+      "preview": "cases/Q08/panel.png",
+      "svg": "cases/Q08/panel.svg",
+      "manifest": "cases/Q08/manifest.json",
+      "scene": "FloorPlan203",
+      "pair_id": "floorplan203_00002",
+      "world_id": "w1",
+      "original_world_id": "w0",
+      "dataset_key": "pair_773c353e292a3cd130c54b078fe7385b815e51616dcb99459ffa002b6e80ba16",
+      "kind": "look_flip",
+      "anchor": "Box",
+      "source": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L381",
+      "sources": [
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L381",
+        "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L381"
+      ],
+      "caption": "Both models received the same image history, including the large box, and selected the bowl after the return.",
+      "input_and_actions": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key)."
+    }
+  ]
+}

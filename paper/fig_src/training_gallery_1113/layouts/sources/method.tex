@@ -1,0 +1,125 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Task, world pairs, and two moments}
+\label{sec:task}
+
+\paragraph{Task.}
+An episode starts at a viewpoint and heading $s_0$ in a simulated scene.
+The instruction is ``Select the marked object closest to the $\langle$anchor$\rangle$.''
+Two candidate objects $A$ and $B$ carry numeric marks~\cite{som2023} whenever they are visible and within reach; the anchor $X$ is an object of a different category that is unique in the scene.
+The correct target $g(w)$ in world $w$ is the candidate whose center is closer to $X$, and we require the farther candidate to be at least $1.5$ times as far, so that the answer is unambiguous.
+At each turn the agent receives the current frame, the history, and a text listing the available actions.
+It can take an \emph{observation action}, \ie turn left or right by $45^\circ$ or move to an adjacent viewpoint, each costing $\lambda$, or it can end the episode with \commit$(c)$ for a marked candidate $c$, which yields reward $\mathbb{1}[c = g(w)]$.
+Marks are placed only on candidates that can legitimately be selected, so the reward equals task success.
+An episode allows at most $D$ observation actions and $D{+}1$ turns.
+
+\paragraph{World pairs and cases.}
+A world pair $(w_0, w_1)$ shares the scene, the start $s_0$, the candidates, and the instruction, and differs only in the pose of $X$; all other object poses are copied from $w_0$ (\cref{sec:data}).
+Two binary properties define four cases (\cref{tab:cases}).
+In \emph{direct} pairs $X$ is visible from $s_0$ in both worlds, so the evidence is in the input from the start; in \Look\ pairs $X$ is out of view at $s_0$ in both worlds, the start image is shared, and one observation action reveals it.
+In \Flip\ pairs $g(w_0) \neq g(w_1)$; in \Stay\ pairs $g(w_0) = g(w_1)$.
+\Look$\to$\Stay\ pairs prevent ``looking means switching'' from being a valid shortcut.
+
+\begin{table}[t]
+  \centering
+  \small
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    & target unchanged & target changes \\
+    \midrule
+    anchor visible at $s_0$ & direct \Stay & direct \Flip \\
+    anchor needs one look & \Look$\to$\Stay & \Look$\to$\Flip \\
+    \bottomrule
+  \end{tabular}
+  \caption{The four cases. Labels are defined relative to what the agent has observed, not to the world alone.}
+  \label{tab:cases}
+\end{table}
+
+\paragraph{Two moments.}
+Let $h_t(w)$ be the agent's full input at turn $t$ in world $w$.
+We use two moments that are easy to conflate.
+$\tau$ is the first turn at which $h_t(w_0) \neq h_t(w_1)$; for all $t < \tau$ the inputs are byte-identical, so the two worlds form one \emph{information set}.
+$\tauseen(w)$ is the first turn at which the anchor is visible in the agent's own frame in world $w$.
+The two can differ: in a \Look$\to$\Flip\ pair the agent may first see the region next to candidate $A$ with no anchor in it.
+The inputs now differ, so $\tau$ has passed, but the agent has not seen $X$, and a \commit\ at that point is still a guess.
+We use $\tau$ to decide how credit is shared and $\tauseen$ to decide whether a commitment was premature.
+Both are computed from the agent's own trajectory and precomputed view tables, so they are defined identically for single-world and paired training.
+
+\subsection{Credit before the evidence}
+\label{sec:credit}
+
+\paragraph{Commit-now value.}
+For a turn $t$ at which at least one candidate is marked, let
+\begin{equation}
+\Qc(w, t) = \sum_{c} \pi_\theta(\commit(c) \mid h_t)\, \mathbb{1}[c = g(w)],
+\label{eq:qcommit}
+\end{equation}
+where the probabilities are obtained by scoring the action text of every selectable candidate and renormalizing over them.
+This is the expected reward of committing immediately; it requires no additional rollout.
+Let $G(w, t)$ be the realized return from turn $t$ in world $w$: the final reward minus $\lambda$ for every later observation action.
+
+\paragraph{Single-world contrast.}
+A same-world comparison of looking against committing, in the spirit of~\cite{seekvln2026}, assigns to a pre-evidence turn ($t < \tau$) of an episode in the realized world $w^\ast$ the advantage
+\begin{equation}
+A^{\mathrm{single}}_t = G(w^\ast, t) - \Qc(w^\ast, t).
+\end{equation}
+If the agent commits at $t < \tau$ and its guess happens to be right in $w^\ast$, the commitment is credited positively even though the same input would have led to failure in the other world.
+
+\paragraph{Information-set credit.}
+With lockstep pairs we observe both outcomes.
+While $t < \tau$, the two prompts are byte-identical, so the policy generates one response and it is executed in both worlds; after $\tau$ the two episodes continue independently.
+We implement this by deduplicating identical prompts within a pair, which requires no change to the one-environment-one-trajectory structure of the trainer.
+For $t < \tau$ we assign to both copies of the turn the same advantage
+\begin{equation}
+A^{\mathrm{IS}}_t = \sum_{w \in \{w_0, w_1\}} p(w) \big[ G(w, t) - \Qc(w, t) \big],
+\label{eq:is}
+\end{equation}
+where $p(w_1) = \rho$ is the training change rate and $p(w_0) = 1 - \rho$.
+After $\tau$, and throughout direct pairs, we use standard multi-turn GAE~\cite{gae2016,vagen2025}.
+By construction, two worlds with identical inputs receive identical credit for the same decision.
+
+\paragraph{What pairing changes: a $2{\times}2$ view.}
+Under lockstep sampling the shared turn appears in both trajectories and the two gradients add.
+Training on paired data with the critic's GAE in each world therefore already merges the two worlds; to first order it differs from \cref{eq:is} only in the baseline used before the evidence.
+Information-set credit thus combines two ingredients, which we test separately:
+(i) \emph{sampling}: single-world episodes versus lockstep pairs, and
+(ii) \emph{pre-evidence baseline}: the learned critic versus $\Qc$.
+For the sampling factor, write $X_w = G(w, t) - \Qc(w, t)$ for a continuation sampled in world $w$.
+If worlds are drawn from the same prior, single-world and paired estimates have the same expectation.
+At an equal budget of two continuations and $\rho = \tfrac12$, the mean of two single-world estimates has variance $\tfrac12\big(\mathbb{E}_w[\mathrm{Var}\,X_w] + \mathrm{Var}_w(\mathbb{E}\,X_w)\big)$, whereas the paired estimate has variance $\tfrac12\,\mathbb{E}_w[\mathrm{Var}\,X_w]$.
+Pairing is stratified sampling over the hidden world: it removes the between-world term $\mathrm{Var}_w(\mathbb{E}\,X_w)$, which is large precisely when committing early pays off in one world and fails in the other.
+We do not claim that single-world credit is biased.
+For $\rho \neq \tfrac12$ one rollout per world is no longer a proportional allocation; we weight each trajectory's loss by $2p(w)$ so that paired data represent the intended world distribution, and treat the variance benefit as an empirical question.
+
+\paragraph{Turns without a valid commit-now value.}
+If no candidate is marked at a pre-evidence turn, or the model's output cannot be parsed, $\Qc$ is undefined.
+On such turns we fall back to the critic's token-level GAE, averaged over the two worlds for paired methods so that both copies remain identical.
+All advantage replacements are done before a single batch-level normalization, and the critic is trained on its usual return targets.
+
+\subsection{Post-evidence consistency}
+\label{sec:consistency}
+Once the agent has seen the anchor, the correct behavior depends on the case.
+We add a consistency term only at the final \commit\ turn of an episode in world $w$, and only if $t \ge \tauseen(w)$; before the agent has seen $X$, forcing a switch would teach it to infer from absence.
+Let $s_w(c)$ be the policy's score of \commit$(c)$ at that turn, computed with the same scoring as $\Qc$, and let $\bar w$ denote the other world of the pair.
+For \Flip\ pairs we use a twin margin on the log-probabilities,
+\begin{equation}
+c_w^{\Flip} = \max\!\big(0,\; m - [\, s_w(g(w)) - s_w(g(\bar w)) \,]\big),
+\end{equation}
+which asks the agent to prefer its own world's target over the other world's by a margin $m$.
+For \Stay\ pairs, when both episodes have seen the anchor, we pull the two target distributions together,
+\begin{equation}
+c_w^{\Stay} = \mathrm{KL}\big(\pi^{\mathrm{sel}}_w \,\|\, \mathrm{sg}[\hat\pi^{\mathrm{sel}}_{\bar w}]\big),
+\end{equation}
+where $\pi^{\mathrm{sel}}_w$ is the policy's distribution over $\{A, B\}$ at the \commit\ turn, $\hat\pi^{\mathrm{sel}}_{\bar w}$ is the same distribution in the other world computed at sampling time, and $\mathrm{sg}$ stops the gradient.
+Each episode carries one direction, so a \Stay\ pair contributes both directions of the KL.
+Terms whose candidates are not selectable at that turn are set to zero.
+The auxiliary loss is $\mathcal{L}_{\mathrm{cons}} = \frac{1}{N}\sum_i 2p(w_i)\, c_i$ over the $N$ episodes of a PPO mini-batch, and the full objective is the PPO loss plus $\beta\, \mathcal{L}_{\mathrm{cons}}$.
+Neither term constrains the route, which may legitimately differ between worlds.
+
+\subsection{Reward and optimization}
+\label{sec:training}
+All methods use the same reward: $+1$ for selecting the correct target, $0$ otherwise, and $-\lambda$ per observation action.
+We do not use VAGEN's format reward, which gives each well-formed action a bonus far larger than $\lambda$ and would itself encourage observation.
+We train with the multi-turn PPO~\cite{ppo2017} of VAGEN~\cite{vagen2025} and use a KL penalty to the reference policy as a loss term rather than in the reward, so that replacing pre-evidence advantages leaves the KL term unchanged and identical across methods.
+Every method uses the same number of episodes per training step: single-world methods sample $64$ episodes, and paired methods sample $32$ pairs.

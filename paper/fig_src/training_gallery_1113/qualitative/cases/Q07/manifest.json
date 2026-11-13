@@ -1,0 +1,195 @@
+{
+  "id": "Q07",
+  "title": "Two models choose differently at the start",
+  "caption": "The same initial frame showed the cup and both labels. The 3B and 32B models selected different objects.",
+  "scene": "FloorPlan1",
+  "pair_id": "floorplan1_00016",
+  "dataset_key": "pair_053d2796d66a15555b771dfd245b5e7af361f4eacbbf72a089634b36da5f5a75",
+  "kind": "direct_flip",
+  "world_id": "w0",
+  "original_world_id": "w1",
+  "world_order": [
+    1,
+    0
+  ],
+  "instruction": "Select the marked object closest to the Cup.",
+  "target": "Pan_21173d15",
+  "fixed_labels": {
+    "Pan_21173d15": 1,
+    "Bottle_4e73f712": 2
+  },
+  "anchor": "Cup_4c1ceda2",
+  "population": "Non-held-out training scene in the fixed pilot pool",
+  "pool": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+    "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+  },
+  "holdout_certificate": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+    "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+  },
+  "excluded_scene_ids": [
+    "FloorPlan15",
+    "FloorPlan204",
+    "FloorPlan301"
+  ],
+  "table_reference": {
+    "bytes": 4222984,
+    "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_train_six_01_retry3_u0000/709115.hopper-m-02/pair_0000/table/table.json",
+    "sha256": "f09968bb85de57b52c955cf941d71f80b2251d18859d663c51c08b97a5e2484f"
+  },
+  "source_snapshot": "0dea11bb",
+  "selection": "Purposive illustration by route, model, correctness, and different/agreed selection. Individual episodes, not a performance estimate.",
+  "frame_semantics": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key).",
+  "runs": [
+    {
+      "model": "3B",
+      "strategy": "obs_never",
+      "episode_id": "83851047262c4a54a5b4d009f10d3998",
+      "world_id": "w0",
+      "original_world_id": "w1",
+      "actions": [
+        "select 1"
+      ],
+      "selected_object": "Pan_21173d15",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_3b_s0_01.json",
+        "sha256": "71ee8e50734ee9d2b28d48a271eb79b63188eb12e28c4c35de58fec57dcb4151",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_3b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl",
+        "sha256": "2fb97b21703de0adafd4f534c07840a8fd07b9b32aa109969289746d19079865",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl"
+      },
+      "episode_line": 6,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L6",
+      "producer_commit": "bbab467e5f0335278c867bf769ef8bb39f9faaf6",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_130367f7097ed7919d82:h5",
+          "own_anchor_pixels_at_255": 267,
+          "env_public_marked": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5",
+            "png_sha256": "debb9e9df2fe5693f69591f3ff4a6fc5038e41c9930b17101a39601edb153855"
+          },
+          "model_image": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5",
+            "png_sha256": "debb9e9df2fe5693f69591f3ff4a6fc5038e41c9930b17101a39601edb153855"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 5,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_3b_s0_01/obs_never.jsonl#L5",
+          "response": "select 1",
+          "sample_id": "model_sample_000028",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5"
+          ],
+          "public_text": "Select the marked object closest to the Cup.\nNeighbors: [[1,\"front-right\"],[2,\"front-left\"],[3,\"back-right\"],[4,\"back-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[136,112],\"bounding_box\":[111,97,155,119],\"label\":1},{\"anchor_pixel\":[8,143],\"bounding_box\":[0,111,19,163],\"label\":2}]",
+          "model_request_or_input_sha256": "2c71bf110f89b9b9bbf61ca5665e442cbb682549881b81e5bad0bec494f6c3a3",
+          "exact_input_cache": {
+            "key": "2c71bf110f89b9b9bbf61ca5665e442cbb682549881b81e5bad0bec494f6c3a3",
+            "origin_sample_id": "model_sample_000028",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    },
+    {
+      "model": "32B",
+      "strategy": "obs_never",
+      "episode_id": "e158fe8be6964072880f4ee6874aa0cb",
+      "world_id": "w0",
+      "original_world_id": "w1",
+      "actions": [
+        "select 2"
+      ],
+      "selected_object": "Bottle_4e73f712",
+      "success": false,
+      "source": {
+        "file": "results/diag_diag02_baselines_32b_s0_01_retry2.json",
+        "sha256": "e97c6e19e2f18a633560e17498eb07f80d915e6ed33447a26df92dd99b6e145e",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_32b_s0_01_retry2.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_never.jsonl",
+        "sha256": "c70a5410911dc43392593188981d0a4359a1426c5a96caf8106723cbf6b1c745",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_never.jsonl"
+      },
+      "episode_line": 6,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_never.jsonl#L6",
+      "producer_commit": "f01175fa6fb3b604b9e4fb2d55e46cd33d7da244",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_130367f7097ed7919d82:h5",
+          "own_anchor_pixels_at_255": 267,
+          "env_public_marked": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5",
+            "png_sha256": "debb9e9df2fe5693f69591f3ff4a6fc5038e41c9930b17101a39601edb153855"
+          },
+          "model_image": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5",
+            "png_sha256": "debb9e9df2fe5693f69591f3ff4a6fc5038e41c9930b17101a39601edb153855"
+          },
+          "action": "select 2",
+          "decision_source": "recorded model output",
+          "line": 5,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_never.jsonl#L5",
+          "response": "select 2",
+          "sample_id": "model_sample_000099",
+          "response_token_ids": [
+            1742,
+            220,
+            17,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "20a576e943d520465cc8acef07a2e1bb04635854b707bd72028dc74ce4c6e2b5"
+          ],
+          "public_text": "Select the marked object closest to the Cup.\nNeighbors: [[1,\"front-right\"],[2,\"front-left\"],[3,\"back-right\"],[4,\"back-left\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"move 4\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[136,112],\"bounding_box\":[111,97,155,119],\"label\":1},{\"anchor_pixel\":[8,143],\"bounding_box\":[0,111,19,163],\"label\":2}]",
+          "model_request_or_input_sha256": "c824aab41508cfdce069d2827f6cf6ca525049465dcc2a90adb603de3e4a3f44",
+          "exact_input_cache": {
+            "key": "c824aab41508cfdce069d2827f6cf6ca525049465dcc2a90adb603de3e4a3f44",
+            "origin_sample_id": "model_sample_000099",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    }
+  ],
+  "same_first_environment_image": true
+}

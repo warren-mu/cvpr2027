@@ -1,0 +1,343 @@
+{
+  "id": "Q08",
+  "title": "Two models agree on a shared view history",
+  "caption": "Both models received the same image history, including the large box, and selected the bowl after the return.",
+  "scene": "FloorPlan203",
+  "pair_id": "floorplan203_00002",
+  "dataset_key": "pair_773c353e292a3cd130c54b078fe7385b815e51616dcb99459ffa002b6e80ba16",
+  "kind": "look_flip",
+  "world_id": "w1",
+  "original_world_id": "w0",
+  "world_order": [
+    1,
+    0
+  ],
+  "instruction": "Select the marked object closest to the Box.",
+  "target": "Bowl_cd243bbd",
+  "fixed_labels": {
+    "Bowl_cd243bbd": 1,
+    "Book_e173324d": 2
+  },
+  "anchor": "Box_8e5b2c6b",
+  "population": "Non-held-out training scene in the fixed pilot pool",
+  "pool": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/e2e_pilot_pool_83_certificates_01.json",
+    "sha256": "3c098a6928549bbdc082595f3e44fcfa701da4843af3f60c067429f11fe2d952"
+  },
+  "holdout_certificate": {
+    "file": "/nfs/home/svu/e1583364/CVPR2027/cvpr2027/data/world_pairs/train_holdout_scenes.json",
+    "sha256": "6420085a04a5338c4e6fda52fd8f6549465e8a2092eb98c2d2eb9062a27c59fa"
+  },
+  "excluded_scene_ids": [
+    "FloorPlan15",
+    "FloorPlan204",
+    "FloorPlan301"
+  ],
+  "table_reference": {
+    "bytes": 5383989,
+    "file": "/scratch/e1583364/cvpr2027/t02_export/t02_export_first6_01_retry2_u0000/708997.hopper-m-02/pair_0000/table/table.json",
+    "sha256": "77cf349734016d99ab2c533d1cacabf4a5dd8db871a7a964e019db5144a5fc54"
+  },
+  "source_snapshot": "0dea11bb",
+  "selection": "Purposive illustration by route, model, correctness, and different/agreed selection. Individual episodes, not a performance estimate.",
+  "frame_semantics": "DIAG02 original-model diagnostic. Images show public marked RGB at each decision, reconstructed losslessly and checked with original decision and ordered model-request image hashes. The scripted observation steps are controller actions; the final select is the model output (possibly reused under its recorded exact-input key).",
+  "runs": [
+    {
+      "model": "7B",
+      "strategy": "obs_trigger",
+      "episode_id": "f7af9c68a2944ed6aa4c5fe006c189e5",
+      "world_id": "w1",
+      "original_world_id": "w0",
+      "actions": [
+        "turn_left",
+        "turn_right",
+        "select 1"
+      ],
+      "selected_object": "Bowl_cd243bbd",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_7b_s0_01.json",
+        "sha256": "e5dfca984185b864ff6644294df1488b671b9a4036a106ca65d8ad5c42c9d192",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_7b_s0_01.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl",
+        "sha256": "49a08f62ddb270f6828cf0b11fbbd2ee73388d06f04cf01c8d3b4f7deee5dc18",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl"
+      },
+      "episode_line": 381,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L381",
+      "producer_commit": "bfffd02a456b8386fae3264b29e57c20b0c318da",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_e7d4687439a77039d63f:h0",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "model_image": {
+            "file": "frames/a_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 116,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L116",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"left\"],[2,\"front\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[80,122],\"bounding_box\":[69,113,90,132],\"label\":1},{\"anchor_pixel\":[243,148],\"bounding_box\":[226,136,254,170],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_e7d4687439a77039d63f:h7",
+          "own_anchor_pixels_at_255": 5962,
+          "env_public_marked": {
+            "file": "frames/a_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "png_sha256": "fa8ceb120c12076221aa8d486ecffe0349733089a2b24d62d342dd6f56e9f00d"
+          },
+          "model_image": {
+            "file": "frames/a_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "png_sha256": "fa8ceb120c12076221aa8d486ecffe0349733089a2b24d62d342dd6f56e9f00d"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 290,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L290",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"front-left\"],[2,\"front-right\"],[3,\"back-right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[241,135],\"bounding_box\":[229,125,254,146],\"label\":1}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 2,
+          "state_id": "v_e7d4687439a77039d63f:h0",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/a_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "model_image": {
+            "file": "frames/a_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 380,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_7b_s0_01/obs_trigger.jsonl#L380",
+          "response": "select 1",
+          "sample_id": "model_sample_000155",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab"
+          ],
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"left\"],[2,\"front\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[80,122],\"bounding_box\":[69,113,90,132],\"label\":1},{\"anchor_pixel\":[243,148],\"bounding_box\":[226,136,254,170],\"label\":2}]",
+          "model_request_or_input_sha256": "ea77d48ad40457727361529eff34ecf4684dea58aafa1e0ba14c17983804fb7c",
+          "exact_input_cache": {
+            "key": "ea77d48ad40457727361529eff34ecf4684dea58aafa1e0ba14c17983804fb7c",
+            "origin_sample_id": "model_sample_000155",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    },
+    {
+      "model": "32B",
+      "strategy": "obs_trigger",
+      "episode_id": "0cf1b57b953a47499e424f67329e2eb4",
+      "world_id": "w1",
+      "original_world_id": "w0",
+      "actions": [
+        "turn_left",
+        "turn_right",
+        "select 1"
+      ],
+      "selected_object": "Bowl_cd243bbd",
+      "success": true,
+      "source": {
+        "file": "results/diag_diag02_baselines_32b_s0_01_retry2.json",
+        "sha256": "e97c6e19e2f18a633560e17498eb07f80d915e6ed33447a26df92dd99b6e145e",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/results/diag_diag02_baselines_32b_s0_01_retry2.json"
+      },
+      "journal": {
+        "file": "logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl",
+        "sha256": "5cc3d584c044d7e36e16d3cdd1d71087382807940613b19aaf45ae70f8f52a17",
+        "url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl"
+      },
+      "episode_line": 381,
+      "episode_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L381",
+      "producer_commit": "f01175fa6fb3b604b9e4fb2d55e46cd33d7da244",
+      "decisions": [
+        {
+          "index": 0,
+          "state_id": "v_e7d4687439a77039d63f:h0",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "model_image": {
+            "file": "frames/b_s00_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "action": "turn_left",
+          "decision_source": "scripted controller",
+          "line": 116,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L116",
+          "response": "turn_left",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"left\"],[2,\"front\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[80,122],\"bounding_box\":[69,113,90,132],\"label\":1},{\"anchor_pixel\":[243,148],\"bounding_box\":[226,136,254,170],\"label\":2}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 1,
+          "state_id": "v_e7d4687439a77039d63f:h7",
+          "own_anchor_pixels_at_255": 5962,
+          "env_public_marked": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "png_sha256": "fa8ceb120c12076221aa8d486ecffe0349733089a2b24d62d342dd6f56e9f00d"
+          },
+          "model_image": {
+            "file": "frames/b_s01_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "png_sha256": "fa8ceb120c12076221aa8d486ecffe0349733089a2b24d62d342dd6f56e9f00d"
+          },
+          "action": "turn_right",
+          "decision_source": "scripted controller",
+          "line": 290,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L290",
+          "response": "turn_right",
+          "sample_id": null,
+          "response_token_ids": [],
+          "model_input_present_this_decision": false,
+          "entire_ordered_model_input_rgb_sha256": null,
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"front-left\"],[2,\"front-right\"],[3,\"back-right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[241,135],\"bounding_box\":[229,125,254,146],\"label\":1}]",
+          "model_request_or_input_sha256": null,
+          "exact_input_cache": null
+        },
+        {
+          "index": 2,
+          "state_id": "v_e7d4687439a77039d63f:h0",
+          "own_anchor_pixels_at_255": 0,
+          "env_public_marked": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "model_image": {
+            "file": "frames/b_s02_env.png",
+            "dimensions": [
+              255,
+              255
+            ],
+            "decoded_rgb_sha256": "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "png_sha256": "0fe80e2b36299d31eb7cb5295c727616ee937d647b9f716c03165e127fe2b1de"
+          },
+          "action": "select 1",
+          "decision_source": "recorded model output",
+          "line": 380,
+          "line_url": "https://github.com/warren-mu/cvpr2027/blob/0dea11bb/logs/runs/diag_diag02_baselines_32b_s0_01_retry2/obs_trigger.jsonl#L380",
+          "response": "select 1",
+          "sample_id": "model_sample_000143",
+          "response_token_ids": [
+            1742,
+            220,
+            16,
+            151645
+          ],
+          "model_input_present_this_decision": true,
+          "entire_ordered_model_input_rgb_sha256": [
+            "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab",
+            "4950ca2f6c08935d373348b473e4ab8a29bcf20512ac40df0d6d1f74953446eb",
+            "e14f41f214a72d1698cbd0440e7726b335aab5d7df0d3c62067895e8cfd9a5ab"
+          ],
+          "public_text": "Select the marked object closest to the Box.\nNeighbors: [[1,\"left\"],[2,\"front\"],[3,\"right\"]]\nAvailable actions: [\"move 1\",\"move 2\",\"move 3\",\"turn_left\",\"turn_right\",\"select 2\",\"select 1\"]\nMarks: [{\"anchor_pixel\":[80,122],\"bounding_box\":[69,113,90,132],\"label\":1},{\"anchor_pixel\":[243,148],\"bounding_box\":[226,136,254,170],\"label\":2}]",
+          "model_request_or_input_sha256": "77ac90685ebd05cc903d15e11da0965aa0fa619a74b86bf683da7daa9ea60885",
+          "exact_input_cache": {
+            "key": "77ac90685ebd05cc903d15e11da0965aa0fa619a74b86bf683da7daa9ea60885",
+            "origin_sample_id": "model_sample_000143",
+            "reused_generation": false,
+            "version": "full_public_request_once_v1"
+          }
+        }
+      ]
+    }
+  ],
+  "same_first_environment_image": true
+}

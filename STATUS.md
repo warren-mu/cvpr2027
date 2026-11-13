@@ -2002,3 +2002,6 @@ DIAG02 E1–E6 已完成，见 [任务报告](tasks/DIAG02.report.md)。固定 8
 论文 intro 和 method 共用 FloorPlan203 的纸箱 LOOK→FLIP 对 floorplan203_00004。已通过认证并排除留出场景的 13 个训练 LOOK→STAY 对中，Box 锚点为 0 个。按人类的备用选择，STAY 使用 FloorPlan7 的面包对 floorplan7_00008。六帧保留各自已审预览中的 255×255 PNG 字节，逐帧核实实例掩码框和画面上可见的数字中心。FLIP 双世界共享起点的 RGB 及 PNG 各自完全一致。本次 CPU 导出及来源审计使用 0 GPU·小时。[六帧压缩包](logs/review/diag_fig_selected_frames_01/frames.zip) · [帧清单](logs/review/diag_fig_selected_frames_01/frames.json)
 
 并行的测试缓存复核 b05（710922）通过本批六个来源的 200 个状态，排队 3 秒，运行 12 分 28 秒，0.207778 GPU·小时。b01、b02、b04、b05 累计通过 24 个来源。b03 指定节点重提 710904 在排队快照已等 20 分 22 秒，未开始即取消，PBS 确认 0 GPU·小时。b06 首投 710949 在 hopper-19 开卡黑帧，退出码 86，排队 14 秒，分配 26 秒，0.007222 GPU·小时，业务检查尚未开始。原开卡证据保留。
+
+
+2026-11-13：论文选图库已交付。6 张 intro、6 张 method、8 个实际推理对比、24 组双世界回放。全部使用非留出训练场景，GPU 0 小时。见 [图例与来源](tasks/PAPER_FIGURES_1113.report.md)。
