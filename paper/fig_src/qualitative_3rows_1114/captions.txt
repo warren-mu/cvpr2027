@@ -1,0 +1,9 @@
+FIGURE A · Three matched observation sequences (01_cases)
+Three Look episodes from non-held-out iTHOR training scenes. At the selection step, Qwen2.5-VL-3B, -7B, and -32B received the same ordered five images within an episode. The obs_trigger controller turned left, returned to the starting heading, turned right, then returned again. The first four actions were scripted. The anchor was visible only on the rightward view (step 3, green corners); the final choice was made by each model at step 4 from the full five-frame history. The models selected different targets for the box and bread, and all three selected the wrong target for the bottle. The correctness column uses the nearest candidate in each world's original 3D geometry.
+
+FIGURE B · Model rows for the same episode (02_models)
+The three Qwen2.5-VL models saw the identical five frames in a Look–Flip episode in FloorPlan203. The box appeared in the rightward view and was out of view again at selection. The 3B model selected the book (#1), the correct target. The 7B and 32B models selected the bowl (#2). The repeated frames in each row are the recorded views aligned to the same camera heading.
+
+图 A 每行是一个真实回合。图 B 每行是一个模型，因此同一列的环境图像相同。绿色角标取自第 3 步锚点实例掩码的外接框，仅用于帮助读者定位；frames/ 中的原图保留训练环境的数字标号。编号绑定到各自世界对里的物体，不能跨案例解释。模型的观察动作由 obs_trigger 固定，最终选择由模型给出。展示案例按动作可对齐、锚点仅在第 3 步出现和预测结果有差异选取。个例不用于说明模型规模或方法的总体优劣。
+
+两版均提供论文用矢量 PDF、可编辑 SVG、高分辨率 PNG。manifest.json 包含 3 个世界对的完整 dataset_key、训练/留出来源、原世界编号、相机状态、实例掩码、哈希、原始日志链接和决策。每行 5 张原图均为 255×255 PNG。面包行左看帧从认证视角表按原标号函数无损回放，解码像素与日志哈希一致。其余 14 个帧位置直接复用服务器已存 PNG。provenance/selected/ 保留九段日志摘录。
